@@ -1,22 +1,28 @@
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import DatabaseSession
-from app.core.tenancy import PlatformAdmin
+from app.core.tenancy import Principal, require_permission
+from app.modules.authorization.service import ensure_company_system_roles
 from app.modules.companies.models import Company
 from app.modules.companies.schemas import CompanyCreate, CompanyResponse, CompanyUpdate
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
+CanViewCompanies = Annotated[Principal, Depends(require_permission("platform.companies.view"))]
+CanCreateCompanies = Annotated[Principal, Depends(require_permission("platform.companies.create"))]
+CanUpdateCompanies = Annotated[Principal, Depends(require_permission("platform.companies.update"))]
+
 
 @router.get("", response_model=list[CompanyResponse])
 async def list_companies(
-    _: PlatformAdmin,
+    _: CanViewCompanies,
     database: DatabaseSession,
 ) -> list[CompanyResponse]:
     companies = (
@@ -30,12 +36,14 @@ async def list_companies(
 @router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)
 async def create_company(
     payload: CompanyCreate,
-    _: PlatformAdmin,
+    _: CanCreateCompanies,
     database: DatabaseSession,
 ) -> CompanyResponse:
     company = Company(**payload.model_dump())
     database.add(company)
     try:
+        await database.flush()
+        await ensure_company_system_roles(database, company.id)
         await database.commit()
     except IntegrityError as exc:
         await database.rollback()
@@ -47,7 +55,7 @@ async def create_company(
 async def update_company(
     company_id: UUID,
     payload: CompanyUpdate,
-    _: PlatformAdmin,
+    _: CanUpdateCompanies,
     database: DatabaseSession,
 ) -> CompanyResponse:
     company = await database.get(Company, company_id)

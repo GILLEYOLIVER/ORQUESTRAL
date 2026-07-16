@@ -508,7 +508,7 @@ wheels = [
 
 [[package]]
 name = "orkestral-api"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "alembic" },
@@ -556,7 +556,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "orkestral-worker"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "apps/worker" }
 dependencies = [
     { name = "celery", extra = ["redis"] },

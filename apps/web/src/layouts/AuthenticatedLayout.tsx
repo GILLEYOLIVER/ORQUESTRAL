@@ -5,6 +5,7 @@ import {
   Building2,
   LayoutDashboard,
   LogOut,
+  ShieldCheck,
   UserRound,
   UsersRound,
   Workflow,
@@ -68,14 +69,20 @@ export function AuthenticatedLayout({
             <Boxes size={18} />
             Integrações
           </span>
-          {!preview &&
-          session.me?.permissions.includes("company:manage_users") ? (
+          {!preview && session.me?.permissions.includes("users.view") ? (
             <NavLink className="sidebar__link" to="/app/usuarios">
               <UsersRound size={18} />
               Usuários
             </NavLink>
           ) : null}
-          {!preview && session.me?.user.is_platform_admin ? (
+          {!preview && session.me?.permissions.includes("roles.view") ? (
+            <NavLink className="sidebar__link" to="/app/papeis">
+              <ShieldCheck size={18} />
+              Papéis
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("platform.companies.view") ? (
             <NavLink className="sidebar__link" to="/app/empresas">
               <Building2 size={18} />
               Empresas
@@ -88,7 +95,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">Fase 2 · Identidade e acesso</div>
+        <div className="sidebar__footer">Fase 3 · Papéis e permissões</div>
       </aside>
       <div className="app-main">
         {preview ? (

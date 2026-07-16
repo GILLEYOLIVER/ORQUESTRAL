@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, model_validator
 
 from app.core.schemas import StrictSchema
 
@@ -17,6 +17,7 @@ class CompanyUserResponse(StrictSchema):
     user_status: str
     membership_status: str
     role_id: UUID | None
+    role_name: str | None
     is_owner: bool
     created_at: datetime
 
@@ -24,6 +25,7 @@ class CompanyUserResponse(StrictSchema):
 class InvitationCreate(StrictSchema):
     email: EmailStr
     name: str = Field(min_length=2, max_length=160)
+    role_id: UUID
 
 
 class InvitationResponse(StrictSchema):
@@ -37,4 +39,13 @@ class InvitationResponse(StrictSchema):
 
 
 class CompanyUserUpdate(StrictSchema):
-    status: Literal["active", "disabled"]
+    status: Literal["active", "disabled"] | None = None
+    role_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def require_change(self) -> CompanyUserUpdate:
+        if not self.model_fields_set:
+            raise ValueError("Informe ao menos uma alteração.")
+        if "role_id" in self.model_fields_set and self.role_id is None:
+            raise ValueError("O papel é obrigatório.")
+        return self

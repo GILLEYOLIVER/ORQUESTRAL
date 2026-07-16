@@ -8,7 +8,7 @@ Confirma apenas que o processo HTTP está respondendo. Não consulta dependênci
 {
   "status": "ok",
   "service": "Orkestral API",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "request_id": "9adba59d-bcd1-40d5-bf23-ec10888dc1c0"
 }
 ```

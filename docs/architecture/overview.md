@@ -34,11 +34,15 @@ sequenceDiagram
     API-->>Browser: resposta restrita ao company_id do contexto
 ```
 
-O cliente nunca escolhe livremente um `company_id` para operações do tenant. A empresa atual vem da sessão autenticada e só é aceita quando existe vínculo ativo. Administradores da plataforma gerenciam o cadastro global de empresas; proprietários gerenciam membros exclusivamente na empresa selecionada.
+O cliente nunca escolhe livremente um `company_id` para operações do tenant. A empresa atual vem da sessão autenticada e só é aceita quando existe vínculo ativo. O servidor carrega as permissões do papel nesse vínculo a cada requisição e aplica dependências explícitas como `require_permission("agents.create")`.
+
+## Autorização
+
+Papéis pertencem a uma única empresa e recebem permissões de um catálogo global imutável. “Proprietário” e “Membro” são criados automaticamente; papéis personalizados podem ser administrados no painel. A interface esconde ações indisponíveis com `PermissionGuard`, mas a decisão final sempre pertence à API. Toda criação, alteração ou exclusão de papel e toda mudança de papel de usuário gera um evento de auditoria sem credenciais ou segredos.
 
 ## Limites atuais
 
-- Papéis e permissões configuráveis começam na Fase 3; na Fase 2 existe apenas a distinção mínima entre administrador da plataforma e proprietário da empresa.
+- Agentes, workflows, integrações e faturamento ainda não expõem operações; suas permissões já estão reservadas no catálogo para proteger as futuras rotas.
 - O worker executa somente uma tarefa de diagnóstico.
 - n8n e armazenamento são provisionados, mas não possuem integração funcional com a API.
 - O pacote de plugins está deliberadamente vazio até a Fase 5.

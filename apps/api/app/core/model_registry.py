@@ -6,15 +6,25 @@ from app.modules.authentication.models import (
     CompanyInvitation,
     PasswordResetToken,
 )
+from app.modules.authorization.models import (
+    AuthorizationAuditEvent,
+    Permission,
+    Role,
+    RolePermission,
+)
 from app.modules.companies.models import Company
 from app.modules.users.models import CompanyUser, User
 
 __all__ = [
     "AuthAttempt",
     "AuthSession",
+    "AuthorizationAuditEvent",
     "Company",
     "CompanyInvitation",
     "CompanyUser",
     "PasswordResetToken",
+    "Permission",
+    "Role",
+    "RolePermission",
     "User",
 ]

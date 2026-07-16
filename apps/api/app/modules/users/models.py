@@ -59,7 +59,9 @@ class CompanyUser(Base):
         ForeignKey("companies.id", ondelete="CASCADE"), index=True
     )
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    role_id: Mapped[UUID | None]
+    role_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("roles.id", ondelete="SET NULL"), index=True
+    )
     status: Mapped[str] = mapped_column(String(20), default="invited", server_default="invited")
     is_owner: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(

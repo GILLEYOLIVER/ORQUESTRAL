@@ -30,6 +30,12 @@ test("administrador entra, acessa o tenant e encerra a sessão", async ({
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Empresas" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Usuários" })).toBeVisible();
+  await page.getByRole("link", { name: "Papéis" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Papéis e permissões" }),
+  ).toBeVisible();
+  await expect(page.getByText("Proprietário", { exact: true })).toBeVisible();
+  await expect(page.getByText("Membro", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Sair" }).click();
   await expect(page).toHaveURL(/\/login$/);

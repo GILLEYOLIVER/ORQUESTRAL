@@ -22,7 +22,7 @@ const foundationItems = [
   {
     icon: Layers3,
     title: "Gestão de acesso",
-    description: "Empresas, usuários, convites e recuperação de senha.",
+    description: "Papéis granulares, permissões e trilha de auditoria.",
   },
 ];
 
@@ -37,13 +37,13 @@ export function DashboardPage() {
             {me?.current_company?.trade_name ?? "Administração Orkestral"}
           </h1>
           <p>
-            Identidade, sessões e contexto multiempresa estão ativos para
-            receber os próximos módulos de negócio.
+            Identidade, isolamento multiempresa e autorização granular estão
+            ativos para receber os próximos módulos de negócio.
           </p>
         </div>
         <span className="phase-badge">
           <CheckCircle2 size={16} />
-          Fase 2
+          Fase 3
         </span>
       </div>
       <div className="foundation-grid">
@@ -59,10 +59,10 @@ export function DashboardPage() {
       </div>
       <Card className="next-step" eyebrow="Segurança ativa">
         <div>
-          <h2>Acesso autenticado e isolado por empresa</h2>
+          <h2>Autorização validada no servidor</h2>
           <p>
-            A empresa atual nunca é aceita livremente do front-end: ela é
-            validada pelo vínculo do usuário em cada sessão.
+            Menus refletem o acesso disponível, mas cada operação é sempre
+            autorizada novamente pela API com o papel da empresa atual.
           </p>
         </div>
         <span aria-hidden="true" className="next-step__arrow">

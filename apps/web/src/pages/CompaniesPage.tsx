@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import type { CompanyResponse } from "@orkestral/shared-types";
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
+import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
 import { useSession } from "../session/context";
 
@@ -36,7 +37,7 @@ export function CompaniesPage() {
   const companies = useQuery({
     queryKey: ["companies"],
     queryFn: () => request<CompanyResponse[]>("/companies"),
-    enabled: Boolean(me?.user.is_platform_admin),
+    enabled: me?.permissions.includes("platform.companies.view") ?? false,
   });
   const createCompany = useMutation({
     mutationFn: (values: FormValues) =>
@@ -65,7 +66,7 @@ export function CompaniesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["companies"] }),
   });
 
-  if (!me?.user.is_platform_admin) {
+  if (!me?.permissions.includes("platform.companies.view")) {
     return (
       <Alert variant="error">
         Acesso restrito à administração da plataforma.
@@ -82,41 +83,45 @@ export function CompaniesPage() {
         </div>
       </div>
       <div className="management-grid">
-        <Card eyebrow="Nova empresa">
-          {error ? <Alert variant="error">{error}</Alert> : null}
-          <form
-            className="stack-form"
-            noValidate
-            onSubmit={(event) =>
-              void handleSubmit((values) => createCompany.mutate(values))(event)
-            }
-          >
-            <TextField
-              error={errors.legal_name?.message}
-              label="Razão social"
-              {...register("legal_name")}
-            />
-            <TextField
-              error={errors.trade_name?.message}
-              label="Nome fantasia"
-              {...register("trade_name")}
-            />
-            <TextField
-              error={errors.document_number?.message}
-              label="CNPJ ou documento"
-              {...register("document_number")}
-            />
-            <TextField
-              error={errors.slug?.message}
-              label="Identificador (slug)"
-              placeholder="empresa-exemplo"
-              {...register("slug")}
-            />
-            <Button loading={createCompany.isPending} type="submit">
-              <Plus size={17} /> Cadastrar empresa
-            </Button>
-          </form>
-        </Card>
+        <PermissionGuard all={["platform.companies.create"]}>
+          <Card eyebrow="Nova empresa">
+            {error ? <Alert variant="error">{error}</Alert> : null}
+            <form
+              className="stack-form"
+              noValidate
+              onSubmit={(event) =>
+                void handleSubmit((values) => createCompany.mutate(values))(
+                  event,
+                )
+              }
+            >
+              <TextField
+                error={errors.legal_name?.message}
+                label="Razão social"
+                {...register("legal_name")}
+              />
+              <TextField
+                error={errors.trade_name?.message}
+                label="Nome fantasia"
+                {...register("trade_name")}
+              />
+              <TextField
+                error={errors.document_number?.message}
+                label="CNPJ ou documento"
+                {...register("document_number")}
+              />
+              <TextField
+                error={errors.slug?.message}
+                label="Identificador (slug)"
+                placeholder="empresa-exemplo"
+                {...register("slug")}
+              />
+              <Button loading={createCompany.isPending} type="submit">
+                <Plus size={17} /> Cadastrar empresa
+              </Button>
+            </form>
+          </Card>
+        </PermissionGuard>
         <Card className="management-list" eyebrow="Empresas cadastradas">
           {companies.isLoading ? <p>Carregando empresas…</p> : null}
           {companies.isError ? (
@@ -136,18 +141,20 @@ export function CompaniesPage() {
               <span className={`status-chip status-chip--${company.status}`}>
                 {company.status}
               </span>
-              <Button
-                onClick={() =>
-                  changeStatus.mutate({
-                    id: company.id,
-                    status:
-                      company.status === "suspended" ? "active" : "suspended",
-                  })
-                }
-                variant="ghost"
-              >
-                {company.status === "suspended" ? "Ativar" : "Suspender"}
-              </Button>
+              <PermissionGuard all={["platform.companies.update"]}>
+                <Button
+                  onClick={() =>
+                    changeStatus.mutate({
+                      id: company.id,
+                      status:
+                        company.status === "suspended" ? "active" : "suspended",
+                    })
+                  }
+                  variant="ghost"
+                >
+                  {company.status === "suspended" ? "Ativar" : "Suspender"}
+                </Button>
+              </PermissionGuard>
             </article>
           ))}
         </Card>

@@ -33,7 +33,7 @@ services:
       retries: 10
 
   object-storage:
-    image: orkestral-object-storage:0.2.0
+    image: orkestral-object-storage:0.3.0
     build:
       context: .
       dockerfile: infrastructure/docker/minio/Dockerfile
@@ -95,7 +95,7 @@ services:
       start_period: 30s
 
   api:
-    image: orkestral-api:0.2.0
+    image: orkestral-api:0.3.0
     build:
       context: .
       dockerfile: Dockerfile.api
@@ -131,7 +131,7 @@ services:
       start_period: 15s
 
   worker:
-    image: orkestral-worker:0.2.0
+    image: orkestral-worker:0.3.0
     build:
       context: .
       dockerfile: Dockerfile.api
@@ -158,7 +158,7 @@ services:
       start_period: 20s
 
   web:
-    image: orkestral-web:0.2.0
+    image: orkestral-web:0.3.0
     build:
       context: .
       dockerfile: Dockerfile.web

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Orkestral API"
     app_env: Environment = "development"
-    app_version: str = "0.2.0"
+    app_version: str = "0.3.0"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")

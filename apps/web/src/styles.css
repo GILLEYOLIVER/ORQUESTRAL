@@ -902,8 +902,158 @@ p {
   gap: 0.5rem;
 }
 
+.roles-layout {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(320px, 1fr) minmax(0, 1.15fr);
+}
+
+.permission-fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  max-height: 430px;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.permission-fieldset > legend {
+  font-weight: 700;
+  padding: 0 0.4rem;
+}
+
+.permission-group {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.permission-group > strong {
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.check-row {
+  align-items: start;
+  cursor: pointer;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: auto 1fr;
+}
+
+.check-row input {
+  accent-color: var(--color-primary);
+  height: 1rem;
+  margin-top: 0.15rem;
+  width: 1rem;
+}
+
+.check-row span,
+.check-row small {
+  display: block;
+}
+
+.check-row small,
+.role-row span,
+.role-row small,
+.audit-row span {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.form-actions,
+.member-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.role-row {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0.9rem 0;
+}
+
+.role-row:last-child {
+  border-bottom: 0;
+}
+
+.role-row__main {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.role-row__main:disabled {
+  cursor: default;
+}
+
+.audit-card {
+  display: grid;
+  gap: 0;
+}
+
+.audit-row {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.75rem 0;
+}
+
+.audit-row:last-child {
+  border-bottom: 0;
+}
+
+.audit-row > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.native-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.native-field > span {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.native-field select,
+.member-actions select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  min-height: 2.7rem;
+  padding: 0.6rem 0.7rem;
+}
+
+.native-field select[aria-invalid="true"],
+.native-field small {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
 @media (max-width: 900px) {
   .management-grid,
+  .roles-layout,
   .profile-grid {
     grid-template-columns: 1fr;
   }

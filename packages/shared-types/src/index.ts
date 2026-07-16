@@ -12,3 +12,6 @@ export type CompanyResponse = components["schemas"]["CompanyResponse"];
 export type CompanyUserResponse = components["schemas"]["CompanyUserResponse"];
 export type InvitationResponse = components["schemas"]["InvitationResponse"];
 export type MessageResponse = components["schemas"]["MessageResponse"];
+export type PermissionResponse = components["schemas"]["PermissionResponse"];
+export type RoleResponse = components["schemas"]["RoleResponse"];
+export type AuditEventResponse = components["schemas"]["AuditEventResponse"];

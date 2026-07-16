@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.resources import create_resources
 from app.core.security import hash_password
+from app.modules.authorization.service import ensure_company_system_roles
 from app.modules.companies.models import Company
 from app.modules.users.models import CompanyUser, User
 
@@ -54,6 +55,8 @@ async def bootstrap() -> None:
                 database.add(company)
                 await database.flush()
 
+            owner_role, _ = await ensure_company_system_roles(database, company.id)
+
             user = await database.scalar(select(User).where(User.email == admin_email))
             if user is None:
                 user = User(
@@ -77,10 +80,13 @@ async def bootstrap() -> None:
                     CompanyUser(
                         company_id=company.id,
                         user_id=user.id,
+                        role_id=owner_role.id,
                         status="active",
                         is_owner=True,
                     )
                 )
+            else:
+                membership.role_id = owner_role.id
             await database.commit()
     finally:
         await resources.close()

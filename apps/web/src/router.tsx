@@ -1,5 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- este módulo exporta o singleton do roteador e seus guards locais. */
+import type { ReactNode } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import { Alert } from "@orkestral/ui-components";
 import { AuthenticatedLayout } from "./layouts/AuthenticatedLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage";
@@ -14,6 +16,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { RolesPage } from "./pages/RolesPage";
 import { useSession } from "./session/context";
 
 function ProtectedApp() {
@@ -54,6 +57,23 @@ function DevelopmentPreview() {
   return previewEnabled ? <AuthenticatedLayout preview /> : <NotFoundPage />;
 }
 
+function PermissionRoute({
+  children,
+  permission,
+}: {
+  children: ReactNode;
+  permission: string;
+}) {
+  const { me } = useSession();
+  return me?.permissions.includes(permission) ? (
+    children
+  ) : (
+    <Alert variant="error">
+      Você não possui permissão para acessar esta área.
+    </Alert>
+  );
+}
+
 export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
@@ -72,8 +92,30 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "perfil", element: <ProfilePage /> },
-      { path: "empresas", element: <CompaniesPage /> },
-      { path: "usuarios", element: <CompanyUsersPage /> },
+      {
+        path: "empresas",
+        element: (
+          <PermissionRoute permission="platform.companies.view">
+            <CompaniesPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "usuarios",
+        element: (
+          <PermissionRoute permission="users.view">
+            <CompanyUsersPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "papeis",
+        element: (
+          <PermissionRoute permission="roles.view">
+            <RolesPage />
+          </PermissionRoute>
+        ),
+      },
     ],
   },
   { path: "selecionar-empresa", element: <CompanySelectionGuard /> },

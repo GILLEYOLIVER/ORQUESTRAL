@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
@@ -11,6 +12,8 @@ from sqlalchemy import select
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import InvalidAccessTokenError, decode_access_token, utc_now
 from app.modules.authentication.models import AuthSession
+from app.modules.authorization.catalog import PLATFORM_PERMISSION_CODES, TENANT_PERMISSION_CODES
+from app.modules.authorization.models import Permission, RolePermission
 from app.modules.companies.models import Company
 from app.modules.users.models import CompanyUser, User
 
@@ -75,7 +78,7 @@ async def get_current_principal(
     membership: CompanyUser | None = None
     permissions: set[str] = set()
     if user.is_platform_admin:
-        permissions.add("platform:manage_companies")
+        permissions.update(PLATFORM_PERMISSION_CODES)
     if claims.company_id is not None:
         row = (
             await database.execute(
@@ -96,7 +99,18 @@ async def get_current_principal(
         else:
             membership, company = row
             if membership.is_owner:
-                permissions.add("company:manage_users")
+                permissions.update(TENANT_PERMISSION_CODES)
+            elif membership.role_id is not None:
+                permissions.update(
+                    await database.scalars(
+                        select(Permission.code)
+                        .join(
+                            RolePermission,
+                            RolePermission.permission_id == Permission.id,
+                        )
+                        .where(RolePermission.role_id == membership.role_id)
+                    )
+                )
 
     return Principal(
         user=user,
@@ -146,3 +160,17 @@ def require_company_owner(context: CurrentRequestContext) -> RequestContext:
 
 
 CompanyOwnerContext = Annotated[RequestContext, Depends(require_company_owner)]
+
+
+def require_permission(
+    permission_code: str,
+) -> Callable[[CurrentPrincipal], Coroutine[Any, Any, Principal]]:
+    async def permission_dependency(principal: CurrentPrincipal) -> Principal:
+        if permission_code not in principal.permissions:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Permissão necessária: {permission_code}.",
+            )
+        return principal
+
+    return permission_dependency
