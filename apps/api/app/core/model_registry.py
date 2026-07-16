@@ -13,15 +13,22 @@ from app.modules.authorization.models import (
     RolePermission,
 )
 from app.modules.companies.models import Company
+from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
+from app.modules.modularity.models import CompanyModule, ModuleCatalog
 from app.modules.users.models import CompanyUser, User
 
 __all__ = [
     "AuthAttempt",
     "AuthSession",
     "AuthorizationAuditEvent",
+    "CRMContact",
+    "CRMContactTag",
+    "CRMTag",
     "Company",
     "CompanyInvitation",
+    "CompanyModule",
     "CompanyUser",
+    "ModuleCatalog",
     "PasswordResetToken",
     "Permission",
     "Role",

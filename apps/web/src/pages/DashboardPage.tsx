@@ -21,8 +21,8 @@ const foundationItems = [
   },
   {
     icon: Layers3,
-    title: "Gestão de acesso",
-    description: "Papéis granulares, permissões e trilha de auditoria.",
+    title: "Núcleo modular",
+    description: "Funcionalidades ativadas separadamente por empresa.",
   },
 ];
 
@@ -37,13 +37,13 @@ export function DashboardPage() {
             {me?.current_company?.trade_name ?? "Administração Orkestral"}
           </h1>
           <p>
-            Identidade, isolamento multiempresa e autorização granular estão
-            ativos para receber os próximos módulos de negócio.
+            O núcleo modular está ativo e o primeiro módulo funcional de CRM
+            já pode ser habilitado para cada empresa.
           </p>
         </div>
         <span className="phase-badge">
           <CheckCircle2 size={16} />
-          Fase 3
+          Fase 4
         </span>
       </div>
       <div className="foundation-grid">
@@ -57,12 +57,12 @@ export function DashboardPage() {
           </Card>
         ))}
       </div>
-      <Card className="next-step" eyebrow="Segurança ativa">
+      <Card className="next-step" eyebrow="CRM disponível">
         <div>
-          <h2>Autorização validada no servidor</h2>
+          <h2>Contatos comerciais isolados por empresa</h2>
           <p>
-            Menus refletem o acesso disponível, mas cada operação é sempre
-            autorizada novamente pela API com o papel da empresa atual.
+            Ative o CRM no catálogo de módulos para usar pesquisa, filtros,
+            etiquetas, paginação e gestão completa de contatos.
           </p>
         </div>
         <span aria-hidden="true" className="next-step__arrow">

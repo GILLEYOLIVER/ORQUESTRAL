@@ -23,6 +23,8 @@ type FormValues = z.infer<typeof schema>;
 const moduleLabels: Record<string, string> = {
   users: "Usuários",
   roles: "Papéis e permissões",
+  modules: "Módulos",
+  crm: "CRM",
   agents: "Agentes",
   workflows: "Workflows",
   integrations: "Integrações",

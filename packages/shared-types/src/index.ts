@@ -15,3 +15,7 @@ export type MessageResponse = components["schemas"]["MessageResponse"];
 export type PermissionResponse = components["schemas"]["PermissionResponse"];
 export type RoleResponse = components["schemas"]["RoleResponse"];
 export type AuditEventResponse = components["schemas"]["AuditEventResponse"];
+export type ModuleResponse = components["schemas"]["ModuleResponse"];
+export type CRMContactPage = components["schemas"]["CRMContactPage"];
+export type CRMContactResponse = components["schemas"]["CRMContactResponse"];
+export type CRMTagResponse = components["schemas"]["CRMTagResponse"];

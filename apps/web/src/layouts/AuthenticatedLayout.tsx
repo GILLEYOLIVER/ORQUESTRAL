@@ -3,14 +3,17 @@ import {
   Bot,
   Boxes,
   Building2,
+  ContactRound,
   LayoutDashboard,
   LogOut,
+  PackageOpen,
   ShieldCheck,
   UserRound,
   UsersRound,
   Workflow,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { isModuleActive, useModules } from "../modules/useModules";
 import { useSession } from "../session/context";
 
 export function AuthenticatedLayout({
@@ -24,6 +27,7 @@ export function AuthenticatedLayout({
   const userName = session.me?.user.name ?? "Equipe Orkestral";
   const companyName =
     session.me?.current_company?.trade_name ?? "Administração da plataforma";
+  const modules = useModules(!preview);
 
   const logout = async () => {
     await session.logout();
@@ -69,6 +73,20 @@ export function AuthenticatedLayout({
             <Boxes size={18} />
             Integrações
           </span>
+          {!preview && session.me?.permissions.includes("modules.view") ? (
+            <NavLink className="sidebar__link" to="/app/modulos">
+              <PackageOpen size={18} />
+              Módulos
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("crm.contacts.view") &&
+          isModuleActive(modules.data, "crm") ? (
+            <NavLink className="sidebar__link" to="/app/crm/contatos">
+              <ContactRound size={18} />
+              Contatos
+            </NavLink>
+          ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (
             <NavLink className="sidebar__link" to="/app/usuarios">
               <UsersRound size={18} />
@@ -95,7 +113,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">Fase 3 · Papéis e permissões</div>
+        <div className="sidebar__footer">Fase 4 · Núcleo modular</div>
       </aside>
       <div className="app-main">
         {preview ? (

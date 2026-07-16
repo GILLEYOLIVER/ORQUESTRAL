@@ -2,7 +2,7 @@
 
 Fundação da plataforma SaaS multiempresa de automação empresarial e agentes de inteligência artificial.
 
-O repositório contém a fundação da **Fase 1**, a identidade multiempresa da **Fase 2** e a autorização granular da **Fase 3**: autenticação real, sessões revogáveis, empresas, usuários, papéis, permissões e auditoria de alterações de acesso.
+O repositório contém as Fases 1 a 4 da plataforma: fundação executável, identidade multiempresa, autorização granular e núcleo modular. O primeiro módulo funcional é um CRM básico com contatos, etiquetas, pesquisa, filtros, paginação, exclusão lógica e auditoria.
 
 ## Pré-requisitos
 
@@ -66,7 +66,7 @@ Senha:  Orkestral-Dev-2026!
 
 Entre em `http://localhost/login`. Essas credenciais pertencem exclusivamente ao `.env.example`, são rejeitadas em produção e devem ser substituídas fora do ambiente local.
 
-O administrador pode cadastrar empresas em `/app/empresas`, configurar papéis em `/app/papeis` e convidar membros com um papel inicial em `/app/usuarios`. Sem provedor de e-mail nesta etapa, links de convite e redefinição aparecem na própria interface apenas quando `DEVELOPMENT_EXPOSE_TOKENS=true`.
+O administrador pode cadastrar empresas em `/app/empresas`, configurar papéis em `/app/papeis`, convidar membros em `/app/usuarios` e ativar o CRM em `/app/modulos`. Depois da ativação, os contatos ficam disponíveis em `/app/crm/contatos`. Sem provedor de e-mail nesta etapa, links de convite e redefinição aparecem na própria interface apenas quando `DEVELOPMENT_EXPOSE_TOKENS=true`.
 
 ## Prévia do shell
 
@@ -135,4 +135,4 @@ docs           arquitetura, APIs, banco, plugins e decisões
 tests          integração, segurança e ponta a ponta
 ```
 
-Consulte [a visão de arquitetura](docs/architecture/overview.md), [a API de autenticação](docs/api/authentication.md), [a API de autorização](docs/api/authorization.md) e o [guia de solução de problemas](docs/troubleshooting.md).
+Consulte [a visão de arquitetura](docs/architecture/overview.md), [a API de autenticação](docs/api/authentication.md), [a API de autorização](docs/api/authorization.md), [o núcleo modular](docs/architecture/modularity.md), [a API do CRM](docs/api/crm.md) e o [guia de solução de problemas](docs/troubleshooting.md).

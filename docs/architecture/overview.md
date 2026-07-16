@@ -40,9 +40,13 @@ O cliente nunca escolhe livremente um `company_id` para operações do tenant. A
 
 Papéis pertencem a uma única empresa e recebem permissões de um catálogo global imutável. “Proprietário” e “Membro” são criados automaticamente; papéis personalizados podem ser administrados no painel. A interface esconde ações indisponíveis com `PermissionGuard`, mas a decisão final sempre pertence à API. Toda criação, alteração ou exclusão de papel e toda mudança de papel de usuário gera um evento de auditoria sem credenciais ou segredos.
 
+## Núcleo modular
+
+O catálogo distingue módulos planejados de módulos efetivamente instalados. Somente manifests carregados pelo registro central podem ser ativados. Cada operação de um módulo exige simultaneamente a permissão do papel e um vínculo ativo em `company_modules`. O CRM é o primeiro módulo instalado e todo acesso a contatos deriva o `company_id` da sessão.
+
 ## Limites atuais
 
-- Agentes, workflows, integrações e faturamento ainda não expõem operações; suas permissões já estão reservadas no catálogo para proteger as futuras rotas.
+- Financeiro, suporte, RH, estoque, projetos, marketing e analytics aparecem como planejados, mas não podem ser ativados até possuírem implementação e manifest próprios.
 - O worker executa somente uma tarefa de diagnóstico.
 - n8n e armazenamento são provisionados, mas não possuem integração funcional com a API.
 - O pacote de plugins está deliberadamente vazio até a Fase 5.

@@ -58,7 +58,7 @@ export function LoginPage() {
           <p>Uma base segura para conectar pessoas, processos e tecnologia.</p>
         </div>
         <span className="auth-aside__caption">
-          Acesso multiempresa · Fase 3
+          Acesso multiempresa · Fase 4
         </span>
       </section>
       <section className="auth-content" aria-labelledby="login-title">

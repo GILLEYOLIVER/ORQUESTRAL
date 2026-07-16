@@ -8,16 +8,19 @@ import { AcceptInvitationPage } from "./pages/AcceptInvitationPage";
 import { CompaniesPage } from "./pages/CompaniesPage";
 import { CompanySelectionPage } from "./pages/CompanySelectionPage";
 import { CompanyUsersPage } from "./pages/CompanyUsersPage";
+import { CRMContactsPage } from "./pages/CRMContactsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ErrorPage } from "./pages/ErrorPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
+import { ModulesPage } from "./pages/ModulesPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { RolesPage } from "./pages/RolesPage";
 import { useSession } from "./session/context";
+import { isModuleActive, useModules } from "./modules/useModules";
 
 function ProtectedApp() {
   const session = useSession();
@@ -74,6 +77,37 @@ function PermissionRoute({
   );
 }
 
+function ModuleRoute({
+  children,
+  moduleCode,
+  permission,
+}: {
+  children: ReactNode;
+  moduleCode: string;
+  permission: string;
+}) {
+  const { me } = useSession();
+  const hasPermission = me?.permissions.includes(permission) ?? false;
+  const modules = useModules(hasPermission);
+  if (!hasPermission) {
+    return (
+      <Alert variant="error">
+        Você não possui permissão para acessar esta área.
+      </Alert>
+    );
+  }
+  if (modules.isLoading) {
+    return <div className="route-loading">Verificando módulo…</div>;
+  }
+  return isModuleActive(modules.data, moduleCode) ? (
+    children
+  ) : (
+    <Alert variant="error">
+      Este módulo não está ativo para a empresa atual.
+    </Alert>
+  );
+}
+
 export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
@@ -114,6 +148,22 @@ export const router = createBrowserRouter([
           <PermissionRoute permission="roles.view">
             <RolesPage />
           </PermissionRoute>
+        ),
+      },
+      {
+        path: "modulos",
+        element: (
+          <PermissionRoute permission="modules.view">
+            <ModulesPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "crm/contatos",
+        element: (
+          <ModuleRoute moduleCode="crm" permission="crm.contacts.view">
+            <CRMContactsPage />
+          </ModuleRoute>
         ),
       },
     ],
