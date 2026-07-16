@@ -1,0 +1,25 @@
+{
+  "name": "orkestral",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @orkestral/web dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "contracts:generate": "pnpm --filter @orkestral/shared-types generate",
+    "contracts:check": "pnpm contracts:generate && git diff --exit-code -- openapi.json packages/shared-types/src/api.generated.ts",
+    "test:e2e": "pnpm --filter @orkestral/web test:e2e"
+  },
+  "devDependencies": {
+    "prettier": "3.9.5"
+  }
+}

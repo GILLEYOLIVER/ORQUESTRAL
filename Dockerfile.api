@@ -1,0 +1,35 @@
+FROM ghcr.io/astral-sh/uv:0.11.29 AS uv
+
+FROM python:3.13.14-slim-bookworm AS python-base
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy \
+    PATH="/workspace/.venv/bin:$PATH"
+WORKDIR /workspace
+COPY --from=uv /uv /uvx /bin/
+COPY pyproject.toml uv.lock ./
+COPY apps/api/pyproject.toml apps/api/pyproject.toml
+COPY apps/worker/pyproject.toml apps/worker/pyproject.toml
+
+FROM python-base AS dependencies
+RUN uv sync --frozen --all-packages --no-dev --no-install-workspace
+COPY apps/api apps/api
+COPY apps/worker apps/worker
+COPY infrastructure infrastructure
+RUN uv sync --frozen --all-packages --no-dev
+
+FROM dependencies AS production
+RUN addgroup --system orkestral && adduser --system --ingroup orkestral orkestral \
+    && chown -R orkestral:orkestral /workspace
+USER orkestral
+EXPOSE 8000
+CMD ["sh", "/workspace/infrastructure/docker/api/entrypoint.sh"]
+
+FROM python-base AS development
+RUN uv sync --frozen --all-packages --all-extras --no-install-workspace
+COPY apps/api apps/api
+COPY apps/worker apps/worker
+COPY infrastructure infrastructure
+RUN uv sync --frozen --all-packages --all-extras
+EXPOSE 8000
+CMD ["sh", "/workspace/infrastructure/docker/api/entrypoint.sh"]

@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "codex/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.29"
+          enable-cache: true
+      - run: uv sync --locked --all-packages --all-extras
+      - run: uv run ruff format --check apps tests
+      - run: uv run ruff check apps tests
+      - run: uv run mypy apps/api apps/worker
+      - run: uv run pytest -m "not integration" apps/api/tests apps/worker/tests
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.4-bookworm
+        env:
+          POSTGRES_DB: orkestral
+          POSTGRES_USER: orkestral
+          POSTGRES_PASSWORD: integration-secret
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U orkestral -d orkestral"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8.0.6-alpine3.21
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      APP_ENV: testing
+      DATABASE_URL: postgresql+asyncpg://orkestral:integration-secret@127.0.0.1:5432/orkestral
+      REDIS_URL: redis://127.0.0.1:6379/0
+      PYTHONPATH: apps/api:apps/worker
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.29"
+      - run: uv sync --locked --all-packages --all-extras
+      - working-directory: apps/api
+        run: uv run alembic -c alembic.ini upgrade head
+      - working-directory: apps/api
+        run: uv run alembic -c alembic.ini downgrade base
+      - working-directory: apps/api
+        run: uv run alembic -c alembic.ini upgrade head
+      - run: uv run pytest -m integration tests/integration
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.29"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: uv sync --locked --all-packages
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm contracts:check
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.development.yml config --quiet
+      - run: docker build --target production -f Dockerfile.api -t orkestral-api:ci .
+      - run: docker build --target production -f Dockerfile.web -t orkestral-web:ci .
