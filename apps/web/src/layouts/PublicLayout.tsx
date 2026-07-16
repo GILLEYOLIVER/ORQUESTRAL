@@ -18,7 +18,7 @@ export function PublicLayout() {
         <Outlet />
       </main>
       <footer className="public-footer">
-        Orkestral · Fundação da plataforma
+        Orkestral · Acesso seguro multiempresa
       </footer>
     </div>
   );

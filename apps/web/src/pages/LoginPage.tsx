@@ -2,9 +2,11 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Alert, Button, TextField } from "@orkestral/ui-components";
+import { ApiClientError } from "../lib/http";
+import { useSession } from "../session/context";
 
 const loginSchema = z.object({
   email: z.email("Informe um e-mail válido."),
@@ -14,17 +16,34 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const [notice, setNotice] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const session = useSession();
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  const submit = () => setNotice(true);
+  const submit = async (values: LoginForm) => {
+    setError(null);
+    try {
+      const profile = await session.login(values.email, values.password);
+      await navigate(
+        profile.requires_company_selection ? "/selecionar-empresa" : "/app",
+        { replace: true },
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof ApiClientError
+          ? caught.message
+          : "Não foi possível entrar.",
+      );
+    }
+  };
 
   return (
     <div className="auth-page">
@@ -38,7 +57,9 @@ export function LoginPage() {
           <h1>Seu centro de operações inteligentes.</h1>
           <p>Uma base segura para conectar pessoas, processos e tecnologia.</p>
         </div>
-        <span className="auth-aside__caption">Ambiente inicial · Fase 1</span>
+        <span className="auth-aside__caption">
+          Acesso multiempresa · Fase 2
+        </span>
       </section>
       <section className="auth-content" aria-labelledby="login-title">
         <div className="auth-card">
@@ -50,10 +71,9 @@ export function LoginPage() {
           <p className="auth-card__lead">
             Use suas credenciais empresariais para continuar.
           </p>
-          {notice ? (
-            <Alert title="Acesso ainda não habilitado">
-              A autenticação real será disponibilizada na Fase 2. Nenhuma
-              credencial foi enviada ou armazenada.
+          {error ? (
+            <Alert title="Não foi possível entrar" variant="error">
+              {error}
             </Alert>
           ) : null}
           <form
@@ -79,7 +99,11 @@ export function LoginPage() {
               <span>Ambiente protegido</span>
               <Link to="/esqueci-minha-senha">Esqueci minha senha</Link>
             </div>
-            <Button className="auth-card__submit" type="submit">
+            <Button
+              className="auth-card__submit"
+              loading={isSubmitting}
+              type="submit"
+            >
               Continuar
             </Button>
           </form>

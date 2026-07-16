@@ -1,6 +1,7 @@
 import type { ProblemDetails } from "@orkestral/shared-types";
+import { getAccessToken } from "../session/tokenStore";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 export class ApiClientError extends Error {
   constructor(
@@ -14,8 +15,18 @@ export class ApiClientError extends Error {
 }
 
 export interface RequestOptions extends Omit<RequestInit, "body"> {
+  authenticated?: boolean;
+  allowAuthRefresh?: boolean;
   body?: unknown;
   timeoutMs?: number;
+}
+
+let refreshHandler: (() => Promise<string | null>) | null = null;
+
+export function registerAuthRefreshHandler(
+  handler: (() => Promise<string | null>) | null,
+) {
+  refreshHandler = handler;
 }
 
 function combineSignal(
@@ -42,8 +53,16 @@ export async function request<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { body, headers, timeoutMs = 10_000, ...init } = options;
+  const {
+    allowAuthRefresh = true,
+    authenticated = true,
+    body,
+    headers,
+    timeoutMs = 10_000,
+    ...init
+  } = options;
   const combined = combineSignal(init.signal, timeoutMs);
+  const token = authenticated ? getAccessToken() : null;
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -54,12 +73,27 @@ export async function request<T>(
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         "X-Request-ID": crypto.randomUUID(),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
       signal: combined.signal,
     });
 
     if (!response.ok) {
+      if (
+        response.status === 401 &&
+        authenticated &&
+        allowAuthRefresh &&
+        refreshHandler
+      ) {
+        const refreshedToken = await refreshHandler();
+        if (refreshedToken) {
+          return request<T>(path, {
+            ...options,
+            allowAuthRefresh: false,
+          });
+        }
+      }
       const contentType = response.headers.get("content-type") ?? "";
       const problem = contentType.includes("application/problem+json")
         ? ((await response.json()) as ProblemDetails)

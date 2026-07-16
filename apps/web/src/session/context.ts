@@ -1,11 +1,16 @@
 import { createContext, useContext } from "react";
+import type { MeResponse } from "@orkestral/shared-types";
 
-export type SessionStatus = "anonymous" | "authenticated";
+export type SessionStatus =
+  "loading" | "anonymous" | "authenticated" | "company_selection";
 
 export interface SessionContextValue {
-  clearAccessToken: () => void;
+  login: (email: string, password: string) => Promise<MeResponse>;
+  logout: () => Promise<void>;
+  me: MeResponse | null;
+  refreshProfile: () => Promise<MeResponse | null>;
+  selectCompany: (companyId: string) => Promise<void>;
   getAccessToken: () => string | null;
-  setAccessToken: (token: string) => void;
   status: SessionStatus;
 }
 

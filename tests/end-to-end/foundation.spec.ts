@@ -15,3 +15,24 @@ test("front-end e health checks estão acessíveis", async ({
     .poll(async () => (await request.get("/ready")).status())
     .toBe(200);
 });
+
+test("administrador entra, acessa o tenant e encerra a sessão", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("E-mail corporativo").fill("admin@orkestral.dev.br");
+  await page.getByLabel("Senha").fill("Orkestral-Dev-2026!");
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(
+    page.getByRole("heading", { name: "Orkestral Desenvolvimento" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Empresas" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Usuários" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sair" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto("/app");
+  await expect(page).toHaveURL(/\/login$/);
+});

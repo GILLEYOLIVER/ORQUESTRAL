@@ -2,7 +2,7 @@
 
 Fundação da plataforma SaaS multiempresa de automação empresarial e agentes de inteligência artificial.
 
-Esta entrega cobre a **Fase 1**: monorepo, API, web, worker, infraestrutura local, contratos, testes e CI. Empresas, usuários, autenticação real e módulos de negócio começam na Fase 2.
+O repositório contém a fundação da **Fase 1** e a identidade multiempresa da **Fase 2**: autenticação real, sessões revogáveis, empresas, usuários, convites e recuperação de senha. Papéis e permissões configuráveis permanecem reservados à Fase 3.
 
 ## Pré-requisitos
 
@@ -55,9 +55,20 @@ docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.d
 
 Use `down -v` somente quando quiser apagar deliberadamente todos os dados locais.
 
-## Prévia autenticada
+## Acesso de desenvolvimento
 
-A autenticação não é simulada. O formulário de login valida os campos e informa que o acesso real será implementado na Fase 2.
+A inicialização local cria, de forma idempotente, uma empresa e um administrador somente quando `BOOTSTRAP_ENABLED=true`:
+
+```text
+E-mail: admin@orkestral.dev.br
+Senha:  Orkestral-Dev-2026!
+```
+
+Entre em `http://localhost/login`. Essas credenciais pertencem exclusivamente ao `.env.example`, são rejeitadas em produção e devem ser substituídas fora do ambiente local.
+
+O administrador pode cadastrar empresas em `/app/empresas`. Como proprietário da empresa atual, também pode convidar e desabilitar membros em `/app/usuarios`. Sem provedor de e-mail na Fase 2, links de convite e redefinição aparecem na própria interface apenas quando `DEVELOPMENT_EXPOSE_TOKENS=true`.
+
+## Prévia do shell
 
 Com `VITE_AUTH_PREVIEW_ENABLED=true` e o servidor Vite em modo development, o shell autenticado pode ser visto em:
 
@@ -65,7 +76,7 @@ Com `VITE_AUTH_PREVIEW_ENABLED=true` e o servidor Vite em modo development, o sh
 http://localhost:5173/preview/app
 ```
 
-O build de produção falha se essa flag estiver ativa. A rota `/app` permanece protegida e redireciona usuários anônimos.
+O build de produção falha se essa flag estiver ativa. A prévia não cria usuário nem sessão; `/app` exige autenticação real.
 
 ## Desenvolvimento sem Docker
 
@@ -110,7 +121,7 @@ O CI repete a geração e falha se os arquivos versionados estiverem desatualiza
 
 `.env.example` contém somente valores conhecidos de desenvolvimento. Copie e substitua os valores em qualquer outro ambiente. Quando `APP_ENV=production`, a API rejeita placeholders, segredos menores que 32 caracteres e valores marcados como desenvolvimento.
 
-Não versionar `.env`, certificados, tokens ou dumps. Access tokens futuros permanecerão em memória e refresh tokens serão cookies HttpOnly.
+Não versionar `.env`, certificados, tokens ou dumps. Access tokens permanecem somente em memória; refresh tokens opacos ficam em cookies HttpOnly, são rotacionados a cada renovação e podem ser revogados no servidor.
 
 ## Estrutura
 
@@ -124,4 +135,4 @@ docs           arquitetura, APIs, banco, plugins e decisões
 tests          integração, segurança e ponta a ponta
 ```
 
-Consulte [a visão de arquitetura](docs/architecture/overview.md) e o [guia de solução de problemas](docs/troubleshooting.md).
+Consulte [a visão de arquitetura](docs/architecture/overview.md), [a API de autenticação](docs/api/authentication.md) e o [guia de solução de problemas](docs/troubleshooting.md).

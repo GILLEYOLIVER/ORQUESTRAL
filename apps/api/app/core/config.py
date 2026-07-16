@@ -9,6 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 Environment = Literal["development", "testing", "staging", "production"]
 
 _PLACEHOLDER_MARKERS = ("change-me", "development-only", "example", "placeholder")
+_LOCAL_MARKERS = ("localhost", "127.0.0.1", "::1")
 
 
 class Settings(BaseSettings):
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Orkestral API"
     app_env: Environment = "development"
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
@@ -41,6 +42,23 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost", "http://localhost:5173"]
     )
     dependency_timeout_seconds: float = Field(default=2.0, gt=0, le=10)
+    jwt_issuer: str = "orkestral"
+    jwt_audience: str = "orkestral-api"
+    access_token_minutes: int = Field(default=15, ge=5, le=60)
+    refresh_token_days: int = Field(default=30, ge=1, le=90)
+    password_reset_minutes: int = Field(default=30, ge=5, le=120)
+    invitation_days: int = Field(default=7, ge=1, le=30)
+    auth_cookie_name: str = "orkestral_refresh"
+    login_max_attempts: int = Field(default=5, ge=3, le=20)
+    login_window_seconds: int = Field(default=900, ge=60, le=3_600)
+    development_expose_tokens: bool = False
+    bootstrap_enabled: bool = False
+    bootstrap_admin_name: str | None = None
+    bootstrap_admin_email: str | None = None
+    bootstrap_admin_password: str | None = None
+    bootstrap_company_name: str | None = None
+    bootstrap_company_slug: str | None = None
+    bootstrap_company_document: str | None = None
 
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
@@ -62,7 +80,33 @@ class Settings(BaseSettings):
         if unsafe:
             joined = ", ".join(sorted(unsafe))
             raise ValueError(f"Valores inseguros para produção: {joined}")
+
+        configurations = {
+            "DATABASE_URL": self.database_url,
+            "REDIS_URL": str(self.redis_url),
+            "CELERY_BROKER_URL": str(self.celery_broker_url),
+            "CELERY_RESULT_BACKEND": str(self.celery_result_backend),
+            "N8N_BASE_URL": str(self.n8n_base_url),
+            "STORAGE_ENDPOINT": str(self.storage_endpoint),
+            "CORS_ORIGINS": ",".join(self.cors_origins),
+        }
+        unsafe_configurations = [
+            name
+            for name, value in configurations.items()
+            if any(marker in value.lower() for marker in (*_PLACEHOLDER_MARKERS, *_LOCAL_MARKERS))
+        ]
+        if unsafe_configurations:
+            joined = ", ".join(sorted(unsafe_configurations))
+            raise ValueError(f"Configurações inseguras para produção: {joined}")
+        if self.development_expose_tokens:
+            raise ValueError("DEVELOPMENT_EXPOSE_TOKENS não pode ser habilitado em produção")
+        if self.bootstrap_enabled:
+            raise ValueError("BOOTSTRAP_ENABLED não pode ser habilitado em produção")
         return self
+
+    @property
+    def auth_cookie_secure(self) -> bool:
+        return self.app_env in {"staging", "production"}
 
     def readiness_is_configured(self) -> bool:
         return bool(

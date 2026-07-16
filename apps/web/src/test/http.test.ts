@@ -37,7 +37,7 @@ describe("HTTP client", () => {
     );
     await request("/health");
     expect(fetchMock).toHaveBeenCalledWith(
-      "/health",
+      "/api/health",
       expect.objectContaining({
         credentials: "include",
         headers: expect.objectContaining({

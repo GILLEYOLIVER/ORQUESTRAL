@@ -6,40 +6,44 @@ import {
   ServerCog,
 } from "lucide-react";
 import { Card } from "@orkestral/ui-components";
+import { useSession } from "../session/context";
 
 const foundationItems = [
   {
     icon: ServerCog,
-    title: "Serviços centrais",
-    description: "API, worker e gateway estruturados.",
+    title: "Sessão segura",
+    description: "Access token em memória e refresh token HttpOnly.",
   },
   {
     icon: Database,
-    title: "Persistência",
-    description: "PostgreSQL e Redis preparados.",
+    title: "Isolamento multiempresa",
+    description: "Contexto derivado do usuário e vínculo validado pela API.",
   },
   {
     icon: Layers3,
-    title: "Base modular",
-    description: "Monorepo pronto para novas fases.",
+    title: "Gestão de acesso",
+    description: "Empresas, usuários, convites e recuperação de senha.",
   },
 ];
 
 export function DashboardPage() {
+  const { me } = useSession();
   return (
     <div className="dashboard">
       <div className="dashboard__heading">
         <div>
           <span className="eyebrow">Visão geral</span>
-          <h1>Fundação da plataforma</h1>
+          <h1>
+            {me?.current_company?.trade_name ?? "Administração Orkestral"}
+          </h1>
           <p>
-            A estrutura técnica inicial está organizada para receber os módulos
-            de negócio.
+            Identidade, sessões e contexto multiempresa estão ativos para
+            receber os próximos módulos de negócio.
           </p>
         </div>
         <span className="phase-badge">
           <CheckCircle2 size={16} />
-          Fase 1
+          Fase 2
         </span>
       </div>
       <div className="foundation-grid">
@@ -53,12 +57,12 @@ export function DashboardPage() {
           </Card>
         ))}
       </div>
-      <Card className="next-step" eyebrow="Próximo marco">
+      <Card className="next-step" eyebrow="Segurança ativa">
         <div>
-          <h2>Empresas, usuários e autenticação</h2>
+          <h2>Acesso autenticado e isolado por empresa</h2>
           <p>
-            A Fase 2 adicionará sessões reais, contexto multiempresa e gestão
-            segura de acesso.
+            A empresa atual nunca é aceita livremente do front-end: ela é
+            validada pelo vínculo do usuário em cada sessão.
           </p>
         </div>
         <span aria-hidden="true" className="next-step__arrow">

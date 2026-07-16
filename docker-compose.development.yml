@@ -1,13 +1,19 @@
 services:
   postgres:
+    networks:
+      - postgres-development-access
     ports:
       - "127.0.0.1:${POSTGRES_HOST_PORT:-15432}:5432"
 
   redis:
+    networks:
+      - redis-development-access
     ports:
       - "127.0.0.1:6379:6379"
 
   object-storage:
+    networks:
+      - storage-development-access
     ports:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
@@ -15,6 +21,8 @@ services:
   n8n:
     environment:
       N8N_SECURE_COOKIE: "false"
+    networks:
+      - n8n-development-access
     ports:
       - "127.0.0.1:5678:5678"
 
@@ -25,10 +33,12 @@ services:
       [
         "sh",
         "-c",
-        "cd /workspace/apps/api && alembic -c alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+        "cd /workspace/apps/api && alembic -c alembic.ini upgrade head && python -m app.scripts.bootstrap && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
       ]
     ports:
       - "127.0.0.1:8000:8000"
+    networks:
+      - api-development-access
     volumes:
       - ./apps/api:/workspace/apps/api
       - ./apps/worker:/workspace/apps/worker
@@ -45,8 +55,9 @@ services:
     build:
       target: development
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
       VITE_AUTH_PREVIEW_ENABLED: ${VITE_AUTH_PREVIEW_ENABLED:-true}
+      VITE_DEV_API_PROXY_TARGET: http://api:8000
     ports:
       - "127.0.0.1:5173:5173"
     healthcheck:
@@ -71,3 +82,10 @@ services:
 
 volumes:
   web-node-modules:
+
+networks:
+  api-development-access:
+  n8n-development-access:
+  postgres-development-access:
+  redis-development-access:
+  storage-development-access:

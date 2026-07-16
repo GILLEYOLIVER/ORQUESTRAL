@@ -778,3 +778,146 @@ p {
     gap: 1rem;
   }
 }
+
+.route-loading {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.simple-card form,
+.stack-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.simple-card form .ui-button {
+  width: 100%;
+}
+
+.selection-card {
+  margin: 0 auto;
+  max-width: 680px;
+}
+
+.selection-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.selection-list .ui-button {
+  justify-content: space-between;
+  min-height: 3.25rem;
+  text-align: left;
+  width: 100%;
+}
+
+.management-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.management-grid {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.6fr);
+}
+
+.management-list {
+  min-width: 0;
+}
+
+.management-row {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  padding: 1rem 0;
+}
+
+.management-row:last-child {
+  border-bottom: 0;
+}
+
+.management-row > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.management-row span,
+.management-row small {
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-chip {
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.55rem;
+  text-transform: uppercase;
+}
+
+.status-chip--active,
+.status-chip--trial {
+  background: #e4f3ed;
+  border-color: #b8dacd;
+  color: #155b4f;
+}
+
+.status-chip--suspended,
+.status-chip--invited {
+  background: #fff5d8;
+  border-color: #ead799;
+  color: #73550b;
+}
+
+.status-chip--cancelled,
+.status-chip--disabled {
+  background: #fbe7e7;
+  border-color: #e7bcbc;
+  color: #8b2828;
+}
+
+.profile-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-grid .ui-card {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .management-grid,
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .management-row {
+    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .management-row > .status-chip,
+  .management-row > .ui-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

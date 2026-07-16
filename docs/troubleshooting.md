@@ -16,6 +16,25 @@ As extensões exigem um usuário PostgreSQL capaz de executar `CREATE EXTENSION`
 
 Ela só existe no servidor Vite em modo development com `VITE_AUTH_PREVIEW_ENABLED=true`. Isso é intencional; o build de produção não contém uma porta de entrada simulada.
 
+## Não consigo entrar no ambiente local
+
+Confirme que a API aplicou a migração e executou o bootstrap:
+
+```powershell
+docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.development.yml logs api
+docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.development.yml exec api python -m app.scripts.bootstrap
+```
+
+Depois use `admin@orkestral.dev.br` e a senha definida em `BOOTSTRAP_ADMIN_PASSWORD`. O bootstrap não roda em produção.
+
+## O gateway retorna 502 após reconstruir a API
+
+O Nginx pode manter o endereço interno do container anterior. Reinicie apenas o gateway:
+
+```powershell
+docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.development.yml restart nginx
+```
+
 ## O banco `n8n` não existe
 
 O script de inicialização roda somente na primeira criação do volume PostgreSQL. Em um ambiente local descartável, remova deliberadamente os volumes e suba novamente. Não faça isso em ambientes com dados importantes.
