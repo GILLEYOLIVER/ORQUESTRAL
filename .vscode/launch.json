@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Orkestral: F5 iniciar e abrir interface",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost/app",
+      "webRoot": "${workspaceFolder}/apps/web",
+      "preLaunchTask": "Orkestral: iniciar ambiente",
+      "sourceMaps": true,
+      "runtimeArgs": ["--new-window"],
+      "presentation": {
+        "group": "Orkestral",
+        "order": 1
+      }
+    },
+    {
+      "name": "Orkestral: abrir interface sem rebuild",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost/app",
+      "webRoot": "${workspaceFolder}/apps/web",
+      "preLaunchTask": "Orkestral: iniciar sem rebuild",
+      "sourceMaps": true,
+      "runtimeArgs": ["--new-window"],
+      "presentation": {
+        "group": "Orkestral",
+        "order": 2
+      }
+    }
+  ]
+}
