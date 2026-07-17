@@ -16,6 +16,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulesPage } from "./pages/ModulesPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { PluginsPage } from "./pages/PluginsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { RolesPage } from "./pages/RolesPage";
@@ -147,6 +148,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute permission="roles.view">
             <RolesPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "integracoes",
+        element: (
+          <PermissionRoute permission="plugins.view">
+            <PluginsPage />
           </PermissionRoute>
         ),
       },
