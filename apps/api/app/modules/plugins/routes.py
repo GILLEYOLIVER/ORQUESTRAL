@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, select
 
@@ -11,6 +12,7 @@ from app.core.dependencies import DatabaseSession
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
+from app.modules.plugins.adapters import PluginAdapterError, get_plugin_adapter
 from app.modules.plugins.crypto import CredentialVault, mask_credentials
 from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin
 from app.modules.plugins.schemas import (
@@ -163,8 +165,9 @@ async def test_credential(
     if row is None:
         raise HTTPException(status_code=404, detail="Credencial não encontrada.")
     credential, plugin = row
-    CredentialVault(get_settings().encryption_key).decrypt(credential.encrypted_credentials)
-    return ConnectionTestResponse(
-        success=True,
-        message=f"Credencial do plugin {plugin.name} foi descriptografada e validada localmente.",
-    )
+    values = CredentialVault(get_settings().encryption_key).decrypt(credential.encrypted_credentials)
+    try:
+        result = await get_plugin_adapter(plugin.code).test_connection(values)
+    except (PluginAdapterError, httpx.HTTPError, OSError, ValueError) as exc:
+        return ConnectionTestResponse(success=False, message=str(exc))
+    return ConnectionTestResponse(success=result.success, message=result.message)
