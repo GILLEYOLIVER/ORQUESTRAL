@@ -4,7 +4,6 @@ import {
   Database,
   KeyRound,
   Layers3,
-  PlugZap,
   ServerCog,
 } from "lucide-react";
 import { Card } from "@orkestral/ui-components";
@@ -72,9 +71,6 @@ export function DashboardPage() {
             valide a configuração diretamente pela nova página de Integrações.
           </p>
         </div>
-        <span aria-hidden="true" className="next-step__arrow">
-          <PlugZap />
-        </span>
         <span aria-hidden="true" className="next-step__arrow">
           <ArrowUpRight />
         </span>
