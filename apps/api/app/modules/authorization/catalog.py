@@ -37,6 +37,10 @@ PERMISSION_CATALOG = (
     PermissionDefinition("roles.delete", "roles", "delete", "Excluir papéis personalizados"),
     PermissionDefinition("modules.view", "modules", "view", "Visualizar módulos da empresa"),
     PermissionDefinition("modules.manage", "modules", "manage", "Ativar módulos da empresa"),
+    PermissionDefinition("plugins.view", "plugins", "view", "Visualizar plugins da empresa"),
+    PermissionDefinition(
+        "plugins.manage", "plugins", "manage", "Ativar plugins e administrar credenciais"
+    ),
     PermissionDefinition("crm.contacts.view", "crm", "contacts.view", "Visualizar contatos do CRM"),
     PermissionDefinition("crm.contacts.create", "crm", "contacts.create", "Criar contatos no CRM"),
     PermissionDefinition(
