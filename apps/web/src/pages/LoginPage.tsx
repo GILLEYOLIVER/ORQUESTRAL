@@ -15,6 +15,11 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+const devAdminLoginEnabled =
+  import.meta.env.DEV && import.meta.env.VITE_DEV_ADMIN_LOGIN_ENABLED === "true";
+const devAdminEmail = import.meta.env.VITE_DEV_ADMIN_EMAIL ?? "";
+const devAdminPassword = import.meta.env.VITE_DEV_ADMIN_PASSWORD ?? "";
+
 export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const session = useSession();
@@ -45,6 +50,14 @@ export function LoginPage() {
     }
   };
 
+  const loginAsDevelopmentAdmin = async () => {
+    if (!devAdminEmail || !devAdminPassword) {
+      setError("As credenciais locais de desenvolvimento não estão configuradas.");
+      return;
+    }
+    await submit({ email: devAdminEmail, password: devAdminPassword });
+  };
+
   return (
     <div className="auth-page">
       <section className="auth-aside">
@@ -57,9 +70,7 @@ export function LoginPage() {
           <h1>Seu centro de operações inteligentes.</h1>
           <p>Uma base segura para conectar pessoas, processos e tecnologia.</p>
         </div>
-        <span className="auth-aside__caption">
-          Acesso multiempresa · Fase 4
-        </span>
+        <span className="auth-aside__caption">Acesso multiempresa · Fase 5</span>
       </section>
       <section className="auth-content" aria-labelledby="login-title">
         <div className="auth-card">
@@ -68,18 +79,23 @@ export function LoginPage() {
           </div>
           <span className="eyebrow">Acesso seguro</span>
           <h1 id="login-title">Entrar na Orkestral</h1>
-          <p className="auth-card__lead">
-            Use suas credenciais empresariais para continuar.
-          </p>
+          <p className="auth-card__lead">Use suas credenciais empresariais para continuar.</p>
           {error ? (
             <Alert title="Não foi possível entrar" variant="error">
               {error}
             </Alert>
           ) : null}
-          <form
-            noValidate
-            onSubmit={(event) => void handleSubmit(submit)(event)}
-          >
+          {devAdminLoginEnabled ? (
+            <Button
+              className="auth-card__submit"
+              loading={isSubmitting}
+              onClick={() => void loginAsDevelopmentAdmin()}
+              type="button"
+            >
+              Acessar como administrador
+            </Button>
+          ) : null}
+          <form noValidate onSubmit={(event) => void handleSubmit(submit)(event)}>
             <TextField
               autoComplete="email"
               error={errors.email?.message}
@@ -99,11 +115,7 @@ export function LoginPage() {
               <span>Ambiente protegido</span>
               <Link to="/esqueci-minha-senha">Esqueci minha senha</Link>
             </div>
-            <Button
-              className="auth-card__submit"
-              loading={isSubmitting}
-              type="submit"
-            >
+            <Button className="auth-card__submit" loading={isSubmitting} type="submit">
               Continuar
             </Button>
           </form>
