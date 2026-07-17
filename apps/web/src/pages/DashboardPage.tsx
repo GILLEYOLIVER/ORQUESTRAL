@@ -2,7 +2,9 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Database,
+  KeyRound,
   Layers3,
+  PlugZap,
   ServerCog,
 } from "lucide-react";
 import { Card } from "@orkestral/ui-components";
@@ -24,6 +26,11 @@ const foundationItems = [
     title: "Núcleo modular",
     description: "Funcionalidades ativadas separadamente por empresa.",
   },
+  {
+    icon: KeyRound,
+    title: "Cofre de credenciais",
+    description: "Segredos de integrações armazenados de forma criptografada.",
+  },
 ];
 
 export function DashboardPage() {
@@ -37,13 +44,13 @@ export function DashboardPage() {
             {me?.current_company?.trade_name ?? "Administração Orkestral"}
           </h1>
           <p>
-            O núcleo modular está ativo e o primeiro módulo funcional de CRM
-            já pode ser habilitado para cada empresa.
+            O núcleo de plugins está ativo e as integrações podem ser habilitadas
+            separadamente para cada empresa.
           </p>
         </div>
         <span className="phase-badge">
           <CheckCircle2 size={16} />
-          Fase 4
+          Fase 5
         </span>
       </div>
       <div className="foundation-grid">
@@ -57,14 +64,17 @@ export function DashboardPage() {
           </Card>
         ))}
       </div>
-      <Card className="next-step" eyebrow="CRM disponível">
+      <Card className="next-step" eyebrow="Integrações disponíveis">
         <div>
-          <h2>Contatos comerciais isolados por empresa</h2>
+          <h2>Plugins e credenciais isolados por empresa</h2>
           <p>
-            Ative o CRM no catálogo de módulos para usar pesquisa, filtros,
-            etiquetas, paginação e gestão completa de contatos.
+            Ative Webhook, SMTP ou API REST, cadastre a credencial no cofre e
+            valide a configuração diretamente pela nova página de Integrações.
           </p>
         </div>
+        <span aria-hidden="true" className="next-step__arrow">
+          <PlugZap />
+        </span>
         <span aria-hidden="true" className="next-step__arrow">
           <ArrowUpRight />
         </span>
