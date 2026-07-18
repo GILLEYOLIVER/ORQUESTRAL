@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Orkestral API"
     app_env: Environment = "development"
-    app_version: str = "0.4.0"
+    app_version: str = "0.7.0"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     encryption_key: str = "development-only-change-me-encryption-key-32"
     n8n_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:5678")
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
+    n8n_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
+    n8n_max_attempts: int = Field(default=3, ge=1, le=5)
+    workflow_webhook_rate_limit: int = Field(default=60, ge=1, le=1_000)
+    workflow_max_payload_bytes: int = Field(default=262_144, ge=1_024, le=5_242_880)
+    ai_provider_api_key: str | None = None
+    ai_provider_base_url: AnyHttpUrl = AnyHttpUrl("https://api.openai.com/v1")
+    ai_provider_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    ai_input_cost_per_million_tokens_microusd: int = Field(default=150_000, ge=0)
+    ai_output_cost_per_million_tokens_microusd: int = Field(default=600_000, ge=0)
     storage_endpoint: AnyHttpUrl = AnyHttpUrl("http://localhost:9000")
     storage_access_key: str = "development-only"
     storage_secret_key: str = "development-only-change-me-storage-secret"  # noqa: S105

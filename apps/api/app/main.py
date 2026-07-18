@@ -12,6 +12,7 @@ from app.core.logging import configure_logging
 from app.core.middleware import ObservabilityMiddleware
 from app.core.resources import create_resources
 from app.core.schemas import ProblemDetails
+from app.modules.agents.routes import router as agents_router
 from app.modules.authentication.routes import router as authentication_router
 from app.modules.authorization.routes import router as authorization_router
 from app.modules.companies.routes import router as companies_router
@@ -19,6 +20,8 @@ from app.modules.modularity.registry import module_registry
 from app.modules.modularity.routes import router as modules_router
 from app.modules.plugins.routes import router as plugins_router
 from app.modules.users.routes import router as users_router
+from app.modules.workflows.routes import router as workflows_router
+from app.modules.workflows.routes import webhook_router as workflow_webhooks_router
 from app.routes.health import router as health_router
 
 
@@ -56,12 +59,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.add_middleware(ObservabilityMiddleware)
     install_exception_handlers(application)
     application.include_router(health_router)
+    application.include_router(agents_router)
     application.include_router(authentication_router)
     application.include_router(authorization_router)
     application.include_router(companies_router)
     application.include_router(users_router)
     application.include_router(modules_router)
     application.include_router(plugins_router)
+    application.include_router(workflows_router)
+    application.include_router(workflow_webhooks_router)
     for module in module_registry.installed():
         for module_router in module.routers:
             application.include_router(module_router)

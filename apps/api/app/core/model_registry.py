@@ -1,5 +1,13 @@
 """Importa os modelos para que o metadata do Alembic permaneça completo."""
 
+from app.modules.agents.models import (
+    Agent,
+    AgentConversation,
+    AgentMessage,
+    AgentTool,
+    AgentToolRun,
+    AgentUsageRecord,
+)
 from app.modules.authentication.models import (
     AuthAttempt,
     AuthSession,
@@ -17,8 +25,15 @@ from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
 from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin, PluginConnectionTest
 from app.modules.users.models import CompanyUser, User
+from app.modules.workflows.models import Workflow, WorkflowExecution
 
 __all__ = [
+    "Agent",
+    "AgentConversation",
+    "AgentMessage",
+    "AgentTool",
+    "AgentToolRun",
+    "AgentUsageRecord",
     "AuthAttempt",
     "AuthSession",
     "AuthorizationAuditEvent",
@@ -39,4 +54,6 @@ __all__ = [
     "Role",
     "RolePermission",
     "User",
+    "Workflow",
+    "WorkflowExecution",
 ]

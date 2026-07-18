@@ -544,7 +544,7 @@ wheels = [
 
 [[package]]
 name = "orkestral-api"
-version = "0.5.0"
+version = "0.7.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "alembic" },

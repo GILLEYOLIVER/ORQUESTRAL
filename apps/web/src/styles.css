@@ -781,6 +781,152 @@ p {
   }
 }
 
+.workflow-summary {
+  align-items: center;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-primary);
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.55rem 0.8rem;
+}
+
+.workflow-toolbar,
+.workflow-layout,
+.workflow-detail {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+}
+
+.workflow-toolbar {
+  grid-template-columns: minmax(320px, 1.2fr) minmax(260px, 0.8fr);
+}
+
+.workflow-layout {
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.4fr);
+}
+
+.workflow-import p,
+.workflow-detail p {
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.file-button {
+  cursor: pointer;
+  margin-top: 1rem;
+  width: fit-content;
+}
+
+.workflow-row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0.9rem 0.35rem;
+  text-align: left;
+  width: 100%;
+}
+
+.workflow-row:hover,
+.workflow-row--active {
+  background: var(--color-surface-subtle);
+}
+
+.workflow-row__icon {
+  align-items: center;
+  background: var(--color-primary-soft);
+  border-radius: 50%;
+  color: var(--color-primary);
+  display: flex;
+  height: 2.4rem;
+  justify-content: center;
+  width: 2.4rem;
+}
+
+.workflow-row > span:nth-child(2),
+.execution-row > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.workflow-row small,
+.execution-row small {
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workflow-webhook {
+  align-items: center;
+  background: var(--color-surface-subtle);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  gap: 0.6rem;
+  margin: 1rem 0;
+  overflow: hidden;
+  padding: 0.75rem;
+}
+
+.workflow-webhook code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.native-field textarea {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: "IBM Plex Mono", monospace;
+  padding: 0.75rem;
+  resize: vertical;
+}
+
+.workflow-detail > .ui-card > .ui-button {
+  margin-top: 1rem;
+}
+
+.execution-row {
+  align-items: start;
+  border-bottom: 1px solid var(--color-border);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 0.85rem 0;
+}
+
+.execution-row:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .workflow-toolbar,
+  .workflow-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .workflow-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .workflow-row > .status-chip {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
 .plugin-grid {
   display: grid;
   gap: 1rem;
