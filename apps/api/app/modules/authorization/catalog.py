@@ -53,6 +53,10 @@ PERMISSION_CATALOG = (
     PermissionDefinition("workflows.execute", "workflows", "execute", "Executar workflows"),
     PermissionDefinition("workflows.configure", "workflows", "configure", "Configurar workflows"),
     PermissionDefinition("integrations.manage", "integrations", "manage", "Gerenciar integrações"),
+    PermissionDefinition("plugins.view", "plugins", "view", "Visualizar plugins da empresa"),
+    PermissionDefinition(
+        "plugins.manage", "plugins", "manage", "Ativar plugins e administrar credenciais"
+    ),
     PermissionDefinition("billing.view", "billing", "view", "Visualizar faturamento"),
     PermissionDefinition("billing.manage", "billing", "manage", "Gerenciar faturamento"),
 )

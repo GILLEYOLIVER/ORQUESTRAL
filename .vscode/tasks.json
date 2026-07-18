@@ -4,17 +4,24 @@
     {
       "label": "Orkestral: iniciar ambiente",
       "type": "shell",
-      "command": "powershell.exe",
+      "command": "bash",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}\\scripts\\dev.ps1",
+        "${workspaceFolder}/scripts/dev.sh",
         "start"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\dev.ps1",
+          "start"
+        ]
       },
       "problemMatcher": [],
       "presentation": {
@@ -27,52 +34,74 @@
     {
       "label": "Orkestral: iniciar sem rebuild",
       "type": "shell",
-      "command": "powershell.exe",
+      "command": "bash",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}\\scripts\\dev.ps1",
+        "${workspaceFolder}/scripts/dev.sh",
         "start",
-        "-NoBuild"
+        "--no-build"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\dev.ps1",
+          "start",
+          "-NoBuild"
+        ]
       },
       "problemMatcher": []
     },
     {
       "label": "Orkestral: encerrar ambiente",
       "type": "shell",
-      "command": "powershell.exe",
+      "command": "bash",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}\\scripts\\dev.ps1",
+        "${workspaceFolder}/scripts/dev.sh",
         "stop"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\dev.ps1",
+          "stop"
+        ]
       },
       "problemMatcher": []
     },
     {
       "label": "Orkestral: mostrar status",
       "type": "shell",
-      "command": "powershell.exe",
+      "command": "bash",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}\\scripts\\dev.ps1",
+        "${workspaceFolder}/scripts/dev.sh",
         "status"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\dev.ps1",
+          "status"
+        ]
       },
       "problemMatcher": []
     },

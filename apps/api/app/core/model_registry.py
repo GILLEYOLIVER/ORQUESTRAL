@@ -15,7 +15,7 @@ from app.modules.authorization.models import (
 from app.modules.companies.models import Company
 from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
-from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin
+from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin, PluginConnectionTest
 from app.modules.users.models import CompanyUser, User
 
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     "PasswordResetToken",
     "Permission",
     "Plugin",
+    "PluginConnectionTest",
     "Role",
     "RolePermission",
     "User",

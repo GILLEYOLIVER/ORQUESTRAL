@@ -15,6 +15,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulesPage } from "./pages/ModulesPage";
+import { PluginsPage } from "./pages/PluginsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
@@ -155,6 +156,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute permission="modules.view">
             <ModulesPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "integracoes",
+        element: (
+          <PermissionRoute permission="plugins.view">
+            <PluginsPage />
           </PermissionRoute>
         ),
       },
