@@ -16,7 +16,9 @@ from app.modules.agents.providers.factory import create_language_model_provider
 from app.modules.agents.schemas import AgentChatRequest, AgentChatResponse, AgentConversationCreate, AgentConversationResponse, AgentCreate, AgentMessageResponse, AgentProviderStatusResponse, AgentResponse, AgentToolCatalogResponse, AgentToolDecision, AgentToolResponse, AgentToolRunResponse, AgentToolsUpdate, AgentUpdate, AgentUsageResponse
 from app.modules.agents.tools import BUILTIN_TOOLS, TOOL_CATALOG, ToolAccessError, ToolArgumentsError, ToolExecutionError, assert_tool_access, execute_builtin_tool, validate_tool_arguments
 from app.modules.authorization.service import record_authorization_audit
+from app.modules.knowledge.models import KnowledgeBase
 from app.modules.workflows.definition import as_summary_object
+from app.modules.knowledge.processing import search_knowledge
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 CanViewAgents = Annotated[Principal, Depends(require_permission("agents.view"))]
@@ -161,6 +163,19 @@ async def get_agent(agent_id: UUID, principal: CanViewAgents, database: Database
 async def update_agent(agent_id: UUID, payload: AgentUpdate, principal: CanConfigureAgents, database: DatabaseSession) -> AgentResponse:
     context = get_request_context(principal)
     agent = await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    if "knowledge_base_id" in payload.model_fields_set and payload.knowledge_base_id is not None:
+        knowledge_base = await database.scalar(
+            select(KnowledgeBase).where(
+                KnowledgeBase.id == payload.knowledge_base_id,
+                KnowledgeBase.company_id == context.company_id,
+                KnowledgeBase.status == "active",
+            )
+        )
+        if knowledge_base is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Base de conhecimento ativa nao encontrada para esta empresa",
+            )
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(agent, field, value)
     agent.updated_at = utc_now()
@@ -256,7 +271,9 @@ async def chat_with_agent(agent_id: UUID, payload: AgentChatRequest, principal: 
     history.reverse()
     tools = (await database.scalars(select(AgentTool).where(AgentTool.agent_id == agent.id, AgentTool.company_id == context.company_id, AgentTool.enabled.is_(True)))).all()
     provider_tools = [ToolDefinition(key=tool.tool_key, name=tool.name, description=tool.description, input_schema=tool.input_schema) for tool in tools]
-    provider_messages = [ModelMessage(role="system", content=agent.instructions)] + [ModelMessage(role=message.role, content=message.content) for message in history]
+    sources = await search_knowledge(database, company_id=context.company_id, base_id=agent.knowledge_base_id, query=payload.message) if agent.knowledge_base_id else []
+    knowledge_context = "\n\n".join(f"[Fonte {item['document_name']} trecho {item['chunk_index']}] {item['content']}" for item in sources)
+    provider_messages = [ModelMessage(role="system", content=agent.instructions)] + ([ModelMessage(role="system", content="Use apenas estas fontes internas autorizadas:\n"+knowledge_context)] if knowledge_context else []) + [ModelMessage(role=message.role, content=message.content) for message in history]
     started = perf_counter()
     try:
         provider = create_language_model_provider(agent.provider, settings)
@@ -303,7 +320,8 @@ async def chat_with_agent(agent_id: UUID, payload: AgentChatRequest, principal: 
             result_messages.append(f"A ferramenta {tool.name} falhou: {exc}")
         run.finished_at = utc_now()
     duration_ms = max(0, round((perf_counter() - started) * 1_000))
-    assistant_message = AgentMessage(company_id=context.company_id, conversation_id=conversation.id, agent_id=agent.id, role="assistant", content="\n".join(result_messages) or result.content or "O agente concluiu sem conteúdo.", tool_call={"calls": [{"tool_key": call.key, "state": result_status} for call in result.tool_calls]}, provider=agent.provider, model=agent.model, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, total_tokens=usage.total_tokens, cost_microunits=usage.cost_microunits, duration_ms=duration_ms)
+    source_note = "\n\nFontes internas: " + ", ".join(f"{x['document_name']} (trecho {x['chunk_index']})" for x in sources) if sources else ""
+    assistant_message = AgentMessage(company_id=context.company_id, conversation_id=conversation.id, agent_id=agent.id, role="assistant", content=("\n".join(result_messages) or result.content or "O agente concluiu sem conteúdo.")+source_note, tool_call={"calls": [{"tool_key": call.key, "state": result_status} for call in result.tool_calls],"sources":sources}, provider=agent.provider, model=agent.model, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, total_tokens=usage.total_tokens, cost_microunits=usage.cost_microunits, duration_ms=duration_ms)
     database.add(assistant_message)
     await database.flush()
     for run in created_runs:

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Orkestral API"
     app_env: Environment = "development"
-    app_version: str = "0.7.0"
+    app_version: str = "0.8.0"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     ai_provider_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     ai_input_cost_per_million_tokens_microusd: int = Field(default=150_000, ge=0)
     ai_output_cost_per_million_tokens_microusd: int = Field(default=600_000, ge=0)
+    knowledge_max_file_bytes: int = Field(default=20_971_520, ge=1_048_576, le=104_857_600)
+    knowledge_web_allowed_domains: list[str] = Field(default_factory=list)
     storage_endpoint: AnyHttpUrl = AnyHttpUrl("http://localhost:9000")
     storage_access_key: str = "development-only"
     storage_secret_key: str = "development-only-change-me-storage-secret"  # noqa: S105
