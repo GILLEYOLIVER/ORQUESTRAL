@@ -24,6 +24,7 @@ from app.modules.companies.models import Company
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
 from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
+from app.modules.metrics.models import MetricAggregationRun, MetricDailySummary
 from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin, PluginConnectionTest
 from app.modules.users.models import CompanyUser, User
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
@@ -51,6 +52,8 @@ __all__ = [
     "KnowledgeChunk",
     "KnowledgeDocument",
     "ModuleCatalog",
+    "MetricAggregationRun",
+    "MetricDailySummary",
     "PasswordResetToken",
     "Permission",
     "Plugin",
