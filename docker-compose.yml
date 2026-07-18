@@ -139,7 +139,7 @@ services:
     restart: unless-stopped
     env_file: .env
     command:
-      ["celery", "-A", "worker.main:celery_app", "worker", "--loglevel=INFO"]
+      ["celery", "-A", "worker.main:celery_app", "worker", "--beat", "--loglevel=INFO"]
     networks: [backend, storage]
     depends_on:
       postgres:

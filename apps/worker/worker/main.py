@@ -21,4 +21,10 @@ celery_app.conf.update(
     enable_utc=True,
     broker_connection_retry_on_startup=True,
     task_track_started=True,
+    beat_schedule={
+        "aggregate-metrics-every-five-minutes": {
+            "task": "orkestral.metrics.aggregate",
+            "schedule": 300.0,
+        }
+    },
 )
