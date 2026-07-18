@@ -10,6 +10,8 @@ dependencies = [
   "cryptography==45.0.7",
   "email-validator==2.3.0",
   "fastapi==0.139.1",
+  "httpx==0.28.1",
+  "orkestral-plugin-sdk==0.1.0",
   "pydantic-settings==2.14.2",
   "pyjwt==2.10.1",
   "redis==6.4.0",
@@ -20,12 +22,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx==0.28.1",
   "mypy==2.3.0",
   "pytest==9.1.1",
   "pytest-asyncio==1.4.0",
   "ruff==0.15.21",
 ]
+
+[tool.uv.sources]
+orkestral-plugin-sdk = { workspace = true }
 
 [build-system]
 requires = ["hatchling==1.29.0"]

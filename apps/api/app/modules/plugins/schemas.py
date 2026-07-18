@@ -17,6 +17,7 @@ class PluginResponse(BaseModel):
     catalog_status: str
     company_status: str
     configuration: dict[str, Any]
+    manifest: dict[str, Any]
 
 
 class CompanyPluginUpdate(BaseModel):
@@ -42,5 +43,23 @@ class CredentialResponse(BaseModel):
 
 
 class ConnectionTestResponse(BaseModel):
+    test_id: UUID
     success: bool
     message: str
+    duration_ms: int
+    tested_at: datetime
+
+
+class CredentialRotationResponse(BaseModel):
+    rotated: int
+    failed: int
+
+
+class ConnectionTestHistoryResponse(BaseModel):
+    id: UUID
+    plugin_id: UUID
+    credential_id: UUID | None
+    success: bool
+    message: str
+    duration_ms: int
+    created_at: datetime

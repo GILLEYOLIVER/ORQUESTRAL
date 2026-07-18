@@ -66,13 +66,12 @@ export function AuthenticatedLayout({
             <Bot size={18} />
             Agentes
           </span>
-          <span
-            aria-disabled="true"
-            className="sidebar__link sidebar__link--disabled"
-          >
-            <Boxes size={18} />
-            Integrações
-          </span>
+          {!preview && session.me?.permissions.includes("plugins.view") ? (
+            <NavLink className="sidebar__link" to="/app/integracoes">
+              <Boxes size={18} />
+              Integrações
+            </NavLink>
+          ) : null}
           {!preview && session.me?.permissions.includes("modules.view") ? (
             <NavLink className="sidebar__link" to="/app/modulos">
               <PackageOpen size={18} />
@@ -113,7 +112,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">Fase 4 · Núcleo modular</div>
+        <div className="sidebar__footer">Fase 5 · Sistema de plugins</div>
       </aside>
       <div className="app-main">
         {preview ? (

@@ -202,7 +202,8 @@ Crie uma configuração compartilhada de desenvolvimento:
 ```text
 .vscode/launch.json
 .vscode/tasks.json
-scripts/dev.ps1
+scripts/dev.ps1 (Windows)
+scripts/dev.sh (macOS/Linux)
 docs/development-f5.md
 ```
 
@@ -217,7 +218,7 @@ Ao pressionar `F5`, o VS Code deverá:
 
 Disponibilize tarefas para iniciar sem rebuild, parar, reiniciar, consultar status e acompanhar logs.
 
-O script deverá verificar Docker e Docker Desktop, usar caminhos relativos, funcionar no PowerShell e mostrar logs claros em caso de falha.
+O script deverá verificar Docker e Docker Desktop, usar caminhos relativos, funcionar no PowerShell (Windows) e Bash (macOS/Linux), e mostrar logs claros em caso de falha.
 
 ### Acesso administrativo local
 

@@ -169,7 +169,7 @@ services:
     restart: unless-stopped
     networks: [edge]
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/"]
       interval: 10s
       timeout: 3s
       retries: 10

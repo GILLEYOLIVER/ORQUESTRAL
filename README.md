@@ -19,6 +19,8 @@ Antes de iniciar, verifique automaticamente todas as ferramentas, versões, depe
 .\check-environment.ps1
 ```
 
+No macOS/Linux, pressione `F5` no VS Code ou execute `scripts/dev.sh start` depois de instalar e iniciar o Docker.
+
 Para obter saída estruturada:
 
 ```powershell

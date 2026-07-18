@@ -343,7 +343,8 @@ Arquivos obrigatórios:
 ```text
 .vscode/launch.json
 .vscode/tasks.json
-scripts/dev.ps1
+scripts/dev.ps1 (Windows)
+scripts/dev.sh (macOS/Linux)
 ```
 
 Ao pressionar `F5`, o VS Code deverá:
@@ -370,7 +371,7 @@ Critérios adicionais de conclusão:
 
 * pressionar `F5` inicia o ambiente a partir da raiz do monorepositório;
 * a interface é aberta automaticamente após o health check;
-* o fluxo funciona no Windows PowerShell;
+* o fluxo funciona no Windows PowerShell e no Bash (macOS/Linux);
 * a configuração não expõe segredos;
 * o acesso administrativo rápido fica indisponível fora do desenvolvimento local.
 
