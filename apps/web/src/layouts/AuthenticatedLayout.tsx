@@ -1,5 +1,6 @@
 import {
   Bell,
+  BookOpenText,
   Bot,
   Boxes,
   Building2,
@@ -64,6 +65,12 @@ export function AuthenticatedLayout({
               Agentes
             </NavLink>
           ) : null}
+          {!preview && session.me?.permissions.includes("knowledge.view") ? (
+            <NavLink className="sidebar__link" to="/app/conhecimento">
+              <BookOpenText size={18} />
+              Conhecimento
+            </NavLink>
+          ) : null}
           {!preview && session.me?.permissions.includes("plugins.view") ? (
             <NavLink className="sidebar__link" to="/app/integracoes">
               <Boxes size={18} />
@@ -110,7 +117,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">Fase 7 · Agentes com controle humano</div>
+        <div className="sidebar__footer">Fase 8 · Conhecimento autorizado</div>
       </aside>
       <div className="app-main">
         {preview ? (

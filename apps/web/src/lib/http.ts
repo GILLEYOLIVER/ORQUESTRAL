@@ -63,15 +63,23 @@ export async function request<T>(
   } = options;
   const combined = combineSignal(init.signal, timeoutMs);
   const token = authenticated ? getAccessToken() : null;
+  const isFormData = body instanceof FormData;
 
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined
+          ? undefined
+          : isFormData
+            ? body
+            : JSON.stringify(body),
       credentials: "include",
       headers: {
         Accept: "application/json",
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(body === undefined || isFormData
+          ? {}
+          : { "Content-Type": "application/json" }),
         "X-Request-ID": crypto.randomUUID(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,

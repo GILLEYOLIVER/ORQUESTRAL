@@ -21,6 +21,7 @@ from app.modules.authorization.models import (
     RolePermission,
 )
 from app.modules.companies.models import Company
+from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
 from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
 from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin, PluginConnectionTest
@@ -46,6 +47,9 @@ __all__ = [
     "CompanyPlugin",
     "CompanyUser",
     "IntegrationCredential",
+    "KnowledgeBase",
+    "KnowledgeChunk",
+    "KnowledgeDocument",
     "ModuleCatalog",
     "PasswordResetToken",
     "Permission",

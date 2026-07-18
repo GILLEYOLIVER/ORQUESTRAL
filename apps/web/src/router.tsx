@@ -14,6 +14,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ErrorPage } from "./pages/ErrorPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LandingPage } from "./pages/LandingPage";
+import { KnowledgePage } from "./pages/KnowledgePage";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulesPage } from "./pages/ModulesPage";
 import { PluginsPage } from "./pages/PluginsPage";
@@ -174,6 +175,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute permission="agents.view">
             <AgentsPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "conhecimento",
+        element: (
+          <PermissionRoute permission="knowledge.view">
+            <KnowledgePage />
           </PermissionRoute>
         ),
       },

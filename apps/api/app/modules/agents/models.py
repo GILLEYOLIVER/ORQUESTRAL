@@ -32,7 +32,7 @@ class Agent(Base):
     max_input_tokens: Mapped[int] = mapped_column(Integer, default=4096, server_default="4096")
     max_output_tokens: Mapped[int] = mapped_column(Integer, default=1024, server_default="1024")
     memory_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
-    knowledge_base_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    knowledge_base_id: Mapped[UUID | None] = mapped_column(ForeignKey("knowledge_bases.id", ondelete="SET NULL"), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="active", server_default="active", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())

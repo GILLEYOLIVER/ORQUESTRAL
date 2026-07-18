@@ -49,6 +49,8 @@ PERMISSION_CATALOG = (
     PermissionDefinition("agents.create", "agents", "create", "Criar agentes"),
     PermissionDefinition("agents.execute", "agents", "execute", "Executar agentes"),
     PermissionDefinition("agents.configure", "agents", "configure", "Configurar agentes"),
+    PermissionDefinition("knowledge.view", "knowledge", "view", "Visualizar bases de conhecimento"),
+    PermissionDefinition("knowledge.manage", "knowledge", "manage", "Gerenciar bases e documentos"),
     PermissionDefinition("workflows.view", "workflows", "view", "Visualizar workflows"),
     PermissionDefinition("workflows.execute", "workflows", "execute", "Executar workflows"),
     PermissionDefinition("workflows.configure", "workflows", "configure", "Configurar workflows"),
