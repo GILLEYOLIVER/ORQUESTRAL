@@ -14,7 +14,14 @@ export type InvitationResponse = components["schemas"]["InvitationResponse"];
 export type MessageResponse = components["schemas"]["MessageResponse"];
 export type PermissionResponse = components["schemas"]["PermissionResponse"];
 export type RoleResponse = components["schemas"]["RoleResponse"];
-export type AuditEventResponse = components["schemas"]["AuditEventResponse"];
+export type AuditEventResponse =
+  components["schemas"]["app__modules__authorization__schemas__AuditEventResponse"];
+export type SecurityAuditEventResponse =
+  components["schemas"]["app__modules__audit__schemas__AuditEventResponse"];
+export type AuditEventPage = components["schemas"]["AuditEventPage"];
+export type PurgeAuditEventsRequest = components["schemas"]["PurgeAuditEventsRequest"];
+export type PurgeAuditEventsResponse = components["schemas"]["PurgeAuditEventsResponse"];
+export type AuthSessionResponse = components["schemas"]["AuthSessionResponse"];
 export type ModuleResponse = components["schemas"]["ModuleResponse"];
 export type CRMContactPage = components["schemas"]["CRMContactPage"];
 export type CRMContactResponse = components["schemas"]["CRMContactResponse"];

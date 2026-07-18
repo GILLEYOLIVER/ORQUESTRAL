@@ -239,6 +239,34 @@ class AuthenticationService:
                 auth_session.revoked_at = utc_now()
                 await self.database.commit()
 
+    async def active_sessions(self, user_id: UUID) -> list[AuthSession]:
+        now = utc_now()
+        return list(
+            await self.database.scalars(
+                select(AuthSession)
+                .where(
+                    AuthSession.user_id == user_id,
+                    AuthSession.revoked_at.is_(None),
+                    AuthSession.expires_at > now,
+                )
+                .order_by(AuthSession.last_used_at.desc())
+            )
+        )
+
+    async def revoke_session(self, *, user_id: UUID, session_id: UUID) -> bool:
+        auth_session = await self.database.scalar(
+            select(AuthSession).where(
+                AuthSession.id == session_id,
+                AuthSession.user_id == user_id,
+                AuthSession.revoked_at.is_(None),
+            )
+        )
+        if auth_session is None:
+            return False
+        auth_session.revoked_at = utc_now()
+        await self.database.commit()
+        return True
+
     async def select_company(
         self, *, auth_session: AuthSession, user: User, company_id: UUID
     ) -> IssuedTokens:

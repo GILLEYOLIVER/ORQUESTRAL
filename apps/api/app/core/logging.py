@@ -6,6 +6,8 @@ from typing import Any, cast
 
 import structlog
 
+from app.core.redaction import redact_structlog_event
+
 
 def configure_logging(level: str) -> None:
     logging.basicConfig(format="%(message)s", stream=sys.stdout, level=level.upper(), force=True)
@@ -15,6 +17,7 @@ def configure_logging(level: str) -> None:
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             structlog.processors.StackInfoRenderer(),
+            redact_structlog_event,
             structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(
