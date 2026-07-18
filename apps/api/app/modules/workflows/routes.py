@@ -16,20 +16,28 @@ from app.modules.authorization.service import record_authorization_audit
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 from app.modules.workflows.definition import (
     WorkflowDefinitionError,
+    analyze_definition,
     as_summary_object,
+    block_catalog,
+    compare_definitions,
     export_definition,
     prepare_definition,
 )
-from app.modules.workflows.models import Workflow, WorkflowExecution
+from app.modules.workflows.compiler import compile_definition
+from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 from app.modules.workflows.schemas import (
     WorkflowCreate,
+    WorkflowComparisonResponse,
     WorkflowCreatedResponse,
+    WorkflowDefinitionRequest,
     WorkflowEngineStatusResponse,
     WorkflowExecuteRequest,
     WorkflowExecutionResponse,
     WorkflowExportResponse,
     WorkflowResponse,
     WorkflowUpdate,
+    WorkflowValidationResponse,
+    WorkflowVersionResponse,
     WorkflowWebhookSecretResponse,
 )
 from app.modules.workflows.security import (
@@ -53,6 +61,7 @@ def _workflow_response(workflow: Workflow) -> WorkflowResponse:
         id=workflow.id,
         name=workflow.name,
         description=workflow.description,
+        definition=workflow.definition,
         version=workflow.version,
         status=workflow.status,
         sync_status=workflow.sync_status,
@@ -66,6 +75,33 @@ def _workflow_response(workflow: Workflow) -> WorkflowResponse:
 
 def _execution_response(execution: WorkflowExecution) -> WorkflowExecutionResponse:
     return WorkflowExecutionResponse.model_validate(execution, from_attributes=True)
+
+
+def _version_record(
+    workflow: Workflow,
+    user_id: UUID | None,
+    change_summary: str | None,
+) -> WorkflowVersion:
+    return WorkflowVersion(
+        company_id=workflow.company_id,
+        workflow_id=workflow.id,
+        created_by_user_id=user_id,
+        version=workflow.version,
+        name=workflow.name,
+        description=workflow.description,
+        definition=workflow.definition,
+        change_summary=change_summary,
+    )
+
+
+def _assert_publishable(definition: dict[str, Any]) -> None:
+    issues = analyze_definition(definition)
+    errors = [issue for issue in issues if issue["severity"] == "error"]
+    if errors:
+        raise HTTPException(
+            status_code=422,
+            detail={"message": "Corrija a definicao antes de publicar.", "issues": errors},
+        )
 
 
 async def _get_workflow(
@@ -85,17 +121,21 @@ async def _get_workflow(
 async def _sync_workflow(workflow: Workflow, settings: Settings) -> None:
     client = N8nClient(settings)
     try:
+        compiled = compile_definition(
+            workflow.definition,
+            internal_webhook_path=workflow.internal_webhook_path,
+        )
         if workflow.n8n_workflow_id:
             result = await client.update_workflow(
-                workflow.n8n_workflow_id, workflow.name, workflow.definition
+                workflow.n8n_workflow_id, workflow.name, compiled
             )
         else:
-            result = await client.create_workflow(workflow.name, workflow.definition)
+            result = await client.create_workflow(workflow.name, compiled)
             workflow.n8n_workflow_id = str(result.get("id") or "") or None
         workflow.n8n_version_id = str(result.get("versionId") or "") or None
         workflow.sync_status = "synced"
         workflow.last_error = None
-    except N8nClientError as exc:
+    except (N8nClientError, WorkflowDefinitionError) as exc:
         workflow.sync_status = "error"
         workflow.last_error = str(exc)
 
@@ -127,7 +167,7 @@ async def _create_workflow_record(
     )
     database.add(workflow)
     await database.flush()
-    await _sync_workflow(workflow, settings)
+    database.add(_version_record(workflow, context.user_id, "Versao inicial"))
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -216,6 +256,12 @@ async def engine_status(
     )
 
 
+@router.get("/blocks/catalog", response_model=list[dict[str, Any]])
+async def list_workflow_blocks(principal: CanViewWorkflows) -> list[dict[str, Any]]:
+    del principal
+    return block_catalog()
+
+
 @router.get("", response_model=list[WorkflowResponse])
 async def list_workflows(
     principal: CanViewWorkflows, database: DatabaseSession
@@ -295,8 +341,17 @@ async def update_workflow(
         except WorkflowDefinitionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
     workflow.version += 1
+    workflow.status = "draft"
+    workflow.sync_status = "pending"
+    workflow.last_error = None
     workflow.updated_at = utc_now()
-    await _sync_workflow(workflow, settings)
+    database.add(
+        _version_record(
+            workflow,
+            context.user_id,
+            payload.change_summary or "Rascunho atualizado",
+        )
+    )
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -311,6 +366,23 @@ async def update_workflow(
     return _workflow_response(workflow)
 
 
+@router.post("/{workflow_id}/validate", response_model=WorkflowValidationResponse)
+async def validate_workflow_draft(
+    workflow_id: UUID,
+    payload: WorkflowDefinitionRequest,
+    principal: CanConfigureWorkflows,
+    database: DatabaseSession,
+) -> WorkflowValidationResponse:
+    context = get_request_context(principal)
+    workflow = await _get_workflow(database, context.company_id, workflow_id)
+    definition = payload.definition if payload.definition is not None else workflow.definition
+    issues = analyze_definition(definition)
+    return WorkflowValidationResponse(
+        valid=not any(issue["severity"] == "error" for issue in issues),
+        issues=issues,
+    )
+
+
 @router.post("/{workflow_id}/sync", response_model=WorkflowResponse)
 async def sync_workflow(
     workflow_id: UUID,
@@ -320,10 +392,21 @@ async def sync_workflow(
 ) -> WorkflowResponse:
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
+    _assert_publishable(workflow.definition)
     await _sync_workflow(workflow, settings)
     await database.commit()
     await database.refresh(workflow)
     return _workflow_response(workflow)
+
+
+@router.post("/{workflow_id}/publish", response_model=WorkflowResponse)
+async def publish_workflow(
+    workflow_id: UUID,
+    principal: CanConfigureWorkflows,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> WorkflowResponse:
+    return await activate_workflow(workflow_id, principal, database, settings)
 
 
 @router.post("/{workflow_id}/activate", response_model=WorkflowResponse)
@@ -453,6 +536,103 @@ async def list_workflow_executions(
         )
     )
     return [_execution_response(execution) for execution in executions]
+
+
+@router.get("/{workflow_id}/versions", response_model=list[WorkflowVersionResponse])
+async def list_workflow_versions(
+    workflow_id: UUID,
+    principal: CanViewWorkflows,
+    database: DatabaseSession,
+) -> list[WorkflowVersionResponse]:
+    context = get_request_context(principal)
+    await _get_workflow(database, context.company_id, workflow_id)
+    versions = list(
+        await database.scalars(
+            select(WorkflowVersion)
+            .where(
+                WorkflowVersion.company_id == context.company_id,
+                WorkflowVersion.workflow_id == workflow_id,
+            )
+            .order_by(WorkflowVersion.version.desc())
+        )
+    )
+    return [WorkflowVersionResponse.model_validate(item, from_attributes=True) for item in versions]
+
+
+@router.get("/{workflow_id}/versions/compare", response_model=WorkflowComparisonResponse)
+async def compare_workflow_versions(
+    workflow_id: UUID,
+    from_version: int,
+    to_version: int,
+    principal: CanViewWorkflows,
+    database: DatabaseSession,
+) -> WorkflowComparisonResponse:
+    context = get_request_context(principal)
+    await _get_workflow(database, context.company_id, workflow_id)
+    rows = list(
+        await database.scalars(
+            select(WorkflowVersion).where(
+                WorkflowVersion.company_id == context.company_id,
+                WorkflowVersion.workflow_id == workflow_id,
+                WorkflowVersion.version.in_([from_version, to_version]),
+            )
+        )
+    )
+    by_version = {row.version: row for row in rows}
+    if from_version not in by_version or to_version not in by_version:
+        raise HTTPException(status_code=404, detail="Versao nao encontrada.")
+    comparison = compare_definitions(
+        by_version[from_version].definition,
+        by_version[to_version].definition,
+    )
+    return WorkflowComparisonResponse(
+        from_version=from_version,
+        to_version=to_version,
+        **comparison,
+    )
+
+
+@router.post("/{workflow_id}/versions/{version}/restore", response_model=WorkflowResponse)
+async def restore_workflow_version(
+    workflow_id: UUID,
+    version: int,
+    principal: CanConfigureWorkflows,
+    database: DatabaseSession,
+) -> WorkflowResponse:
+    context = get_request_context(principal)
+    workflow = await _get_workflow(database, context.company_id, workflow_id)
+    snapshot = await database.scalar(
+        select(WorkflowVersion).where(
+            WorkflowVersion.company_id == context.company_id,
+            WorkflowVersion.workflow_id == workflow_id,
+            WorkflowVersion.version == version,
+        )
+    )
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail="Versao nao encontrada.")
+    workflow.name = snapshot.name
+    workflow.description = snapshot.description
+    workflow.definition = prepare_definition(snapshot.definition, workflow.internal_webhook_path)
+    workflow.version += 1
+    workflow.status = "draft"
+    workflow.sync_status = "pending"
+    workflow.last_error = None
+    workflow.updated_at = utc_now()
+    database.add(
+        _version_record(workflow, context.user_id, f"Restaurada da versao {version}")
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="workflow.version.restored",
+        target_type="workflow",
+        target_id=workflow.id,
+        details={"source_version": version, "new_version": workflow.version},
+    )
+    await database.commit()
+    await database.refresh(workflow)
+    return _workflow_response(workflow)
 
 
 @router.get("/{workflow_id}/export", response_model=WorkflowExportResponse)

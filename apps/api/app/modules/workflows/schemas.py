@@ -31,6 +31,7 @@ class WorkflowUpdate(StrictSchema):
     name: str | None = Field(default=None, min_length=2, max_length=160)
     description: str | None = Field(default=None, max_length=500)
     definition: dict[str, Any] | None = None
+    change_summary: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def require_change(self) -> WorkflowUpdate:
@@ -43,6 +44,7 @@ class WorkflowResponse(StrictSchema):
     id: UUID
     name: str
     description: str | None
+    definition: dict[str, Any]
     version: int
     status: WorkflowStatus
     sync_status: WorkflowSyncStatus
@@ -92,3 +94,38 @@ class WorkflowEngineStatusResponse(StrictSchema):
     configured: bool
     available: bool
     message: str
+
+
+class WorkflowDefinitionRequest(StrictSchema):
+    definition: dict[str, Any] | None = None
+
+
+class WorkflowValidationIssue(StrictSchema):
+    severity: Literal["error", "warning"]
+    code: str
+    message: str
+    node_id: str | None = None
+
+
+class WorkflowValidationResponse(StrictSchema):
+    valid: bool
+    issues: list[WorkflowValidationIssue]
+
+
+class WorkflowVersionResponse(StrictSchema):
+    id: UUID
+    version: int
+    name: str
+    description: str | None
+    definition: dict[str, Any]
+    change_summary: str | None
+    created_at: datetime
+
+
+class WorkflowComparisonResponse(StrictSchema):
+    from_version: int
+    to_version: int
+    added_nodes: list[str]
+    removed_nodes: list[str]
+    changed_nodes: list[str]
+    connections_changed: bool

@@ -117,7 +117,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">Fase 8 · Conhecimento autorizado</div>
+        <div className="sidebar__footer">Fase 9 · Automacoes visuais</div>
       </aside>
       <div className="app-main">
         {preview ? (

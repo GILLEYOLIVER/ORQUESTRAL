@@ -2,10 +2,33 @@ import { useQuery } from "@tanstack/react-query";
 import { request } from "../lib/http";
 import { useSession } from "../session/context";
 
+export interface WorkflowNodeDefinition {
+  id: string;
+  type: string;
+  label: string;
+  position: { x: number; y: number };
+  config: Record<string, unknown>;
+}
+
+export interface WorkflowConnectionDefinition {
+  id: string;
+  source: string;
+  target: string;
+  source_handle?: string;
+}
+
+export interface WorkflowDefinition {
+  nodes: WorkflowNodeDefinition[];
+  connections: WorkflowConnectionDefinition[];
+  variables: Record<string, unknown>;
+  version: 1;
+}
+
 export interface WorkflowResponse {
   id: string;
   name: string;
   description: string | null;
+  definition: WorkflowDefinition;
   version: number;
   status: "draft" | "active" | "inactive" | "error";
   sync_status: "pending" | "synced" | "error";
@@ -38,6 +61,46 @@ export interface WorkflowEngineStatus {
   configured: boolean;
   available: boolean;
   message: string;
+}
+
+export interface WorkflowBlock {
+  type: string;
+  category: string;
+  label: string;
+  description: string;
+  required_fields: string[];
+  defaults: Record<string, unknown>;
+}
+
+export interface WorkflowValidationIssue {
+  severity: "error" | "warning";
+  code: string;
+  message: string;
+  node_id: string | null;
+}
+
+export interface WorkflowValidationResponse {
+  valid: boolean;
+  issues: WorkflowValidationIssue[];
+}
+
+export interface WorkflowVersion {
+  id: string;
+  version: number;
+  name: string;
+  description: string | null;
+  definition: WorkflowDefinition;
+  change_summary: string | null;
+  created_at: string;
+}
+
+export interface WorkflowComparison {
+  from_version: number;
+  to_version: number;
+  added_nodes: string[];
+  removed_nodes: string[];
+  changed_nodes: string[];
+  connections_changed: boolean;
 }
 
 export function useWorkflows(enabled = true) {

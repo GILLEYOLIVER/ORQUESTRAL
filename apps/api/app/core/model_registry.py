@@ -26,7 +26,7 @@ from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
 from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin, PluginConnectionTest
 from app.modules.users.models import CompanyUser, User
-from app.modules.workflows.models import Workflow, WorkflowExecution
+from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 
 __all__ = [
     "Agent",
@@ -60,4 +60,5 @@ __all__ = [
     "User",
     "Workflow",
     "WorkflowExecution",
+    "WorkflowVersion",
 ]
