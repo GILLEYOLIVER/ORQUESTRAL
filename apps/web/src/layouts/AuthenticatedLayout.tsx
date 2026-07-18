@@ -58,13 +58,12 @@ export function AuthenticatedLayout({
               Automações
             </NavLink>
           ) : null}
-          <span
-            aria-disabled="true"
-            className="sidebar__link sidebar__link--disabled"
-          >
-            <Bot size={18} />
-            Agentes
-          </span>
+          {!preview && session.me?.permissions.includes("agents.view") ? (
+            <NavLink className="sidebar__link" to="/app/agentes">
+              <Bot size={18} />
+              Agentes
+            </NavLink>
+          ) : null}
           {!preview && session.me?.permissions.includes("plugins.view") ? (
             <NavLink className="sidebar__link" to="/app/integracoes">
               <Boxes size={18} />
@@ -111,7 +110,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">Fase 6 · Motor de automações</div>
+        <div className="sidebar__footer">Fase 7 · Agentes com controle humano</div>
       </aside>
       <div className="app-main">
         {preview ? (

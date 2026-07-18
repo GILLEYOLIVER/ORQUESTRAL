@@ -5,6 +5,7 @@ import { Alert } from "@orkestral/ui-components";
 import { AuthenticatedLayout } from "./layouts/AuthenticatedLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage";
+import { AgentsPage } from "./pages/AgentsPage";
 import { CompaniesPage } from "./pages/CompaniesPage";
 import { CompanySelectionPage } from "./pages/CompanySelectionPage";
 import { CompanyUsersPage } from "./pages/CompanyUsersPage";
@@ -165,6 +166,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute permission="plugins.view">
             <PluginsPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "agentes",
+        element: (
+          <PermissionRoute permission="agents.view">
+            <AgentsPage />
           </PermissionRoute>
         ),
       },
