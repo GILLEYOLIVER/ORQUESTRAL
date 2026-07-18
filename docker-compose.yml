@@ -101,7 +101,7 @@ services:
       dockerfile: Dockerfile.api
       target: production
     restart: unless-stopped
-    env_file: .env.example
+    env_file: .env
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
@@ -137,7 +137,7 @@ services:
       dockerfile: Dockerfile.api
       target: production
     restart: unless-stopped
-    env_file: .env.example
+    env_file: .env
     command:
       ["celery", "-A", "worker.main:celery_app", "worker", "--loglevel=INFO"]
     networks: [backend, storage]

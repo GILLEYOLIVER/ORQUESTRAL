@@ -17,6 +17,7 @@ from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
 from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin, PluginConnectionTest
 from app.modules.users.models import CompanyUser, User
+from app.modules.workflows.models import Workflow, WorkflowExecution
 
 __all__ = [
     "AuthAttempt",
@@ -39,4 +40,6 @@ __all__ = [
     "Role",
     "RolePermission",
     "User",
+    "Workflow",
+    "WorkflowExecution",
 ]

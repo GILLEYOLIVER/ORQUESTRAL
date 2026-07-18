@@ -16,6 +16,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulesPage } from "./pages/ModulesPage";
 import { PluginsPage } from "./pages/PluginsPage";
+import { WorkflowsPage } from "./pages/WorkflowsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
@@ -164,6 +165,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute permission="plugins.view">
             <PluginsPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "automacoes",
+        element: (
+          <PermissionRoute permission="workflows.view">
+            <WorkflowsPage />
           </PermissionRoute>
         ),
       },

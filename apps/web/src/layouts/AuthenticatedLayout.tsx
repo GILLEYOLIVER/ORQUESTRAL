@@ -52,13 +52,12 @@ export function AuthenticatedLayout({
             <LayoutDashboard size={18} />
             Visão geral
           </NavLink>
-          <span
-            aria-disabled="true"
-            className="sidebar__link sidebar__link--disabled"
-          >
-            <Workflow size={18} />
-            Automações
-          </span>
+          {!preview && session.me?.permissions.includes("workflows.view") ? (
+            <NavLink className="sidebar__link" to="/app/automacoes">
+              <Workflow size={18} />
+              Automações
+            </NavLink>
+          ) : null}
           <span
             aria-disabled="true"
             className="sidebar__link sidebar__link--disabled"
@@ -112,7 +111,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">Fase 5 · Sistema de plugins</div>
+        <div className="sidebar__footer">Fase 6 · Motor de automações</div>
       </aside>
       <div className="app-main">
         {preview ? (
