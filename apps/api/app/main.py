@@ -12,6 +12,7 @@ from app.core.logging import configure_logging
 from app.core.middleware import ObservabilityMiddleware
 from app.core.resources import create_resources
 from app.core.schemas import ProblemDetails
+from app.modules.agents.routes import router as agents_router
 from app.modules.authentication.routes import router as authentication_router
 from app.modules.authorization.routes import router as authorization_router
 from app.modules.companies.routes import router as companies_router
@@ -58,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.add_middleware(ObservabilityMiddleware)
     install_exception_handlers(application)
     application.include_router(health_router)
+    application.include_router(agents_router)
     application.include_router(authentication_router)
     application.include_router(authorization_router)
     application.include_router(companies_router)
