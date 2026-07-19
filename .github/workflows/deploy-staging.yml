@@ -1,0 +1,119 @@
+name: Deploy staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Operation to execute
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - rollback
+      release_sha:
+        description: Full commit SHA already published in GHCR
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha }}
+      - name: Validate release input
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+      - name: Authenticate to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Confirm immutable images
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          repository="${GITHUB_REPOSITORY,,}"
+          for component in api web remote; do
+            docker manifest inspect \
+              "ghcr.io/${repository}-${component}:sha-${RELEASE_SHA}" >/dev/null
+          done
+      - name: Validate protected configuration
+        env:
+          BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          BACKUP_HOOK: ${{ secrets.STAGING_BACKUP_HOOK }}
+          MIGRATION_HOOK: ${{ secrets.STAGING_MIGRATION_HOOK }}
+          DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
+          ROLLBACK_HOOK: ${{ secrets.STAGING_ROLLBACK_HOOK }}
+          HOOK_TOKEN: ${{ secrets.STAGING_HOOK_TOKEN }}
+        run: |
+          test -n "$BASE_URL"
+          test -n "$BACKUP_HOOK"
+          test -n "$MIGRATION_HOOK"
+          test -n "$DEPLOY_HOOK"
+          test -n "$ROLLBACK_HOOK"
+          test -n "$HOOK_TOKEN"
+          [[ "$BASE_URL" == https://* ]]
+      - name: Create pre-deploy backup
+        if: inputs.action == 'deploy'
+        env:
+          HOOK_URL: ${{ secrets.STAGING_BACKUP_HOOK }}
+          HOOK_TOKEN: ${{ secrets.STAGING_HOOK_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          payload=$(jq -n --arg sha "$RELEASE_SHA" '{release_sha: $sha}')
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $HOOK_TOKEN" \
+            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Run database migration task
+        if: inputs.action == 'deploy'
+        env:
+          HOOK_URL: ${{ secrets.STAGING_MIGRATION_HOOK }}
+          HOOK_TOKEN: ${{ secrets.STAGING_HOOK_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          payload=$(jq -n --arg sha "$RELEASE_SHA" '{release_sha: $sha}')
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $HOOK_TOKEN" \
+            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Deploy immutable release
+        if: inputs.action == 'deploy'
+        env:
+          HOOK_URL: ${{ secrets.STAGING_DEPLOY_HOOK }}
+          HOOK_TOKEN: ${{ secrets.STAGING_HOOK_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          payload=$(jq -n --arg sha "$RELEASE_SHA" '{release_sha: $sha}')
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $HOOK_TOKEN" \
+            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Roll back to immutable release
+        if: inputs.action == 'rollback'
+        env:
+          HOOK_URL: ${{ secrets.STAGING_ROLLBACK_HOOK }}
+          HOOK_TOKEN: ${{ secrets.STAGING_HOOK_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          payload=$(jq -n --arg sha "$RELEASE_SHA" '{release_sha: $sha}')
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $HOOK_TOKEN" \
+            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Verify deployed release
+        env:
+          BASE_URL: ${{ vars.STAGING_BASE_URL }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: bash scripts/verify-deployment.sh "$BASE_URL" "$RELEASE_SHA"
