@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Orkestral API"
     app_env: Environment = "development"
-    app_version: str = "0.12.0"
+    app_version: str = "0.13.0"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     audit_capture_enabled: bool = True
     audit_retention_days: int = Field(default=365, ge=30, le=3_650)
     billing_enforcement_enabled: bool = False
+    notification_email_webhook_url: str | None = None
+    notification_whatsapp_webhook_url: str | None = None
+    notification_delivery_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    notification_reminder_minutes: int = Field(default=30, ge=1, le=10_080)
     dependency_timeout_seconds: float = Field(default=2.0, gt=0, le=10)
     jwt_issuer: str = "orkestral"
     jwt_audience: str = "orkestral-api"

@@ -64,6 +64,12 @@ PERMISSION_CATALOG = (
     ),
     PermissionDefinition("billing.view", "billing", "view", "Visualizar faturamento"),
     PermissionDefinition("billing.manage", "billing", "manage", "Gerenciar faturamento"),
+    PermissionDefinition("notifications.view", "notifications", "view", "Visualizar notificações"),
+    PermissionDefinition(
+        "notifications.manage", "notifications", "manage", "Administrar notificações"
+    ),
+    PermissionDefinition("approvals.view", "approvals", "view", "Visualizar aprovações"),
+    PermissionDefinition("approvals.decide", "approvals", "decide", "Decidir aprovações"),
 )
 
 PLATFORM_PERMISSION_CODES = frozenset(

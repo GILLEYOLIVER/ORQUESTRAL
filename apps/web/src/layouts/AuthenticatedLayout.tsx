@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { isModuleActive, useModules } from "../modules/useModules";
+import { useNotificationSummary } from "../notifications/useNotifications";
 import { useSession } from "../session/context";
 
 export function AuthenticatedLayout({
@@ -30,6 +31,10 @@ export function AuthenticatedLayout({
   const companyName =
     session.me?.current_company?.trade_name ?? "Administração da plataforma";
   const modules = useModules(!preview);
+  const notificationSummary = useNotificationSummary(!preview);
+  const attentionCount =
+    (notificationSummary.data?.unread_count ?? 0) +
+    (notificationSummary.data?.pending_approvals ?? 0);
 
   const logout = async () => {
     await session.logout();
@@ -54,6 +59,15 @@ export function AuthenticatedLayout({
             <LayoutDashboard size={18} />
             Visão geral
           </NavLink>
+          {!preview ? (
+            <NavLink className="sidebar__link" to="/app/notificacoes">
+              <Bell size={18} />
+              Central de atenção
+              {attentionCount ? (
+                <span className="sidebar__badge">{attentionCount}</span>
+              ) : null}
+            </NavLink>
+          ) : null}
           {!preview && session.me?.permissions.includes("workflows.view") ? (
             <NavLink className="sidebar__link" to="/app/automacoes">
               <Workflow size={18} />
@@ -138,13 +152,28 @@ export function AuthenticatedLayout({
             <strong>{companyName}</strong>
           </div>
           <div className="app-header__actions">
-            <button
-              aria-label="Notificações"
-              className="icon-button"
-              type="button"
-            >
-              <Bell size={19} />
-            </button>
+            {preview ? (
+              <button
+                aria-label="Notificações"
+                className="icon-button"
+                type="button"
+              >
+                <Bell size={19} />
+              </button>
+            ) : (
+              <NavLink
+                aria-label="Notificações"
+                className="icon-button notification-button"
+                to="/app/notificacoes"
+              >
+                <Bell size={19} />
+                {attentionCount ? (
+                  <span className="notification-button__badge">
+                    {attentionCount > 99 ? "99+" : attentionCount}
+                  </span>
+                ) : null}
+              </NavLink>
+            )}
             <NavLink
               className="profile-button"
               to={preview ? rootPath : "/app/perfil"}

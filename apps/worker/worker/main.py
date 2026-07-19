@@ -25,6 +25,10 @@ celery_app.conf.update(
         "aggregate-metrics-every-five-minutes": {
             "task": "orkestral.metrics.aggregate",
             "schedule": 300.0,
-        }
+        },
+        "process-notifications-every-minute": {
+            "task": "orkestral.notifications.maintain",
+            "schedule": 60.0,
+        },
     },
 )

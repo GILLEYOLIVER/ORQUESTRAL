@@ -43,7 +43,7 @@ INSERTS = (
        GROUP BY company_id, DATE(COALESCE(processed_at, created_at))""",
     """INSERT INTO metric_daily_summaries (company_id, metric_date, module, metric_key, count_value, numeric_value)
        SELECT company_id, CURRENT_DATE, 'agents', 'approvals.pending', COUNT(*)::int, COUNT(*)::numeric
-       FROM agent_tool_runs WHERE state='awaiting_confirmation' GROUP BY company_id""",
+       FROM approval_requests WHERE status='pending' GROUP BY company_id""",
 )
 
 

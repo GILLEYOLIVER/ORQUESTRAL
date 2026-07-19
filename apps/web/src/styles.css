@@ -486,6 +486,17 @@ p {
   text-decoration: none;
 }
 
+.sidebar__badge {
+  background: #f2c45f;
+  border-radius: 999px;
+  color: #3d2a04;
+  font-size: 0.64rem;
+  margin-left: auto;
+  min-width: 1.35rem;
+  padding: 0.15rem 0.35rem;
+  text-align: center;
+}
+
 .sidebar__link.active,
 .sidebar__link:hover:not(.sidebar__link--disabled) {
   background: rgb(255 255 255 / 0.09);
@@ -562,7 +573,26 @@ p {
 .icon-button {
   border-radius: 50%;
   justify-content: center;
+  position: relative;
   width: 39px;
+}
+
+.notification-button__badge {
+  align-items: center;
+  background: #d84d34;
+  border: 2px solid white;
+  border-radius: 999px;
+  color: white;
+  display: flex;
+  font-size: 0.55rem;
+  font-weight: 800;
+  height: 1.15rem;
+  justify-content: center;
+  min-width: 1.15rem;
+  padding: 0 0.2rem;
+  position: absolute;
+  right: -0.2rem;
+  top: -0.25rem;
 }
 
 .profile-button {
