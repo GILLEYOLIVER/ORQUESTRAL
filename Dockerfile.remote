@@ -45,5 +45,10 @@ COPY --from=web-build /workspace/apps/web/dist ./apps/web/dist
 COPY infrastructure/docker/api/entrypoint.sh /usr/local/bin/orkestral-entrypoint
 RUN chmod +x /usr/local/bin/orkestral-entrypoint
 
+RUN addgroup --system orkestral \
+    && adduser --system --ingroup orkestral orkestral
+
+USER orkestral
+
 EXPOSE 10000
 ENTRYPOINT ["/usr/local/bin/orkestral-entrypoint"]

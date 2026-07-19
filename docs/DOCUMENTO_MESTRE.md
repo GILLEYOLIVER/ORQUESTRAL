@@ -1625,6 +1625,7 @@ Não considere uma fase concluída sem testes automatizados.
 - [x] Migração serializada no development e separável em staging/production.
 - [x] Rollback, backups, monitoramento e promoção documentados.
 - [x] Preparação versionada de staging com promoção protegida, migração dedicada, verificação e rollback.
+- [x] Auditoria de segurança automatizada com SAST, dependências, segredos, filesystem e cadeia de CI.
 - [ ] Staging e production serão provisionados somente com infraestrutura autorizada.
 
 ## Pipeline
@@ -1714,7 +1715,7 @@ Implemente na seguinte ordem:
 32. Criar testes completos.
 33. Criar pipeline CI/CD.
 34. Preparar staging. **Concluído em código; provisionamento externo aguarda infraestrutura autorizada.**
-35. Executar auditoria de segurança.
+35. Executar auditoria de segurança. **Concluído com evidências automatizadas e correções aplicadas.**
 36. Preparar produção.
 
 ---

@@ -8,11 +8,13 @@ src = ["apps/api", "apps/worker"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC", "S", "RUF"]
-ignore = ["B008", "E501", "S101"]
+ignore = ["B008", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "apps/api/app/migrations/versions/*.py" = ["E501"]
-"apps/api/tests/*.py" = ["S105"]
+"apps/api/tests/*.py" = ["S101", "S105"]
+"apps/worker/tests/*.py" = ["S101"]
+"tests/**/*.py" = ["S101"]
 
 [[tool.mypy.overrides]]
 module = ["asyncpg", "celery", "openpyxl", "reportlab.*"]

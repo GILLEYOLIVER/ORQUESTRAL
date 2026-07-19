@@ -6,7 +6,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
-from typing import Any, cast
+from typing import Any
 from uuid import UUID, uuid4
 
 import jwt
@@ -98,16 +98,13 @@ def decode_access_token(settings: Settings, token: str) -> AccessTokenClaims:
     payload: dict[str, Any] | None = None
     for secret in settings.jwt_verification_secrets:
         try:
-            payload = cast(
-                dict[str, Any],
-                jwt.decode(
-                    token,
-                    secret,
-                    algorithms=["HS256"],
-                    audience=settings.jwt_audience,
-                    issuer=settings.jwt_issuer,
-                    options={"require": ["exp", "iat", "jti", "sub", "sid", "type"]},
-                ),
+            payload = jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                audience=settings.jwt_audience,
+                issuer=settings.jwt_issuer,
+                options={"require": ["exp", "iat", "jti", "sub", "sid", "type"]},
             )
             break
         except jwt.InvalidTokenError:
