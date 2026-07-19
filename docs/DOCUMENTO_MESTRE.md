@@ -1576,6 +1576,24 @@ O ambiente remoto contém somente dados fictícios e não substitui produção. 
 
 # 19. FASE 14 — TESTES
 
+## Estado de implementação
+
+- [x] Testes unitários de serviços, regras, permissões, validações, workflows, limites e consumo.
+- [x] Testes de integração com PostgreSQL, Redis, armazenamento, n8n, provedor de IA e plugins.
+- [x] Testes de segurança para isolamento entre empresas, privilégios, autorização, IDs, uploads e credenciais.
+- [x] Jornada ponta a ponta cobrindo os dez passos obrigatórios.
+- [x] Execução local isolada e restauração automática do ambiente de desenvolvimento.
+- [x] Execução obrigatória das suítes no GitHub Actions.
+
+## Validação concluída em 19/07/2026
+
+- Backend e worker: 77 testes aprovados.
+- Frontend: 9 testes aprovados.
+- Integrações PostgreSQL e Redis: 4 testes aprovados em serviços descartáveis isolados.
+- Ponta a ponta: 7 testes aprovados com PostgreSQL, Redis, MinIO, n8n e contratos externos.
+- Total: 97 testes automatizados aprovados.
+- O ambiente local foi restaurado com todos os containers saudáveis após a execução.
+
 ## Testes obrigatórios
 
 ### Testes unitários

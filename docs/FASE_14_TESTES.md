@@ -4,6 +4,23 @@ Esta fase transforma os criterios do documento mestre em verificacoes automatiza
 reproduziveis. A execucao normal do produto nao usa simuladores. O arquivo
 `docker-compose.test.yml` existe somente para contratos deterministas durante os testes.
 
+## Estado concluido
+
+A bateria completa foi validada em macOS em 19/07/2026:
+
+| Suite                 | Resultado                         |
+| --------------------- | --------------------------------- |
+| Backend e worker      | 77 testes aprovados               |
+| Frontend              | 9 testes aprovados                |
+| PostgreSQL e Redis    | 4 testes de integracao aprovados  |
+| Jornada ponta a ponta | 7 testes aprovados                |
+| Total                 | 97 testes automatizados aprovados |
+
+As integracoes foram executadas em containers descartaveis com todas as migrations ate
+`20260719_0015`. A jornada ponta a ponta validou PostgreSQL, Redis, MinIO, n8n, contratos
+externos, isolamento multiempresa e os dez passos obrigatorios. Ao final, os dados temporarios
+foram removidos e o ambiente Docker local foi restaurado com todos os servicos saudaveis.
+
 ## Matriz de cobertura
 
 | Categoria     | Cobertura automatizada                                                                                                                                                                 |
