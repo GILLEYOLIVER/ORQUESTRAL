@@ -8,13 +8,13 @@ Redis permanece obrigatório porque autenticação, sessão, limitação de tent
 
 ## Ambiente implantado em 19/07/2026
 
-| Componente | Recurso | Configuração |
-| --- | --- | --- |
-| Aplicação e API | `https://orkestral-development.onrender.com` | Render Web Service Docker Free, Virginia |
-| PostgreSQL | `orkestral-development` | Neon Free, AWS US East, TLS e scale-to-zero |
-| Redis | `orkestral-development` | Upstash Free, AWS `us-east-1`, TLS |
-| Código | `GILLEYOLIVER/ORQUESTRAL` | Repositório privado, branch `development` |
-| Deploy | GitHub Environment `development` | Branch autorizada, hook secreto e URL pública configurados |
+| Componente      | Recurso                                      | Configuração                                               |
+| --------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| Aplicação e API | `https://orkestral-development.onrender.com` | Render Web Service Docker Free, Virginia                   |
+| PostgreSQL      | `orkestral-development`                      | Neon Free, AWS US East, TLS e scale-to-zero                |
+| Redis           | `orkestral-development`                      | Upstash Free, AWS `us-east-1`, TLS                         |
+| Código          | `GILLEYOLIVER/ORQUESTRAL`                    | Repositório privado, branch `development`                  |
+| Deploy          | GitHub Environment `development`             | Branch autorizada, hook secreto e URL pública configurados |
 
 O container remoto executa frontend e API no mesmo domínio. O bootstrap criou somente a empresa e o administrador fictícios de desenvolvimento. As credenciais reais permanecem exclusivamente nos cofres dos provedores.
 

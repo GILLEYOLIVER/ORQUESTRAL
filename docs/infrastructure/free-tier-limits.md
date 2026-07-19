@@ -20,11 +20,11 @@
 
 ## Estado implantado em 19/07/2026
 
-| Provedor | Recurso | Plano confirmado | Cobrança obrigatória |
-| --- | --- | --- | --- |
-| Render | `orkestral-development` | Free, 512 MB e 0,1 CPU | Não |
-| Neon | `orkestral-development` | Free, 0,5 GB e scale-to-zero | Não |
-| Upstash | `orkestral-development` | Free, custo exibido de US$ 0,00 | Não |
+| Provedor | Recurso                 | Plano confirmado                | Cobrança obrigatória |
+| -------- | ----------------------- | ------------------------------- | -------------------- |
+| Render   | `orkestral-development` | Free, 512 MB e 0,1 CPU          | Não                  |
+| Neon     | `orkestral-development` | Free, 0,5 GB e scale-to-zero    | Não                  |
+| Upstash  | `orkestral-development` | Free, custo exibido de US$ 0,00 | Não                  |
 
 Nenhum método de pagamento, upgrade automático ou recurso pago foi ativado. Se a camada gratuita terminar, o ambiente deve ser desligado em vez de aceitar cobrança.
 
