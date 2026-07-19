@@ -254,6 +254,4 @@ def downgrade() -> None:
     op.drop_table("notification_preferences")
     op.drop_table("notifications")
     for code, *_ in PERMISSIONS:
-        op.execute(
-            sa.text("DELETE FROM permissions WHERE code = :code").bindparams(code=code)
-        )
+        op.execute(sa.text("DELETE FROM permissions WHERE code = :code").bindparams(code=code))
