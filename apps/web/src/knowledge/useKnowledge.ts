@@ -43,7 +43,8 @@ export function useKnowledgeBases() {
 export function useKnowledgeDocuments(baseId: string | null) {
   return useQuery({
     queryKey: ["knowledge-documents", baseId],
-    queryFn: () => request<KnowledgeDocument[]>(`/knowledge-bases/${baseId}/documents`),
+    queryFn: () =>
+      request<KnowledgeDocument[]>(`/knowledge-bases/${baseId}/documents`),
     enabled: Boolean(baseId),
     refetchInterval: (query) =>
       query.state.data?.some(
@@ -66,22 +67,30 @@ export function useKnowledgeActions() {
   const refreshBases = () =>
     queryClient.invalidateQueries({ queryKey: ["knowledge-bases"] });
   const refreshDocuments = (baseId: string) =>
-    queryClient.invalidateQueries({ queryKey: ["knowledge-documents", baseId] });
+    queryClient.invalidateQueries({
+      queryKey: ["knowledge-documents", baseId],
+    });
 
   const createBase = useMutation({
     mutationFn: (payload: { name: string; description: string }) =>
-      request<KnowledgeBase>("/knowledge-bases", { method: "POST", body: payload }),
+      request<KnowledgeBase>("/knowledge-bases", {
+        method: "POST",
+        body: payload,
+      }),
     onSuccess: refreshBases,
   });
   const uploadDocument = useMutation({
     mutationFn: ({ baseId, file }: { baseId: string; file: File }) => {
       const formData = new FormData();
       formData.append("file", file);
-      return request<KnowledgeDocument>(`/knowledge-bases/${baseId}/documents`, {
-        method: "POST",
-        body: formData,
-        timeoutMs: 30_000,
-      });
+      return request<KnowledgeDocument>(
+        `/knowledge-bases/${baseId}/documents`,
+        {
+          method: "POST",
+          body: formData,
+          timeoutMs: 30_000,
+        },
+      );
     },
     onSuccess: (document) => refreshDocuments(document.knowledge_base_id),
   });
@@ -94,7 +103,13 @@ export function useKnowledgeActions() {
     onSuccess: (document) => refreshDocuments(document.knowledge_base_id),
   });
   const reprocessDocument = useMutation({
-    mutationFn: ({ baseId, documentId }: { baseId: string; documentId: string }) =>
+    mutationFn: ({
+      baseId,
+      documentId,
+    }: {
+      baseId: string;
+      documentId: string;
+    }) =>
       request<KnowledgeDocument>(
         `/knowledge-bases/${baseId}/documents/${documentId}/reprocess`,
         { method: "POST" },
@@ -102,7 +117,13 @@ export function useKnowledgeActions() {
     onSuccess: (document) => refreshDocuments(document.knowledge_base_id),
   });
   const deleteDocument = useMutation({
-    mutationFn: ({ baseId, documentId }: { baseId: string; documentId: string }) =>
+    mutationFn: ({
+      baseId,
+      documentId,
+    }: {
+      baseId: string;
+      documentId: string;
+    }) =>
       request<void>(`/knowledge-bases/${baseId}/documents/${documentId}`, {
         method: "DELETE",
       }),
@@ -115,7 +136,13 @@ export function useKnowledgeActions() {
       ),
   });
   const assignAgent = useMutation({
-    mutationFn: ({ agentId, baseId }: { agentId: string; baseId: string | null }) =>
+    mutationFn: ({
+      agentId,
+      baseId,
+    }: {
+      agentId: string;
+      baseId: string | null;
+    }) =>
       request<AgentOption>(`/agents/${agentId}`, {
         method: "PATCH",
         body: { knowledge_base_id: baseId },

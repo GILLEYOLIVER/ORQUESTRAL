@@ -39,11 +39,11 @@ Inclua login, recuperação de senha, seleção de empresa, perfil, gestão de e
 
 ## Critérios de conclusão
 
-* Entrada e saída funcionam.
-* Usuário comum não acessa outra empresa.
-* Administrador da plataforma cadastra empresas.
-* Proprietário convida usuários.
-* Testes de isolamento multiempresa passam.
+- Entrada e saída funcionam.
+- Usuário comum não acessa outra empresa.
+- Administrador da plataforma cadastra empresas.
+- Proprietário convida usuários.
+- Testes de isolamento multiempresa passam.
 
 ---
 
@@ -100,10 +100,10 @@ Crie `PermissionGuard` para melhorar a experiência sem substituir a verificaç�
 
 ## Critérios de conclusão
 
-* Permissões são verificadas no servidor.
-* Papéis personalizados podem ser criados.
-* Alterações são auditadas.
-* Há testes de acessos permitidos e negados.
+- Permissões são verificadas no servidor.
+- Papéis personalizados podem ser criados.
+- Alterações são auditadas.
+- Há testes de acessos permitidos e negados.
 
 ---
 
@@ -147,10 +147,10 @@ Telas: lista, cadastro, edição, detalhes, filtros, pesquisa e paginação.
 
 ## Critérios de conclusão
 
-* CRM pode ser ativado para uma empresa e desativado para outra.
-* Empresa sem o módulo não acessa as rotas.
-* Contatos ficam isolados.
-* O módulo possui testes próprios.
+- CRM pode ser ativado para uma empresa e desativado para outra.
+- Empresa sem o módulo não acessa as rotas.
+- Contatos ficam isolados.
+- O módulo possui testes próprios.
 
 ---
 
@@ -207,8 +207,8 @@ Cada plugin deve oferecer `Testar conexão` com timeout e erro controlado.
 
 ## Critérios de conclusão
 
-* Plugins são ativados por empresa.
-* Credenciais ficam criptografadas.
-* Falha de plugin não derruba a aplicação.
-* Tentativas e falhas são registradas.
-* Novos plugins podem ser adicionados sem modificar o núcleo.
+- Plugins são ativados por empresa.
+- Credenciais ficam criptografadas.
+- Falha de plugin não derruba a aplicação.
+- Tentativas e falhas são registradas.
+- Novos plugins podem ser adicionados sem modificar o núcleo.

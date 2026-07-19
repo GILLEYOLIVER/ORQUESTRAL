@@ -29,7 +29,9 @@ const statusLabels: Record<string, string> = {
 };
 
 function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Nao foi possivel concluir a operacao.";
+  return error instanceof Error
+    ? error.message
+    : "Nao foi possivel concluir a operacao.";
 }
 
 export function KnowledgePage() {
@@ -41,12 +43,15 @@ export function KnowledgePage() {
   const [baseDescription, setBaseDescription] = useState("");
   const [webUrl, setWebUrl] = useState("");
   const [searchText, setSearchText] = useState("");
-  const [searchResults, setSearchResults] = useState<KnowledgeSearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<KnowledgeSearchResult[]>(
+    [],
+  );
   const [feedback, setFeedback] = useState<string | null>(null);
   const documents = useKnowledgeDocuments(selectedBaseId);
 
   useEffect(() => {
-    if (!selectedBaseId && bases.data?.length) setSelectedBaseId(bases.data[0].id);
+    if (!selectedBaseId && bases.data?.length)
+      setSelectedBaseId(bases.data[0].id);
   }, [bases.data, selectedBaseId]);
 
   const selectedBase = useMemo(
@@ -75,8 +80,13 @@ export function KnowledgePage() {
     if (!selectedBaseId || !file) return;
     setFeedback(null);
     try {
-      await actions.uploadDocument.mutateAsync({ baseId: selectedBaseId, file });
-      setFeedback("Documento recebido. O processamento continua em segundo plano.");
+      await actions.uploadDocument.mutateAsync({
+        baseId: selectedBaseId,
+        file,
+      });
+      setFeedback(
+        "Documento recebido. O processamento continua em segundo plano.",
+      );
     } catch (error) {
       setFeedback(errorMessage(error));
     }
@@ -87,7 +97,10 @@ export function KnowledgePage() {
     if (!selectedBaseId) return;
     setFeedback(null);
     try {
-      await actions.importWebPage.mutateAsync({ baseId: selectedBaseId, url: webUrl.trim() });
+      await actions.importWebPage.mutateAsync({
+        baseId: selectedBaseId,
+        url: webUrl.trim(),
+      });
       setWebUrl("");
       setFeedback("Pagina autorizada recebida para processamento.");
     } catch (error) {
@@ -101,7 +114,10 @@ export function KnowledgePage() {
     setFeedback(null);
     try {
       setSearchResults(
-        await actions.search.mutateAsync({ baseId: selectedBaseId, query: searchText.trim() }),
+        await actions.search.mutateAsync({
+          baseId: selectedBaseId,
+          query: searchText.trim(),
+        }),
       );
     } catch (error) {
       setFeedback(errorMessage(error));
@@ -115,13 +131,16 @@ export function KnowledgePage() {
           <span className="knowledge-kicker">Biblioteca operacional</span>
           <h1>Conhecimento que trabalha junto com seus agentes.</h1>
           <p>
-            Reuna fontes autorizadas, acompanhe o processamento e entregue contexto interno
-            rastreavel para cada resposta.
+            Reuna fontes autorizadas, acompanhe o processamento e entregue
+            contexto interno rastreavel para cada resposta.
           </p>
         </div>
         <div className="knowledge-hero-mark" aria-hidden="true">
           <BookOpenText size={42} />
-          <span>{documents.data?.filter((item) => item.status === "ready").length ?? 0}</span>
+          <span>
+            {documents.data?.filter((item) => item.status === "ready").length ??
+              0}
+          </span>
           <small>fontes prontas</small>
         </div>
       </header>
@@ -131,7 +150,10 @@ export function KnowledgePage() {
       <section className="knowledge-grid knowledge-grid--top">
         <article className="knowledge-panel">
           <div className="knowledge-panel-title">
-            <div><span>01</span><h2>Bases</h2></div>
+            <div>
+              <span>01</span>
+              <h2>Bases</h2>
+            </div>
             <small>{bases.data?.length ?? 0} cadastradas</small>
           </div>
           <div className="knowledge-base-list">
@@ -150,7 +172,10 @@ export function KnowledgePage() {
               </button>
             ))}
           </div>
-          <form className="knowledge-create" onSubmit={(event) => void createBase(event)}>
+          <form
+            className="knowledge-create"
+            onSubmit={(event) => void createBase(event)}
+          >
             <label>
               Nova base
               <input
@@ -173,10 +198,15 @@ export function KnowledgePage() {
 
         <article className="knowledge-panel">
           <div className="knowledge-panel-title">
-            <div><span>02</span><h2>Fontes</h2></div>
+            <div>
+              <span>02</span>
+              <h2>Fontes</h2>
+            </div>
             <small>{selectedBase?.name ?? "Selecione uma base"}</small>
           </div>
-          <label className={`knowledge-drop ${!selectedBaseId ? "is-disabled" : ""}`}>
+          <label
+            className={`knowledge-drop ${!selectedBaseId ? "is-disabled" : ""}`}
+          >
             <UploadCloud size={30} />
             <strong>Enviar um documento</strong>
             <span>PDF, DOCX, TXT, CSV ou XLSX. Limite de 20 MB.</span>
@@ -190,7 +220,10 @@ export function KnowledgePage() {
               type="file"
             />
           </label>
-          <form className="knowledge-web" onSubmit={(event) => void importWeb(event)}>
+          <form
+            className="knowledge-web"
+            onSubmit={(event) => void importWeb(event)}
+          >
             <Globe2 size={19} />
             <input
               disabled={!selectedBaseId}
@@ -200,20 +233,29 @@ export function KnowledgePage() {
               type="url"
               value={webUrl}
             />
-            <button disabled={!selectedBaseId || actions.importWebPage.isPending} type="submit">
+            <button
+              disabled={!selectedBaseId || actions.importWebPage.isPending}
+              type="submit"
+            >
               Importar
             </button>
           </form>
           <p className="knowledge-hint">
-            Paginas web so entram quando o dominio esta na lista segura da instalacao.
+            Paginas web so entram quando o dominio esta na lista segura da
+            instalacao.
           </p>
         </article>
       </section>
 
       <section className="knowledge-panel">
         <div className="knowledge-panel-title">
-          <div><span>03</span><h2>Processamento</h2></div>
-          {documents.isFetching ? <LoaderCircle className="knowledge-spin" size={18} /> : null}
+          <div>
+            <span>03</span>
+            <h2>Processamento</h2>
+          </div>
+          {documents.isFetching ? (
+            <LoaderCircle className="knowledge-spin" size={18} />
+          ) : null}
         </div>
         <div className="knowledge-document-list">
           {documents.data?.map((document) => (
@@ -221,46 +263,87 @@ export function KnowledgePage() {
               <FileSearch size={21} />
               <div>
                 <strong>{document.name}</strong>
-                <small>{document.source_type.toUpperCase()} · {(document.size_bytes / 1024).toFixed(1)} KB</small>
-                {document.error_summary ? <em>{document.error_summary}</em> : null}
+                <small>
+                  {document.source_type.toUpperCase()} ·{" "}
+                  {(document.size_bytes / 1024).toFixed(1)} KB
+                </small>
+                {document.error_summary ? (
+                  <em>{document.error_summary}</em>
+                ) : null}
               </div>
-              <span className={`knowledge-status knowledge-status--${document.status}`}>
+              <span
+                className={`knowledge-status knowledge-status--${document.status}`}
+              >
                 {statusLabels[document.status] ?? document.status}
               </span>
               <button
                 aria-label="Reprocessar documento"
-                onClick={() => selectedBaseId && void actions.reprocessDocument.mutateAsync({ baseId: selectedBaseId, documentId: document.id })}
+                onClick={() =>
+                  selectedBaseId &&
+                  void actions.reprocessDocument.mutateAsync({
+                    baseId: selectedBaseId,
+                    documentId: document.id,
+                  })
+                }
                 title="Reprocessar"
                 type="button"
-              ><RefreshCw size={16} /></button>
+              >
+                <RefreshCw size={16} />
+              </button>
               <button
                 aria-label="Excluir documento"
                 className="is-danger"
-                onClick={() => selectedBaseId && window.confirm(`Excluir ${document.name}?`) && void actions.deleteDocument.mutateAsync({ baseId: selectedBaseId, documentId: document.id })}
+                onClick={() =>
+                  selectedBaseId &&
+                  window.confirm(`Excluir ${document.name}?`) &&
+                  void actions.deleteDocument.mutateAsync({
+                    baseId: selectedBaseId,
+                    documentId: document.id,
+                  })
+                }
                 title="Excluir"
                 type="button"
-              ><Trash2 size={16} /></button>
+              >
+                <Trash2 size={16} />
+              </button>
             </article>
           ))}
-          {!documents.data?.length ? <div className="knowledge-empty">Nenhuma fonte nesta base ainda.</div> : null}
+          {!documents.data?.length ? (
+            <div className="knowledge-empty">
+              Nenhuma fonte nesta base ainda.
+            </div>
+          ) : null}
         </div>
       </section>
 
       <section className="knowledge-grid knowledge-grid--bottom">
         <article className="knowledge-panel">
           <div className="knowledge-panel-title">
-            <div><span>04</span><h2>Conectar agentes</h2></div><Link2 size={18} />
+            <div>
+              <span>04</span>
+              <h2>Conectar agentes</h2>
+            </div>
+            <Link2 size={18} />
           </div>
           <div className="knowledge-agent-list">
             {agents.data?.map((agent) => (
               <label key={agent.id}>
                 <span>{agent.name}</span>
                 <select
-                  onChange={(event) => void actions.assignAgent.mutateAsync({ agentId: agent.id, baseId: event.target.value || null })}
+                  onChange={(event) =>
+                    void actions.assignAgent.mutateAsync({
+                      agentId: agent.id,
+                      baseId: event.target.value || null,
+                    })
+                  }
                   value={agent.knowledge_base_id ?? ""}
                 >
                   <option value="">Sem base vinculada</option>
-                  {bases.data?.map((base) => <option key={base.id} value={base.id}>{base.name}</option>)}
+                  {bases.data?.map((base) => (
+                    <option key={base.id} value={base.id}>
+                      {base.name}
+                    </option>
+                  ))}
                 </select>
               </label>
             ))}
@@ -269,7 +352,11 @@ export function KnowledgePage() {
 
         <article className="knowledge-panel knowledge-search">
           <div className="knowledge-panel-title">
-            <div><span>05</span><h2>Testar recuperacao</h2></div><Search size={18} />
+            <div>
+              <span>05</span>
+              <h2>Testar recuperacao</h2>
+            </div>
+            <Search size={18} />
           </div>
           <form onSubmit={(event) => void runSearch(event)}>
             <input
@@ -279,13 +366,21 @@ export function KnowledgePage() {
               required
               value={searchText}
             />
-            <button disabled={!selectedBaseId || actions.search.isPending} type="submit">Buscar</button>
+            <button
+              disabled={!selectedBaseId || actions.search.isPending}
+              type="submit"
+            >
+              Buscar
+            </button>
           </form>
           <div className="knowledge-results">
             {searchResults.map((result) => (
               <article key={`${result.document_id}-${result.chunk_index}`}>
                 <strong>{result.document_name}</strong>
-                <small>Trecho {result.chunk_index + 1} · aderencia {(result.score * 100).toFixed(0)}%</small>
+                <small>
+                  Trecho {result.chunk_index + 1} · aderencia{" "}
+                  {(result.score * 100).toFixed(0)}%
+                </small>
                 <p>{result.content}</p>
               </article>
             ))}

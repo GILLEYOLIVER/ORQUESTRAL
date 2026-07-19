@@ -39,6 +39,20 @@ class AccessTokenResponse(StrictSchema):
     expires_at: datetime
 
 
+class DevelopmentAccessResponse(StrictSchema):
+    enabled: bool
+
+
+class AuthSessionResponse(StrictSchema):
+    id: UUID
+    ip_address: str
+    user_agent: str | None
+    expires_at: datetime
+    last_used_at: datetime
+    created_at: datetime
+    current: bool
+
+
 class MessageResponse(StrictSchema):
     message: str
     development_token: str | None = Field(

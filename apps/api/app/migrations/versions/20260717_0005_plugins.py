@@ -31,8 +31,18 @@ def upgrade() -> None:
     op.bulk_insert(
         permissions,
         [
-            {"code": "plugins.view", "module_code": "plugins", "action": "view", "description": "Visualizar plugins da empresa"},
-            {"code": "plugins.manage", "module_code": "plugins", "action": "manage", "description": "Ativar plugins e administrar credenciais"},
+            {
+                "code": "plugins.view",
+                "module_code": "plugins",
+                "action": "view",
+                "description": "Visualizar plugins da empresa",
+            },
+            {
+                "code": "plugins.manage",
+                "module_code": "plugins",
+                "action": "manage",
+                "description": "Ativar plugins e administrar credenciais",
+            },
         ],
     )
     op.execute("""
@@ -52,10 +62,14 @@ def upgrade() -> None:
         sa.Column("description", sa.String(500), nullable=False),
         sa.Column("authentication_type", sa.String(32), nullable=False),
         sa.Column("status", sa.String(20), nullable=False),
-        sa.Column("manifest", postgresql.JSONB(), server_default=sa.text("'{}'::jsonb"), nullable=False),
+        sa.Column(
+            "manifest", postgresql.JSONB(), server_default=sa.text("'{}'::jsonb"), nullable=False
+        ),
         sa.Column("created_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
-        sa.CheckConstraint("status IN ('installed', 'planned', 'disabled')", name="ck_plugins_status"),
+        sa.CheckConstraint(
+            "status IN ('installed', 'planned', 'disabled')", name="ck_plugins_status"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("code"),
     )
@@ -64,17 +78,65 @@ def upgrade() -> None:
 
     plugins = sa.table(
         "plugins",
-        sa.column("code", sa.String()), sa.column("name", sa.String()), sa.column("version", sa.String()),
-        sa.column("description", sa.String()), sa.column("authentication_type", sa.String()),
-        sa.column("status", sa.String()), sa.column("manifest", postgresql.JSONB()),
+        sa.column("code", sa.String()),
+        sa.column("name", sa.String()),
+        sa.column("version", sa.String()),
+        sa.column("description", sa.String()),
+        sa.column("authentication_type", sa.String()),
+        sa.column("status", sa.String()),
+        sa.column("manifest", postgresql.JSONB()),
     )
-    op.bulk_insert(plugins, [
-        {"code": "generic_webhook", "name": "Webhook genérico", "version": "1.0.0", "description": "Recebe e envia eventos HTTP assinados.", "authentication_type": "secret", "status": "installed", "manifest": {"actions": ["send"], "triggers": ["receive"]}},
-        {"code": "smtp_email", "name": "E-mail SMTP", "version": "1.0.0", "description": "Envio de mensagens por servidor SMTP.", "authentication_type": "username_password", "status": "installed", "manifest": {"actions": ["send_email"], "triggers": []}},
-        {"code": "rest_api", "name": "API REST genérica", "version": "1.0.0", "description": "Integração segura com APIs HTTP externas.", "authentication_type": "api_key", "status": "installed", "manifest": {"actions": ["request"], "triggers": []}},
-        {"code": "google_calendar", "name": "Google Calendar", "version": "0.0.0", "description": "Agenda e eventos do Google.", "authentication_type": "oauth2", "status": "planned", "manifest": {}},
-        {"code": "whatsapp_business", "name": "WhatsApp Business", "version": "0.0.0", "description": "Mensagens por provedor oficial.", "authentication_type": "oauth2", "status": "planned", "manifest": {}},
-    ], multiinsert=False)
+    op.bulk_insert(
+        plugins,
+        [
+            {
+                "code": "generic_webhook",
+                "name": "Webhook genérico",
+                "version": "1.0.0",
+                "description": "Recebe e envia eventos HTTP assinados.",
+                "authentication_type": "secret",
+                "status": "installed",
+                "manifest": {"actions": ["send"], "triggers": ["receive"]},
+            },
+            {
+                "code": "smtp_email",
+                "name": "E-mail SMTP",
+                "version": "1.0.0",
+                "description": "Envio de mensagens por servidor SMTP.",
+                "authentication_type": "username_password",
+                "status": "installed",
+                "manifest": {"actions": ["send_email"], "triggers": []},
+            },
+            {
+                "code": "rest_api",
+                "name": "API REST genérica",
+                "version": "1.0.0",
+                "description": "Integração segura com APIs HTTP externas.",
+                "authentication_type": "api_key",
+                "status": "installed",
+                "manifest": {"actions": ["request"], "triggers": []},
+            },
+            {
+                "code": "google_calendar",
+                "name": "Google Calendar",
+                "version": "0.0.0",
+                "description": "Agenda e eventos do Google.",
+                "authentication_type": "oauth2",
+                "status": "planned",
+                "manifest": {},
+            },
+            {
+                "code": "whatsapp_business",
+                "name": "WhatsApp Business",
+                "version": "0.0.0",
+                "description": "Mensagens por provedor oficial.",
+                "authentication_type": "oauth2",
+                "status": "planned",
+                "manifest": {},
+            },
+        ],
+        multiinsert=False,
+    )
 
     op.create_table(
         "company_plugins",
@@ -82,7 +144,12 @@ def upgrade() -> None:
         sa.Column("company_id", UUID, nullable=False),
         sa.Column("plugin_id", UUID, nullable=False),
         sa.Column("status", sa.String(20), server_default="inactive", nullable=False),
-        sa.Column("configuration", postgresql.JSONB(), server_default=sa.text("'{}'::jsonb"), nullable=False),
+        sa.Column(
+            "configuration",
+            postgresql.JSONB(),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
         sa.Column("activated_at", TIMESTAMP, nullable=True),
         sa.Column("deactivated_at", TIMESTAMP, nullable=True),
         sa.CheckConstraint("status IN ('active', 'inactive')", name="ck_company_plugins_status"),
@@ -105,13 +172,19 @@ def upgrade() -> None:
         sa.Column("expires_at", TIMESTAMP, nullable=True),
         sa.Column("created_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
-        sa.CheckConstraint("status IN ('active', 'expired', 'revoked')", name="ck_integration_credentials_status"),
+        sa.CheckConstraint(
+            "status IN ('active', 'expired', 'revoked')", name="ck_integration_credentials_status"
+        ),
         sa.ForeignKeyConstraint(["company_id"], ["companies.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["plugin_id"], ["plugins.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_integration_credentials_company_id", "integration_credentials", ["company_id"])
-    op.create_index("ix_integration_credentials_plugin_id", "integration_credentials", ["plugin_id"])
+    op.create_index(
+        "ix_integration_credentials_company_id", "integration_credentials", ["company_id"]
+    )
+    op.create_index(
+        "ix_integration_credentials_plugin_id", "integration_credentials", ["plugin_id"]
+    )
 
 
 def downgrade() -> None:

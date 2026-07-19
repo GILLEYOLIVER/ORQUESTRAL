@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AnyHttpUrl, Field, RedisDsn, model_validator
+from pydantic import AnyHttpUrl, Field, RedisDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["development", "testing", "staging", "production"]
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Orkestral API"
     app_env: Environment = "development"
-    app_version: str = "0.8.0"
+    app_version: str = "0.11.1"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     ai_output_cost_per_million_tokens_microusd: int = Field(default=600_000, ge=0)
     knowledge_max_file_bytes: int = Field(default=20_971_520, ge=1_048_576, le=104_857_600)
     knowledge_web_allowed_domains: list[str] = Field(default_factory=list)
+    knowledge_embedding_provider: Literal["local_hash", "openai_compatible"] = "local_hash"
+    knowledge_embedding_model: str = "text-embedding-3-small"
+    knowledge_embedding_dimensions: int = 384
+    knowledge_embedding_batch_size: int = Field(default=32, ge=1, le=256)
     storage_endpoint: AnyHttpUrl = AnyHttpUrl("http://localhost:9000")
     storage_access_key: str = "development-only"
     storage_secret_key: str = "development-only-change-me-storage-secret"  # noqa: S105
@@ -52,9 +56,17 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost", "http://localhost:5173"]
     )
+    security_rate_limit_enabled: bool = True
+    security_rate_limit_requests: int = Field(default=300, ge=10, le=10_000)
+    security_rate_limit_window_seconds: int = Field(default=60, ge=10, le=3_600)
+    request_max_body_bytes: int = Field(default=26_214_400, ge=1_024, le=104_857_600)
+    security_hsts_seconds: int = Field(default=31_536_000, ge=0, le=63_072_000)
+    audit_capture_enabled: bool = True
+    audit_retention_days: int = Field(default=365, ge=30, le=3_650)
     dependency_timeout_seconds: float = Field(default=2.0, gt=0, le=10)
     jwt_issuer: str = "orkestral"
     jwt_audience: str = "orkestral-api"
+    jwt_previous_secrets: list[str] = Field(default_factory=list)
     access_token_minutes: int = Field(default=15, ge=5, le=60)
     refresh_token_days: int = Field(default=30, ge=1, le=90)
     password_reset_minutes: int = Field(default=30, ge=5, le=120)
@@ -70,6 +82,13 @@ class Settings(BaseSettings):
     bootstrap_company_name: str | None = None
     bootstrap_company_slug: str | None = None
     bootstrap_company_document: str | None = None
+
+    @field_validator("knowledge_embedding_dimensions")
+    @classmethod
+    def validate_knowledge_embedding_dimensions(cls, value: int) -> int:
+        if value != 384:
+            raise ValueError("KNOWLEDGE_EMBEDDING_DIMENSIONS must be 384")
+        return value
 
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
@@ -113,11 +132,30 @@ class Settings(BaseSettings):
             raise ValueError("DEVELOPMENT_EXPOSE_TOKENS não pode ser habilitado em produção")
         if self.bootstrap_enabled:
             raise ValueError("BOOTSTRAP_ENABLED não pode ser habilitado em produção")
+        if self.knowledge_embedding_provider != "openai_compatible":
+            raise ValueError("KNOWLEDGE_EMBEDDING_PROVIDER deve ser openai_compatible em produção")
+        if not self.ai_provider_api_key or any(
+            marker in self.ai_provider_api_key.lower() for marker in _PLACEHOLDER_MARKERS
+        ):
+            raise ValueError("AI_PROVIDER_API_KEY deve ser configurada para embeddings em produção")
+        if any(origin == "*" or not origin.startswith("https://") for origin in self.cors_origins):
+            raise ValueError("CORS_ORIGINS deve conter apenas origens HTTPS explícitas em produção")
+        unsafe_previous_secrets = [
+            value
+            for value in self.jwt_previous_secrets
+            if len(value) < 32 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
+        ]
+        if unsafe_previous_secrets:
+            raise ValueError("JWT_PREVIOUS_SECRETS contém valores inseguros para produção")
         return self
 
     @property
     def auth_cookie_secure(self) -> bool:
         return self.app_env in {"staging", "production"}
+
+    @property
+    def jwt_verification_secrets(self) -> tuple[str, ...]:
+        return tuple(dict.fromkeys((self.jwt_secret, *self.jwt_previous_secrets)))
 
     def readiness_is_configured(self) -> bool:
         return bool(

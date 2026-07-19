@@ -95,18 +95,26 @@ def create_access_token(
 
 
 def decode_access_token(settings: Settings, token: str) -> AccessTokenClaims:
+    payload: dict[str, Any] | None = None
+    for secret in settings.jwt_verification_secrets:
+        try:
+            payload = cast(
+                dict[str, Any],
+                jwt.decode(
+                    token,
+                    secret,
+                    algorithms=["HS256"],
+                    audience=settings.jwt_audience,
+                    issuer=settings.jwt_issuer,
+                    options={"require": ["exp", "iat", "jti", "sub", "sid", "type"]},
+                ),
+            )
+            break
+        except jwt.InvalidTokenError:
+            continue
+    if payload is None:
+        raise InvalidAccessTokenError("Token de acesso inválido")
     try:
-        payload = cast(
-            dict[str, Any],
-            jwt.decode(
-                token,
-                settings.jwt_secret,
-                algorithms=["HS256"],
-                audience=settings.jwt_audience,
-                issuer=settings.jwt_issuer,
-                options={"require": ["exp", "iat", "sub", "sid", "type"]},
-            ),
-        )
         if payload["type"] != "access":
             raise InvalidAccessTokenError("Tipo de token inválido")
         company_value = payload.get("company_id")
@@ -116,7 +124,7 @@ def decode_access_token(settings: Settings, token: str) -> AccessTokenClaims:
             company_id=UUID(str(company_value)) if company_value else None,
             expires_at=datetime.fromtimestamp(float(payload["exp"]), tz=UTC),
         )
-    except (jwt.InvalidTokenError, KeyError, TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError) as exc:
         raise InvalidAccessTokenError("Token de acesso inválido") from exc
 
 

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master, "codex/**"]
+    branches: [main, master]
   pull_request:
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:18.4-bookworm
+        image: pgvector/pgvector:pg18-bookworm
         env:
           POSTGRES_DB: orkestral
           POSTGRES_USER: orkestral

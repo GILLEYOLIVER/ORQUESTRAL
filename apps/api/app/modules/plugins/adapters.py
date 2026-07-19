@@ -34,7 +34,9 @@ class HttpAdapter(BasePlugin):
         credential_fields=(
             PluginField("base_url", "URL base", "url", placeholder="https://api.exemplo.com"),
             PluginField("api_key", "Chave da API", "password", required=False, secret=True),
-            PluginField("auth_header", "Cabeçalho de autenticação", required=False, default="Authorization"),
+            PluginField(
+                "auth_header", "Cabeçalho de autenticação", required=False, default="Authorization"
+            ),
         ),
         tools=(PluginTool("request", "Requisição HTTP", "Executa uma chamada autenticada."),),
         actions=("request",),
@@ -58,8 +60,12 @@ class HttpAdapter(BasePlugin):
         async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
             response = await client.get(url, headers={str(k): str(v) for k, v in headers.items()})
         if response.status_code >= 500:
-            return ConnectionTestResult(False, f"O destino respondeu com HTTP {response.status_code}.")
-        return ConnectionTestResult(True, f"Conexão HTTP validada com status {response.status_code}.")
+            return ConnectionTestResult(
+                False, f"O destino respondeu com HTTP {response.status_code}."
+            )
+        return ConnectionTestResult(
+            True, f"Conexão HTTP validada com status {response.status_code}."
+        )
 
 
 class WebhookAdapter(HttpAdapter):
@@ -71,7 +77,9 @@ class WebhookAdapter(HttpAdapter):
         authentication_type="secret",
         credential_fields=(
             PluginField("url", "URL de destino", "url", placeholder="https://exemplo.com/webhook"),
-            PluginField("signing_secret", "Segredo de assinatura", "password", required=False, secret=True),
+            PluginField(
+                "signing_secret", "Segredo de assinatura", "password", required=False, secret=True
+            ),
         ),
         tools=(PluginTool("send", "Enviar webhook", "Envia um evento HTTP assinado."),),
         triggers=("receive",),
@@ -94,7 +102,9 @@ class SmtpAdapter(BasePlugin):
             PluginField("password", "Senha", "password", required=False, secret=True),
             PluginField("use_tls", "Usar STARTTLS", "boolean", required=False, default=True),
         ),
-        tools=(PluginTool("send_email", "Enviar e-mail", "Envia uma mensagem pelo SMTP configurado."),),
+        tools=(
+            PluginTool("send_email", "Enviar e-mail", "Envia uma mensagem pelo SMTP configurado."),
+        ),
         actions=("send_email",),
     )
 
@@ -154,7 +164,11 @@ class ImapAdapter(BasePlugin):
 
         def connect() -> None:
             client: imaplib.IMAP4
-            client = imaplib.IMAP4_SSL(host, port, timeout=5) if use_ssl else imaplib.IMAP4(host, port, timeout=5)
+            client = (
+                imaplib.IMAP4_SSL(host, port, timeout=5)
+                if use_ssl
+                else imaplib.IMAP4(host, port, timeout=5)
+            )
             try:
                 client.login(username, password)
             finally:
@@ -176,7 +190,9 @@ class GoogleCalendarAdapter(BasePlugin):
         authentication_type="oauth2",
         credential_fields=(
             PluginField("access_token", "Token de acesso OAuth", "password", secret=True),
-            PluginField("refresh_token", "Token de renovação", "password", required=False, secret=True),
+            PluginField(
+                "refresh_token", "Token de renovação", "password", required=False, secret=True
+            ),
         ),
         tools=(PluginTool("calendar_event", "Gerenciar evento", "Cria e atualiza eventos."),),
         triggers=("event_changed",),
@@ -198,7 +214,9 @@ class GoogleCalendarAdapter(BasePlugin):
                 headers={"Authorization": f"Bearer {token}"},
             )
         if response.status_code >= 400:
-            return ConnectionTestResult(False, f"Google Calendar respondeu com HTTP {response.status_code}.")
+            return ConnectionTestResult(
+                False, f"Google Calendar respondeu com HTTP {response.status_code}."
+            )
         return ConnectionTestResult(True, "Conexão com Google Calendar validada.")
 
 
@@ -214,7 +232,9 @@ class WhatsAppBusinessAdapter(BasePlugin):
             PluginField("phone_number_id", "ID do número de telefone"),
             PluginField("api_version", "Versão da Graph API", placeholder="vXX.X"),
         ),
-        tools=(PluginTool("send_message", "Enviar mensagem", "Envia mensagem pelo provedor oficial."),),
+        tools=(
+            PluginTool("send_message", "Enviar mensagem", "Envia mensagem pelo provedor oficial."),
+        ),
         triggers=("message_received", "message_status"),
         actions=("send_message",),
         supports_token_refresh=True,
@@ -235,7 +255,9 @@ class WhatsAppBusinessAdapter(BasePlugin):
                 headers={"Authorization": f"Bearer {token}"},
             )
         if response.status_code >= 400:
-            return ConnectionTestResult(False, f"WhatsApp Business respondeu com HTTP {response.status_code}.")
+            return ConnectionTestResult(
+                False, f"WhatsApp Business respondeu com HTTP {response.status_code}."
+            )
         return ConnectionTestResult(True, "Conexão com WhatsApp Business validada.")
 
 
@@ -247,9 +269,15 @@ class ExternalPostgresAdapter(BasePlugin):
         description="Acesso controlado a um banco PostgreSQL externo.",
         authentication_type="connection_string",
         credential_fields=(
-            PluginField("dsn", "String de conexão", "password", secret=True, placeholder="postgresql://..."),
+            PluginField(
+                "dsn", "String de conexão", "password", secret=True, placeholder="postgresql://..."
+            ),
         ),
-        tools=(PluginTool("query", "Consulta PostgreSQL", "Executa consultas permitidas no banco externo."),),
+        tools=(
+            PluginTool(
+                "query", "Consulta PostgreSQL", "Executa consultas permitidas no banco externo."
+            ),
+        ),
         actions=("query",),
     )
 

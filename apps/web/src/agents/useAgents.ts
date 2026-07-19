@@ -70,7 +70,14 @@ export interface AgentToolRunResponse {
 }
 
 export interface AgentChatResponse {
-  conversation: { id: string; agent_id: string; title: string; status: string; created_at: string; updated_at: string };
+  conversation: {
+    id: string;
+    agent_id: string;
+    title: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+  };
   user_message: AgentMessageResponse;
   assistant_message: AgentMessageResponse;
   pending_actions: AgentToolRunResponse[];
@@ -97,6 +104,10 @@ export function useAgents(enabled = true) {
   return useQuery({
     queryKey: ["agents", me?.current_company?.id],
     queryFn: () => request<AgentResponse[]>("/agents"),
-    enabled: enabled && status === "authenticated" && Boolean(me?.current_company) && (me?.permissions.includes("agents.view") ?? false),
+    enabled:
+      enabled &&
+      status === "authenticated" &&
+      Boolean(me?.current_company) &&
+      (me?.permissions.includes("agents.view") ?? false),
   });
 }

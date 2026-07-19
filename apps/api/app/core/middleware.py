@@ -1,14 +1,177 @@
 from __future__ import annotations
 
+import hashlib
+import ipaddress
 from time import perf_counter
+from typing import cast
 
 import structlog
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
+from app.core.config import Settings
 from app.core.logging import get_logger
 from app.core.request_context import normalize_request_id
+from app.core.security import InvalidAccessTokenError, decode_access_token
+from app.modules.audit.service import AuditEventInput, AuditService
+
+_MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def client_ip_address(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "").split(",", maxsplit=1)[0].strip()
+    candidate = forwarded or (request.client.host if request.client else "unknown")
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError:
+        return "unknown"
+
+
+class SecurityMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        settings = cast(Settings, request.app.state.settings)
+        response = self._validate_body_size(request, settings)
+        if response is None:
+            response = await self._enforce_rate_limit(request, settings)
+        if response is None:
+            response = await call_next(request)
+
+        self._apply_security_headers(response, settings)
+        if (
+            settings.audit_capture_enabled
+            and settings.app_env != "testing"
+            and request.method in _MUTATING_METHODS
+        ):
+            await self._capture_audit_event(request, response, settings)
+        return response
+
+    @staticmethod
+    def _problem(request: Request, status_code: int, title: str, detail: str) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", normalize_request_id(None))
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "type": "about:blank",
+                "title": title,
+                "status": status_code,
+                "detail": detail,
+                "instance": request.url.path,
+                "request_id": request_id,
+            },
+        )
+
+    def _validate_body_size(self, request: Request, settings: Settings) -> Response | None:
+        header = request.headers.get("content-length")
+        if not header:
+            return None
+        try:
+            content_length = int(header)
+        except ValueError:
+            return self._problem(request, 400, "Cabeçalho inválido", "Content-Length inválido.")
+        if content_length < 0:
+            return self._problem(request, 400, "Cabeçalho inválido", "Content-Length inválido.")
+        if content_length > settings.request_max_body_bytes:
+            return self._problem(
+                request,
+                413,
+                "Conteúdo muito grande",
+                "A solicitação excede o limite de tamanho permitido.",
+            )
+        return None
+
+    async def _enforce_rate_limit(self, request: Request, settings: Settings) -> Response | None:
+        if not settings.security_rate_limit_enabled or settings.app_env == "testing":
+            return None
+        fingerprint = hashlib.sha256(client_ip_address(request).encode()).hexdigest()
+        bucket = f"security:rate:{fingerprint}"
+        redis = cast(Redis, request.app.state.resources.redis)
+        try:
+            count = await redis.incr(bucket)
+            if count == 1:
+                await redis.expire(bucket, settings.security_rate_limit_window_seconds)
+            if count <= settings.security_rate_limit_requests:
+                return None
+            ttl = max(await redis.ttl(bucket), 1)
+        except RedisError:
+            get_logger(component="security").exception("rate_limit_backend_unavailable")
+            if settings.app_env in {"staging", "production"}:
+                return self._problem(
+                    request,
+                    503,
+                    "Proteção temporariamente indisponível",
+                    "Tente novamente em alguns instantes.",
+                )
+            return None
+        response = self._problem(
+            request,
+            429,
+            "Muitas solicitações",
+            "Aguarde alguns instantes antes de tentar novamente.",
+        )
+        response.headers["Retry-After"] = str(ttl)
+        return response
+
+    @staticmethod
+    def _apply_security_headers(response: Response, settings: Settings) -> None:
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+        )
+        response.headers["Cache-Control"] = "no-store"
+        if settings.auth_cookie_secure and settings.security_hsts_seconds:
+            response.headers["Strict-Transport-Security"] = (
+                f"max-age={settings.security_hsts_seconds}; includeSubDomains"
+            )
+
+    @staticmethod
+    async def _capture_audit_event(
+        request: Request, response: Response, settings: Settings
+    ) -> None:
+        user_id = None
+        company_id = None
+        actor_type = "anonymous"
+        authorization = request.headers.get("authorization", "")
+        if authorization.lower().startswith("bearer "):
+            try:
+                claims = decode_access_token(settings, authorization[7:].strip())
+                user_id = claims.user_id
+                company_id = claims.company_id
+                actor_type = "user"
+            except InvalidAccessTokenError:
+                pass
+        route = request.scope.get("route")
+        resource_type = str(getattr(route, "path", request.url.path))[:120]
+        try:
+            async with request.app.state.resources.sessions() as database:
+                await AuditService(database).record(
+                    AuditEventInput(
+                        company_id=company_id,
+                        actor_user_id=user_id,
+                        actor_type=actor_type,
+                        action=f"http.{request.method.lower()}",
+                        resource_type=resource_type,
+                        resource_id=None,
+                        before_data=None,
+                        after_data={"status_code": response.status_code},
+                        ip_address=client_ip_address(request),
+                        user_agent=request.headers.get("user-agent"),
+                        request_id=getattr(request.state, "request_id", normalize_request_id(None)),
+                    )
+                )
+                await database.commit()
+        except Exception:
+            get_logger(component="audit").exception(
+                "audit_capture_failed",
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+            )
 
 
 class ObservabilityMiddleware(BaseHTTPMiddleware):

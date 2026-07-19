@@ -938,7 +938,9 @@ p {
   flex-direction: column;
   gap: 1rem;
   min-height: 310px;
-  transition: border-color 180ms ease, transform 180ms ease;
+  transition:
+    border-color 180ms ease,
+    transform 180ms ease;
 }
 
 .plugin-card--selected {

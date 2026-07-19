@@ -1,0 +1,51 @@
+{
+  "nodes": [
+    {
+      "id": "trigger-manual",
+      "name": "Inicio manual [trigger-manu]",
+      "position": [80, 180],
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1
+    },
+    {
+      "id": "flow-end",
+      "name": "Encerramento [flow-end]",
+      "position": [430, 180],
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1
+    },
+    {
+      "id": "orkestral-internal-entry",
+      "name": "Entrada interna Orkestral",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-180, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "private-entry",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Inicio manual [trigger-manu]": {
+      "main": [
+        [{ "node": "Encerramento [flow-end]", "type": "main", "index": 0 }]
+      ]
+    },
+    "Entrada interna Orkestral": {
+      "main": [
+        [{ "node": "Encerramento [flow-end]", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true
+  }
+}

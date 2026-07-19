@@ -13,15 +13,15 @@ A Fase 5 estabelece a fronteira oficial entre o núcleo Orkestral e serviços ex
 
 ## Plugins oficiais iniciais
 
-| Código | Finalidade | Autenticação |
-| --- | --- | --- |
-| `generic_webhook` | Receber e enviar eventos HTTP assinados | Segredo opcional |
-| `smtp_email` | Enviar mensagens por SMTP | Usuário e senha |
-| `imap_email` | Ler caixas de e-mail | Usuário e senha/token |
-| `google_calendar` | Consultar e manter agendas | OAuth 2.0 |
-| `whatsapp_business` | Mensagens pelo provedor oficial | OAuth 2.0 |
-| `external_postgresql` | Acessar PostgreSQL externo | String de conexão |
-| `rest_api` | Consumir APIs HTTP genéricas | API key opcional |
+| Código                | Finalidade                              | Autenticação          |
+| --------------------- | --------------------------------------- | --------------------- |
+| `generic_webhook`     | Receber e enviar eventos HTTP assinados | Segredo opcional      |
+| `smtp_email`          | Enviar mensagens por SMTP               | Usuário e senha       |
+| `imap_email`          | Ler caixas de e-mail                    | Usuário e senha/token |
+| `google_calendar`     | Consultar e manter agendas              | OAuth 2.0             |
+| `whatsapp_business`   | Mensagens pelo provedor oficial         | OAuth 2.0             |
+| `external_postgresql` | Acessar PostgreSQL externo              | String de conexão     |
+| `rest_api`            | Consumir APIs HTTP genéricas            | API key opcional      |
 
 ## Cofre e rotação
 

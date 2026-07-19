@@ -26,10 +26,10 @@ Crie telas para listar, criar, ativar/desativar, executar manualmente, consultar
 
 ## Critérios de conclusão
 
-* A Orkestral cria e executa um fluxo no n8n.
-* O resultado aparece na Orkestral.
-* O n8n não é exposto ao usuário final.
-* Falhas são registradas e apresentadas de modo compreensível.
+- A Orkestral cria e executa um fluxo no n8n.
+- O resultado aparece na Orkestral.
+- O n8n não é exposto ao usuário final.
+- Falhas são registradas e apresentadas de modo compreensível.
 
 ---
 
@@ -91,11 +91,11 @@ Registre empresa, usuário, agente, provedor, modelo, tokens, custo, ferramenta,
 
 ## Critérios de conclusão
 
-* Vários agentes por empresa.
-* Ferramentas próprias por agente.
-* Ferramentas não autorizadas são bloqueadas.
-* Tokens e custos são registrados.
-* Ações sensíveis exigem confirmação.
+- Vários agentes por empresa.
+- Ferramentas próprias por agente.
+- Ferramentas não autorizadas são bloqueadas.
+- Tokens e custos são registrados.
+- Ações sensíveis exigem confirmação.
 
 ---
 
@@ -138,11 +138,11 @@ O agente identifica a base permitida, pesquisa apenas documentos da empresa, rec
 
 ## Critérios de conclusão
 
-* Processamento ocorre em segundo plano.
-* Documentos ficam isolados por empresa.
-* Agentes usam somente fontes autorizadas.
-* Fontes internas são informadas.
-* Documentos podem ser removidos e reprocessados.
+- Processamento ocorre em segundo plano.
+- Documentos ficam isolados por empresa.
+- Agentes usam somente fontes autorizadas.
+- Fontes internas são informadas.
+- Documentos podem ser removidos e reprocessados.
 
 ---
 
@@ -181,10 +181,10 @@ Implemente rascunho, publicação, histórico, restauração, comparação e dup
 
 ## Critérios de conclusão
 
-* Fluxo visual é criado e validado.
-* O compilador publica no n8n.
-* O histórico de versões é preservado.
-* Cada execução pode ser acompanhada.
+- Fluxo visual é criado e validado.
+- O compilador publica no n8n.
+- O histórico de versões é preservado.
+- Cada execução pode ser acompanhada.
 
 ---
 
@@ -196,14 +196,14 @@ Apresentar resultados empresariais e operacionais.
 
 ## Métricas iniciais
 
-* automações executadas, com sucesso e com falha;
-* tempo economizado estimado;
-* agentes mais utilizados;
-* tokens e custo de IA;
-* integrações com falha;
-* usuários ativos;
-* documentos processados;
-* tarefas aguardando aprovação.
+- automações executadas, com sucesso e com falha;
+- tempo economizado estimado;
+- agentes mais utilizados;
+- tokens e custo de IA;
+- integrações com falha;
+- usuários ativos;
+- documentos processados;
+- tarefas aguardando aprovação.
 
 Crie um módulo de métricas baseado em eventos internos. Evite consultas pesadas nas tabelas operacionais em cada abertura.
 

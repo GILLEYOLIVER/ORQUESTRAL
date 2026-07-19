@@ -9,14 +9,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
 from app.core.logging import configure_logging
-from app.core.middleware import ObservabilityMiddleware
+from app.core.middleware import ObservabilityMiddleware, SecurityMiddleware
 from app.core.resources import create_resources
 from app.core.schemas import ProblemDetails
 from app.modules.agents.routes import router as agents_router
+from app.modules.audit.routes import router as audit_router
 from app.modules.authentication.routes import router as authentication_router
 from app.modules.authorization.routes import router as authorization_router
 from app.modules.companies.routes import router as companies_router
 from app.modules.knowledge.routes import router as knowledge_router
+from app.modules.metrics.routes import router as metrics_router
 from app.modules.modularity.registry import module_registry
 from app.modules.modularity.routes import router as modules_router
 from app.modules.plugins.routes import router as plugins_router
@@ -57,14 +59,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
+    application.add_middleware(SecurityMiddleware)
     application.add_middleware(ObservabilityMiddleware)
     install_exception_handlers(application)
     application.include_router(health_router)
     application.include_router(agents_router)
     application.include_router(authentication_router)
+    application.include_router(audit_router)
     application.include_router(authorization_router)
     application.include_router(companies_router)
     application.include_router(knowledge_router)
+    application.include_router(metrics_router)
     application.include_router(users_router)
     application.include_router(modules_router)
     application.include_router(plugins_router)

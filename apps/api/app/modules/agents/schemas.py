@@ -10,7 +10,9 @@ from app.core.schemas import StrictSchema
 
 AgentProvider = Literal["local", "openai_compatible"]
 AgentStatus = Literal["active", "inactive"]
-ToolRunState = Literal["requested", "awaiting_confirmation", "approved", "rejected", "executing", "completed", "failed"]
+ToolRunState = Literal[
+    "requested", "awaiting_confirmation", "approved", "rejected", "executing", "completed", "failed"
+]
 
 
 class AgentCreate(StrictSchema):
