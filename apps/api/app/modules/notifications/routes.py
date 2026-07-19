@@ -57,7 +57,9 @@ def _preference_response(
         whatsapp_enabled=preference.whatsapp_enabled,
         whatsapp_recipient=preference.whatsapp_recipient,
         reminders_enabled=preference.reminders_enabled,
-        email_channel_configured=bool(settings.notification_email_webhook_url),
+        email_channel_configured=bool(
+            settings.email_delivery_enabled and settings.notification_email_webhook_url
+        ),
         whatsapp_channel_configured=bool(settings.notification_whatsapp_webhook_url),
     )
 

@@ -1,0 +1,59 @@
+name: Deploy development
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [development]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-development
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve commit
+        id: commit
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+          MANUAL_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            echo "sha=$WORKFLOW_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=$MANUAL_SHA" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          test -n "$RENDER_DEPLOY_HOOK" || { echo "RENDER_DEPLOY_HOOK não configurado"; exit 1; }
+          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK"
+      - name: Verify deployed commit
+        env:
+          REMOTE_DEVELOPMENT_URL: ${{ vars.REMOTE_DEVELOPMENT_URL }}
+          EXPECTED_COMMIT: ${{ steps.commit.outputs.sha }}
+        run: |
+          test -n "$REMOTE_DEVELOPMENT_URL" || { echo "REMOTE_DEVELOPMENT_URL não configurada"; exit 1; }
+          for attempt in $(seq 1 80); do
+            payload=$(curl --fail --silent --show-error --max-time 90 \
+              "$REMOTE_DEVELOPMENT_URL/system/version" || true)
+            if echo "$payload" | jq -e --arg sha "$EXPECTED_COMMIT" '.commit == $sha' >/dev/null; then
+              curl --fail --silent --show-error "$REMOTE_DEVELOPMENT_URL/ready"
+              exit 0
+            fi
+            echo "Aguardando deploy ($attempt/80)..."
+            sleep 15
+          done
+          echo "O commit esperado não ficou saudável dentro de 20 minutos."
+          exit 1

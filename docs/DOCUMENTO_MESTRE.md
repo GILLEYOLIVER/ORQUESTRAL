@@ -1531,6 +1531,37 @@ O sistema deverá permitir que uma automação pause até a aprovação humana.
 
 ---
 
+# 18.5. FASE 13.5 — AMBIENTE REMOTO GRATUITO DE DESENVOLVIMENTO
+
+## Objetivo
+
+Disponibilizar a Orkestral pela internet para desenvolvimento e testes sem dependência do computador local, sem recursos pagos obrigatórios e sem tratar o ambiente como produção.
+
+## Arquitetura aprovada
+
+- Render Free executa uma imagem única com frontend React e API FastAPI no mesmo domínio.
+- Neon Free fornece PostgreSQL gerenciado.
+- Upstash Free fornece Redis obrigatório para autenticação, sessões e rate limiting.
+- n8n, worker, armazenamento de objetos e entrega externa de e-mail permanecem desligados no modo reduzido.
+- Configuração permanece portável por variáveis de ambiente, container OCI e migrations Alembic.
+
+## Critérios de conclusão
+
+- [x] Modos `local`, `development` e `production` documentados.
+- [x] Blueprint gratuito, imagem remota e entrypoint por `PORT` implementados.
+- [x] Migração concorrente protegida e seed idempotente implementados.
+- [x] Saúde, prontidão, versão, commit, ambiente e capacidades expostos.
+- [x] Banner remoto, `noindex` e ocultação de recursos indisponíveis implementados.
+- [x] Deploy pós-CI com verificação do SHA exato implementado.
+- [x] Exportação, restauração, rollback, limites e troubleshooting documentados.
+- [ ] URL pública ativada após cadastro dos segredos gratuitos nos provedores.
+
+## Restrição
+
+O ambiente remoto contém somente dados fictícios e não substitui produção. Nenhuma cobrança ou upgrade automático pode ser habilitado para cumprir esta fase.
+
+---
+
 # 19. FASE 14 — TESTES
 
 ## Testes obrigatórios

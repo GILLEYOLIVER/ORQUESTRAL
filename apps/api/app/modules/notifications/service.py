@@ -343,6 +343,7 @@ async def deliver_pending_notifications(database: AsyncSession, settings: Settin
                 for channel in ("email", "whatsapp")
                 if statuses.get(channel, {}).get("state") in {"pending", "failed"}
                 and int(statuses.get(channel, {}).get("attempts", 0)) < 3
+                and (channel != "email" or settings.email_delivery_enabled)
             ]
             if not pending_channels:
                 continue

@@ -120,6 +120,10 @@ async def _get_workflow(database: DatabaseSession, company_id: UUID, workflow_id
 
 
 async def _sync_workflow(workflow: Workflow, settings: Settings) -> None:
+    if not settings.n8n_enabled:
+        workflow.sync_status = "error"
+        workflow.last_error = "n8n indisponível no ambiente remoto reduzido."
+        return
     client = N8nClient(settings)
     try:
         compiled = compile_definition(
@@ -202,6 +206,12 @@ async def engine_status(
     principal: CanViewWorkflows, settings: RequestSettings
 ) -> WorkflowEngineStatusResponse:
     del principal
+    if not settings.n8n_enabled:
+        return WorkflowEngineStatusResponse(
+            configured=False,
+            available=False,
+            message="n8n indisponível no ambiente remoto reduzido.",
+        )
     client = N8nClient(settings)
     if not client.configured:
         return WorkflowEngineStatusResponse(

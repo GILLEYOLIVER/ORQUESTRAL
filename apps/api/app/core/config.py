@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 from functools import lru_cache
 from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, RedisDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-Environment = Literal["development", "testing", "staging", "production"]
+Environment = Literal["local", "development", "testing", "staging", "production"]
 
 _PLACEHOLDER_MARKERS = ("change-me", "development-only", "example", "placeholder")
 _LOCAL_MARKERS = ("localhost", "127.0.0.1", "::1")
@@ -23,9 +24,18 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Orkestral API"
-    app_env: Environment = "development"
+    app_env: Environment = "local"
     app_version: str = "0.13.0"
     log_level: str = "INFO"
+    remote_development_enabled: bool = False
+    n8n_enabled: bool = True
+    object_storage_enabled: bool = True
+    background_worker_enabled: bool = True
+    email_delivery_enabled: bool = True
+    web_static_directory: str | None = None
+    git_commit_sha: str = "local"
+    render_git_commit: str | None = None
+    deployed_at: str | None = None
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
     celery_broker_url: RedisDsn = RedisDsn("redis://localhost:6379/1")
@@ -97,6 +107,54 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
+        if self.remote_development_enabled:
+            if self.app_env != "development":
+                raise ValueError("REMOTE_DEVELOPMENT_ENABLED exige APP_ENV=development")
+            remote_secrets = {
+                "JWT_SECRET": self.jwt_secret,
+                "ENCRYPTION_KEY": self.encryption_key,
+            }
+            unsafe_remote_secrets = [
+                name
+                for name, value in remote_secrets.items()
+                if len(value) < 32
+                or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
+            ]
+            if unsafe_remote_secrets:
+                raise ValueError(
+                    "Segredos inseguros no desenvolvimento remoto: "
+                    + ", ".join(unsafe_remote_secrets)
+                )
+            remote_connections = {
+                "DATABASE_URL": self.database_url,
+                "REDIS_URL": str(self.redis_url),
+            }
+            unsafe_remote_connections = [
+                name
+                for name, value in remote_connections.items()
+                if "localhost" in value.lower() or "127.0.0.1" in value
+            ]
+            if unsafe_remote_connections:
+                raise ValueError(
+                    "Conexões locais no desenvolvimento remoto: "
+                    + ", ".join(unsafe_remote_connections)
+                )
+            if self.development_expose_tokens:
+                raise ValueError(
+                    "DEVELOPMENT_EXPOSE_TOKENS deve permanecer desabilitado remotamente"
+                )
+            if self.bootstrap_enabled and not (
+                self.bootstrap_admin_email and self.bootstrap_admin_password
+            ):
+                raise ValueError(
+                    "Seed remoto exige BOOTSTRAP_ADMIN_EMAIL e BOOTSTRAP_ADMIN_PASSWORD"
+                )
+            if any(
+                origin == "*" or not origin.startswith("https://") for origin in self.cors_origins
+            ):
+                raise ValueError(
+                    "CORS_ORIGINS remoto aceita somente origens HTTPS explícitas ou lista vazia"
+                )
         if self.app_env != "production":
             return self
 
@@ -158,16 +216,33 @@ class Settings(BaseSettings):
 
     @property
     def auth_cookie_secure(self) -> bool:
-        return self.app_env in {"staging", "production"}
+        return self.remote_development_enabled or self.app_env in {"staging", "production"}
+
+    @property
+    def effective_bootstrap_admin_password(self) -> str | None:
+        if self.bootstrap_admin_password:
+            return self.bootstrap_admin_password
+        if self.app_env == "local" and self.bootstrap_admin_email:
+            material = f"{self.jwt_secret}|{self.bootstrap_admin_email}|orkestral-local"
+            digest = hashlib.sha256(material.encode("utf-8")).hexdigest()
+            return f"Local-{digest[:24]}!9Aa"
+        return None
+
+    @property
+    def deployed_commit(self) -> str:
+        return self.render_git_commit or self.git_commit_sha
 
     @property
     def jwt_verification_secrets(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys((self.jwt_secret, *self.jwt_previous_secrets)))
 
     def readiness_is_configured(self) -> bool:
-        return bool(
-            self.database_url and self.redis_url and self.storage_bucket and self.n8n_base_url
-        )
+        required = [bool(self.database_url), bool(self.redis_url)]
+        if self.object_storage_enabled:
+            required.extend([bool(self.storage_endpoint), bool(self.storage_bucket)])
+        if self.n8n_enabled:
+            required.append(bool(self.n8n_base_url))
+        return all(required)
 
 
 @lru_cache

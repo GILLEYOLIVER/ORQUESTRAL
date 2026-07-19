@@ -1,7 +1,11 @@
 import type { ProblemDetails } from "@orkestral/shared-types";
 import { getAccessToken } from "../session/tokenStore";
+import { environment } from "./environment";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = (
+  configuredApiBaseUrl === undefined ? "/api" : configuredApiBaseUrl
+).replace(/\/$/, "");
 
 export class ApiClientError extends Error {
   constructor(
@@ -58,7 +62,7 @@ export async function request<T>(
     authenticated = true,
     body,
     headers,
-    timeoutMs = 10_000,
+    timeoutMs = environment.remoteDevelopment ? 90_000 : 10_000,
     ...init
   } = options;
   const combined = combineSignal(init.signal, timeoutMs);
@@ -124,7 +128,12 @@ export async function request<T>(
     if (combined.signal.aborted) {
       throw new ApiClientError("A solicitação excedeu o tempo limite.", 0);
     }
-    throw new ApiClientError("Não foi possível conectar ao serviço.", 0);
+    throw new ApiClientError(
+      environment.remoteDevelopment
+        ? "O ambiente remoto está iniciando. Aguarde até um minuto e tente novamente."
+        : "Não foi possível conectar ao serviço.",
+      0,
+    );
   } finally {
     combined.dispose();
   }

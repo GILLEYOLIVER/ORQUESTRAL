@@ -5,6 +5,7 @@ from time import perf_counter
 from typing import Any
 from uuid import UUID
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -37,6 +38,11 @@ async def run_workflow(
     existing_execution: WorkflowExecution | None = None,
     bypass_approval: bool = False,
 ) -> WorkflowExecution:
+    if not settings.n8n_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="Execução de automações indisponível no ambiente remoto reduzido.",
+        )
     await enforce_limit(
         database,
         company_id=workflow.company_id,

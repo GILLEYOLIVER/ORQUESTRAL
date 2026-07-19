@@ -138,6 +138,16 @@ jobs:
           -f docker-compose.development.yml
           down --volumes
 
+  remote-deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check committed secrets
+        run: bash scripts/check-secrets.sh
+      - name: Build reduced remote image
+        run: docker build --file Dockerfile.remote --tag orkestral-remote:ci .
+
   containers:
     runs-on: ubuntu-latest
     steps:

@@ -19,7 +19,7 @@ async def bootstrap() -> None:
     required = {
         "BOOTSTRAP_ADMIN_NAME": settings.bootstrap_admin_name,
         "BOOTSTRAP_ADMIN_EMAIL": settings.bootstrap_admin_email,
-        "BOOTSTRAP_ADMIN_PASSWORD": settings.bootstrap_admin_password,
+        "BOOTSTRAP_ADMIN_PASSWORD": settings.effective_bootstrap_admin_password,
         "BOOTSTRAP_COMPANY_NAME": settings.bootstrap_company_name,
         "BOOTSTRAP_COMPANY_SLUG": settings.bootstrap_company_slug,
         "BOOTSTRAP_COMPANY_DOCUMENT": settings.bootstrap_company_document,
@@ -29,7 +29,7 @@ async def bootstrap() -> None:
         raise RuntimeError(f"Bootstrap incompleto: {', '.join(missing)}")
     admin_name = settings.bootstrap_admin_name
     admin_email = settings.bootstrap_admin_email
-    admin_password = settings.bootstrap_admin_password
+    admin_password = settings.effective_bootstrap_admin_password
     company_name = settings.bootstrap_company_name
     company_slug = settings.bootstrap_company_slug
     company_document = settings.bootstrap_company_document
@@ -68,6 +68,8 @@ async def bootstrap() -> None:
                 )
                 database.add(user)
                 await database.flush()
+            elif settings.app_env == "local":
+                user.password_hash = hash_password(admin_password)
 
             membership = await database.scalar(
                 select(CompanyUser).where(

@@ -530,6 +530,17 @@ p {
   text-align: center;
 }
 
+.remote-development-banner {
+  background: #f8e8bd;
+  border-bottom: 1px solid #d5b76b;
+  color: #493b19;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  padding: 0.65rem 1.25rem;
+  text-align: center;
+}
+
 .app-header {
   align-items: center;
   background: white;
