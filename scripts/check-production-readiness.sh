@@ -9,6 +9,22 @@ fail() {
   exit 1
 }
 
+contains_fixed() {
+  if command -v rg >/dev/null 2>&1; then
+    rg --fixed-strings --quiet "$1" "$2"
+  else
+    grep --fixed-strings --quiet -- "$1" "$2"
+  fi
+}
+
+contains_regex() {
+  if command -v rg >/dev/null 2>&1; then
+    rg --regexp "$1" --quiet "$2"
+  else
+    grep --extended-regexp --quiet -- "$1" "$2"
+  fi
+}
+
 required_files=(
   .env.production.example
   .github/workflows/deploy-production.yml
@@ -30,7 +46,7 @@ workflow_markers=(
   "PRODUCTION_HOOK_TOKEN"
 )
 for marker in "${workflow_markers[@]}"; do
-  rg --fixed-strings --quiet "$marker" .github/workflows/deploy-production.yml ||
+  contains_fixed "$marker" .github/workflows/deploy-production.yml ||
     fail "workflow marker not found: $marker"
 done
 
@@ -48,24 +64,24 @@ environment_keys=(
   VITE_AUTH_PREVIEW_ENABLED
 )
 for key in "${environment_keys[@]}"; do
-  rg --regexp "^${key}=" --quiet .env.production.example ||
+  contains_regex "^${key}=" .env.production.example ||
     fail "environment key not found: $key"
 done
 
-rg --fixed-strings --quiet "APP_ENV=production" .env.production.example ||
+contains_fixed "APP_ENV=production" .env.production.example ||
   fail "APP_ENV must be production"
-rg --fixed-strings --quiet "BILLING_ENFORCEMENT_ENABLED=true" .env.production.example ||
+contains_fixed "BILLING_ENFORCEMENT_ENABLED=true" .env.production.example ||
   fail "billing enforcement must be enabled"
-rg --fixed-strings --quiet "KNOWLEDGE_EMBEDDING_PROVIDER=openai_compatible" .env.production.example ||
+contains_fixed "KNOWLEDGE_EMBEDDING_PROVIDER=openai_compatible" .env.production.example ||
   fail "production embeddings must use the external provider"
-rg --fixed-strings --quiet "RUN_MIGRATIONS_ON_STARTUP=false" .env.production.example ||
+contains_fixed "RUN_MIGRATIONS_ON_STARTUP=false" .env.production.example ||
   fail "replicas must not run migrations on startup"
-rg --fixed-strings --quiet "BOOTSTRAP_ENABLED=false" .env.production.example ||
+contains_fixed "BOOTSTRAP_ENABLED=false" .env.production.example ||
   fail "bootstrap must be disabled"
-rg --fixed-strings --quiet "VITE_AUTH_PREVIEW_ENABLED=false" .env.production.example ||
+contains_fixed "VITE_AUTH_PREVIEW_ENABLED=false" .env.production.example ||
   fail "authentication preview must be disabled"
 
-if rg --regexp '^[A-Z0-9_]+=.*(localhost|127\.0\.0\.1|development-only|change-me)' \
+if contains_regex '^[A-Z0-9_]+=.*(localhost|127\.0\.0\.1|development-only|change-me)' \
   .env.production.example; then
   fail "unsafe local or sample value found in production environment"
 fi
