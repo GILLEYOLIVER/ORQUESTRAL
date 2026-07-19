@@ -15,7 +15,7 @@ provisionado e nenhum segredo real foi acessado.
 | Dependencias Python de producao    | Vulnerabilidades encontradas e versoes corrigidas aplicadas |
 | Bandit                             | Nenhum achado medio ou alto                                 |
 | Testes de seguranca e multiempresa | Cobertos pela Fase 14 e pelo CI                             |
-| Imagens                            | Trivy bloqueante para vulnerabilidades criticas             |
+| Imagens                            | Trivy bloqueante para achados altos e criticos              |
 | Configuracao de staging/production | Rejeita placeholders, localhost, CORS inseguro e bootstrap  |
 
 ## Achados tratados
@@ -42,6 +42,12 @@ script de auditoria bloqueia novas referencias mutaveis. Dependabot acompanha at
 Severidade alta. `cryptography 45.0.7` e `PyJWT 2.10.1` possuiam advisories corrigidos em versoes
 posteriores. O lockfile foi atualizado para `cryptography 48.0.1` e `PyJWT 2.13.0`; o `pip-audit`
 passou a bloquear recorrencias na esteira.
+
+### SEC-005 - containers executados como root
+
+Severidade alta. O Trivy identificou que os runtimes de `Dockerfile.web` e `Dockerfile.remote` nao
+declaravam um usuario sem privilegios. O frontend agora executa como `nginx` na porta interna
+`8080`, e o servico remoto executa como o usuario dedicado `orkestral`.
 
 ## Riscos residuais
 
