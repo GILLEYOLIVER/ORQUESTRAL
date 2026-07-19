@@ -4,7 +4,7 @@ from time import perf_counter
 from typing import Annotated, Literal, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 
 from app.core.dependencies import DatabaseSession, RequestSettings
@@ -261,15 +261,16 @@ async def list_usage(
 
 
 @router.get("", response_model=list[AgentResponse])
-async def list_agents(principal: CanViewAgents, database: DatabaseSession) -> list[AgentResponse]:
+async def list_agents(
+    principal: CanViewAgents,
+    database: DatabaseSession,
+    include_inactive: bool = Query(default=False),
+) -> list[AgentResponse]:
     context = get_request_context(principal)
-    agents = (
-        await database.scalars(
-            select(Agent)
-            .where(Agent.company_id == context.company_id)
-            .order_by(Agent.created_at.desc())
-        )
-    ).all()
+    statement = select(Agent).where(Agent.company_id == context.company_id)
+    if not include_inactive:
+        statement = statement.where(Agent.status == "active")
+    agents = (await database.scalars(statement.order_by(Agent.created_at.desc()))).all()
     return [_agent_response(agent) for agent in agents]
 
 

@@ -63,6 +63,14 @@
   justify-content: center;
   width: 38px;
 }
+.agent-delete-button {
+  color: #a33232;
+  margin-left: auto;
+}
+.agent-delete-button:hover {
+  background: #fbe7e7;
+  color: #7d2020;
+}
 .agent-row small,
 .agent-usage small,
 .agent-message small {
