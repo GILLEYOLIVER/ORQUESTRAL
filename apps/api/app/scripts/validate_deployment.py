@@ -3,7 +3,7 @@ from app.core.config import get_settings
 
 def main() -> None:
     settings = get_settings()
-    if not settings.readiness_is_configured:
+    if not settings.readiness_is_configured():
         raise RuntimeError("Dependências obrigatórias não foram configuradas.")
     print(
         "Configuração validada:",

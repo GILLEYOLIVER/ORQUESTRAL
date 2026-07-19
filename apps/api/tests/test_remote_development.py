@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,8 +9,8 @@ from app.core.config import Settings
 from app.main import create_app
 
 
-def remote_settings(**overrides: object) -> Settings:
-    values: dict[str, object] = {
+def remote_settings(**overrides: Any) -> Settings:
+    values: dict[str, Any] = {
         "app_env": "development",
         "remote_development_enabled": True,
         "database_url": "postgresql+asyncpg://user:password@db.example/orkestral?ssl=require",
