@@ -115,9 +115,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         return response
 
     @staticmethod
-    def _apply_security_headers(
-        request: Request, response: Response, settings: Settings
-    ) -> None:
+    def _apply_security_headers(request: Request, response: Response, settings: Settings) -> None:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"

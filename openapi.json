@@ -1882,6 +1882,39 @@
         "title": "CRMTagResponse",
         "type": "object"
       },
+      "CapabilitiesResponse": {
+        "properties": {
+          "background_worker": {
+            "title": "Background Worker",
+            "type": "boolean"
+          },
+          "email_delivery": {
+            "title": "Email Delivery",
+            "type": "boolean"
+          },
+          "n8n": {
+            "title": "N8N",
+            "type": "boolean"
+          },
+          "object_storage": {
+            "title": "Object Storage",
+            "type": "boolean"
+          },
+          "remote_development": {
+            "title": "Remote Development",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "remote_development",
+          "n8n",
+          "object_storage",
+          "background_worker",
+          "email_delivery"
+        ],
+        "title": "CapabilitiesResponse",
+        "type": "object"
+      },
       "CheckResult": {
         "additionalProperties": false,
         "properties": {
@@ -4555,6 +4588,46 @@
           "last_login_at"
         ],
         "title": "UserResponse",
+        "type": "object"
+      },
+      "VersionResponse": {
+        "properties": {
+          "commit": {
+            "title": "Commit",
+            "type": "string"
+          },
+          "deployed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployed At"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "version",
+          "commit",
+          "environment",
+          "deployed_at"
+        ],
+        "title": "VersionResponse",
         "type": "object"
       },
       "WorkflowComparisonResponse": {
@@ -12065,6 +12138,108 @@
           }
         },
         "summary": "Ready",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/system/capabilities": {
+      "get": {
+        "operationId": "capabilities_system_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/system/version": {
+      "get": {
+        "operationId": "version_system_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "summary": "Version",
         "tags": [
           "system"
         ]

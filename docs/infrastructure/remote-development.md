@@ -8,12 +8,12 @@ Redis permanece obrigatório porque autenticação, sessão, limitação de tent
 
 ## Alternativas avaliadas
 
-| Opção | Adequação | Decisão |
-| --- | --- | --- |
-| Render Free | GitHub, TLS, logs, 750 horas/mês por workspace, sem cobrança ao esgotar cota quando não há método de pagamento | Escolhida |
-| Koyeb Free | 512 MB e escala a zero, mas exige cartão e limita serviços gratuitos | Rejeitada por risco financeiro maior |
-| Cloudflare Pages | Excelente frontend estático, mas criaria domínio separado e complexidade de cookies/CORS | Alternativa futura |
-| Railway | Crédito gratuito pequeno e avaliação temporária | Rejeitada para disponibilidade contínua |
+| Opção            | Adequação                                                                                                      | Decisão                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Render Free      | GitHub, TLS, logs, 750 horas/mês por workspace, sem cobrança ao esgotar cota quando não há método de pagamento | Escolhida                               |
+| Koyeb Free       | 512 MB e escala a zero, mas exige cartão e limita serviços gratuitos                                           | Rejeitada por risco financeiro maior    |
+| Cloudflare Pages | Excelente frontend estático, mas criaria domínio separado e complexidade de cookies/CORS                       | Alternativa futura                      |
+| Railway          | Crédito gratuito pequeno e avaliação temporária                                                                | Rejeitada para disponibilidade contínua |
 
 ## Provisionamento
 

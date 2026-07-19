@@ -3,10 +3,9 @@ import { getAccessToken } from "../session/tokenStore";
 import { environment } from "./environment";
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-const API_BASE_URL = (configuredApiBaseUrl === undefined ? "/api" : configuredApiBaseUrl).replace(
-  /\/$/,
-  "",
-);
+const API_BASE_URL = (
+  configuredApiBaseUrl === undefined ? "/api" : configuredApiBaseUrl
+).replace(/\/$/, "");
 
 export class ApiClientError extends Error {
   constructor(

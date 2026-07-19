@@ -148,7 +148,8 @@ export function AuthenticatedLayout({
       <div className="app-main">
         {environment.remoteDevelopment ? (
           <div className="remote-development-banner" role="status">
-            Ambiente de desenvolvimento remoto · dados de teste · recursos reduzidos
+            Ambiente de desenvolvimento remoto · dados de teste · recursos
+            reduzidos
           </div>
         ) : null}
         {preview ? (

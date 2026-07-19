@@ -150,8 +150,7 @@ class Settings(BaseSettings):
                     "Seed remoto exige BOOTSTRAP_ADMIN_EMAIL e BOOTSTRAP_ADMIN_PASSWORD"
                 )
             if any(
-                origin == "*" or not origin.startswith("https://")
-                for origin in self.cors_origins
+                origin == "*" or not origin.startswith("https://") for origin in self.cors_origins
             ):
                 raise ValueError(
                     "CORS_ORIGINS remoto aceita somente origens HTTPS explícitas ou lista vazia"
