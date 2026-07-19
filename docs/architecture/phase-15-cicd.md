@@ -19,6 +19,10 @@ São publicadas três imagens portáveis: `api`, `web` e `remote`. O deploy grat
 - `staging`: preparado, manual e protegido por GitHub Environment.
 - `production`: contrato preparado, sem provedor ou deploy automático nesta fase.
 
+O passo 35 adiciona uma auditoria independente: dependências de produção, SAST, segredos,
+configuração, filesystem e cadeia de Actions são verificados sem acesso aos secrets dos ambientes.
+Actions externas permanecem fixadas por SHA e recebem atualizações controladas pelo Dependabot.
+
 Migrações de desenvolvimento usam advisory lock PostgreSQL. Staging e produção devem executar uma única tarefa de migração antes de iniciar réplicas, mantendo `RUN_MIGRATIONS_ON_STARTUP=false`.
 
 ## Segurança

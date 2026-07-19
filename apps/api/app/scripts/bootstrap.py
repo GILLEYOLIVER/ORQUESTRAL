@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import cast
 
 from sqlalchemy import select
 
@@ -27,18 +28,12 @@ async def bootstrap() -> None:
     missing = [name for name, value in required.items() if not value]
     if missing:
         raise RuntimeError(f"Bootstrap incompleto: {', '.join(missing)}")
-    admin_name = settings.bootstrap_admin_name
-    admin_email = settings.bootstrap_admin_email
-    admin_password = settings.effective_bootstrap_admin_password
-    company_name = settings.bootstrap_company_name
-    company_slug = settings.bootstrap_company_slug
-    company_document = settings.bootstrap_company_document
-    assert admin_name is not None
-    assert admin_email is not None
-    assert admin_password is not None
-    assert company_name is not None
-    assert company_slug is not None
-    assert company_document is not None
+    admin_name = cast(str, required["BOOTSTRAP_ADMIN_NAME"])
+    admin_email = cast(str, required["BOOTSTRAP_ADMIN_EMAIL"])
+    admin_password = cast(str, required["BOOTSTRAP_ADMIN_PASSWORD"])
+    company_name = cast(str, required["BOOTSTRAP_COMPANY_NAME"])
+    company_slug = cast(str, required["BOOTSTRAP_COMPANY_SLUG"])
+    company_document = cast(str, required["BOOTSTRAP_COMPANY_DOCUMENT"])
 
     resources = create_resources(settings)
     try:

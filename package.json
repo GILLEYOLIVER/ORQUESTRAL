@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "contracts:generate": "pnpm --filter @orkestral/shared-types generate",
     "contracts:check": "pnpm contracts:generate && git diff --exit-code -- openapi.json packages/shared-types/src/api.generated.ts",
-    "test:e2e": "pnpm --filter @orkestral/web test:e2e"
+    "test:e2e": "pnpm --filter @orkestral/web test:e2e",
+    "security:audit": "bash scripts/security-audit.sh"
   },
   "devDependencies": {
     "prettier": "3.9.5"

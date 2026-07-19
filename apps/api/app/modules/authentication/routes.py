@@ -86,12 +86,16 @@ async def development_login(
 ) -> AccessTokenResponse:
     if not _development_access_enabled(settings):
         raise HTTPException(status_code=404, detail="Recurso não disponível.")
-    assert settings.bootstrap_admin_email is not None
+    admin_email = settings.bootstrap_admin_email
     password = settings.effective_bootstrap_admin_password
-    assert password is not None
+    if admin_email is None or password is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Administrador local incompleto. Execute o bootstrap novamente.",
+        )
     try:
         issued = await AuthenticationService(database, redis, settings).login(
-            email=settings.bootstrap_admin_email,
+            email=admin_email,
             password=password,
             ip_address=_client_ip(request),
             user_agent=request.headers.get("user-agent"),

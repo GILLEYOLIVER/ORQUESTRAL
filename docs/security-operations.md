@@ -12,6 +12,16 @@
   caminhos inseguros e expansão máxima de arquivos compactados.
 - Empresas e usuários usam exclusão lógica; eventos de auditoria são imutáveis na API regular.
 
+## Auditoria automatizada
+
+Execute `pnpm security:audit` para verificar segredos versionados, dependências Node e Python,
+SAST Python e pinning imutável das GitHub Actions. O workflow `Security audit` repete essas
+verificações em pull requests, na `main`, semanalmente e sob demanda, além de executar Trivy no
+filesystem. Vulnerabilidades altas ou críticas e achados SAST médios ou altos bloqueiam a entrega.
+
+O Dependabot acompanha npm, Python, Docker e GitHub Actions semanalmente. Atualizações de Actions
+devem preservar o SHA completo e registrar a versão legível em comentário.
+
 ## Rotação de segredos
 
 1. Gere um segredo aleatório com pelo menos 32 caracteres no gerenciador de segredos autorizado.
