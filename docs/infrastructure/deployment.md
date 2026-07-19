@@ -9,6 +9,8 @@
 5. `Deploy development` chama o deploy hook do Render somente depois da publicação.
 6. O workflow usa `scripts/verify-deployment.sh` para confirmar `/system/version` e `/ready`.
 
+Staging usa o workflow manual protegido `Deploy staging`. Ele aceita somente um SHA completo ja publicado, confirma as imagens imutaveis, cria backup, executa a migracao em tarefa unica, implanta e verifica o commit. O procedimento e os secrets exigidos estao em `docs/infrastructure/staging.md`.
+
 O deploy também pode ser iniciado manualmente por `workflow_dispatch`. Um deploy nunca é considerado concluído apenas porque a imagem iniciou.
 
 ## Ambientes protegidos
@@ -42,3 +44,5 @@ python -m app.scripts.seed_development
 2. Confirme `/system/version` e `/ready`.
 3. Migrações devem ser retrocompatíveis; não reverta uma migration destrutiva sem restauração validada.
 4. Se necessário, restaure um dump em um banco novo e altere `DATABASE_URL` somente após validar o novo banco.
+
+Em staging, use `action=rollback` no workflow `Deploy staging` com o ultimo SHA saudavel. O mesmo artefato homologado deve ser promovido para producao sem rebuild.

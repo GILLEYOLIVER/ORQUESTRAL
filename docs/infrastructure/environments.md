@@ -13,3 +13,5 @@
 O ambiente é definido por `APP_ENV`; o modo remoto exige também `REMOTE_DEVELOPMENT_ENABLED=true`. Nunca copie `.env` entre ambientes. Use `.env.example` localmente e `.env.development.example` apenas como contrato de configuração.
 
 Os contratos `.env.testing.example`, `.env.staging.example` e `.env.production.example` não contêm credenciais utilizáveis. Valores reais pertencem exclusivamente ao secret manager do ambiente.
+
+Staging e promovido manualmente a partir de um SHA imutavel pelo workflow `Deploy staging`. Consulte `docs/infrastructure/staging.md`. A existencia do workflow nao significa que o ambiente externo foi provisionado.
