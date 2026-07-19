@@ -1716,7 +1716,7 @@ Implemente na seguinte ordem:
 33. Criar pipeline CI/CD.
 34. Preparar staging. **Concluído em código; provisionamento externo aguarda infraestrutura autorizada.**
 35. Executar auditoria de segurança. **Concluído com evidências automatizadas e correções aplicadas.**
-36. Preparar produção.
+36. Preparar produção. **Concluído em código; provisionamento externo aguarda infraestrutura autorizada.**
 
 ---
 
