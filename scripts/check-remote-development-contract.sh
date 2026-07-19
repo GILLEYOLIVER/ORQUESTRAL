@@ -30,7 +30,7 @@ for file in "${required_files[@]}"; do
   [[ -f "$file" ]] || fail "arquivo obrigatorio ausente: $file"
 done
 
-if rg -n '(localhost|127\.0\.0\.1|host\.docker\.internal)' .env.development.example >/dev/null; then
+if grep -En '(localhost|127\.0\.0\.1|host\.docker\.internal)' .env.development.example >/dev/null; then
   fail ".env.development.example contem endereco local"
 fi
 
@@ -46,7 +46,7 @@ required_env=(
 )
 
 for entry in "${required_env[@]}"; do
-  rg -q "^${entry}$" .env.development.example || fail "variavel obrigatoria ausente: $entry"
+  grep -Fqx "$entry" .env.development.example || fail "variavel obrigatoria ausente: $entry"
 done
 
 required_build_args=(
@@ -56,7 +56,7 @@ required_build_args=(
 )
 
 for entry in "${required_build_args[@]}"; do
-  rg -q "^${entry}$" Dockerfile.remote || fail "build remoto sem contrato: $entry"
+  grep -Fqx "$entry" Dockerfile.remote || fail "build remoto sem contrato: $entry"
 done
 
 printf 'remote-development-contract: ok\n'
