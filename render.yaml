@@ -24,6 +24,8 @@ services:
         value: "false"
       - key: BACKGROUND_WORKER_ENABLED
         value: "false"
+      - key: RUN_MIGRATIONS_ON_STARTUP
+        value: "true"
       - key: EMAIL_DELIVERY_ENABLED
         value: "false"
       - key: DEVELOPMENT_EXPOSE_TOKENS

@@ -2,7 +2,7 @@ name: Deploy development
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [Publish images]
     types: [completed]
     branches: [development]
   workflow_dispatch:
@@ -33,6 +33,9 @@ jobs:
           else
             echo "sha=$MANUAL_SHA" >> "$GITHUB_OUTPUT"
           fi
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.commit.outputs.sha }}
       - name: Trigger Render deploy
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
@@ -45,15 +48,4 @@ jobs:
           EXPECTED_COMMIT: ${{ steps.commit.outputs.sha }}
         run: |
           test -n "$REMOTE_DEVELOPMENT_URL" || { echo "REMOTE_DEVELOPMENT_URL não configurada"; exit 1; }
-          for attempt in $(seq 1 80); do
-            payload=$(curl --fail --silent --show-error --max-time 90 \
-              "$REMOTE_DEVELOPMENT_URL/system/version" || true)
-            if echo "$payload" | jq -e --arg sha "$EXPECTED_COMMIT" '.commit == $sha' >/dev/null; then
-              curl --fail --silent --show-error "$REMOTE_DEVELOPMENT_URL/ready"
-              exit 0
-            fi
-            echo "Aguardando deploy ($attempt/80)..."
-            sleep 15
-          done
-          echo "O commit esperado não ficou saudável dentro de 20 minutos."
-          exit 1
+          bash scripts/verify-deployment.sh "$REMOTE_DEVELOPMENT_URL" "$EXPECTED_COMMIT"

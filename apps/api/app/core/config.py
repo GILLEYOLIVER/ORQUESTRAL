@@ -155,7 +155,7 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "CORS_ORIGINS remoto aceita somente origens HTTPS explícitas ou lista vazia"
                 )
-        if self.app_env != "production":
+        if self.app_env not in {"staging", "production"}:
             return self
 
         secrets = {

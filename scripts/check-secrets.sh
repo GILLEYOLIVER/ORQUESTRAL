@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if git ls-files | rg '(^|/)\.env$'; then
+if git ls-files | grep -Eq '(^|/)\.env$'; then
   echo "Arquivo .env real não pode ser versionado."
   exit 1
 fi
