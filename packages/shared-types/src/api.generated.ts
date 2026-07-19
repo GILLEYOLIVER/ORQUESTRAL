@@ -3477,7 +3477,9 @@ export type $defs = Record<string, never>;
 export interface operations {
     list_agents_agents_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_inactive?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;

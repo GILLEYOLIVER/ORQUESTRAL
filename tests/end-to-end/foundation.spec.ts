@@ -61,3 +61,37 @@ test("clientes veem linguagem comercial na área de plano e consumo", async ({
   ).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/Fase\s+\d+/i);
 });
+
+test("administrador cria e exclui logicamente um agente", async ({ page }) => {
+  const agentName = `Agente descartável ${Date.now()}`;
+  await page.goto("/login");
+  await page
+    .getByRole("button", { name: "Acessar como administrador" })
+    .click();
+  await page.getByRole("link", { name: "Agentes" }).click();
+
+  const sidebar = page.locator(".sidebar");
+  await expect(sidebar).toHaveCSS("position", "sticky");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect
+    .poll(async () => Math.round((await sidebar.boundingBox())?.y ?? -1))
+    .toBe(0);
+  await page.evaluate(() => window.scrollTo(0, 0));
+
+  await page
+    .getByRole("textbox", { name: "Nome", exact: true })
+    .fill(agentName);
+  await page.getByRole("button", { name: "Criar agente" }).click();
+  const createdAgent = page.getByRole("button", {
+    name: new RegExp(agentName),
+  });
+  await expect(createdAgent).toBeVisible();
+  await createdAgent.click();
+  await expect(
+    page.getByRole("heading", { name: agentName, exact: true }),
+  ).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Excluir agente" }).click();
+  await expect(createdAgent).toHaveCount(0);
+});

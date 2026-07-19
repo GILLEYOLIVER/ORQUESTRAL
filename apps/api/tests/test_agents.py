@@ -84,3 +84,4 @@ def test_tool_access_blocks_disabled_or_unauthorized_tool() -> None:
 
 def test_agents_route_requires_authentication(client: TestClient) -> None:
     assert client.get("/agents").status_code == 401
+    assert client.delete("/agents/00000000-0000-0000-0000-000000000000").status_code == 401

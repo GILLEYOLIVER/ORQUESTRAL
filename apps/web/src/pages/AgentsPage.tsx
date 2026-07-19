@@ -9,6 +9,7 @@ import {
   Send,
   ShieldAlert,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
@@ -54,7 +55,13 @@ export function AgentsPage() {
   const selected = agents.data?.find((agent) => agent.id === selectedId);
 
   useEffect(() => {
-    if (!selectedId && agents.data?.[0]) setSelectedId(agents.data[0].id);
+    if (!agents.data?.length) {
+      if (selectedId) setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !agents.data.some((agent) => agent.id === selectedId)) {
+      setSelectedId(agents.data[0].id);
+    }
   }, [agents.data, selectedId]);
   useEffect(() => {
     setConversationId(null);
@@ -111,6 +118,13 @@ export function AgentsPage() {
         body: { name, instructions, provider, model },
       }),
     onSuccess: (agent) => {
+      queryClient.setQueriesData<AgentResponse[]>(
+        { queryKey: ["agents"] },
+        (current) => [
+          agent,
+          ...(current ?? []).filter((item) => item.id !== agent.id),
+        ],
+      );
       setSelectedId(agent.id);
       setName("");
       refresh();
@@ -123,6 +137,19 @@ export function AgentsPage() {
         body: { tool_keys: selectedTools },
       }),
     onSuccess: refresh,
+  });
+  const remove = useMutation({
+    mutationFn: (agentId: string) =>
+      request<void>(`/agents/${agentId}`, { method: "DELETE" }),
+    onSuccess: (_, agentId) => {
+      queryClient.setQueriesData<AgentResponse[]>(
+        { queryKey: ["agents"] },
+        (current) => (current ?? []).filter((agent) => agent.id !== agentId),
+      );
+      setConversationId(null);
+      setSelectedId((current) => (current === agentId ? null : current));
+      refresh();
+    },
   });
   const chat = useMutation({
     mutationFn: () =>
@@ -169,7 +196,11 @@ export function AgentsPage() {
     [usage.data],
   );
   const failure =
-    create.error ?? configureTools.error ?? chat.error ?? decide.error;
+    create.error ??
+    remove.error ??
+    configureTools.error ??
+    chat.error ??
+    decide.error;
 
   return (
     <div className="management-page agents-page">
@@ -290,6 +321,22 @@ export function AgentsPage() {
                   <MessageSquare size={14} /> memória{" "}
                   {selected.memory_enabled ? "ativa" : "inativa"}
                 </span>
+                <Button
+                  className="agent-delete-button"
+                  loading={remove.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Excluir o agente ${selected.name}? O histórico será preservado.`,
+                      )
+                    ) {
+                      remove.mutate(selected.id);
+                    }
+                  }}
+                  variant="ghost"
+                >
+                  <Trash2 size={16} /> Excluir agente
+                </Button>
               </div>
             </Card>
             <PermissionGuard all={["agents.configure"]}>
