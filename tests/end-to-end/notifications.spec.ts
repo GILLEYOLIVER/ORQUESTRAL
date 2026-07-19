@@ -1,12 +1,24 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-test("administrador acompanha notificações, aprovações e preferências", async ({
-  page,
-}) => {
+async function accessDevelopmentAdmin(page: Page) {
   await page.goto("/login");
   await page
     .getByRole("button", { name: "Acessar como administrador" })
     .click();
+
+  await page.waitForURL(/\/(app|selecionar-empresa)$/);
+  if (new URL(page.url()).pathname === "/selecionar-empresa") {
+    await page
+      .getByRole("button", { name: /Orkestral Desenvolvimento/ })
+      .click();
+  }
+  await expect(page).toHaveURL(/\/app$/);
+}
+
+test("administrador acompanha notificações, aprovações e preferências", async ({
+  page,
+}) => {
+  await accessDevelopmentAdmin(page);
 
   await page.getByRole("link", { name: "Central de atenção" }).click();
 
