@@ -1554,7 +1554,19 @@ Disponibilizar a Orkestral pela internet para desenvolvimento e testes sem depen
 - [x] Banner remoto, `noindex` e ocultação de recursos indisponíveis implementados.
 - [x] Deploy pós-CI com verificação do SHA exato implementado.
 - [x] Exportação, restauração, rollback, limites e troubleshooting documentados.
-- [ ] URL pública ativada após cadastro dos segredos gratuitos nos provedores.
+- [x] URL pública ativada após cadastro dos segredos gratuitos nos provedores.
+
+## Implantação ativa em 19/07/2026
+
+- Aplicação e API: `https://orkestral-development.onrender.com`.
+- Render Web Service `orkestral-development`: Docker Free, região Virginia e health check em `/ready`.
+- Neon Free: PostgreSQL remoto com TLS, migrations Alembic aplicadas até `20260719_0015`.
+- Upstash Free: Redis remoto com TLS para autenticação, sessões e rate limiting.
+- GitHub Environment `development`: secret do deploy hook, URL pública e regra exclusiva para a branch `development`.
+- Repositório `GILLEYOLIVER/ORQUESTRAL` confirmado como privado.
+- Pipeline `Deploy development` e deploy por hook validados com sucesso.
+- `/health`, `/ready`, `/system/version`, `robots.txt`, HTTPS, CORS restrito e login administrativo validados remotamente.
+- Nenhum recurso com cobrança obrigatória ou método de pagamento foi ativado.
 
 ## Restrição
 

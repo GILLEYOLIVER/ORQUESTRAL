@@ -13,6 +13,17 @@ Staging usa o workflow manual protegido `Deploy staging`. Ele aceita somente um 
 
 O deploy também pode ser iniciado manualmente por `workflow_dispatch`. Um deploy nunca é considerado concluído apenas porque a imagem iniciou.
 
+## Desenvolvimento remoto ativo
+
+- URL: `https://orkestral-development.onrender.com`.
+- Branch: `development`.
+- GitHub Environment: `development`, restrito à branch de mesmo nome.
+- Workflow: `Deploy development`.
+- Render: serviço Docker Free `orkestral-development`, conectado ao repositório privado.
+- Verificação: commit publicado em `/system/version` e dependências em `/ready`.
+
+Em 19/07/2026, o workflow manual de validação `29702874801` acionou o Render pelo deploy hook, verificou o commit `b987f45` e terminou com sucesso. O deploy correspondente também terminou como `Live` no Render.
+
 ## Ambientes protegidos
 
 Crie no GitHub os ambientes `development`, `staging` e `production`. Guarde hooks e URLs em secrets/variables do ambiente. Staging e produção devem exigir revisão e aceitar somente suas branches autorizadas. O ambiente `testing` é efêmero e não recebe segredos remotos.
