@@ -7,9 +7,14 @@ import {
 
 type JsonRecord = Record<string, unknown>;
 
-async function readJson<T>(response: APIResponse, accepted: number[] = [200]): Promise<T> {
+async function readJson<T>(
+  response: APIResponse,
+  accepted: number[] = [200],
+): Promise<T> {
   const payload = await response.text();
-  expect(accepted, `${response.url()}: ${payload}`).toContain(response.status());
+  expect(accepted, `${response.url()}: ${payload}`).toContain(
+    response.status(),
+  );
   return (payload ? JSON.parse(payload) : {}) as T;
 }
 
@@ -24,7 +29,11 @@ async function developmentAdmin(request: APIRequestContext) {
   const home = await readJson<{
     current_company: { id: string } | null;
     memberships: Array<{ company: { id: string; slug: string } }>;
-  }>(await request.get("/api/auth/me", { headers: authorization(login.access_token) }));
+  }>(
+    await request.get("/api/auth/me", {
+      headers: authorization(login.access_token),
+    }),
+  );
 
   if (home.current_company) {
     return { token: login.access_token, companyId: home.current_company.id };
@@ -33,7 +42,10 @@ async function developmentAdmin(request: APIRequestContext) {
   const membership =
     home.memberships.find(({ company }) => company.slug === "orkestral-dev") ??
     home.memberships[0];
-  expect(membership, "Administrador de desenvolvimento sem empresa ativa").toBeTruthy();
+  expect(
+    membership,
+    "Administrador de desenvolvimento sem empresa ativa",
+  ).toBeTruthy();
   const selected = await readJson<{ access_token: string }>(
     await request.post("/api/auth/select-company", {
       headers: authorization(login.access_token),
@@ -43,7 +55,8 @@ async function developmentAdmin(request: APIRequestContext) {
   return { token: selected.access_token, companyId: membership.company.id };
 }
 
-test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => {
+test.describe
+  .serial("Fase 14 - contratos, seguranca e jornada completa", () => {
   test.skip(
     process.env.PHASE14_E2E !== "true",
     "Execute com docker-compose.test.yml e PHASE14_E2E=true.",
@@ -64,7 +77,9 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
         headers: authorization(admin.token),
       }),
     );
-    expect(engine).toEqual(expect.objectContaining({ configured: true, available: true }));
+    expect(engine).toEqual(
+      expect.objectContaining({ configured: true, available: true }),
+    );
   });
 
   test("executa os 10 passos e bloqueia ataques multiempresa", async ({
@@ -78,11 +93,15 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
     const memberEmail = `phase14-${suffix}@example.com`;
     const memberPassword = "Phase14!Secure2026";
 
-    const anonymous = await playwright.request.newContext({ baseURL: baseURL ?? "http://localhost" });
+    const anonymous = await playwright.request.newContext({
+      baseURL: baseURL ?? "http://localhost",
+    });
     try {
       for (const route of ["/api/agents", "/api/workflows", "/api/plugins"]) {
         const response = await anonymous.get(route);
-        expect(response.status(), `${route} deve exigir autenticacao`).toBe(401);
+        expect(response.status(), `${route} deve exigir autenticacao`).toBe(
+          401,
+        );
       }
     } finally {
       await anonymous.dispose();
@@ -115,28 +134,40 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
     const selectedMe = await readJson<{
       current_company: { id: string };
       permissions: string[];
-    }>(await request.get("/api/auth/me", { headers: authorization(adminToken) }));
+    }>(
+      await request.get("/api/auth/me", { headers: authorization(adminToken) }),
+    );
     expect(selectedMe.current_company.id).toBe(company.id);
     expect(selectedMe.permissions).toContain("agents.create");
     expect(selectedMe.permissions).toContain("workflows.configure");
 
     // 2. Criar usuario por convite e validar que um membro nao escala privilegios.
     const roles = await readJson<Array<{ id: string; name: string }>>(
-      await request.get("/api/authorization/roles", { headers: authorization(adminToken) }),
+      await request.get("/api/authorization/roles", {
+        headers: authorization(adminToken),
+      }),
     );
     const memberRole = roles.find((role) => role.name === "Membro");
     if (!memberRole) {
-      throw new Error("O papel de sistema Membro nao foi criado para a nova empresa.");
+      throw new Error(
+        "O papel de sistema Membro nao foi criado para a nova empresa.",
+      );
     }
     const invitation = await readJson<{ development_token: string | null }>(
       await request.post("/api/company/invitations", {
         headers: authorization(adminToken),
-        data: { email: memberEmail, name: "Membro Fase 14", role_id: memberRole.id },
+        data: {
+          email: memberEmail,
+          name: "Membro Fase 14",
+          role_id: memberRole.id,
+        },
       }),
       [200, 201],
     );
     if (!invitation.development_token) {
-      throw new Error("DEVELOPMENT_EXPOSE_TOKENS deve estar ativo no ambiente de teste.");
+      throw new Error(
+        "DEVELOPMENT_EXPOSE_TOKENS deve estar ativo no ambiente de teste.",
+      );
     }
     await readJson<JsonRecord>(
       await request.post("/api/auth/accept-invitation", {
@@ -200,7 +231,10 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
       }),
     );
     expect(plugin.company_status).toBe("active");
-    const credential = await readJson<{ id: string; masked_values: JsonRecord }>(
+    const credential = await readJson<{
+      id: string;
+      masked_values: JsonRecord;
+    }>(
       await request.post("/api/plugins/rest_api/credentials", {
         headers: authorization(adminToken),
         data: {
@@ -216,9 +250,12 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
     );
     expect(JSON.stringify(credential)).not.toContain(secret);
     const connection = await readJson<{ success: boolean }>(
-      await request.post(`/api/plugins/rest_api/credentials/${credential.id}/test`, {
-        headers: authorization(adminToken),
-      }),
+      await request.post(
+        `/api/plugins/rest_api/credentials/${credential.id}/test`,
+        {
+          headers: authorization(adminToken),
+        },
+      ),
     );
     expect(connection.success).toBe(true);
 
@@ -228,7 +265,8 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
         headers: authorization(adminToken),
         data: {
           name: `Agente Fase 14 ${suffix}`,
-          instructions: "Responda de forma objetiva durante a validacao automatizada.",
+          instructions:
+            "Responda de forma objetiva durante a validacao automatizada.",
           provider: "openai_compatible",
           model: "phase14-contract-model",
         },
@@ -241,7 +279,8 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
           headers: authorization(adminToken),
           data: {
             name: "Tentativa de tenant",
-            instructions: "Esta requisicao nao pode escolher a empresa diretamente.",
+            instructions:
+              "Esta requisicao nao pode escolher a empresa diretamente.",
             company_id: homeCompanyId,
           },
         })
@@ -257,7 +296,10 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
     );
     expect(tools).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ tool_key: "orkestral.company.summary", enabled: true }),
+        expect.objectContaining({
+          tool_key: "orkestral.company.summary",
+          enabled: true,
+        }),
       ]),
     );
     const chat = await request.post(`/api/agents/${agent.id}/chat`, {
@@ -282,7 +324,9 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
           file: {
             name: "phase14.txt",
             mimeType: "text/plain",
-            buffer: Buffer.from("Documento seguro usado no teste de armazenamento da Fase 14."),
+            buffer: Buffer.from(
+              "Documento seguro usado no teste de armazenamento da Fase 14.",
+            ),
           },
         },
       },
@@ -356,7 +400,9 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
     );
 
     // 10. Verificar consumo e ausencia de credenciais nos eventos auditaveis.
-    const usage = await readJson<Array<{ metric: string; metadata: JsonRecord }>>(
+    const usage = await readJson<
+      Array<{ metric: string; metadata: JsonRecord }>
+    >(
       await request.get("/api/billing/usage-records", {
         headers: authorization(adminToken),
       }),
@@ -384,9 +430,15 @@ test.describe.serial("Fase 14 - contratos, seguranca e jornada completa", () => 
     );
     const homeToken = homeSelection.access_token;
     for (const operation of [
-      request.get(`/api/agents/${agent.id}`, { headers: authorization(homeToken) }),
-      request.delete(`/api/agents/${agent.id}`, { headers: authorization(homeToken) }),
-      request.get(`/api/workflows/${workflow.id}`, { headers: authorization(homeToken) }),
+      request.get(`/api/agents/${agent.id}`, {
+        headers: authorization(homeToken),
+      }),
+      request.delete(`/api/agents/${agent.id}`, {
+        headers: authorization(homeToken),
+      }),
+      request.get(`/api/workflows/${workflow.id}`, {
+        headers: authorization(homeToken),
+      }),
       request.post(`/api/workflows/${workflow.id}/execute`, {
         headers: authorization(homeToken),
         data: { input: {} },

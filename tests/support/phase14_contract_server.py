@@ -68,7 +68,7 @@ class ContractHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(encoded)
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/healthz":
             dependencies = runtime_dependencies()
@@ -102,7 +102,7 @@ class ContractHandler(BaseHTTPRequestHandler):
             return
         self._json(HTTPStatus.NOT_FOUND, {"message": "Contract route not found"})
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         path = urlparse(self.path).path
         payload = self._body()
         if path == "/api/v1/workflows":
@@ -167,7 +167,7 @@ class ContractHandler(BaseHTTPRequestHandler):
             return
         self._json(HTTPStatus.NOT_FOUND, {"message": "Contract route not found"})
 
-    def do_PUT(self) -> None:  # noqa: N802
+    def do_PUT(self) -> None:
         path = urlparse(self.path).path
         prefix = "/api/v1/workflows/"
         if not path.startswith(prefix):
@@ -190,4 +190,4 @@ class ContractHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    ThreadingHTTPServer(("0.0.0.0", 5678), ContractHandler).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", 5678), ContractHandler).serve_forever()  # noqa: S104

@@ -6,12 +6,12 @@ reproduziveis. A execucao normal do produto nao usa simuladores. O arquivo
 
 ## Matriz de cobertura
 
-| Categoria | Cobertura automatizada |
-| --- | --- |
-| Unitarios | Servicos, regras de negocio, permissoes, validacoes, compilador de workflows, limites e consumo em `apps/api/tests`; componentes, guards e cliente HTTP em `apps/web/src/**/*.test.*`. |
-| Integracao | PostgreSQL e Redis em `tests/integration`; MinIO, n8n real, provedor OpenAI compativel e plugin HTTP na suite `phase14-journey.spec.ts`. |
-| Seguranca | Rotas sem autorizacao, escalonamento de privilegio, IDs entre empresas, campo `company_id` injetado, upload executavel e vazamento de credenciais na jornada da Fase 14. |
-| Ponta a ponta | Empresa, usuario, modulo, plugin, agente, ferramenta, workflow, execucao, logs e consumo pela API publicada no proxy local. |
+| Categoria     | Cobertura automatizada                                                                                                                                                                 |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unitarios     | Servicos, regras de negocio, permissoes, validacoes, compilador de workflows, limites e consumo em `apps/api/tests`; componentes, guards e cliente HTTP em `apps/web/src/**/*.test.*`. |
+| Integracao    | PostgreSQL e Redis em `tests/integration`; MinIO, n8n real, provedor OpenAI compativel e plugin HTTP na suite `phase14-journey.spec.ts`.                                               |
+| Seguranca     | Rotas sem autorizacao, escalonamento de privilegio, IDs entre empresas, campo `company_id` injetado, upload executavel e vazamento de credenciais na jornada da Fase 14.               |
+| Ponta a ponta | Empresa, usuario, modulo, plugin, agente, ferramenta, workflow, execucao, logs e consumo pela API publicada no proxy local.                                                            |
 
 ## Contratos externos
 
