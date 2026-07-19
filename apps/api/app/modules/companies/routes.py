@@ -8,10 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import DatabaseSession
-from app.core.tenancy import Principal, require_permission
+from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import ensure_company_system_roles
 from app.modules.companies.models import Company
 from app.modules.companies.schemas import CompanyCreate, CompanyResponse, CompanyUpdate
+from app.modules.users.models import CompanyUser
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -36,14 +37,24 @@ async def list_companies(
 @router.post("", response_model=CompanyResponse, status_code=status.HTTP_201_CREATED)
 async def create_company(
     payload: CompanyCreate,
-    _: CanCreateCompanies,
+    principal: CanCreateCompanies,
     database: DatabaseSession,
 ) -> CompanyResponse:
+    context = get_request_context(principal)
     company = Company(**payload.model_dump())
     database.add(company)
     try:
         await database.flush()
-        await ensure_company_system_roles(database, company.id)
+        owner_role, _ = await ensure_company_system_roles(database, company.id)
+        database.add(
+            CompanyUser(
+                company_id=company.id,
+                user_id=context.user_id,
+                role_id=owner_role.id,
+                status="active",
+                is_owner=True,
+            )
+        )
         await database.commit()
     except IntegrityError as exc:
         await database.rollback()

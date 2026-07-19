@@ -233,7 +233,14 @@ def test_login_refresh_logout_invitation_and_tenant_isolation() -> None:
                 json={"email": identity.email, "password": identity.password},
             )
             assert admin_login_again.status_code == 200
-            headers = {"Authorization": f"Bearer {admin_login_again.json()['access_token']}"}
+            admin_token = admin_login_again.json()["access_token"]
+            selected_again = client.post(
+                "/auth/select-company",
+                headers={"Authorization": f"Bearer {admin_token}"},
+                json={"company_id": str(identity.company_id)},
+            )
+            assert selected_again.status_code == 200
+            headers = {"Authorization": f"Bearer {selected_again.json()['access_token']}"}
             expanded_role = client.patch(
                 f"/authorization/roles/{custom_role_id}",
                 headers=headers,
