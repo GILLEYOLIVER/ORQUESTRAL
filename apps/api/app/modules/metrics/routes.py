@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -26,7 +25,9 @@ def _period(start: date | None, end: date | None) -> tuple[date, date]:
     final = end or date.today()
     initial = start or (final - timedelta(days=29))
     if initial > final:
-        raise HTTPException(status_code=422, detail="A data inicial deve ser anterior a data final.")
+        raise HTTPException(
+            status_code=422, detail="A data inicial deve ser anterior a data final."
+        )
     if (final - initial).days > 366:
         raise HTTPException(status_code=422, detail="O periodo maximo e de 366 dias.")
     return initial, final
@@ -44,7 +45,9 @@ async def _dashboard(
     workflow_id: UUID | None,
     allow_cache: bool = True,
 ) -> DashboardResponse:
-    cache_key = f"metrics:{company_id}:{start}:{end}:{module or '-'}:{agent_id or '-'}:{workflow_id or '-'}"
+    cache_key = (
+        f"metrics:{company_id}:{start}:{end}:{module or '-'}:{agent_id or '-'}:{workflow_id or '-'}"
+    )
     if allow_cache:
         cached = await redis.get(cache_key)
         if cached:
@@ -68,7 +71,11 @@ async def _dashboard(
     agent_ids = {row.agent_id for row in rows if row.agent_id is not None}
     agent_names: dict[str, str] = {}
     if agent_ids:
-        agents = list(await database.scalars(select(Agent).where(Agent.company_id == company_id, Agent.id.in_(agent_ids))))
+        agents = list(
+            await database.scalars(
+                select(Agent).where(Agent.company_id == company_id, Agent.id.in_(agent_ids))
+            )
+        )
         agent_names = {str(agent.id): agent.name for agent in agents}
     calculated = calculate_dashboard(rows, agent_names, start, end)
     response = DashboardResponse(
@@ -76,7 +83,7 @@ async def _dashboard(
         totals=calculated["totals"],
         series=calculated["series"],
         top_agents=calculated["top_agents"],
-        generated_at=calculated["generated_at"] or datetime.now(timezone.utc),
+        generated_at=calculated["generated_at"] or datetime.now(UTC),
         cached=False,
     )
     await redis.setex(cache_key, 300, response.model_dump_json())
@@ -96,7 +103,16 @@ async def dashboard(
 ) -> DashboardResponse:
     context = get_request_context(principal)
     start, end = _period(from_date, to_date)
-    return await _dashboard(company_id=context.company_id, database=database, redis=redis, start=start, end=end, module=module, agent_id=agent_id, workflow_id=workflow_id)
+    return await _dashboard(
+        company_id=context.company_id,
+        database=database,
+        redis=redis,
+        start=start,
+        end=end,
+        module=module,
+        agent_id=agent_id,
+        workflow_id=workflow_id,
+    )
 
 
 @router.post("/aggregate")
@@ -122,12 +138,28 @@ async def export_metrics(
 ) -> Response:
     context = get_request_context(principal)
     start, end = _period(from_date, to_date)
-    data = await _dashboard(company_id=context.company_id, database=database, redis=redis, start=start, end=end, module=module, agent_id=agent_id, workflow_id=workflow_id)
+    data = await _dashboard(
+        company_id=context.company_id,
+        database=database,
+        redis=redis,
+        start=start,
+        end=end,
+        module=module,
+        agent_id=agent_id,
+        workflow_id=workflow_id,
+    )
     if format == "csv":
         content, media_type = csv_report(data), "text/csv; charset=utf-8"
     elif format == "xlsx":
-        content, media_type = xlsx_report(data), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        content, media_type = (
+            xlsx_report(data),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
     else:
         content, media_type = pdf_report(data), "application/pdf"
     filename = f"orkestral-metricas-{start}-{end}.{format}"
-    return Response(content=content, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -111,9 +111,7 @@ async def test_update_restores_previous_workflow_when_n8n_rejects_change() -> No
     )
 
     with pytest.raises(N8nRequestError, match="versão anterior foi restaurada"):
-        await client.update_workflow_with_rollback(
-            "workflow-1", "Nova", workflow_definition()
-        )
+        await client.update_workflow_with_rollback("workflow-1", "Nova", workflow_definition())
 
     assert put_payloads[0]["name"] == "Nova"
     assert put_payloads[1]["name"] == "Anterior"

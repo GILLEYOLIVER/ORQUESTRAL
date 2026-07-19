@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 
 class WorkflowDefinitionError(ValueError):
@@ -9,22 +9,134 @@ class WorkflowDefinitionError(ValueError):
 
 
 BLOCK_CATALOG: tuple[dict[str, Any], ...] = (
-    {"type": "trigger.manual", "category": "Gatilhos", "label": "Inicio manual", "description": "Inicia por comando de um usuario autorizado.", "required_fields": [], "defaults": {}},
-    {"type": "trigger.schedule", "category": "Gatilhos", "label": "Horario", "description": "Executa em um intervalo programado.", "required_fields": ["interval_minutes"], "defaults": {"interval_minutes": 60}},
-    {"type": "trigger.webhook", "category": "Gatilhos", "label": "Webhook", "description": "Recebe um evento HTTP autorizado.", "required_fields": [], "defaults": {}},
-    {"type": "trigger.message_received", "category": "Gatilhos", "label": "Mensagem recebida", "description": "Inicia quando uma integracao entrega uma mensagem.", "required_fields": ["channel"], "defaults": {"channel": "whatsapp"}},
-    {"type": "trigger.contact_created", "category": "Gatilhos", "label": "Novo contato", "description": "Inicia quando um contato e criado.", "required_fields": [], "defaults": {}},
-    {"type": "logic.condition", "category": "Logica", "label": "Condicao", "description": "Divide o fluxo entre verdadeiro e falso.", "required_fields": ["expression"], "defaults": {"expression": "$json.input != null"}},
-    {"type": "logic.wait", "category": "Logica", "label": "Espera", "description": "Pausa a execucao por um periodo controlado.", "required_fields": ["seconds"], "defaults": {"seconds": 5}},
-    {"type": "logic.loop", "category": "Logica", "label": "Repeticao", "description": "Repete uma etapa com limite explicito.", "required_fields": ["max_iterations"], "defaults": {"max_iterations": 10}},
-    {"type": "data.query", "category": "Dados", "label": "Consulta", "description": "Consulta dados por um adaptador autorizado.", "required_fields": ["resource"], "defaults": {"resource": "contacts"}},
-    {"type": "data.update", "category": "Dados", "label": "Atualizacao", "description": "Atualiza um recurso com campos declarados.", "required_fields": ["resource", "fields"], "defaults": {"resource": "contacts", "fields": {}}},
-    {"type": "action.email", "category": "Acoes", "label": "E-mail", "description": "Envia e-mail usando uma credencial do cofre.", "required_fields": ["credential_id", "recipient", "subject", "on_error"], "defaults": {"recipient": "", "subject": "", "credential_id": "", "on_error": "stop"}},
-    {"type": "action.message", "category": "Acoes", "label": "Mensagem", "description": "Envia mensagem por um plugin autorizado.", "required_fields": ["credential_id", "recipient", "on_error"], "defaults": {"recipient": "", "credential_id": "", "on_error": "stop"}},
-    {"type": "action.agent", "category": "Inteligencia", "label": "Agente", "description": "Solicita uma resposta a um agente da empresa.", "required_fields": ["agent_id", "prompt", "on_error"], "defaults": {"agent_id": "", "prompt": "", "on_error": "stop"}},
-    {"type": "action.human_approval", "category": "Inteligencia", "label": "Aprovacao humana", "description": "Interrompe ate uma decisao humana registrada.", "required_fields": ["approver_role", "on_error"], "defaults": {"approver_role": "owner", "on_error": "stop"}},
-    {"type": "action.plugin", "category": "Acoes", "label": "Plugin", "description": "Executa uma acao de plugin habilitado.", "required_fields": ["plugin_code", "action", "credential_id", "on_error"], "defaults": {"plugin_code": "", "action": "", "credential_id": "", "on_error": "stop"}},
-    {"type": "flow.end", "category": "Fluxo", "label": "Encerramento", "description": "Finaliza a execucao e devolve o resultado.", "required_fields": [], "defaults": {}},
+    {
+        "type": "trigger.manual",
+        "category": "Gatilhos",
+        "label": "Inicio manual",
+        "description": "Inicia por comando de um usuario autorizado.",
+        "required_fields": [],
+        "defaults": {},
+    },
+    {
+        "type": "trigger.schedule",
+        "category": "Gatilhos",
+        "label": "Horario",
+        "description": "Executa em um intervalo programado.",
+        "required_fields": ["interval_minutes"],
+        "defaults": {"interval_minutes": 60},
+    },
+    {
+        "type": "trigger.webhook",
+        "category": "Gatilhos",
+        "label": "Webhook",
+        "description": "Recebe um evento HTTP autorizado.",
+        "required_fields": [],
+        "defaults": {},
+    },
+    {
+        "type": "trigger.message_received",
+        "category": "Gatilhos",
+        "label": "Mensagem recebida",
+        "description": "Inicia quando uma integracao entrega uma mensagem.",
+        "required_fields": ["channel"],
+        "defaults": {"channel": "whatsapp"},
+    },
+    {
+        "type": "trigger.contact_created",
+        "category": "Gatilhos",
+        "label": "Novo contato",
+        "description": "Inicia quando um contato e criado.",
+        "required_fields": [],
+        "defaults": {},
+    },
+    {
+        "type": "logic.condition",
+        "category": "Logica",
+        "label": "Condicao",
+        "description": "Divide o fluxo entre verdadeiro e falso.",
+        "required_fields": ["expression"],
+        "defaults": {"expression": "$json.input != null"},
+    },
+    {
+        "type": "logic.wait",
+        "category": "Logica",
+        "label": "Espera",
+        "description": "Pausa a execucao por um periodo controlado.",
+        "required_fields": ["seconds"],
+        "defaults": {"seconds": 5},
+    },
+    {
+        "type": "logic.loop",
+        "category": "Logica",
+        "label": "Repeticao",
+        "description": "Repete uma etapa com limite explicito.",
+        "required_fields": ["max_iterations"],
+        "defaults": {"max_iterations": 10},
+    },
+    {
+        "type": "data.query",
+        "category": "Dados",
+        "label": "Consulta",
+        "description": "Consulta dados por um adaptador autorizado.",
+        "required_fields": ["resource"],
+        "defaults": {"resource": "contacts"},
+    },
+    {
+        "type": "data.update",
+        "category": "Dados",
+        "label": "Atualizacao",
+        "description": "Atualiza um recurso com campos declarados.",
+        "required_fields": ["resource", "fields"],
+        "defaults": {"resource": "contacts", "fields": {}},
+    },
+    {
+        "type": "action.email",
+        "category": "Acoes",
+        "label": "E-mail",
+        "description": "Envia e-mail usando uma credencial do cofre.",
+        "required_fields": ["credential_id", "recipient", "subject", "on_error"],
+        "defaults": {"recipient": "", "subject": "", "credential_id": "", "on_error": "stop"},
+    },
+    {
+        "type": "action.message",
+        "category": "Acoes",
+        "label": "Mensagem",
+        "description": "Envia mensagem por um plugin autorizado.",
+        "required_fields": ["credential_id", "recipient", "on_error"],
+        "defaults": {"recipient": "", "credential_id": "", "on_error": "stop"},
+    },
+    {
+        "type": "action.agent",
+        "category": "Inteligencia",
+        "label": "Agente",
+        "description": "Solicita uma resposta a um agente da empresa.",
+        "required_fields": ["agent_id", "prompt", "on_error"],
+        "defaults": {"agent_id": "", "prompt": "", "on_error": "stop"},
+    },
+    {
+        "type": "action.human_approval",
+        "category": "Inteligencia",
+        "label": "Aprovacao humana",
+        "description": "Interrompe ate uma decisao humana registrada.",
+        "required_fields": ["approver_role", "on_error"],
+        "defaults": {"approver_role": "owner", "on_error": "stop"},
+    },
+    {
+        "type": "action.plugin",
+        "category": "Acoes",
+        "label": "Plugin",
+        "description": "Executa uma acao de plugin habilitado.",
+        "required_fields": ["plugin_code", "action", "credential_id", "on_error"],
+        "defaults": {"plugin_code": "", "action": "", "credential_id": "", "on_error": "stop"},
+    },
+    {
+        "type": "flow.end",
+        "category": "Fluxo",
+        "label": "Encerramento",
+        "description": "Finaliza a execucao e devolve o resultado.",
+        "required_fields": [],
+        "defaults": {},
+    },
 )
 
 BLOCK_BY_TYPE = {item["type"]: item for item in BLOCK_CATALOG}
@@ -34,17 +146,34 @@ SENSITIVE_KEYS = frozenset({"password", "secret", "token", "api_key", "apikey", 
 
 
 def block_catalog() -> list[dict[str, Any]]:
-    return json.loads(json.dumps(BLOCK_CATALOG))
+    return cast(list[dict[str, Any]], json.loads(json.dumps(BLOCK_CATALOG)))
 
 
 def build_default_definition(_webhook_path: str | None = None) -> dict[str, Any]:
     return {
         "nodes": [
-            {"id": "trigger-manual", "type": "trigger.manual", "label": "Inicio manual", "position": {"x": 80, "y": 180}, "config": {}},
-            {"id": "flow-end", "type": "flow.end", "label": "Encerramento", "position": {"x": 430, "y": 180}, "config": {}},
+            {
+                "id": "trigger-manual",
+                "type": "trigger.manual",
+                "label": "Inicio manual",
+                "position": {"x": 80, "y": 180},
+                "config": {},
+            },
+            {
+                "id": "flow-end",
+                "type": "flow.end",
+                "label": "Encerramento",
+                "position": {"x": 430, "y": 180},
+                "config": {},
+            },
         ],
         "connections": [
-            {"id": "edge-trigger-end", "source": "trigger-manual", "target": "flow-end", "source_handle": "main"}
+            {
+                "id": "edge-trigger-end",
+                "source": "trigger-manual",
+                "target": "flow-end",
+                "source_handle": "main",
+            }
         ],
         "variables": {},
         "version": 1,
@@ -77,17 +206,31 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(definition, dict):
         return [_issue("error", "invalid_definition", "A definicao deve ser um objeto.")]
     if set(definition) - {"nodes", "connections", "variables", "version"}:
-        issues.append(_issue("error", "unknown_properties", "A definicao contem propriedades nao permitidas."))
+        issues.append(
+            _issue("error", "unknown_properties", "A definicao contem propriedades nao permitidas.")
+        )
     nodes = definition.get("nodes")
     connections = definition.get("connections")
     variables = definition.get("variables")
     version = definition.get("version")
     if not isinstance(nodes, list) or not 2 <= len(nodes) <= 100:
-        return issues + [_issue("error", "invalid_nodes", "A definicao deve possuir entre 2 e 100 blocos.")]
+        return [
+            *issues,
+            _issue("error", "invalid_nodes", "A definicao deve possuir entre 2 e 100 blocos."),
+        ]
     if not isinstance(connections, list):
-        return issues + [_issue("error", "invalid_connections", "As conexoes devem ser uma lista.")]
+        return [
+            *issues,
+            _issue("error", "invalid_connections", "As conexoes devem ser uma lista."),
+        ]
     if not isinstance(variables, dict) or version != 1:
-        issues.append(_issue("error", "invalid_metadata", "Variaveis devem ser um objeto e a versao da definicao deve ser 1."))
+        issues.append(
+            _issue(
+                "error",
+                "invalid_metadata",
+                "Variaveis devem ser um objeto e a versao da definicao deve ser 1.",
+            )
+        )
 
     by_id: dict[str, dict[str, Any]] = {}
     triggers: set[str] = set()
@@ -99,12 +242,26 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         node_id = node.get("id")
         node_type = node.get("type")
         if not isinstance(node_id, str) or not node_id.strip() or node_id in by_id:
-            issues.append(_issue("error", "duplicate_node", "Cada bloco deve possuir um identificador unico.", str(node_id or "")))
+            issues.append(
+                _issue(
+                    "error",
+                    "duplicate_node",
+                    "Cada bloco deve possuir um identificador unico.",
+                    str(node_id or ""),
+                )
+            )
             continue
         by_id[node_id] = node
         catalog = BLOCK_BY_TYPE.get(str(node_type))
         if catalog is None:
-            issues.append(_issue("error", "unsupported_block", f"O bloco {node_type or 'desconhecido'} nao e permitido.", node_id))
+            issues.append(
+                _issue(
+                    "error",
+                    "unsupported_block",
+                    f"O bloco {node_type or 'desconhecido'} nao e permitido.",
+                    node_id,
+                )
+            )
             continue
         if node_type in TRIGGER_TYPES:
             triggers.add(node_id)
@@ -112,28 +269,93 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
             endings.add(node_id)
         config = node.get("config", {})
         if not isinstance(config, dict):
-            issues.append(_issue("error", "invalid_config", "A configuracao do bloco deve ser um objeto.", node_id))
+            issues.append(
+                _issue(
+                    "error",
+                    "invalid_config",
+                    "A configuracao do bloco deve ser um objeto.",
+                    node_id,
+                )
+            )
             continue
         secret_path = _embedded_secret(config)
         if secret_path:
-            issues.append(_issue("error", "embedded_secret", "Use apenas referencias do cofre; segredos nao podem ficar no fluxo.", node_id))
+            issues.append(
+                _issue(
+                    "error",
+                    "embedded_secret",
+                    "Use apenas referencias do cofre; segredos nao podem ficar no fluxo.",
+                    node_id,
+                )
+            )
         for field in catalog["required_fields"]:
             if field not in config or config[field] in (None, ""):
-                issues.append(_issue("error", "required_field", f"Preencha o campo obrigatorio: {field}.", node_id))
+                issues.append(
+                    _issue(
+                        "error",
+                        "required_field",
+                        f"Preencha o campo obrigatorio: {field}.",
+                        node_id,
+                    )
+                )
         if node_type in ACTION_TYPES and config.get("on_error") not in {"stop", "continue"}:
-            issues.append(_issue("error", "missing_error_policy", "Defina o tratamento de erro como stop ou continue.", node_id))
+            issues.append(
+                _issue(
+                    "error",
+                    "missing_error_policy",
+                    "Defina o tratamento de erro como stop ou continue.",
+                    node_id,
+                )
+            )
         if config.get("enabled") is False:
-            issues.append(_issue("error", "disabled_tool", "O bloco referencia uma ferramenta desativada.", node_id))
+            issues.append(
+                _issue(
+                    "error",
+                    "disabled_tool",
+                    "O bloco referencia uma ferramenta desativada.",
+                    node_id,
+                )
+            )
         if node_type == "logic.loop":
             maximum = config.get("max_iterations")
             if not isinstance(maximum, int) or maximum < 1:
-                issues.append(_issue("error", "invalid_loop", "A repeticao precisa de um limite positivo.", node_id))
+                issues.append(
+                    _issue(
+                        "error",
+                        "invalid_loop",
+                        "A repeticao precisa de um limite positivo.",
+                        node_id,
+                    )
+                )
             elif maximum > 1000:
-                issues.append(_issue("error", "mass_risk", "O limite de repeticao excede 1000 operacoes.", node_id))
+                issues.append(
+                    _issue(
+                        "error",
+                        "mass_risk",
+                        "O limite de repeticao excede 1000 operacoes.",
+                        node_id,
+                    )
+                )
             elif maximum > 100:
-                issues.append(_issue("warning", "mass_risk", "Esta repeticao pode gerar operacoes em massa.", node_id))
-        if node_type in {"action.email", "action.message"} and str(config.get("recipient", "")).strip().lower() in {"*", "all", "todos"}:
-            issues.append(_issue("error", "mass_recipient", "Destinatarios em massa exigem uma segmentacao explicita.", node_id))
+                issues.append(
+                    _issue(
+                        "warning",
+                        "mass_risk",
+                        "Esta repeticao pode gerar operacoes em massa.",
+                        node_id,
+                    )
+                )
+        if node_type in {"action.email", "action.message"} and str(
+            config.get("recipient", "")
+        ).strip().lower() in {"*", "all", "todos"}:
+            issues.append(
+                _issue(
+                    "error",
+                    "mass_recipient",
+                    "Destinatarios em massa exigem uma segmentacao explicita.",
+                    node_id,
+                )
+            )
 
     outgoing: dict[str, list[str]] = {node_id: [] for node_id in by_id}
     incoming: dict[str, int] = {node_id: 0 for node_id in by_id}
@@ -146,11 +368,20 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         target = edge.get("target")
         handle = str(edge.get("source_handle", "main"))
         if source not in by_id or target not in by_id or source == target:
-            issues.append(_issue("error", "invalid_edge", "A definicao possui uma conexao invalida.", str(source or "")))
+            issues.append(
+                _issue(
+                    "error",
+                    "invalid_edge",
+                    "A definicao possui uma conexao invalida.",
+                    str(source or ""),
+                )
+            )
             continue
         key = (str(source), str(target), handle)
         if key in edge_keys:
-            issues.append(_issue("warning", "duplicate_edge", "A conexao esta duplicada.", str(source)))
+            issues.append(
+                _issue("warning", "duplicate_edge", "A conexao esta duplicada.", str(source))
+            )
             continue
         edge_keys.add(key)
         outgoing[str(source)].append(str(target))
@@ -162,10 +393,21 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         issues.append(_issue("error", "missing_end", "Inclua ao menos um encerramento."))
     for trigger in triggers:
         if incoming.get(trigger, 0):
-            issues.append(_issue("error", "trigger_with_input", "Gatilhos nao podem receber conexoes.", trigger))
+            issues.append(
+                _issue(
+                    "error", "trigger_with_input", "Gatilhos nao podem receber conexoes.", trigger
+                )
+            )
     for ending in endings:
         if outgoing.get(ending):
-            issues.append(_issue("error", "end_with_output", "O encerramento nao pode iniciar outra etapa.", ending))
+            issues.append(
+                _issue(
+                    "error",
+                    "end_with_output",
+                    "O encerramento nao pode iniciar outra etapa.",
+                    ending,
+                )
+            )
 
     reachable: set[str] = set()
     stack = list(triggers)
@@ -177,7 +419,11 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         stack.extend(outgoing.get(current, []))
     for node_id in by_id:
         if node_id not in reachable:
-            issues.append(_issue("error", "disconnected_node", "O bloco esta desconectado dos gatilhos.", node_id))
+            issues.append(
+                _issue(
+                    "error", "disconnected_node", "O bloco esta desconectado dos gatilhos.", node_id
+                )
+            )
 
     visiting: set[str] = set()
     visited: set[str] = set()
@@ -196,7 +442,13 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         return False
 
     if any(has_cycle(node_id) for node_id in by_id if node_id not in visited):
-        issues.append(_issue("error", "invalid_cycle", "O fluxo possui um ciclo invalido; use o bloco de repeticao com limite."))
+        issues.append(
+            _issue(
+                "error",
+                "invalid_cycle",
+                "O fluxo possui um ciclo invalido; use o bloco de repeticao com limite.",
+            )
+        )
     if endings and not any(ending in reachable for ending in endings):
         issues.append(_issue("error", "unreachable_end", "Nenhum encerramento pode ser alcancado."))
     return issues
@@ -212,12 +464,19 @@ def _is_legacy_n8n(definition: dict[str, Any]) -> bool:
     nodes = definition.get("nodes")
     return isinstance(definition.get("connections"), dict) or (
         isinstance(nodes, list)
-        and any(isinstance(node, dict) and str(node.get("type", "")).startswith("n8n-") for node in nodes)
+        and any(
+            isinstance(node, dict) and str(node.get("type", "")).startswith("n8n-")
+            for node in nodes
+        )
     )
 
 
-def prepare_definition(definition: dict[str, Any] | None, _webhook_path: str | None = None) -> dict[str, Any]:
-    prepared = json.loads(json.dumps(definition)) if definition is not None else build_default_definition()
+def prepare_definition(
+    definition: dict[str, Any] | None, _webhook_path: str | None = None
+) -> dict[str, Any]:
+    prepared = (
+        json.loads(json.dumps(definition)) if definition is not None else build_default_definition()
+    )
     if _is_legacy_n8n(prepared):
         prepared = build_default_definition()
     validate_definition(prepared)
@@ -225,19 +484,25 @@ def prepare_definition(definition: dict[str, Any] | None, _webhook_path: str | N
 
 
 def export_definition(definition: dict[str, Any]) -> dict[str, Any]:
-    exported = json.loads(json.dumps(definition))
+    exported = cast(dict[str, Any], json.loads(json.dumps(definition)))
     validate_definition(exported)
     return exported
 
 
 def compare_definitions(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
-    before_nodes = {str(node.get("id")): node for node in before.get("nodes", []) if isinstance(node, dict)}
-    after_nodes = {str(node.get("id")): node for node in after.get("nodes", []) if isinstance(node, dict)}
+    before_nodes = {
+        str(node.get("id")): node for node in before.get("nodes", []) if isinstance(node, dict)
+    }
+    after_nodes = {
+        str(node.get("id")): node for node in after.get("nodes", []) if isinstance(node, dict)
+    }
     shared = before_nodes.keys() & after_nodes.keys()
     return {
         "added_nodes": sorted(after_nodes.keys() - before_nodes.keys()),
         "removed_nodes": sorted(before_nodes.keys() - after_nodes.keys()),
-        "changed_nodes": sorted(node_id for node_id in shared if before_nodes[node_id] != after_nodes[node_id]),
+        "changed_nodes": sorted(
+            node_id for node_id in shared if before_nodes[node_id] != after_nodes[node_id]
+        ),
         "connections_changed": before.get("connections", []) != after.get("connections", []),
     }
 
@@ -252,7 +517,11 @@ def summarize_payload(value: Any, *, depth: int = 0) -> Any:
                 summary["_truncated"] = True
                 break
             normalized = str(key).lower().replace("-", "_")
-            summary[str(key)[:100]] = "[protegido]" if any(marker in normalized for marker in SENSITIVE_KEYS) else summarize_payload(item, depth=depth + 1)
+            summary[str(key)[:100]] = (
+                "[protegido]"
+                if any(marker in normalized for marker in SENSITIVE_KEYS)
+                else summarize_payload(item, depth=depth + 1)
+            )
         return summary
     if isinstance(value, list):
         items = [summarize_payload(item, depth=depth + 1) for item in value[:50]]

@@ -51,11 +51,33 @@ class UsageEstimate:
 
 class LanguageModelProvider(ABC):
     @abstractmethod
-    async def generate(self, *, messages: Sequence[ModelMessage], tools: Sequence[ToolDefinition], model: str, temperature: float, max_output_tokens: int) -> ModelResult:
+    async def generate(
+        self,
+        *,
+        messages: Sequence[ModelMessage],
+        tools: Sequence[ToolDefinition],
+        model: str,
+        temperature: float,
+        max_output_tokens: int,
+    ) -> ModelResult:
         raise NotImplementedError
 
-    async def stream(self, *, messages: Sequence[ModelMessage], tools: Sequence[ToolDefinition], model: str, temperature: float, max_output_tokens: int) -> AsyncIterator[str]:
-        result = await self.generate(messages=messages, tools=tools, model=model, temperature=temperature, max_output_tokens=max_output_tokens)
+    async def stream(
+        self,
+        *,
+        messages: Sequence[ModelMessage],
+        tools: Sequence[ToolDefinition],
+        model: str,
+        temperature: float,
+        max_output_tokens: int,
+    ) -> AsyncIterator[str]:
+        result = await self.generate(
+            messages=messages,
+            tools=tools,
+            model=model,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+        )
         if result.content:
             yield result.content
 

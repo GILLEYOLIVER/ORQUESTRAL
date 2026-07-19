@@ -15,7 +15,12 @@ from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.plugins.adapters import get_plugin_runtime
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError, mask_credential_fields
-from app.modules.plugins.models import CompanyPlugin, IntegrationCredential, Plugin, PluginConnectionTest
+from app.modules.plugins.models import (
+    CompanyPlugin,
+    IntegrationCredential,
+    Plugin,
+    PluginConnectionTest,
+)
 from app.modules.plugins.schemas import (
     CompanyPluginUpdate,
     ConnectionTestHistoryResponse,
@@ -77,19 +82,26 @@ async def _active_plugin(
         )
     ).one_or_none()
     if row is None:
-        raise HTTPException(status_code=409, detail="Ative o plugin antes de administrar credenciais.")
-    return row
+        raise HTTPException(
+            status_code=409, detail="Ative o plugin antes de administrar credenciais."
+        )
+    return row[0], row[1]
 
 
 @router.get("", response_model=list[PluginResponse])
-async def list_plugins(principal: CanViewPlugins, database: DatabaseSession) -> list[PluginResponse]:
+async def list_plugins(
+    principal: CanViewPlugins, database: DatabaseSession
+) -> list[PluginResponse]:
     context = get_request_context(principal)
     rows = (
         await database.execute(
             select(Plugin, CompanyPlugin)
             .outerjoin(
                 CompanyPlugin,
-                and_(CompanyPlugin.plugin_id == Plugin.id, CompanyPlugin.company_id == context.company_id),
+                and_(
+                    CompanyPlugin.plugin_id == Plugin.id,
+                    CompanyPlugin.company_id == context.company_id,
+                ),
             )
             .order_by(Plugin.name)
         )
@@ -177,7 +189,9 @@ async def create_credential(
         company_id=context.company_id,
         plugin_id=plugin.id,
         name=payload.name,
-        encrypted_credentials=CredentialVault(get_settings().encryption_key).encrypt(payload.values),
+        encrypted_credentials=CredentialVault(get_settings().encryption_key).encrypt(
+            payload.values
+        ),
         credential_fields=sorted(payload.values),
         expires_at=payload.expires_at,
     )
@@ -228,7 +242,9 @@ async def revoke_credential(
     await database.commit()
 
 
-@router.post("/{plugin_code}/credentials/{credential_id}/test", response_model=ConnectionTestResponse)
+@router.post(
+    "/{plugin_code}/credentials/{credential_id}/test", response_model=ConnectionTestResponse
+)
 async def test_credential(
     plugin_code: str,
     credential_id: UUID,
@@ -252,7 +268,9 @@ async def test_credential(
     success = False
     message = "Não foi possível validar a conexão."
     try:
-        values = CredentialVault(get_settings().encryption_key).decrypt(credential.encrypted_credentials)
+        values = CredentialVault(get_settings().encryption_key).decrypt(
+            credential.encrypted_credentials
+        )
         result = await get_plugin_runtime().test_connection(
             plugin.code,
             values,

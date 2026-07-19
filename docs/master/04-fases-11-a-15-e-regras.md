@@ -174,22 +174,22 @@ Não avance escondendo erros conhecidos. Não utilize dados fictícios silencios
 
 # 23. PADRÕES OBRIGATÓRIOS DE CÓDIGO
 
-* Utilize tipagem.
-* Separe regras de negócio das rotas.
-* Use repositórios para banco e serviços para casos de uso.
-* Evite importações circulares.
-* Não coloque credenciais no código.
-* Não misture dados entre empresas.
-* Não permita que o front-end controle permissões reais.
-* Não acople agentes diretamente a provedores.
-* Não acople o sistema ao formato interno do n8n.
-* Documente decisões importantes.
-* Crie migrações reversíveis quando possível.
-* Mantenha compatibilidade de APIs.
-* Utilize UUID.
-* Registre erros com request ID.
-* Nunca registre segredos completos.
-* Adicione testes a cada funcionalidade.
+- Utilize tipagem.
+- Separe regras de negócio das rotas.
+- Use repositórios para banco e serviços para casos de uso.
+- Evite importações circulares.
+- Não coloque credenciais no código.
+- Não misture dados entre empresas.
+- Não permita que o front-end controle permissões reais.
+- Não acople agentes diretamente a provedores.
+- Não acople o sistema ao formato interno do n8n.
+- Documente decisões importantes.
+- Crie migrações reversíveis quando possível.
+- Mantenha compatibilidade de APIs.
+- Utilize UUID.
+- Registre erros com request ID.
+- Nunca registre segredos completos.
+- Adicione testes a cada funcionalidade.
 
 ---
 

@@ -40,7 +40,15 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["workflow_id"], ["workflows.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    for column in ("company_id", "metric_date", "module", "metric_key", "agent_id", "workflow_id", "generated_at"):
+    for column in (
+        "company_id",
+        "metric_date",
+        "module",
+        "metric_key",
+        "agent_id",
+        "workflow_id",
+        "generated_at",
+    ):
         op.create_index(f"ix_metric_daily_summaries_{column}", "metric_daily_summaries", [column])
 
     op.create_table(
@@ -51,12 +59,16 @@ def upgrade() -> None:
         sa.Column("error_summary", sa.Text(), nullable=True),
         sa.Column("started_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
         sa.Column("finished_at", TIMESTAMP, nullable=True),
-        sa.CheckConstraint("status IN ('running','success','error')", name="ck_metric_aggregation_runs_status"),
+        sa.CheckConstraint(
+            "status IN ('running','success','error')", name="ck_metric_aggregation_runs_status"
+        ),
         sa.CheckConstraint("rows_written >= 0", name="ck_metric_aggregation_runs_rows"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_metric_aggregation_runs_status", "metric_aggregation_runs", ["status"])
-    op.create_index("ix_metric_aggregation_runs_started_at", "metric_aggregation_runs", ["started_at"])
+    op.create_index(
+        "ix_metric_aggregation_runs_started_at", "metric_aggregation_runs", ["started_at"]
+    )
 
 
 def downgrade() -> None:

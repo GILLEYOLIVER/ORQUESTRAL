@@ -13,18 +13,18 @@ O sistema deverá atender empresas de diferentes segmentos sem exigir alteraçõ
 
 Exemplos de segmentos atendidos:
 
-* Indústrias;
-* Escritórios;
-* Clínicas;
-* Imobiliárias;
-* Lojas;
-* Prestadores de serviços;
-* Confecções;
-* Restaurantes;
-* Escolas;
-* Transportadoras;
-* Empresas de tecnologia;
-* Empresas de contabilidade.
+- Indústrias;
+- Escritórios;
+- Clínicas;
+- Imobiliárias;
+- Lojas;
+- Prestadores de serviços;
+- Confecções;
+- Restaurantes;
+- Escolas;
+- Transportadoras;
+- Empresas de tecnologia;
+- Empresas de contabilidade.
 
 A plataforma deverá ser modular, extensível, segura, multiempresa e preparada para crescer.
 
@@ -56,36 +56,36 @@ Utilize a seguinte base tecnológica:
 
 ## Front-end
 
-* React;
-* TypeScript;
-* Vite;
-* React Router;
-* TanStack Query;
-* biblioteca de formulários com validação;
-* cliente HTTP centralizado;
-* sistema de componentes reutilizáveis.
+- React;
+- TypeScript;
+- Vite;
+- React Router;
+- TanStack Query;
+- biblioteca de formulários com validação;
+- cliente HTTP centralizado;
+- sistema de componentes reutilizáveis.
 
 ## Back-end
 
-* Python;
-* FastAPI;
-* SQLAlchemy assíncrono;
-* Alembic para migrações;
-* Pydantic para validação;
-* PostgreSQL;
-* Redis;
-* sistema de filas para trabalhos assíncronos;
-* integração interna com n8n.
+- Python;
+- FastAPI;
+- SQLAlchemy assíncrono;
+- Alembic para migrações;
+- Pydantic para validação;
+- PostgreSQL;
+- Redis;
+- sistema de filas para trabalhos assíncronos;
+- integração interna com n8n.
 
 ## Infraestrutura
 
-* Docker;
-* Docker Compose;
-* Nginx;
-* HTTPS;
-* GitHub Actions;
-* armazenamento compatível com S3 para documentos;
-* monitoramento e logs estruturados.
+- Docker;
+- Docker Compose;
+- Nginx;
+- HTTPS;
+- GitHub Actions;
+- armazenamento compatível com S3 para documentos;
+- monitoramento e logs estruturados.
 
 Não prenda o núcleo a um único fornecedor de IA, armazenamento, mensageria ou integração.
 
@@ -247,14 +247,14 @@ apps/api/app/main.py
 
 Implemente:
 
-* inicialização da aplicação;
-* carregamento das configurações;
-* conexão com PostgreSQL;
-* conexão com Redis;
-* middleware de tratamento de erros;
-* middleware de identificação de requisição;
-* logs estruturados;
-* rota de verificação de saúde.
+- inicialização da aplicação;
+- carregamento das configurações;
+- conexão com PostgreSQL;
+- conexão com Redis;
+- middleware de tratamento de erros;
+- middleware de identificação de requisição;
+- logs estruturados;
+- rota de verificação de saúde.
 
 Rotas iniciais:
 
@@ -267,9 +267,9 @@ GET /ready
 
 `/ready` deve verificar pelo menos:
 
-* PostgreSQL;
-* Redis;
-* configurações obrigatórias.
+- PostgreSQL;
+- Redis;
+- configurações obrigatórias.
 
 ### 6.2 Criar configuração central
 
@@ -307,15 +307,15 @@ apps/web/
 
 Implemente inicialmente:
 
-* estrutura de rotas;
-* layout público;
-* layout autenticado;
-* página de login;
-* página inicial provisória;
-* página de erro;
-* cliente HTTP;
-* armazenamento seguro do estado da sessão;
-* tratamento global de erros.
+- estrutura de rotas;
+- layout público;
+- layout autenticado;
+- página de login;
+- página inicial provisória;
+- página de erro;
+- cliente HTTP;
+- armazenamento seguro do estado da sessão;
+- tratamento global de erros.
 
 ### 6.4 Criar Docker Compose
 
@@ -357,11 +357,11 @@ Ao pressionar `F5`, o VS Code deverá:
 
 Deverão existir tarefas separadas para:
 
-* iniciar com rebuild;
-* iniciar sem rebuild;
-* encerrar o ambiente;
-* consultar o status;
-* acompanhar logs dos serviços principais.
+- iniciar com rebuild;
+- iniciar sem rebuild;
+- encerrar o ambiente;
+- consultar o status;
+- acompanhar logs dos serviços principais.
 
 A configuração compartilhada do VS Code poderá ser versionada, mas arquivos pessoais, extensões locais, segredos e preferências individuais não deverão ser incluídos.
 
@@ -369,11 +369,11 @@ O front-end poderá oferecer a ação **Acessar como administrador** somente em 
 
 Critérios adicionais de conclusão:
 
-* pressionar `F5` inicia o ambiente a partir da raiz do monorepositório;
-* a interface é aberta automaticamente após o health check;
-* o fluxo funciona no Windows PowerShell e no Bash (macOS/Linux);
-* a configuração não expõe segredos;
-* o acesso administrativo rápido fica indisponível fora do desenvolvimento local.
+- pressionar `F5` inicia o ambiente a partir da raiz do monorepositório;
+- a interface é aberta automaticamente após o health check;
+- o fluxo funciona no Windows PowerShell e no Bash (macOS/Linux);
+- a configuração não expõe segredos;
+- o acesso administrativo rápido fica indisponível fora do desenvolvimento local.
 
 ### 6.5 Criar migrações
 
@@ -383,12 +383,12 @@ A primeira migração deverá criar extensões e estruturas básicas necessária
 
 ### Critérios de conclusão
 
-* O projeto sobe com um único comando.
-* A API responde em `/health`.
-* O front-end abre sem erros.
-* PostgreSQL e Redis são acessíveis.
-* O README explica como executar o projeto.
-* Nenhum segredo real está versionado.
+- O projeto sobe com um único comando.
+- A API responde em `/health`.
+- O front-end abre sem erros.
+- PostgreSQL e Redis são acessíveis.
+- O README explica como executar o projeto.
+- Nenhum segredo real está versionado.
 
 ---
 
@@ -480,12 +480,12 @@ GET  /auth/me
 
 Utilize:
 
-* token de acesso de curta duração;
-* token de renovação;
-* revogação de sessões;
-* armazenamento seguro dos tokens;
-* limitação de tentativas de login;
-* registro de tentativas suspeitas.
+- token de acesso de curta duração;
+- token de renovação;
+- revogação de sessões;
+- armazenamento seguro dos tokens;
+- limitação de tentativas de login;
+- registro de tentativas suspeitas.
 
 ## 7.5 Contexto da empresa
 
@@ -517,20 +517,20 @@ class RequestContext:
 
 Crie as telas:
 
-* login;
-* recuperação de senha;
-* seleção de empresa, quando houver mais de uma;
-* perfil do usuário;
-* gestão de empresas para administradores da plataforma;
-* gestão de usuários da empresa.
+- login;
+- recuperação de senha;
+- seleção de empresa, quando houver mais de uma;
+- perfil do usuário;
+- gestão de empresas para administradores da plataforma;
+- gestão de usuários da empresa.
 
 ## Critérios de conclusão
 
-* O usuário consegue entrar e sair.
-* Um usuário comum não acessa outra empresa.
-* O administrador da plataforma consegue cadastrar empresas.
-* O proprietário da empresa consegue convidar usuários.
-* Testes de isolamento multiempresa passam.
+- O usuário consegue entrar e sair.
+- Um usuário comum não acessa outra empresa.
+- O administrador da plataforma consegue cadastrar empresas.
+- O proprietário da empresa consegue convidar usuários.
+- Testes de isolamento multiempresa passam.
 
 ---
 
@@ -624,10 +624,10 @@ O front-end melhora a experiência, mas o back-end continua sendo a autoridade f
 
 ## Critérios de conclusão
 
-* Permissões são verificadas no servidor.
-* O painel permite criar papéis personalizados.
-* Alterações de permissões são auditadas.
-* Existem testes para acessos permitidos e negados.
+- Permissões são verificadas no servidor.
+- O painel permite criar papéis personalizados.
+- Alterações de permissões são auditadas.
+- Existem testes para acessos permitidos e negados.
 
 ---
 
@@ -686,16 +686,16 @@ deactivated_at
 
 Cada módulo deverá registrar:
 
-* código;
-* nome;
-* versão;
-* permissões;
-* rotas;
-* menus;
-* configurações;
-* eventos publicados;
-* eventos consumidos;
-* migrações necessárias.
+- código;
+- nome;
+- versão;
+- permissões;
+- rotas;
+- menus;
+- configurações;
+- eventos publicados;
+- eventos consumidos;
+- migrações necessárias.
 
 Crie um registro central que carregue apenas os módulos instalados.
 
@@ -751,30 +751,30 @@ DELETE /crm/contacts/{id}
 
 Implemente:
 
-* paginação;
-* pesquisa;
-* filtros;
-* ordenação;
-* exclusão lógica;
-* auditoria;
-* validação por empresa.
+- paginação;
+- pesquisa;
+- filtros;
+- ordenação;
+- exclusão lógica;
+- auditoria;
+- validação por empresa.
 
 Telas:
 
-* lista de contatos;
-* cadastro;
-* edição;
-* detalhes;
-* filtros;
-* pesquisa;
-* paginação.
+- lista de contatos;
+- cadastro;
+- edição;
+- detalhes;
+- filtros;
+- pesquisa;
+- paginação.
 
 ## Critérios de conclusão
 
-* O CRM pode ser ativado para uma empresa e desativado para outra.
-* Empresa sem o módulo ativo não acessa as rotas.
-* Contatos ficam isolados por empresa.
-* O módulo possui testes próprios.
+- O CRM pode ser ativado para uma empresa e desativado para outra.
+- Empresa sem o módulo ativo não acessa as rotas.
+- Contatos ficam isolados por empresa.
+- O módulo possui testes próprios.
 
 ---
 
@@ -794,16 +794,16 @@ packages/plugin-sdk/
 
 Defina interfaces para:
 
-* metadados;
-* autenticação;
-* configuração;
-* ferramentas disponíveis;
-* gatilhos;
-* ações;
-* teste de conexão;
-* tratamento de erros;
-* renovação de tokens;
-* webhooks.
+- metadados;
+- autenticação;
+- configuração;
+- ferramentas disponíveis;
+- gatilhos;
+- ações;
+- teste de conexão;
+- tratamento de erros;
+- renovação de tokens;
+- webhooks.
 
 Exemplo conceitual:
 
@@ -867,12 +867,12 @@ Nunca salve tokens e senhas em texto puro.
 
 Crie um serviço central para:
 
-* criptografar;
-* descriptografar apenas durante o uso;
-* mascarar valores na interface;
-* rotacionar chaves;
-* registrar acesso administrativo;
-* impedir que segredos apareçam nos logs.
+- criptografar;
+- descriptografar apenas durante o uso;
+- mascarar valores na interface;
+- rotacionar chaves;
+- registrar acesso administrativo;
+- impedir que segredos apareçam nos logs.
 
 ## 10.4 Primeiros plugins
 
@@ -890,11 +890,11 @@ Cada plugin deve possuir a ação “Testar conexão”.
 
 ## Critérios de conclusão
 
-* Plugins podem ser ativados por empresa.
-* Credenciais ficam criptografadas.
-* Um plugin com erro não derruba a aplicação inteira.
-* O sistema registra falhas e tentativas de conexão.
-* Novos plugins podem ser adicionados sem modificar o núcleo principal.
+- Plugins podem ser ativados por empresa.
+- Credenciais ficam criptografadas.
+- Um plugin com erro não derruba a aplicação inteira.
+- O sistema registra falhas e tentativas de conexão.
+- Novos plugins podem ser adicionados sem modificar o núcleo principal.
 
 ---
 
@@ -914,17 +914,17 @@ modules/workflows/services/n8n_client.py
 
 Esse cliente deverá centralizar:
 
-* autenticação com n8n;
-* criação de workflows;
-* atualização;
-* ativação;
-* desativação;
-* execução;
-* consulta de status;
-* consulta de histórico;
-* tratamento de erros;
-* timeouts;
-* tentativas controladas.
+- autenticação com n8n;
+- criação de workflows;
+- atualização;
+- ativação;
+- desativação;
+- execução;
+- consulta de status;
+- consulta de histórico;
+- tratamento de erros;
+- timeouts;
+- tentativas controladas.
 
 Nenhuma rota deverá chamar o n8n diretamente sem passar por esse serviço.
 
@@ -968,35 +968,35 @@ Inclua o identificador interno da empresa em toda execução.
 
 Não permita que um webhook público execute um workflow sem:
 
-* assinatura;
-* chave;
-* token;
-* limite de frequência;
-* validação de empresa;
-* validação do workflow.
+- assinatura;
+- chave;
+- token;
+- limite de frequência;
+- validação de empresa;
+- validação do workflow.
 
 ## 11.4 Interface da Orkestral
 
 Crie telas para:
 
-* listar automações;
-* criar automação;
-* ativar e desativar;
-* executar manualmente;
-* visualizar histórico;
-* visualizar erros;
-* duplicar;
-* importar modelo;
-* exportar definição segura.
+- listar automações;
+- criar automação;
+- ativar e desativar;
+- executar manualmente;
+- visualizar histórico;
+- visualizar erros;
+- duplicar;
+- importar modelo;
+- exportar definição segura.
 
 O cliente não deve ver URLs administrativas, credenciais ou termos técnicos desnecessários do n8n.
 
 ## Critérios de conclusão
 
-* A Orkestral cria e executa um fluxo no n8n.
-* O usuário acompanha o resultado pela Orkestral.
-* O n8n não fica exposto ao usuário final.
-* Falhas são registradas e apresentadas de maneira compreensível.
+- A Orkestral cria e executa um fluxo no n8n.
+- O usuário acompanha o resultado pela Orkestral.
+- O n8n não fica exposto ao usuário final.
+- Falhas são registradas e apresentadas de maneira compreensível.
 
 ---
 
@@ -1107,15 +1107,15 @@ Fluxo:
 
 Ações como estas devem exigir confirmação:
 
-* excluir registros;
-* enviar cobranças;
-* emitir pedidos;
-* cancelar operações;
-* enviar mensagens em massa;
-* alterar dados financeiros;
-* aprovar pagamentos;
-* modificar permissões;
-* executar uma automação crítica.
+- excluir registros;
+- enviar cobranças;
+- emitir pedidos;
+- cancelar operações;
+- enviar mensagens em massa;
+- alterar dados financeiros;
+- aprovar pagamentos;
+- modificar permissões;
+- executar uma automação crítica.
 
 Crie estados de execução:
 
@@ -1133,25 +1133,25 @@ failed
 
 Registre:
 
-* empresa;
-* usuário;
-* agente;
-* provedor;
-* modelo;
-* tokens de entrada;
-* tokens de saída;
-* custo estimado;
-* ferramenta utilizada;
-* duração;
-* resultado.
+- empresa;
+- usuário;
+- agente;
+- provedor;
+- modelo;
+- tokens de entrada;
+- tokens de saída;
+- custo estimado;
+- ferramenta utilizada;
+- duração;
+- resultado.
 
 ## Critérios de conclusão
 
-* Uma empresa consegue cadastrar vários agentes.
-* Cada agente possui ferramentas próprias.
-* Um agente não acessa ferramentas não autorizadas.
-* Custos e tokens são registrados.
-* Ações sensíveis exigem confirmação.
+- Uma empresa consegue cadastrar vários agentes.
+- Cada agente possui ferramentas próprias.
+- Um agente não acessa ferramentas não autorizadas.
+- Custos e tokens são registrados.
+- Ações sensíveis exigem confirmação.
 
 ---
 
@@ -1223,12 +1223,12 @@ Implemente tarefas assíncronas para:
 
 Suporte inicialmente:
 
-* PDF;
-* DOCX;
-* TXT;
-* CSV;
-* XLSX;
-* páginas web autorizadas.
+- PDF;
+- DOCX;
+- TXT;
+- CSV;
+- XLSX;
+- páginas web autorizadas.
 
 ## 13.4 Consulta
 
@@ -1244,11 +1244,11 @@ O agente deverá:
 
 ## Critérios de conclusão
 
-* Arquivos são processados em segundo plano.
-* Documentos de uma empresa não aparecem para outra.
-* O agente responde usando documentos autorizados.
-* O sistema informa as fontes internas utilizadas.
-* Documentos podem ser removidos e reprocessados.
+- Arquivos são processados em segundo plano.
+- Documentos de uma empresa não aparecem para outra.
+- O agente responde usando documentos autorizados.
+- O sistema informa as fontes internas utilizadas.
+- Documentos podem ser removidos e reprocessados.
 
 ---
 
@@ -1262,22 +1262,22 @@ Permitir que usuários criem fluxos sem acessar diretamente o n8n.
 
 Crie blocos próprios da Orkestral:
 
-* gatilho manual;
-* gatilho por horário;
-* webhook;
-* mensagem recebida;
-* novo contato;
-* condição;
-* espera;
-* repetição;
-* consulta;
-* atualização;
-* envio de e-mail;
-* envio de mensagem;
-* execução de agente;
-* aprovação humana;
-* chamada de plugin;
-* encerramento.
+- gatilho manual;
+- gatilho por horário;
+- webhook;
+- mensagem recebida;
+- novo contato;
+- condição;
+- espera;
+- repetição;
+- consulta;
+- atualização;
+- envio de e-mail;
+- envio de mensagem;
+- execução de agente;
+- aprovação humana;
+- chamada de plugin;
+- encerramento.
 
 ## 14.2 Estrutura do fluxo
 
@@ -1302,14 +1302,14 @@ Não armazene apenas a definição do n8n, pois isso tornaria a plataforma depen
 
 Antes de publicar, valide:
 
-* blocos desconectados;
-* ciclos inválidos;
-* credenciais ausentes;
-* permissões;
-* campos obrigatórios;
-* ferramentas desativadas;
-* risco de execução em massa;
-* ausência de tratamento de erro.
+- blocos desconectados;
+- ciclos inválidos;
+- credenciais ausentes;
+- permissões;
+- campos obrigatórios;
+- ferramentas desativadas;
+- risco de execução em massa;
+- ausência de tratamento de erro.
 
 ## 14.4 Versionamento
 
@@ -1317,20 +1317,20 @@ Cada publicação deve gerar uma versão.
 
 Implemente:
 
-* rascunho;
-* versão publicada;
-* histórico;
-* restauração;
-* comparação;
-* duplicação.
+- rascunho;
+- versão publicada;
+- histórico;
+- restauração;
+- comparação;
+- duplicação.
 
 ## Critérios de conclusão
 
-* O usuário cria um fluxo visual.
-* A definição é validada.
-* O fluxo é convertido e publicado no n8n.
-* O histórico de versões é preservado.
-* O usuário consegue acompanhar cada execução.
+- O usuário cria um fluxo visual.
+- A definição é validada.
+- O fluxo é convertido e publicado no n8n.
+- O histórico de versões é preservado.
+- O usuário consegue acompanhar cada execução.
 
 ---
 
@@ -1342,17 +1342,17 @@ Apresentar resultados empresariais e operacionais.
 
 ## Métricas iniciais
 
-* automações executadas;
-* automações com sucesso;
-* automações com falha;
-* tempo economizado estimado;
-* agentes mais utilizados;
-* tokens consumidos;
-* custo de IA;
-* integrações com falha;
-* usuários ativos;
-* documentos processados;
-* tarefas aguardando aprovação.
+- automações executadas;
+- automações com sucesso;
+- automações com falha;
+- tempo economizado estimado;
+- agentes mais utilizados;
+- tokens consumidos;
+- custo de IA;
+- integrações com falha;
+- usuários ativos;
+- documentos processados;
+- tarefas aguardando aprovação.
 
 ## Implementação
 
@@ -1362,19 +1362,19 @@ Evite fazer consultas pesadas diretamente nas tabelas operacionais a cada abertu
 
 Utilize:
 
-* agregações periódicas;
-* cache;
-* tabelas de resumo;
-* filtros por período;
-* filtros por módulo;
-* filtros por agente;
-* filtros por workflow.
+- agregações periódicas;
+- cache;
+- tabelas de resumo;
+- filtros por período;
+- filtros por módulo;
+- filtros por agente;
+- filtros por workflow.
 
 Permita exportação em:
 
-* CSV;
-* XLSX;
-* PDF, quando apropriado.
+- CSV;
+- XLSX;
+- PDF, quando apropriado.
 
 ---
 
@@ -1410,21 +1410,21 @@ Não registre senhas, tokens ou credenciais completas.
 
 Implemente:
 
-* rate limiting;
-* bloqueio por tentativas;
-* validação de entrada;
-* proteção contra injeção;
-* política de CORS;
-* cabeçalhos de segurança;
-* expiração de sessão;
-* revogação de tokens;
-* criptografia de credenciais;
-* rotação de segredos;
-* backup;
-* recuperação de desastre;
-* verificação de uploads;
-* limites por plano;
-* logs sem dados sensíveis.
+- rate limiting;
+- bloqueio por tentativas;
+- validação de entrada;
+- proteção contra injeção;
+- política de CORS;
+- cabeçalhos de segurança;
+- expiração de sessão;
+- revogação de tokens;
+- criptografia de credenciais;
+- rotação de segredos;
+- backup;
+- recuperação de desastre;
+- verificação de uploads;
+- limites por plano;
+- logs sem dados sensíveis.
 
 ## 16.3 Exclusão lógica
 
@@ -1488,15 +1488,15 @@ created_at
 
 Limites possíveis:
 
-* número de usuários;
-* número de agentes;
-* número de automações;
-* execuções mensais;
-* tokens;
-* armazenamento;
-* integrações;
-* documentos;
-* chamadas de API.
+- número de usuários;
+- número de agentes;
+- número de automações;
+- execuções mensais;
+- tokens;
+- armazenamento;
+- integrações;
+- documentos;
+- chamadas de API.
 
 A aplicação deverá verificar limites antes da execução e produzir mensagens claras.
 
@@ -1510,13 +1510,13 @@ Criar uma central de eventos que exigem atenção humana.
 
 Crie:
 
-* notificações internas;
-* notificações por e-mail;
-* notificações por WhatsApp, quando autorizado;
-* central de aprovações;
-* lembretes;
-* estados de leitura;
-* preferências por usuário.
+- notificações internas;
+- notificações por e-mail;
+- notificações por WhatsApp, quando autorizado;
+- central de aprovações;
+- lembretes;
+- estados de leitura;
+- preferências por usuário.
 
 Tabelas:
 
@@ -1537,31 +1537,31 @@ O sistema deverá permitir que uma automação pause até a aprovação humana.
 
 ### Testes unitários
 
-* serviços;
-* regras de negócio;
-* permissões;
-* validações;
-* compilador de workflows;
-* cálculo de limites;
-* cálculo de consumo.
+- serviços;
+- regras de negócio;
+- permissões;
+- validações;
+- compilador de workflows;
+- cálculo de limites;
+- cálculo de consumo.
 
 ### Testes de integração
 
-* PostgreSQL;
-* Redis;
-* armazenamento;
-* n8n;
-* provedores de IA;
-* plugins.
+- PostgreSQL;
+- Redis;
+- armazenamento;
+- n8n;
+- provedores de IA;
+- plugins.
 
 ### Testes de segurança
 
-* acesso entre empresas;
-* escalonamento de privilégio;
-* rotas sem autorização;
-* manipulação de IDs;
-* upload malicioso;
-* vazamento de credenciais.
+- acesso entre empresas;
+- escalonamento de privilégio;
+- rotas sem autorização;
+- manipulação de IDs;
+- upload malicioso;
+- vazamento de credenciais.
 
 ### Testes de ponta a ponta
 
@@ -1609,25 +1609,25 @@ production
 
 Cada ambiente deve ter:
 
-* banco separado;
-* credenciais separadas;
-* configurações separadas;
-* domínio separado;
-* logs separados.
+- banco separado;
+- credenciais separadas;
+- configurações separadas;
+- domínio separado;
+- logs separados.
 
 ## Deploy
 
 Configure:
 
-* Nginx;
-* HTTPS;
-* renovação automática de certificados;
-* backups;
-* monitoramento;
-* health checks;
-* política de reinicialização;
-* migração controlada do banco;
-* rollback.
+- Nginx;
+- HTTPS;
+- renovação automática de certificados;
+- backups;
+- monitoramento;
+- health checks;
+- política de reinicialização;
+- migração controlada do banco;
+- rollback.
 
 ---
 
@@ -1699,23 +1699,23 @@ Não substitua integrações reais por simulações sem identificar claramente q
 
 # 23. PADRÕES OBRIGATÓRIOS DE CÓDIGO
 
-* Utilize tipagem.
-* Separe regras de negócio das rotas.
-* Use repositórios para acesso ao banco.
-* Use serviços para casos de uso.
-* Evite importações circulares.
-* Não coloque credenciais no código.
-* Não misture dados entre empresas.
-* Não permita que o front-end controle permissões reais.
-* Não acople agentes diretamente a provedores.
-* Não acople o sistema diretamente ao formato interno do n8n.
-* Documente decisões importantes.
-* Crie migrações reversíveis quando possível.
-* Mantenha compatibilidade com versões anteriores das APIs.
-* Utilize identificadores UUID.
-* Registre erros com identificador de requisição.
-* Nunca registre segredos completos.
-* Adicione testes a cada funcionalidade.
+- Utilize tipagem.
+- Separe regras de negócio das rotas.
+- Use repositórios para acesso ao banco.
+- Use serviços para casos de uso.
+- Evite importações circulares.
+- Não coloque credenciais no código.
+- Não misture dados entre empresas.
+- Não permita que o front-end controle permissões reais.
+- Não acople agentes diretamente a provedores.
+- Não acople o sistema diretamente ao formato interno do n8n.
+- Documente decisões importantes.
+- Crie migrações reversíveis quando possível.
+- Mantenha compatibilidade com versões anteriores das APIs.
+- Utilize identificadores UUID.
+- Registre erros com identificador de requisição.
+- Nunca registre segredos completos.
+- Adicione testes a cada funcionalidade.
 
 ---
 

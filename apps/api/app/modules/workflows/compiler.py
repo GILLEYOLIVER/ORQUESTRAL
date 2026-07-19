@@ -48,11 +48,7 @@ def _schedule_adapter(node: dict[str, Any], _path: str) -> dict[str, Any]:
     native.update(
         type="n8n-nodes-base.scheduleTrigger",
         typeVersion=1.2,
-        parameters={
-            "rule": {
-                "interval": [{"field": "minutes", "minutesInterval": minutes}]
-            }
-        },
+        parameters={"rule": {"interval": [{"field": "minutes", "minutesInterval": minutes}]}},
     )
     return native
 
@@ -199,9 +195,7 @@ def _native_node(node: dict[str, Any], internal_webhook_path: str) -> dict[str, 
     return adapter(node, internal_webhook_path)
 
 
-def compile_definition(
-    definition: dict[str, Any], *, internal_webhook_path: str
-) -> dict[str, Any]:
+def compile_definition(definition: dict[str, Any], *, internal_webhook_path: str) -> dict[str, Any]:
     validate_definition(definition)
     compatibility_issues = analyze_compiler_compatibility(definition)
     if compatibility_issues:

@@ -7,6 +7,14 @@ import type { MeResponse } from "@orkestral/shared-types";
 import { LoginPage } from "../pages/LoginPage";
 import { SessionContext, type SessionContextValue } from "../session/context";
 
+vi.mock("../lib/http", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/http")>();
+  return {
+    ...actual,
+    request: vi.fn().mockResolvedValue({ enabled: true }),
+  };
+});
+
 const profile: MeResponse = {
   current_company: {
     id: "6a818688-1d95-4fac-9c2d-b64b3317dbaa",
@@ -35,6 +43,7 @@ function renderLogin(overrides: Partial<SessionContextValue> = {}) {
     defaultOptions: { queries: { retry: false } },
   });
   const session: SessionContextValue = {
+    developmentLogin: vi.fn().mockResolvedValue(profile),
     getAccessToken: () => null,
     login: vi.fn().mockResolvedValue(profile),
     logout: vi.fn().mockResolvedValue(undefined),
@@ -82,5 +91,17 @@ describe("LoginPage", () => {
     );
     expect(window.localStorage).toHaveLength(0);
     expect(window.sessionStorage).toHaveLength(0);
+  });
+
+  it("acessa o administrador local sem solicitar credenciais", async () => {
+    const user = userEvent.setup();
+    const developmentLogin = vi.fn().mockResolvedValue(profile);
+    renderLogin({ developmentLogin });
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Acessar como administrador",
+      }),
+    );
+    expect(developmentLogin).toHaveBeenCalledOnce();
   });
 });

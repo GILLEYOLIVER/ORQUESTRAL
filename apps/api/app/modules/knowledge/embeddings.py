@@ -26,9 +26,7 @@ def local_hash_embedding(text: str, dimensions: int = 384) -> list[float]:
     vector = [0.0] * dimensions
     for word in re.findall(r"\w+", text.lower()):
         digest = hashlib.sha256(word.encode()).digest()
-        vector[int.from_bytes(digest[:2], "big") % dimensions] += (
-            1 if digest[2] % 2 else -1
-        )
+        vector[int.from_bytes(digest[:2], "big") % dimensions] += 1 if digest[2] % 2 else -1
     norm = math.sqrt(sum(value * value for value in vector)) or 1.0
     return [round(value / norm, 6) for value in vector]
 

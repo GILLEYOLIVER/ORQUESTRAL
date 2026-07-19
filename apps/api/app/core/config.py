@@ -133,9 +133,7 @@ class Settings(BaseSettings):
         if self.bootstrap_enabled:
             raise ValueError("BOOTSTRAP_ENABLED não pode ser habilitado em produção")
         if self.knowledge_embedding_provider != "openai_compatible":
-            raise ValueError(
-                "KNOWLEDGE_EMBEDDING_PROVIDER deve ser openai_compatible em produção"
-            )
+            raise ValueError("KNOWLEDGE_EMBEDDING_PROVIDER deve ser openai_compatible em produção")
         if not self.ai_provider_api_key or any(
             marker in self.ai_provider_api_key.lower() for marker in _PLACEHOLDER_MARKERS
         ):

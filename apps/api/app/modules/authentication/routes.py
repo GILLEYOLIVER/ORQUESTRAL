@@ -13,6 +13,7 @@ from app.modules.authentication.schemas import (
     AccessTokenResponse,
     AuthSessionResponse,
     CompanySummary,
+    DevelopmentAccessResponse,
     ForgotPasswordRequest,
     LoginRequest,
     MembershipResponse,
@@ -58,6 +59,53 @@ def _token_response(issued: IssuedTokens) -> AccessTokenResponse:
         access_token=issued.access_token,
         expires_at=issued.access_expires_at,
     )
+
+
+def _development_access_enabled(settings: RequestSettings) -> bool:
+    return bool(
+        settings.app_env == "development"
+        and settings.development_expose_tokens
+        and settings.bootstrap_enabled
+        and settings.bootstrap_admin_email
+        and settings.bootstrap_admin_password
+    )
+
+
+@router.get("/development-access", response_model=DevelopmentAccessResponse)
+async def development_access(settings: RequestSettings) -> DevelopmentAccessResponse:
+    return DevelopmentAccessResponse(enabled=_development_access_enabled(settings))
+
+
+@router.post("/development-login", response_model=AccessTokenResponse)
+async def development_login(
+    request: Request,
+    response: Response,
+    database: DatabaseSession,
+    redis: RedisClient,
+    settings: RequestSettings,
+) -> AccessTokenResponse:
+    if not _development_access_enabled(settings):
+        raise HTTPException(status_code=404, detail="Recurso não disponível.")
+    assert settings.bootstrap_admin_email is not None
+    assert settings.bootstrap_admin_password is not None
+    try:
+        issued = await AuthenticationService(database, redis, settings).login(
+            email=settings.bootstrap_admin_email,
+            password=settings.bootstrap_admin_password,
+            ip_address=_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    except InvalidCredentialsError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Administrador local indisponível. Execute o bootstrap novamente.",
+        ) from exc
+    except LoginRateLimitedError as exc:
+        raise HTTPException(
+            status_code=429, detail="Acesso local temporariamente bloqueado."
+        ) from exc
+    _set_refresh_cookie(response, issued.refresh_token, settings)
+    return _token_response(issued)
 
 
 @router.post("/login", response_model=AccessTokenResponse)

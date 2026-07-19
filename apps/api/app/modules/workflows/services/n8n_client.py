@@ -91,9 +91,7 @@ class N8nClient:
                     await asyncio.sleep(self._retry_delay_seconds * attempt)
                     continue
                 if response.status_code == 401:
-                    raise N8nConfigurationError(
-                        "A chave do motor de automação foi recusada."
-                    )
+                    raise N8nConfigurationError("A chave do motor de automação foi recusada.")
                 if response.status_code == 404:
                     raise N8nRequestError("A automação não foi encontrada no motor interno.")
                 if response.status_code >= 400:
@@ -118,9 +116,7 @@ class N8nClient:
             params={"limit": 1, "excludePinnedData": "true"},
         )
 
-    async def create_workflow(
-        self, name: str, definition: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def create_workflow(self, name: str, definition: dict[str, Any]) -> dict[str, Any]:
         return await self._request(
             "POST",
             "/api/v1/workflows",
@@ -153,9 +149,7 @@ class N8nClient:
             return await self.update_workflow(workflow_id, name, definition)
         except N8nClientError as update_error:
             try:
-                await self.update_workflow(
-                    workflow_id, previous_name, previous_definition
-                )
+                await self.update_workflow(workflow_id, previous_name, previous_definition)
             except N8nClientError as rollback_error:
                 raise N8nRequestError(
                     "A atualização falhou e a restauração automática também falhou."
@@ -175,13 +169,9 @@ class N8nClient:
         )
 
     async def get_workflow(self, workflow_id: str) -> dict[str, Any]:
-        return await self._request(
-            "GET", f"/api/v1/workflows/{quote(workflow_id, safe='')}"
-        )
+        return await self._request("GET", f"/api/v1/workflows/{quote(workflow_id, safe='')}")
 
-    async def list_executions(
-        self, workflow_id: str, *, limit: int = 20
-    ) -> dict[str, Any]:
+    async def list_executions(self, workflow_id: str, *, limit: int = 20) -> dict[str, Any]:
         return await self._request(
             "GET",
             "/api/v1/executions",
@@ -200,9 +190,7 @@ class N8nClient:
             params={"includeData": "false", "redactExecutionData": "true"},
         )
 
-    async def trigger_webhook(
-        self, webhook_path: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def trigger_webhook(self, webhook_path: str, payload: dict[str, Any]) -> dict[str, Any]:
         return await self._request(
             "POST",
             f"/webhook/{quote(webhook_path, safe='')}",

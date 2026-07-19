@@ -84,6 +84,46 @@ wait_orkestral() {
   exit 1
 }
 
+refresh_web_dependencies() {
+  local expected_hash current_hash web_container dependency_volume
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    expected_hash="$(sha256sum "$PROJECT_ROOT/pnpm-lock.yaml" | awk '{print $1}')"
+  else
+    expected_hash="$(shasum -a 256 "$PROJECT_ROOT/pnpm-lock.yaml" | awk '{print $1}')"
+  fi
+  current_hash="$(
+    run_compose exec -T web sh -lc \
+      'cat /workspace/apps/web/node_modules/.orkestral-lock-hash 2>/dev/null || true' \
+      2>/dev/null || true
+  )"
+  if [ "$current_hash" = "$expected_hash" ]; then
+    return 0
+  fi
+
+  echo "Atualizando o volume de dependencias do front-end..."
+  if [ "$NO_BUILD" = "true" ]; then
+    run_compose build web
+    run_compose up -d --force-recreate web
+  fi
+  web_container="$(run_compose ps -q web)"
+  dependency_volume="$(
+    docker inspect "$web_container" \
+      --format '{{range .Mounts}}{{if eq .Destination "/workspace/apps/web/node_modules"}}{{.Name}}{{end}}{{end}}'
+  )"
+  if [ -z "$dependency_volume" ]; then
+    echo "Volume de dependencias do front-end nao encontrado." >&2
+    exit 1
+  fi
+
+  run_compose stop web
+  run_compose rm -f web
+  docker volume rm "$dependency_volume" >/dev/null
+  run_compose up -d web
+  run_compose exec -T web sh -lc \
+    "printf '%s' '$expected_hash' > /workspace/apps/web/node_modules/.orkestral-lock-hash"
+}
+
 cd "$PROJECT_ROOT"
 test_docker
 
@@ -94,6 +134,7 @@ case "$ACTION" in
       UP_ARGS+=(--build)
     fi
     run_compose "${UP_ARGS[@]}"
+    refresh_web_dependencies
     # Recarrega o DNS dos upstreams quando a API ou o web foram recriados.
     run_compose restart nginx
     wait_orkestral
@@ -109,6 +150,7 @@ case "$ACTION" in
       UP_ARGS+=(--build)
     fi
     run_compose "${UP_ARGS[@]}"
+    refresh_web_dependencies
     run_compose restart nginx
     wait_orkestral
     ;;

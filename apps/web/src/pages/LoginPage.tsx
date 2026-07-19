@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, LockKeyhole } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { Alert, Button, TextField } from "@orkestral/ui-components";
-import { ApiClientError } from "../lib/http";
+import { ApiClientError, request } from "../lib/http";
 import { useSession } from "../session/context";
 
 const loginSchema = z.object({
@@ -14,9 +15,11 @@ const loginSchema = z.object({
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
+type DevelopmentAccess = { enabled: boolean };
 
 export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
+  const [developmentSubmitting, setDevelopmentSubmitting] = useState(false);
   const session = useSession();
   const navigate = useNavigate();
   const {
@@ -26,6 +29,16 @@ export function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
+  });
+  const developmentAccess = useQuery({
+    queryKey: ["development-access"],
+    queryFn: () =>
+      request<DevelopmentAccess>("/auth/development-access", {
+        authenticated: false,
+        allowAuthRefresh: false,
+      }),
+    retry: false,
+    staleTime: 60_000,
   });
 
   const submit = async (values: LoginForm) => {
@@ -42,6 +55,26 @@ export function LoginPage() {
           ? caught.message
           : "Não foi possível entrar.",
       );
+    }
+  };
+
+  const accessAsAdministrator = async () => {
+    setError(null);
+    setDevelopmentSubmitting(true);
+    try {
+      const profile = await session.developmentLogin();
+      await navigate(
+        profile.requires_company_selection ? "/selecionar-empresa" : "/app",
+        { replace: true },
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof ApiClientError
+          ? caught.message
+          : "Não foi possível acessar o ambiente local.",
+      );
+    } finally {
+      setDevelopmentSubmitting(false);
     }
   };
 
@@ -107,6 +140,17 @@ export function LoginPage() {
               Continuar
             </Button>
           </form>
+          {developmentAccess.data?.enabled ? (
+            <Button
+              className="auth-card__submit"
+              loading={developmentSubmitting}
+              onClick={() => void accessAsAdministrator()}
+              type="button"
+            >
+              <ShieldCheck aria-hidden="true" size={18} />
+              Acessar como administrador
+            </Button>
+          ) : null}
           <p className="auth-card__footnote">
             A Orkestral não armazena tokens no armazenamento do navegador.
           </p>

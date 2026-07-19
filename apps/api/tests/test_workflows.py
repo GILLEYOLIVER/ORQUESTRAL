@@ -33,7 +33,14 @@ def test_default_visual_workflow_is_valid_and_neutral() -> None:
 def test_catalog_contains_all_master_document_blocks() -> None:
     types = {item["type"] for item in block_catalog()}
     assert len(types) == 16
-    assert {"trigger.schedule", "logic.condition", "action.agent", "action.human_approval", "action.plugin", "flow.end"} <= types
+    assert {
+        "trigger.schedule",
+        "logic.condition",
+        "action.agent",
+        "action.human_approval",
+        "action.plugin",
+        "flow.end",
+    } <= types
 
 
 def test_compiler_injects_private_webhook_without_changing_source() -> None:
@@ -47,9 +54,10 @@ def test_compiler_injects_private_webhook_without_changing_source() -> None:
 def test_compiler_matches_golden_default_fixture() -> None:
     fixture = Path(__file__).parent / "fixtures" / "workflows" / "basic_compiled.json"
     expected = json.loads(fixture.read_text(encoding="utf-8"))
-    assert compile_definition(
-        build_default_definition(), internal_webhook_path="private-entry"
-    ) == expected
+    assert (
+        compile_definition(build_default_definition(), internal_webhook_path="private-entry")
+        == expected
+    )
 
 
 def test_compiler_compatibility_covers_catalog_and_rejects_missing_adapter() -> None:
@@ -80,14 +88,17 @@ def test_compiler_compatibility_covers_catalog_and_rejects_missing_adapter() -> 
         {"id": "first", "source": "trigger-manual", "target": "loop"},
         {"id": "second", "source": "loop", "target": "flow-end"},
     ]
-    with pytest.raises(WorkflowCompilerError, match="logic.loop"):
+    with pytest.raises(WorkflowCompilerError, match=r"logic\.loop"):
         compile_definition(definition, internal_webhook_path="private")
 
 
 def test_workflow_rejects_disconnected_cycle_and_embedded_secret() -> None:
     disconnected = build_default_definition()
     disconnected["connections"] = []
-    assert {item["code"] for item in analyze_definition(disconnected)} >= {"disconnected_node", "unreachable_end"}
+    assert {item["code"] for item in analyze_definition(disconnected)} >= {
+        "disconnected_node",
+        "unreachable_end",
+    }
 
     cycle = build_default_definition()
     cycle["connections"].append({"id": "back", "source": "flow-end", "target": "trigger-manual"})
@@ -103,7 +114,15 @@ def test_comparison_tracks_nodes_and_connections() -> None:
     before = build_default_definition()
     after = build_default_definition()
     after["nodes"][1]["label"] = "Fim atualizado"
-    after["nodes"].append({"id": "wait", "type": "logic.wait", "label": "Espera", "position": {"x": 300, "y": 300}, "config": {"seconds": 2}})
+    after["nodes"].append(
+        {
+            "id": "wait",
+            "type": "logic.wait",
+            "label": "Espera",
+            "position": {"x": 300, "y": 300},
+            "config": {"seconds": 2},
+        }
+    )
     comparison = compare_definitions(before, after)
     assert comparison["added_nodes"] == ["wait"]
     assert comparison["changed_nodes"] == ["flow-end"]
@@ -123,7 +142,9 @@ def test_webhook_signature_is_constant_and_body_bound() -> None:
 
 
 def test_payload_summary_redacts_secrets_and_limits_long_values() -> None:
-    summary = as_summary_object({"access_token": "sensitive", "message": "x" * 800, "nested": {"password": "hidden"}})
+    summary = as_summary_object(
+        {"access_token": "sensitive", "message": "x" * 800, "nested": {"password": "hidden"}}
+    )
     assert summary["access_token"] == "[protegido]"
     assert summary["nested"] == {"password": "[protegido]"}
     assert len(str(summary["message"])) <= 503

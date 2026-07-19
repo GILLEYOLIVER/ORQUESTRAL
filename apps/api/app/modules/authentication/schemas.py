@@ -39,6 +39,10 @@ class AccessTokenResponse(StrictSchema):
     expires_at: datetime
 
 
+class DevelopmentAccessResponse(StrictSchema):
+    enabled: bool
+
+
 class AuthSessionResponse(StrictSchema):
     id: UUID
     ip_address: str

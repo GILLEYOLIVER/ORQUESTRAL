@@ -1,15 +1,139 @@
 """Base de conhecimento. Revision 20260718_0009."""
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
-revision="20260718_0009"; down_revision="20260718_0008"; branch_labels=None; depends_on=None
-UUID=postgresql.UUID(as_uuid=True); JSONB=postgresql.JSONB()
+
+revision = "20260718_0009"
+down_revision = "20260718_0008"
+branch_labels = None
+depends_on = None
+UUID = postgresql.UUID(as_uuid=True)
+JSONB = postgresql.JSONB()
+
+
 def upgrade():
-    op.create_table("knowledge_bases",sa.Column("id",UUID,primary_key=True,server_default=sa.text("gen_random_uuid()")),sa.Column("company_id",UUID,sa.ForeignKey("companies.id",ondelete="CASCADE"),nullable=False),sa.Column("created_by_user_id",UUID,sa.ForeignKey("users.id",ondelete="RESTRICT"),nullable=False),sa.Column("name",sa.String(160),nullable=False),sa.Column("description",sa.String(500)),sa.Column("status",sa.String(20),nullable=False,server_default="active"),sa.Column("created_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False),sa.Column("updated_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False),sa.CheckConstraint("status IN ('active','inactive')",name="ck_knowledge_bases_status"))
-    op.create_table("knowledge_documents",sa.Column("id",UUID,primary_key=True,server_default=sa.text("gen_random_uuid()")),sa.Column("company_id",UUID,sa.ForeignKey("companies.id",ondelete="CASCADE"),nullable=False),sa.Column("knowledge_base_id",UUID,sa.ForeignKey("knowledge_bases.id",ondelete="CASCADE"),nullable=False),sa.Column("uploaded_by_user_id",UUID,sa.ForeignKey("users.id",ondelete="RESTRICT"),nullable=False),sa.Column("name",sa.String(255),nullable=False),sa.Column("source_type",sa.String(20),nullable=False),sa.Column("source_url",sa.String(1000)),sa.Column("mime_type",sa.String(160),nullable=False),sa.Column("size_bytes",sa.Integer,nullable=False),sa.Column("storage_key",sa.String(500),nullable=False,unique=True),sa.Column("checksum_sha256",sa.String(64),nullable=False),sa.Column("status",sa.String(20),nullable=False,server_default="uploaded"),sa.Column("document_metadata",JSONB,nullable=False,server_default=sa.text("'{}'::jsonb")),sa.Column("error_summary",sa.Text),sa.Column("processed_at",sa.DateTime(timezone=True)),sa.Column("created_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False),sa.Column("updated_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False),sa.CheckConstraint("status IN ('uploaded','processing','ready','error')",name="ck_knowledge_documents_status"))
-    op.create_table("knowledge_chunks",sa.Column("id",UUID,primary_key=True,server_default=sa.text("gen_random_uuid()")),sa.Column("company_id",UUID,sa.ForeignKey("companies.id",ondelete="CASCADE"),nullable=False),sa.Column("knowledge_base_id",UUID,sa.ForeignKey("knowledge_bases.id",ondelete="CASCADE"),nullable=False),sa.Column("document_id",UUID,sa.ForeignKey("knowledge_documents.id",ondelete="CASCADE"),nullable=False),sa.Column("chunk_index",sa.Integer,nullable=False),sa.Column("content",sa.Text,nullable=False),sa.Column("token_count",sa.Integer,nullable=False),sa.Column("embedding_ref",sa.String(120),nullable=False),sa.Column("embedding",JSONB,nullable=False),sa.Column("chunk_metadata",JSONB,nullable=False,server_default=sa.text("'{}'::jsonb")),sa.Column("created_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False),sa.UniqueConstraint("document_id","chunk_index",name="uq_knowledge_chunks_document_index"))
-    for table,cols in {"knowledge_bases":["company_id","created_by_user_id","name","status"],"knowledge_documents":["company_id","knowledge_base_id","uploaded_by_user_id","checksum_sha256","status"],"knowledge_chunks":["company_id","knowledge_base_id","document_id"]}.items():
-        for col in cols: op.create_index(f"ix_{table}_{col}",table,[col])
-    op.create_foreign_key("fk_agents_knowledge_base_id","agents","knowledge_bases",["knowledge_base_id"],["id"],ondelete="SET NULL")
+    op.create_table(
+        "knowledge_bases",
+        sa.Column("id", UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "company_id", UUID, sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "created_by_user_id",
+            UUID,
+            sa.ForeignKey("users.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column("name", sa.String(160), nullable=False),
+        sa.Column("description", sa.String(500)),
+        sa.Column("status", sa.String(20), nullable=False, server_default="active"),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.CheckConstraint("status IN ('active','inactive')", name="ck_knowledge_bases_status"),
+    )
+    op.create_table(
+        "knowledge_documents",
+        sa.Column("id", UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "company_id", UUID, sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "knowledge_base_id",
+            UUID,
+            sa.ForeignKey("knowledge_bases.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "uploaded_by_user_id",
+            UUID,
+            sa.ForeignKey("users.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column("name", sa.String(255), nullable=False),
+        sa.Column("source_type", sa.String(20), nullable=False),
+        sa.Column("source_url", sa.String(1000)),
+        sa.Column("mime_type", sa.String(160), nullable=False),
+        sa.Column("size_bytes", sa.Integer, nullable=False),
+        sa.Column("storage_key", sa.String(500), nullable=False, unique=True),
+        sa.Column("checksum_sha256", sa.String(64), nullable=False),
+        sa.Column("status", sa.String(20), nullable=False, server_default="uploaded"),
+        sa.Column(
+            "document_metadata", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")
+        ),
+        sa.Column("error_summary", sa.Text),
+        sa.Column("processed_at", sa.DateTime(timezone=True)),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.CheckConstraint(
+            "status IN ('uploaded','processing','ready','error')",
+            name="ck_knowledge_documents_status",
+        ),
+    )
+    op.create_table(
+        "knowledge_chunks",
+        sa.Column("id", UUID, primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "company_id", UUID, sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "knowledge_base_id",
+            UUID,
+            sa.ForeignKey("knowledge_bases.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "document_id",
+            UUID,
+            sa.ForeignKey("knowledge_documents.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column("chunk_index", sa.Integer, nullable=False),
+        sa.Column("content", sa.Text, nullable=False),
+        sa.Column("token_count", sa.Integer, nullable=False),
+        sa.Column("embedding_ref", sa.String(120), nullable=False),
+        sa.Column("embedding", JSONB, nullable=False),
+        sa.Column("chunk_metadata", JSONB, nullable=False, server_default=sa.text("'{}'::jsonb")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.UniqueConstraint(
+            "document_id", "chunk_index", name="uq_knowledge_chunks_document_index"
+        ),
+    )
+    for table, cols in {
+        "knowledge_bases": ["company_id", "created_by_user_id", "name", "status"],
+        "knowledge_documents": [
+            "company_id",
+            "knowledge_base_id",
+            "uploaded_by_user_id",
+            "checksum_sha256",
+            "status",
+        ],
+        "knowledge_chunks": ["company_id", "knowledge_base_id", "document_id"],
+    }.items():
+        for col in cols:
+            op.create_index(f"ix_{table}_{col}", table, [col])
+    op.create_foreign_key(
+        "fk_agents_knowledge_base_id",
+        "agents",
+        "knowledge_bases",
+        ["knowledge_base_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+
+
 def downgrade():
-    op.drop_constraint("fk_agents_knowledge_base_id","agents",type_="foreignkey"); op.drop_table("knowledge_chunks"); op.drop_table("knowledge_documents"); op.drop_table("knowledge_bases")
+    op.drop_constraint("fk_agents_knowledge_base_id", "agents", type_="foreignkey")
+    op.drop_table("knowledge_chunks")
+    op.drop_table("knowledge_documents")
+    op.drop_table("knowledge_bases")

@@ -5,10 +5,7 @@
       "label": "Orkestral: iniciar ambiente",
       "type": "shell",
       "command": "bash",
-      "args": [
-        "${workspaceFolder}/scripts/dev.sh",
-        "start"
-      ],
+      "args": ["${workspaceFolder}/scripts/dev.sh", "start"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -35,11 +32,7 @@
       "label": "Orkestral: iniciar sem rebuild",
       "type": "shell",
       "command": "bash",
-      "args": [
-        "${workspaceFolder}/scripts/dev.sh",
-        "start",
-        "--no-build"
-      ],
+      "args": ["${workspaceFolder}/scripts/dev.sh", "start", "--no-build"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -61,10 +54,7 @@
       "label": "Orkestral: encerrar ambiente",
       "type": "shell",
       "command": "bash",
-      "args": [
-        "${workspaceFolder}/scripts/dev.sh",
-        "stop"
-      ],
+      "args": ["${workspaceFolder}/scripts/dev.sh", "stop"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -85,10 +75,7 @@
       "label": "Orkestral: mostrar status",
       "type": "shell",
       "command": "bash",
-      "args": [
-        "${workspaceFolder}/scripts/dev.sh",
-        "status"
-      ],
+      "args": ["${workspaceFolder}/scripts/dev.sh", "status"],
       "options": {
         "cwd": "${workspaceFolder}"
       },

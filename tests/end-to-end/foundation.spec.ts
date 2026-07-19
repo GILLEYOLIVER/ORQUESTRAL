@@ -16,17 +16,17 @@ test("front-end e health checks estão acessíveis", async ({
     .toBe(200);
 });
 
-test("administrador entra, acessa o tenant e encerra a sessão", async ({
+test("administrador local entra sem credenciais, acessa o tenant e encerra a sessão", async ({
   page,
 }) => {
   await page.goto("/login");
-  await page.getByLabel("E-mail corporativo").fill("admin@orkestral.dev.br");
-  await page.getByLabel("Senha").fill("Orkestral-Dev-2026!");
-  await page.getByRole("button", { name: "Continuar" }).click();
+  await page
+    .getByRole("button", { name: "Acessar como administrador" })
+    .click();
 
   await expect(page).toHaveURL(/\/app$/);
   await expect(
-    page.getByRole("heading", { name: "Orkestral Desenvolvimento" }),
+    page.getByText("Orkestral Desenvolvimento", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Empresas" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Usuários" })).toBeVisible();

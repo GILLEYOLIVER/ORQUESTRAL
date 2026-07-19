@@ -10,7 +10,7 @@ from uuid import UUID
 
 from docx import Document
 from minio import Minio
-from openpyxl import load_workbook  # type: ignore[import-untyped]
+from openpyxl import load_workbook
 from pypdf import PdfReader
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -55,9 +55,7 @@ def storage(settings: Settings) -> Minio:
 
 def extract(data: bytes, mime: str) -> str:
     if mime == "application/pdf":
-        return "\n".join(
-            (page.extract_text() or "") for page in PdfReader(BytesIO(data)).pages
-        )
+        return "\n".join((page.extract_text() or "") for page in PdfReader(BytesIO(data)).pages)
     if mime.endswith("wordprocessingml.document"):
         return "\n".join(paragraph.text for paragraph in Document(BytesIO(data)).paragraphs)
     if mime.endswith("spreadsheetml.sheet"):
@@ -120,9 +118,7 @@ async def process_document(document_id: UUID, settings: Settings) -> None:
                 provider = get_embedding_provider(settings)
                 vectors = await provider.embed_many(parts)
                 await database.execute(
-                    delete(KnowledgeChunk).where(
-                        KnowledgeChunk.document_id == document.id
-                    )
+                    delete(KnowledgeChunk).where(KnowledgeChunk.document_id == document.id)
                 )
                 for index, (part, vector) in enumerate(zip(parts, vectors, strict=True)):
                     checksum = hashlib.sha256(part.encode()).hexdigest()[:16]

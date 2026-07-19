@@ -32,8 +32,8 @@ def test_structured_log_processor_redacts_authorization() -> None:
 
 
 def test_jwt_rotation_accepts_previous_secret() -> None:
-    old_secret = "old-secret-with-at-least-thirty-two-characters"  # noqa: S105
-    new_secret = "new-secret-with-at-least-thirty-two-characters"  # noqa: S105
+    old_secret = "old-secret-with-at-least-thirty-two-characters"
+    new_secret = "new-secret-with-at-least-thirty-two-characters"
     source = Settings(app_env="testing", jwt_secret=old_secret)
     target = Settings(
         app_env="testing",

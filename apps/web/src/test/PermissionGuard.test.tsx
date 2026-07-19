@@ -6,6 +6,7 @@ import { SessionContext, type SessionContextValue } from "../session/context";
 
 function renderGuard(permissions: string[]) {
   const session: SessionContextValue = {
+    developmentLogin: vi.fn(),
     getAccessToken: () => "token-em-memoria",
     login: vi.fn(),
     logout: vi.fn(),

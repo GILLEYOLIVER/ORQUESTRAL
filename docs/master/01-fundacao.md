@@ -14,18 +14,18 @@ O sistema deverá atender empresas de diferentes segmentos sem exigir alteraçõ
 
 Exemplos de segmentos atendidos:
 
-* Indústrias;
-* Escritórios;
-* Clínicas;
-* Imobiliárias;
-* Lojas;
-* Prestadores de serviços;
-* Confecções;
-* Restaurantes;
-* Escolas;
-* Transportadoras;
-* Empresas de tecnologia;
-* Empresas de contabilidade.
+- Indústrias;
+- Escritórios;
+- Clínicas;
+- Imobiliárias;
+- Lojas;
+- Prestadores de serviços;
+- Confecções;
+- Restaurantes;
+- Escolas;
+- Transportadoras;
+- Empresas de tecnologia;
+- Empresas de contabilidade.
 
 A plataforma deverá ser modular, extensível, segura, multiempresa e preparada para crescer.
 
@@ -55,36 +55,36 @@ Desenvolva uma plataforma capaz de:
 
 ## Front-end
 
-* React;
-* TypeScript;
-* Vite;
-* React Router;
-* TanStack Query;
-* biblioteca de formulários com validação;
-* cliente HTTP centralizado;
-* sistema de componentes reutilizáveis.
+- React;
+- TypeScript;
+- Vite;
+- React Router;
+- TanStack Query;
+- biblioteca de formulários com validação;
+- cliente HTTP centralizado;
+- sistema de componentes reutilizáveis.
 
 ## Back-end
 
-* Python;
-* FastAPI;
-* SQLAlchemy assíncrono;
-* Alembic para migrações;
-* Pydantic para validação;
-* PostgreSQL;
-* Redis;
-* sistema de filas para trabalhos assíncronos;
-* integração interna com n8n.
+- Python;
+- FastAPI;
+- SQLAlchemy assíncrono;
+- Alembic para migrações;
+- Pydantic para validação;
+- PostgreSQL;
+- Redis;
+- sistema de filas para trabalhos assíncronos;
+- integração interna com n8n.
 
 ## Infraestrutura
 
-* Docker;
-* Docker Compose;
-* Nginx;
-* HTTPS;
-* GitHub Actions;
-* armazenamento compatível com S3 para documentos;
-* monitoramento e logs estruturados.
+- Docker;
+- Docker Compose;
+- Nginx;
+- HTTPS;
+- GitHub Actions;
+- armazenamento compatível com S3 para documentos;
+- monitoramento e logs estruturados.
 
 Não prenda o núcleo a um único fornecedor de IA, armazenamento, mensageria ou integração.
 
@@ -226,12 +226,12 @@ No desenvolvimento, a tela de login poderá exibir `Acessar como administrador`.
 
 Esse botão deverá:
 
-* existir apenas quando uma variável explícita de desenvolvimento estiver habilitada;
-* usar somente credenciais de bootstrap locais;
-* nunca ser habilitado em produção;
-* entrar com o papel Proprietário;
-* receber as permissões empresariais instaladas;
-* não expor senha em interface, logs ou código-fonte do front-end.
+- existir apenas quando uma variável explícita de desenvolvimento estiver habilitada;
+- usar somente credenciais de bootstrap locais;
+- nunca ser habilitado em produção;
+- entrar com o papel Proprietário;
+- receber as permissões empresariais instaladas;
+- não expor senha em interface, logs ou código-fonte do front-end.
 
 Variáveis sugeridas:
 
@@ -245,10 +245,10 @@ O build de produção deverá ignorar ou rejeitar essa funcionalidade.
 
 ## Critérios de conclusão
 
-* O projeto sobe com um único comando e também com `F5`.
-* O navegador abre automaticamente após os serviços ficarem saudáveis.
-* `/health` responde.
-* Front-end, PostgreSQL e Redis funcionam.
-* O README explica a execução.
-* O acesso rápido existe somente localmente.
-* Nenhum segredo real está versionado.
+- O projeto sobe com um único comando e também com `F5`.
+- O navegador abre automaticamente após os serviços ficarem saudáveis.
+- `/health` responde.
+- Front-end, PostgreSQL e Redis funcionam.
+- O README explica a execução.
+- O acesso rápido existe somente localmente.
+- Nenhum segredo real está versionado.

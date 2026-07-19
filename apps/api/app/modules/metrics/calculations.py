@@ -18,7 +18,9 @@ FIELD_BY_KEY = {
 }
 
 
-def calculate_dashboard(rows: list[Any], agent_names: dict[str, str], start: date, end: date) -> dict[str, Any]:
+def calculate_dashboard(
+    rows: list[Any], agent_names: dict[str, str], start: date, end: date
+) -> dict[str, Any]:
     totals = {field: 0.0 for field in FIELD_BY_KEY.values()}
     series: dict[date, dict[str, Any]] = {}
     cursor = start
@@ -37,7 +39,16 @@ def calculate_dashboard(rows: list[Any], agent_names: dict[str, str], start: dat
             series[row.metric_date][field] += value
         if row.agent_id is not None:
             agent_id = str(row.agent_id)
-            item = agents.setdefault(agent_id, {"id": agent_id, "name": agent_names.get(agent_id, "Agente"), "uses": 0, "tokens": 0, "cost_usd": 0.0})
+            item = agents.setdefault(
+                agent_id,
+                {
+                    "id": agent_id,
+                    "name": agent_names.get(agent_id, "Agente"),
+                    "uses": 0,
+                    "tokens": 0,
+                    "cost_usd": 0.0,
+                },
+            )
             if row.metric_key == "agent.uses":
                 item["uses"] += int(value)
             elif row.metric_key == "agent.tokens":
@@ -46,10 +57,25 @@ def calculate_dashboard(rows: list[Any], agent_names: dict[str, str], start: dat
                 item["cost_usd"] += value
         if generated_at is None or row.generated_at > generated_at:
             generated_at = row.generated_at
-    integer_fields = {"automation_executions", "automation_success", "automation_failure", "agent_uses", "tokens", "integration_failures", "active_users", "documents_processed", "pending_approvals"}
+    integer_fields = {
+        "automation_executions",
+        "automation_success",
+        "automation_failure",
+        "agent_uses",
+        "tokens",
+        "integration_failures",
+        "active_users",
+        "documents_processed",
+        "pending_approvals",
+    }
     for field in integer_fields:
         totals[field] = int(totals[field])
         for point in series.values():
             point[field] = int(point[field])
     top_agents = sorted(agents.values(), key=lambda item: (-item["uses"], item["name"]))[:10]
-    return {"totals": totals, "series": list(series.values()), "top_agents": top_agents, "generated_at": generated_at}
+    return {
+        "totals": totals,
+        "series": list(series.values()),
+        "top_agents": top_agents,
+        "generated_at": generated_at,
+    }

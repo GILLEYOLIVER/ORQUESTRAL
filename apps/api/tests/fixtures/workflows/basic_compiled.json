@@ -32,10 +32,14 @@
   ],
   "connections": {
     "Inicio manual [trigger-manu]": {
-      "main": [[{"node": "Encerramento [flow-end]", "type": "main", "index": 0}]]
+      "main": [
+        [{ "node": "Encerramento [flow-end]", "type": "main", "index": 0 }]
+      ]
     },
     "Entrada interna Orkestral": {
-      "main": [[{"node": "Encerramento [flow-end]", "type": "main", "index": 0}]]
+      "main": [
+        [{ "node": "Encerramento [flow-end]", "type": "main", "index": 0 }]
+      ]
     }
   },
   "settings": {

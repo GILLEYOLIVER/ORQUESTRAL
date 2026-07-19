@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
 
-
 INSERTS = (
     """INSERT INTO metric_daily_summaries (company_id, metric_date, module, metric_key, workflow_id, count_value, numeric_value)
        SELECT company_id, DATE(created_at), 'workflows', 'automation.executions', workflow_id, COUNT(*)::int, COUNT(*)::numeric
@@ -56,13 +55,24 @@ async def aggregate_metrics(*, days: int = 90) -> int:
     run_id = None
     try:
         async with engine.begin() as connection:
-            run_id = (await connection.execute(text("INSERT INTO metric_aggregation_runs (status) VALUES ('running') RETURNING id"))).scalar_one()
-            await connection.execute(text("DELETE FROM metric_daily_summaries WHERE metric_date >= :start_date"), {"start_date": start_date})
+            run_id = (
+                await connection.execute(
+                    text(
+                        "INSERT INTO metric_aggregation_runs (status) VALUES ('running') RETURNING id"
+                    )
+                )
+            ).scalar_one()
+            await connection.execute(
+                text("DELETE FROM metric_daily_summaries WHERE metric_date >= :start_date"),
+                {"start_date": start_date},
+            )
             for statement in INSERTS:
                 result = await connection.execute(text(statement), {"start_date": start_date})
                 rows += max(0, result.rowcount or 0)
             await connection.execute(
-                text("UPDATE metric_aggregation_runs SET status='success', rows_written=:rows, finished_at=now() WHERE id=:id"),
+                text(
+                    "UPDATE metric_aggregation_runs SET status='success', rows_written=:rows, finished_at=now() WHERE id=:id"
+                ),
                 {"rows": rows, "id": run_id},
             )
         return rows
@@ -70,7 +80,9 @@ async def aggregate_metrics(*, days: int = 90) -> int:
         if run_id is not None:
             async with engine.begin() as connection:
                 await connection.execute(
-                    text("UPDATE metric_aggregation_runs SET status='error', error_summary=:error, finished_at=now() WHERE id=:id"),
+                    text(
+                        "UPDATE metric_aggregation_runs SET status='error', error_summary=:error, finished_at=now() WHERE id=:id"
+                    ),
                     {"error": str(exc)[:2000], "id": run_id},
                 )
         raise

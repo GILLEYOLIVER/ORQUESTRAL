@@ -9,7 +9,6 @@ from reportlab.pdfgen import canvas
 
 from app.modules.metrics.schemas import DashboardResponse
 
-
 TOTAL_LABELS = {
     "automation_executions": "Automacoes executadas",
     "automation_success": "Automacoes com sucesso",
@@ -94,6 +93,8 @@ def pdf_report(data: DashboardResponse) -> bytes:
             document.drawRightString(width - 48, y, f"{agent.uses} usos | {agent.tokens} tokens")
             y -= 18
     document.setFont("Helvetica-Oblique", 8)
-    document.drawString(42, 32, "Gerado pela Orkestral a partir de resumos diarios isolados por empresa.")
+    document.drawString(
+        42, 32, "Gerado pela Orkestral a partir de resumos diarios isolados por empresa."
+    )
     document.save()
     return buffer.getvalue()

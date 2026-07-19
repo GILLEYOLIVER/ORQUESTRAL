@@ -71,6 +71,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       status,
       me,
       getAccessToken,
+      developmentLogin: async () => {
+        setStatus("loading");
+        try {
+          const tokens = await request<AccessTokenResponse>(
+            "/auth/development-login",
+            {
+              method: "POST",
+              authenticated: false,
+              allowAuthRefresh: false,
+            },
+          );
+          setAccessToken(tokens.access_token);
+          return await loadProfile();
+        } catch (error) {
+          clearAccessToken();
+          setMe(null);
+          setStatus("anonymous");
+          throw error;
+        }
+      },
       login: async (email, password) => {
         setStatus("loading");
         try {

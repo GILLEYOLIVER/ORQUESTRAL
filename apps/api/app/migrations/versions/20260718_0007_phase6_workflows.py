@@ -28,7 +28,9 @@ def upgrade() -> None:
         sa.Column("created_by_user_id", UUID, nullable=False),
         sa.Column("name", sa.String(160), nullable=False),
         sa.Column("description", sa.String(500), nullable=True),
-        sa.Column("definition", postgresql.JSONB(), server_default=sa.text("'{}'::jsonb"), nullable=False),
+        sa.Column(
+            "definition", postgresql.JSONB(), server_default=sa.text("'{}'::jsonb"), nullable=False
+        ),
         sa.Column("version", sa.Integer(), server_default="1", nullable=False),
         sa.Column("n8n_workflow_id", sa.String(80), nullable=True),
         sa.Column("n8n_version_id", sa.String(80), nullable=True),
@@ -41,8 +43,12 @@ def upgrade() -> None:
         sa.Column("published_at", TIMESTAMP, nullable=True),
         sa.Column("created_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
-        sa.CheckConstraint("status IN ('draft', 'active', 'inactive', 'error')", name="ck_workflows_status"),
-        sa.CheckConstraint("sync_status IN ('pending', 'synced', 'error')", name="ck_workflows_sync_status"),
+        sa.CheckConstraint(
+            "status IN ('draft', 'active', 'inactive', 'error')", name="ck_workflows_status"
+        ),
+        sa.CheckConstraint(
+            "sync_status IN ('pending', 'synced', 'error')", name="ck_workflows_sync_status"
+        ),
         sa.CheckConstraint("version >= 1", name="ck_workflows_version"),
         sa.ForeignKeyConstraint(["company_id"], ["companies.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["created_by_user_id"], ["users.id"], ondelete="RESTRICT"),
@@ -51,7 +57,16 @@ def upgrade() -> None:
         sa.UniqueConstraint("n8n_workflow_id"),
         sa.UniqueConstraint("public_webhook_key"),
     )
-    for column in ("company_id", "created_by_user_id", "name", "n8n_workflow_id", "status", "sync_status", "public_webhook_key", "created_at"):
+    for column in (
+        "company_id",
+        "created_by_user_id",
+        "name",
+        "n8n_workflow_id",
+        "status",
+        "sync_status",
+        "public_webhook_key",
+        "created_at",
+    ):
         op.create_index(f"ix_workflows_{column}", "workflows", [column])
 
     op.create_table(
@@ -63,22 +78,48 @@ def upgrade() -> None:
         sa.Column("external_execution_id", sa.String(80), nullable=True),
         sa.Column("source", sa.String(20), nullable=False),
         sa.Column("status", sa.String(20), server_default="queued", nullable=False),
-        sa.Column("input_summary", postgresql.JSONB(), server_default=sa.text("'{}'::jsonb"), nullable=False),
-        sa.Column("output_summary", postgresql.JSONB(), server_default=sa.text("'{}'::jsonb"), nullable=False),
+        sa.Column(
+            "input_summary",
+            postgresql.JSONB(),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
+        sa.Column(
+            "output_summary",
+            postgresql.JSONB(),
+            server_default=sa.text("'{}'::jsonb"),
+            nullable=False,
+        ),
         sa.Column("error_summary", sa.Text(), nullable=True),
         sa.Column("duration_ms", sa.Integer(), nullable=True),
         sa.Column("started_at", TIMESTAMP, nullable=True),
         sa.Column("finished_at", TIMESTAMP, nullable=True),
         sa.Column("created_at", TIMESTAMP, server_default=sa.text("now()"), nullable=False),
-        sa.CheckConstraint("source IN ('manual', 'webhook', 'schedule', 'system')", name="ck_workflow_executions_source"),
-        sa.CheckConstraint("status IN ('queued', 'running', 'success', 'error', 'canceled', 'waiting')", name="ck_workflow_executions_status"),
-        sa.CheckConstraint("duration_ms IS NULL OR duration_ms >= 0", name="ck_workflow_executions_duration"),
+        sa.CheckConstraint(
+            "source IN ('manual', 'webhook', 'schedule', 'system')",
+            name="ck_workflow_executions_source",
+        ),
+        sa.CheckConstraint(
+            "status IN ('queued', 'running', 'success', 'error', 'canceled', 'waiting')",
+            name="ck_workflow_executions_status",
+        ),
+        sa.CheckConstraint(
+            "duration_ms IS NULL OR duration_ms >= 0", name="ck_workflow_executions_duration"
+        ),
         sa.ForeignKeyConstraint(["company_id"], ["companies.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["requested_by_user_id"], ["users.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["workflow_id"], ["workflows.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    for column in ("company_id", "workflow_id", "requested_by_user_id", "external_execution_id", "source", "status", "created_at"):
+    for column in (
+        "company_id",
+        "workflow_id",
+        "requested_by_user_id",
+        "external_execution_id",
+        "source",
+        "status",
+        "created_at",
+    ):
         op.create_index(f"ix_workflow_executions_{column}", "workflow_executions", [column])
 
 

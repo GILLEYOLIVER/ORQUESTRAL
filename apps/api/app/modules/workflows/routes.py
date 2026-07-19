@@ -14,6 +14,11 @@ from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
+from app.modules.workflows.compiler import (
+    analyze_compiler_compatibility,
+    compile_definition,
+    compiler_compatibility,
+)
 from app.modules.workflows.definition import (
     WorkflowDefinitionError,
     analyze_definition,
@@ -23,15 +28,10 @@ from app.modules.workflows.definition import (
     export_definition,
     prepare_definition,
 )
-from app.modules.workflows.compiler import (
-    analyze_compiler_compatibility,
-    compile_definition,
-    compiler_compatibility,
-)
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 from app.modules.workflows.schemas import (
-    WorkflowCreate,
     WorkflowComparisonResponse,
+    WorkflowCreate,
     WorkflowCreatedResponse,
     WorkflowDefinitionRequest,
     WorkflowEngineStatusResponse,
@@ -108,9 +108,7 @@ def _assert_publishable(definition: dict[str, Any]) -> None:
         )
 
 
-async def _get_workflow(
-    database: DatabaseSession, company_id: UUID, workflow_id: UUID
-) -> Workflow:
+async def _get_workflow(database: DatabaseSession, company_id: UUID, workflow_id: UUID) -> Workflow:
     workflow = await database.scalar(
         select(Workflow).where(
             Workflow.id == workflow_id,
@@ -215,9 +213,7 @@ async def _run_workflow(
     canonical = json.dumps(
         internal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
-    internal_payload["orkestral_signature"] = sign_webhook_body(
-        settings.encryption_key, canonical
-    )
+    internal_payload["orkestral_signature"] = sign_webhook_body(settings.encryption_key, canonical)
     started = perf_counter()
     try:
         output = await N8nClient(settings).trigger_webhook(
@@ -250,9 +246,7 @@ async def engine_status(
     try:
         await client.test_connection()
     except N8nClientError as exc:
-        return WorkflowEngineStatusResponse(
-            configured=True, available=False, message=str(exc)
-        )
+        return WorkflowEngineStatusResponse(configured=True, available=False, message=str(exc))
     return WorkflowEngineStatusResponse(
         configured=True,
         available=True,
@@ -296,9 +290,7 @@ async def create_workflow(
     database: DatabaseSession,
     settings: RequestSettings,
 ) -> WorkflowCreatedResponse:
-    workflow, secret = await _create_workflow_record(
-        payload, principal, database, settings
-    )
+    workflow, secret = await _create_workflow_record(payload, principal, database, settings)
     return WorkflowCreatedResponse(
         **_workflow_response(workflow).model_dump(), webhook_secret=secret
     )
@@ -311,9 +303,7 @@ async def import_workflow(
     database: DatabaseSession,
     settings: RequestSettings,
 ) -> WorkflowCreatedResponse:
-    workflow, secret = await _create_workflow_record(
-        payload, principal, database, settings
-    )
+    workflow, secret = await _create_workflow_record(payload, principal, database, settings)
     return WorkflowCreatedResponse(
         **_workflow_response(workflow).model_dump(), webhook_secret=secret
     )
@@ -326,9 +316,7 @@ async def get_workflow(
     database: DatabaseSession,
 ) -> WorkflowResponse:
     context = get_request_context(principal)
-    return _workflow_response(
-        await _get_workflow(database, context.company_id, workflow_id)
-    )
+    return _workflow_response(await _get_workflow(database, context.company_id, workflow_id))
 
 
 @router.patch("/{workflow_id}", response_model=WorkflowResponse)
@@ -630,9 +618,7 @@ async def restore_workflow_version(
     workflow.sync_status = "pending"
     workflow.last_error = None
     workflow.updated_at = utc_now()
-    database.add(
-        _version_record(workflow, context.user_id, f"Restaurada da versao {version}")
-    )
+    database.add(_version_record(workflow, context.user_id, f"Restaurada da versao {version}"))
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -663,7 +649,11 @@ async def export_workflow(
     )
 
 
-@router.post("/{workflow_id}/duplicate", response_model=WorkflowCreatedResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{workflow_id}/duplicate",
+    response_model=WorkflowCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def duplicate_workflow(
     workflow_id: UUID,
     principal: CanConfigureWorkflows,
@@ -677,9 +667,7 @@ async def duplicate_workflow(
         description=source.description,
         definition=export_definition(source.definition),
     )
-    workflow, secret = await _create_workflow_record(
-        payload, principal, database, settings
-    )
+    workflow, secret = await _create_workflow_record(payload, principal, database, settings)
     return WorkflowCreatedResponse(
         **_workflow_response(workflow).model_dump(), webhook_secret=secret
     )
@@ -774,10 +762,10 @@ async def receive_workflow_webhook(
         )
         secret = str(secret_data["secret"])
     except (CredentialVaultError, KeyError) as exc:
-        raise HTTPException(status_code=503, detail="Webhook temporariamente indisponível.") from exc
-    if not verify_webhook_signature(
-        secret, body, request.headers.get("X-Orkestral-Signature")
-    ):
+        raise HTTPException(
+            status_code=503, detail="Webhook temporariamente indisponível."
+        ) from exc
+    if not verify_webhook_signature(secret, body, request.headers.get("X-Orkestral-Signature")):
         raise HTTPException(status_code=401, detail="Assinatura do webhook inválida.")
     try:
         payload = json.loads(body.decode("utf-8"))

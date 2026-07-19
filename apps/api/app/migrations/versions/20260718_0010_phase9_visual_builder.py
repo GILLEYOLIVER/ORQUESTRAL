@@ -5,8 +5,8 @@ Revises: 20260718_0009
 Create Date: 2026-07-18
 """
 
-from collections.abc import Sequence
 import json
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -21,10 +21,29 @@ UUID = postgresql.UUID(as_uuid=True)
 TIMESTAMP = sa.DateTime(timezone=True)
 DEFAULT_DEFINITION = {
     "nodes": [
-        {"id": "trigger-manual", "type": "trigger.manual", "label": "Inicio manual", "position": {"x": 80, "y": 180}, "config": {}},
-        {"id": "flow-end", "type": "flow.end", "label": "Encerramento", "position": {"x": 430, "y": 180}, "config": {}},
+        {
+            "id": "trigger-manual",
+            "type": "trigger.manual",
+            "label": "Inicio manual",
+            "position": {"x": 80, "y": 180},
+            "config": {},
+        },
+        {
+            "id": "flow-end",
+            "type": "flow.end",
+            "label": "Encerramento",
+            "position": {"x": 430, "y": 180},
+            "config": {},
+        },
     ],
-    "connections": [{"id": "edge-trigger-end", "source": "trigger-manual", "target": "flow-end", "source_handle": "main"}],
+    "connections": [
+        {
+            "id": "edge-trigger-end",
+            "source": "trigger-manual",
+            "target": "flow-end",
+            "source_handle": "main",
+        }
+    ],
     "variables": {},
     "version": 1,
 }
@@ -56,10 +75,13 @@ def upgrade() -> None:
     connection = op.get_bind()
     neutral = json.dumps(DEFAULT_DEFINITION)
     connection.execute(
-        sa.text("UPDATE workflows SET definition=CAST(:definition AS jsonb), sync_status='pending'"),
+        sa.text(
+            "UPDATE workflows SET definition=CAST(:definition AS jsonb), sync_status='pending'"
+        ),
         {"definition": neutral},
     )
-    connection.execute(sa.text("""
+    connection.execute(
+        sa.text("""
         INSERT INTO workflow_versions (
             company_id, workflow_id, created_by_user_id, version, name,
             description, definition, change_summary
@@ -67,7 +89,8 @@ def upgrade() -> None:
         SELECT company_id, id, created_by_user_id, version, name,
                description, definition, 'Migrada para o construtor visual'
         FROM workflows
-    """))
+    """)
+    )
 
 
 def downgrade() -> None:

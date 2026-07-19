@@ -8,10 +8,15 @@ src = ["apps/api", "apps/worker"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC", "S", "RUF"]
-ignore = ["S101"]
+ignore = ["B008", "E501", "S101"]
 
 [tool.ruff.lint.per-file-ignores]
 "apps/api/app/migrations/versions/*.py" = ["E501"]
+"apps/api/tests/*.py" = ["S105"]
+
+[[tool.mypy.overrides]]
+module = ["asyncpg", "celery", "openpyxl", "reportlab.*"]
+ignore_missing_imports = true
 
 [tool.mypy]
 python_version = "3.13"
