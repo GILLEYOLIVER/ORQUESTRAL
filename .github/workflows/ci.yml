@@ -145,6 +145,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check committed secrets
         run: bash scripts/check-secrets.sh
+      - name: Check CI/CD contracts
+        run: bash scripts/check-cicd-contracts.sh
       - name: Build reduced remote image
         run: docker build --file Dockerfile.remote --tag orkestral-remote:ci .
 
@@ -155,3 +157,19 @@ jobs:
       - run: docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.development.yml config --quiet
       - run: docker build --target production -f Dockerfile.api -t orkestral-api:ci .
       - run: docker build --target production -f Dockerfile.web -t orkestral-web:ci .
+      - name: Scan API critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: orkestral-api:ci
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL
+      - name: Scan web critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: orkestral-web:ci
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL

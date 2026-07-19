@@ -1613,6 +1613,19 @@ Não considere uma fase concluída sem testes automatizados.
 
 # 20. FASE 15 — CI/CD E DEPLOY
 
+## Estado de implementação
+
+- [x] CI obrigatório com formatação, análise estática, testes, migrações e builds.
+- [x] Scan bloqueante de vulnerabilidades críticas em imagens.
+- [x] Publicação de imagens OCI imutáveis por SHA no GHCR.
+- [x] Proveniência verificável para imagens publicadas.
+- [x] Contratos separados para local, testing, development, staging e production.
+- [x] Deploy de development condicionado a CI e publicação aprovados.
+- [x] Health check valida versão e commit implantados.
+- [x] Migração serializada no development e separável em staging/production.
+- [x] Rollback, backups, monitoramento e promoção documentados.
+- [ ] Staging e production serão provisionados somente com infraestrutura autorizada.
+
 ## Pipeline
 
 Configure o GitHub Actions para:

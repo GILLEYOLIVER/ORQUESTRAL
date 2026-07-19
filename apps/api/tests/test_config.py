@@ -3,11 +3,12 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from app.core.config import Settings
+from app.core.config import Environment, Settings
 
 
 def production_settings(
     *,
+    app_env: Environment = "production",
     development_expose_tokens: bool = False,
     bootstrap_enabled: bool = False,
     database_url: str = "postgresql+asyncpg://orkestral:strong-password@database.internal/orkestral",
@@ -15,7 +16,7 @@ def production_settings(
     billing_enforcement_enabled: bool = True,
 ) -> Settings:
     return Settings(
-        app_env="production",
+        app_env=app_env,
         database_url=database_url,
         redis_url="rediss://redis.internal:6379/0",
         celery_broker_url="rediss://redis.internal:6379/1",
@@ -39,6 +40,11 @@ def production_settings(
 def test_production_rejects_development_secrets() -> None:
     with pytest.raises(ValidationError, match="Valores inseguros para produção"):
         Settings(app_env="production")
+
+
+def test_staging_uses_production_security_validation() -> None:
+    with pytest.raises(ValidationError, match="Valores inseguros para produção"):
+        Settings(app_env="staging")
 
 
 def test_production_rejects_development_token_exposure() -> None:
