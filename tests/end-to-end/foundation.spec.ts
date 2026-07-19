@@ -1,4 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function accessDevelopmentAdmin(page: Page) {
+  await page.goto("/login");
+  await page
+    .getByRole("button", { name: "Acessar como administrador" })
+    .click();
+
+  await page.waitForURL(/\/(app|selecionar-empresa)$/);
+  if (new URL(page.url()).pathname === "/selecionar-empresa") {
+    await page
+      .getByRole("button", { name: /Orkestral Desenvolvimento/ })
+      .click();
+  }
+  await expect(page).toHaveURL(/\/app$/);
+}
 
 test("front-end e health checks estão acessíveis", async ({
   page,
@@ -19,12 +34,7 @@ test("front-end e health checks estão acessíveis", async ({
 test("administrador local entra sem credenciais, acessa o tenant e encerra a sessão", async ({
   page,
 }) => {
-  await page.goto("/login");
-  await page
-    .getByRole("button", { name: "Acessar como administrador" })
-    .click();
-
-  await expect(page).toHaveURL(/\/app$/);
+  await accessDevelopmentAdmin(page);
   await expect(
     page.getByText("Orkestral Desenvolvimento", { exact: true }),
   ).toBeVisible();
@@ -46,10 +56,7 @@ test("administrador local entra sem credenciais, acessa o tenant e encerra a ses
 test("clientes veem linguagem comercial na área de plano e consumo", async ({
   page,
 }) => {
-  await page.goto("/login");
-  await page
-    .getByRole("button", { name: "Acessar como administrador" })
-    .click();
+  await accessDevelopmentAdmin(page);
 
   await page.getByRole("link", { name: "Plano e consumo" }).click();
   await expect(page).toHaveURL(/\/app\/plano$/);
@@ -64,10 +71,7 @@ test("clientes veem linguagem comercial na área de plano e consumo", async ({
 
 test("administrador cria e exclui logicamente um agente", async ({ page }) => {
   const agentName = `Agente descartável ${Date.now()}`;
-  await page.goto("/login");
-  await page
-    .getByRole("button", { name: "Acessar como administrador" })
-    .click();
+  await accessDevelopmentAdmin(page);
   await page.getByRole("link", { name: "Agentes" }).click();
 
   const sidebar = page.locator(".sidebar");

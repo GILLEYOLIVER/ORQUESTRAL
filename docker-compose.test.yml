@@ -1,0 +1,36 @@
+services:
+  api:
+    environment:
+      N8N_BASE_URL: http://phase14-contract:5678
+      N8N_API_KEY: phase14-n8n-contract-key
+      AI_PROVIDER_BASE_URL: http://phase14-contract:5678/v1
+      AI_PROVIDER_API_KEY: phase14-ai-contract-key
+    depends_on:
+      phase14-contract:
+        condition: service_healthy
+
+  phase14-contract:
+    image: python:3.12-alpine
+    command: ["python", "/opt/orkestral/phase14_contract_server.py"]
+    volumes:
+      - ./tests/support/phase14_contract_server.py:/opt/orkestral/phase14_contract_server.py:ro
+    networks:
+      - default
+      - automation
+      - storage
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:5678/healthz', timeout=2)
+      interval: 3s
+      timeout: 2s
+      retries: 20
+      start_period: 2s
+    restart: unless-stopped
