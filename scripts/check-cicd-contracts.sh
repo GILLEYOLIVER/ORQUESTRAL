@@ -17,12 +17,12 @@ for file in "${required[@]}"; do
 done
 
 bash -n scripts/verify-deployment.sh scripts/check-cicd-contracts.sh
-rg -q 'aquasecurity/trivy-action' .github/workflows/publish-images.yml
-rg -q 'actions/attest@v4' .github/workflows/publish-images.yml
-rg -q 'ghcr.io' .github/workflows/publish-images.yml
+grep -q 'aquasecurity/trivy-action' .github/workflows/publish-images.yml
+grep -q 'actions/attest@v4' .github/workflows/publish-images.yml
+grep -q 'ghcr.io' .github/workflows/publish-images.yml
 
 for file in .env.staging.example .env.production.example; do
-  if rg -n 'localhost|127\.0\.0\.1|development-only|CHANGE_ME' "$file"; then
+  if grep -nE 'localhost|127\.0\.0\.1|development-only|CHANGE_ME' "$file"; then
     printf 'Contrato remoto inseguro: %s\n' "$file" >&2
     exit 1
   fi
