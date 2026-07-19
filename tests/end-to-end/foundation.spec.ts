@@ -42,3 +42,22 @@ test("administrador local entra sem credenciais, acessa o tenant e encerra a ses
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login$/);
 });
+
+test("clientes veem linguagem comercial na área de plano e consumo", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page
+    .getByRole("button", { name: "Acessar como administrador" })
+    .click();
+
+  await page.getByRole("link", { name: "Plano e consumo" }).click();
+  await expect(page).toHaveURL(/\/app\/plano$/);
+  await expect(
+    page.getByRole("heading", { name: "Plano e consumo" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Catálogo comercial" }),
+  ).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(/Fase\s+\d+/i);
+});

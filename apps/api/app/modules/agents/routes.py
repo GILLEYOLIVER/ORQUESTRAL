@@ -52,6 +52,7 @@ from app.modules.agents.tools import (
     validate_tool_arguments,
 )
 from app.modules.authorization.service import record_authorization_audit
+from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.knowledge.models import KnowledgeBase
 from app.modules.knowledge.processing import search_knowledge
 from app.modules.workflows.definition import as_summary_object
@@ -274,9 +275,18 @@ async def list_agents(principal: CanViewAgents, database: DatabaseSession) -> li
 
 @router.post("", response_model=AgentResponse, status_code=status.HTTP_201_CREATED)
 async def create_agent(
-    payload: AgentCreate, principal: CanCreateAgents, database: DatabaseSession
+    payload: AgentCreate,
+    principal: CanCreateAgents,
+    database: DatabaseSession,
+    settings: RequestSettings,
 ) -> AgentResponse:
     context = get_request_context(principal)
+    await enforce_limit(
+        database,
+        company_id=context.company_id,
+        metric=UsageMetric.AGENTS,
+        enforcement_enabled=settings.billing_enforcement_enabled,
+    )
     agent = Agent(
         company_id=context.company_id, created_by_user_id=context.user_id, **payload.model_dump()
     )
@@ -303,6 +313,14 @@ async def create_agent(
         target_type="agent",
         target_id=agent.id,
         details={"name": agent.name, "provider": agent.provider, "model": agent.model},
+    )
+    await record_usage(
+        database,
+        company_id=context.company_id,
+        metric=UsageMetric.AGENTS,
+        quantity=1,
+        metadata={"agent_id": str(agent.id)},
+        idempotency_key=f"agent:{agent.id}",
     )
     await database.commit()
     await database.refresh(agent)
@@ -534,6 +552,14 @@ async def chat_with_agent(
     agent = await _agent(database, agent_id=agent_id, company_id=context.company_id)
     if agent.status != "active":
         raise HTTPException(status_code=409, detail="Este agente está inativo.")
+    projected_tokens = max(1, len(payload.message) // 4) + agent.max_output_tokens
+    await enforce_limit(
+        database,
+        company_id=context.company_id,
+        metric=UsageMetric.TOKENS,
+        increment=projected_tokens,
+        enforcement_enabled=settings.billing_enforcement_enabled,
+    )
     if payload.conversation_id:
         conversation = await _conversation(
             database,
@@ -739,6 +765,18 @@ async def chat_with_agent(
             duration_ms=duration_ms,
             result_status=result_status,
         )
+    )
+    await record_usage(
+        database,
+        company_id=context.company_id,
+        metric=UsageMetric.TOKENS,
+        quantity=usage.total_tokens,
+        metadata={
+            "agent_id": str(agent.id),
+            "conversation_id": str(conversation.id),
+            "provider": agent.provider,
+        },
+        idempotency_key=f"agent-message:{assistant_message.id}",
     )
     await database.commit()
     await database.refresh(conversation)

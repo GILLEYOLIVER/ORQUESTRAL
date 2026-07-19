@@ -21,6 +21,7 @@ from app.modules.authorization.models import (
     Role,
     RolePermission,
 )
+from app.modules.billing.models import Plan, Subscription, UsageRecord
 from app.modules.companies.models import Company
 from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
@@ -63,10 +64,13 @@ __all__ = [
     "ModuleCatalog",
     "PasswordResetToken",
     "Permission",
+    "Plan",
     "Plugin",
     "PluginConnectionTest",
     "Role",
     "RolePermission",
+    "Subscription",
+    "UsageRecord",
     "User",
     "Workflow",
     "WorkflowExecution",

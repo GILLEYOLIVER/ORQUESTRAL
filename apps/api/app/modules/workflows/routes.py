@@ -13,6 +13,7 @@ from app.core.dependencies import DatabaseSession, RedisClient, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
+from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 from app.modules.workflows.compiler import (
     analyze_compiler_compatibility,
@@ -149,6 +150,12 @@ async def _create_workflow_record(
     settings: Settings,
 ) -> tuple[Workflow, str]:
     context = get_request_context(principal)
+    await enforce_limit(
+        database,
+        company_id=context.company_id,
+        metric=UsageMetric.WORKFLOWS,
+        enforcement_enabled=settings.billing_enforcement_enabled,
+    )
     internal_path = new_internal_webhook_path()
     secret = new_webhook_secret()
     try:
@@ -179,6 +186,14 @@ async def _create_workflow_record(
         target_id=workflow.id,
         details={"sync_status": workflow.sync_status},
     )
+    await record_usage(
+        database,
+        company_id=context.company_id,
+        metric=UsageMetric.WORKFLOWS,
+        quantity=1,
+        metadata={"workflow_id": str(workflow.id)},
+        idempotency_key=f"workflow:{workflow.id}",
+    )
     await database.commit()
     await database.refresh(workflow)
     return workflow, secret
@@ -193,6 +208,12 @@ async def _run_workflow(
     source: str,
     requested_by_user_id: UUID | None,
 ) -> WorkflowExecution:
+    await enforce_limit(
+        database,
+        company_id=workflow.company_id,
+        metric=UsageMetric.WORKFLOW_EXECUTIONS,
+        enforcement_enabled=settings.billing_enforcement_enabled,
+    )
     execution = WorkflowExecution(
         company_id=workflow.company_id,
         workflow_id=workflow.id,
@@ -226,6 +247,19 @@ async def _run_workflow(
         execution.error_summary = str(exc)
     execution.duration_ms = max(0, round((perf_counter() - started) * 1_000))
     execution.finished_at = utc_now()
+    await record_usage(
+        database,
+        company_id=workflow.company_id,
+        metric=UsageMetric.WORKFLOW_EXECUTIONS,
+        quantity=1,
+        metadata={
+            "workflow_id": str(workflow.id),
+            "execution_id": str(execution.id),
+            "source": source,
+            "status": execution.status,
+        },
+        idempotency_key=f"workflow-execution:{execution.id}",
+    )
     await database.commit()
     await database.refresh(execution)
     return execution

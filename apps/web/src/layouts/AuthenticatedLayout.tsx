@@ -5,6 +5,7 @@ import {
   Boxes,
   Building2,
   ContactRound,
+  CreditCard,
   LayoutDashboard,
   LogOut,
   PackageOpen,
@@ -83,6 +84,12 @@ export function AuthenticatedLayout({
               Módulos
             </NavLink>
           ) : null}
+          {!preview && session.me?.permissions.includes("billing.view") ? (
+            <NavLink className="sidebar__link" to="/app/plano">
+              <CreditCard size={18} />
+              Plano e consumo
+            </NavLink>
+          ) : null}
           {!preview &&
           session.me?.permissions.includes("crm.contacts.view") &&
           isModuleActive(modules.data, "crm") ? (
@@ -117,9 +124,7 @@ export function AuthenticatedLayout({
             </NavLink>
           ) : null}
         </nav>
-        <div className="sidebar__footer">
-          Fase 10 · Resultados em tempo real
-        </div>
+        <div className="sidebar__footer">Operação segura e integrada</div>
       </aside>
       <div className="app-main">
         {preview ? (

@@ -76,7 +76,7 @@ export function ModulesPage() {
                 <span>
                   {module.installed
                     ? `Instalado · versão ${module.version}`
-                    : "Planejado para uma próxima fase"}
+                    : "Disponibilidade futura"}
                 </span>
               </div>
               {module.installed ? (

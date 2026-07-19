@@ -6,6 +6,7 @@ import { AuthenticatedLayout } from "./layouts/AuthenticatedLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage";
 import { AgentsPage } from "./pages/AgentsPage";
+import { BillingPage } from "./pages/BillingPage";
 import { CompaniesPage } from "./pages/CompaniesPage";
 import { CompanySelectionPage } from "./pages/CompanySelectionPage";
 import { CompanyUsersPage } from "./pages/CompanyUsersPage";
@@ -130,6 +131,14 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "perfil", element: <ProfilePage /> },
+      {
+        path: "plano",
+        element: (
+          <PermissionRoute permission="billing.view">
+            <BillingPage />
+          </PermissionRoute>
+        ),
+      },
       {
         path: "empresas",
         element: (

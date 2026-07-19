@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Orkestral API"
     app_env: Environment = "development"
-    app_version: str = "0.11.1"
+    app_version: str = "0.12.0"
     log_level: str = "INFO"
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     security_hsts_seconds: int = Field(default=31_536_000, ge=0, le=63_072_000)
     audit_capture_enabled: bool = True
     audit_retention_days: int = Field(default=365, ge=30, le=3_650)
+    billing_enforcement_enabled: bool = False
     dependency_timeout_seconds: float = Field(default=2.0, gt=0, le=10)
     jwt_issuer: str = "orkestral"
     jwt_audience: str = "orkestral-api"
@@ -132,6 +133,8 @@ class Settings(BaseSettings):
             raise ValueError("DEVELOPMENT_EXPOSE_TOKENS não pode ser habilitado em produção")
         if self.bootstrap_enabled:
             raise ValueError("BOOTSTRAP_ENABLED não pode ser habilitado em produção")
+        if not self.billing_enforcement_enabled:
+            raise ValueError("BILLING_ENFORCEMENT_ENABLED deve ser habilitado em produção")
         if self.knowledge_embedding_provider != "openai_compatible":
             raise ValueError("KNOWLEDGE_EMBEDDING_PROVIDER deve ser openai_compatible em produção")
         if not self.ai_provider_api_key or any(

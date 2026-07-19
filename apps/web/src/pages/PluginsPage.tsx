@@ -123,7 +123,7 @@ export function PluginsPage() {
     <div className="management-page plugin-page">
       <div className="dashboard__heading">
         <div>
-          <span className="eyebrow">Fase 5 · Ecossistema extensível</span>
+          <span className="eyebrow">Ecossistema extensível</span>
           <h1>Integrações</h1>
           <p>
             Ative conectores por empresa e mantenha credenciais protegidas no

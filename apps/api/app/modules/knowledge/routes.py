@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeDocument
 from app.modules.knowledge.processing import search_knowledge, storage
 from app.modules.knowledge.schemas import (
@@ -109,6 +110,19 @@ async def _store(
         validate_file(data, mime, settings.knowledge_max_file_bytes)
     except KnowledgeSecurityError as exc:
         raise HTTPException(422, str(exc)) from exc
+    await enforce_limit(
+        db,
+        company_id=context.company_id,
+        metric=UsageMetric.DOCUMENTS,
+        enforcement_enabled=settings.billing_enforcement_enabled,
+    )
+    await enforce_limit(
+        db,
+        company_id=context.company_id,
+        metric=UsageMetric.STORAGE_BYTES,
+        increment=len(data),
+        enforcement_enabled=settings.billing_enforcement_enabled,
+    )
     doc_id = uuid4()
     key = f"knowledge/{context.company_id}/{base_id}/{doc_id}/{name}"
     client = storage(settings)
@@ -135,6 +149,22 @@ async def _store(
         checksum_sha256=hashlib.sha256(data).hexdigest(),
     )
     db.add(doc)
+    await record_usage(
+        db,
+        company_id=context.company_id,
+        metric=UsageMetric.DOCUMENTS,
+        quantity=1,
+        metadata={"document_id": str(doc.id), "knowledge_base_id": str(base_id)},
+        idempotency_key=f"knowledge-document:{doc.id}",
+    )
+    await record_usage(
+        db,
+        company_id=context.company_id,
+        metric=UsageMetric.STORAGE_BYTES,
+        quantity=len(data),
+        metadata={"document_id": str(doc.id), "mime_type": mime},
+        idempotency_key=f"knowledge-storage:{doc.id}",
+    )
     await db.commit()
     await db.refresh(doc)
     _enqueue(settings, doc.id)

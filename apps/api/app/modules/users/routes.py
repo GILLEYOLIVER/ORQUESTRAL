@@ -14,6 +14,7 @@ from app.modules.authentication.models import CompanyInvitation
 from app.modules.authorization.catalog import SYSTEM_OWNER_ROLE_NAME
 from app.modules.authorization.models import Role
 from app.modules.authorization.service import record_authorization_audit
+from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.users.models import CompanyUser, User
 from app.modules.users.schemas import (
     CompanyUserResponse,
@@ -97,6 +98,14 @@ async def invite_company_user(
     )
     if membership is not None and membership.status == "active":
         raise HTTPException(status_code=409, detail="O usuário já pertence à empresa.")
+    consumes_capacity = membership is None or membership.status == "disabled"
+    if consumes_capacity:
+        await enforce_limit(
+            database,
+            company_id=context.company_id,
+            metric=UsageMetric.USERS,
+            enforcement_enabled=settings.billing_enforcement_enabled,
+        )
     if membership is None:
         membership = CompanyUser(
             company_id=context.company_id,
@@ -138,6 +147,15 @@ async def invite_company_user(
         target_id=user.id,
         details={"role_id": str(role.id)},
     )
+    if consumes_capacity:
+        await record_usage(
+            database,
+            company_id=context.company_id,
+            metric=UsageMetric.USERS,
+            quantity=1,
+            metadata={"user_id": str(user.id)},
+            idempotency_key=f"company-user:{context.company_id}:{user.id}",
+        )
     await database.commit()
     return InvitationResponse(
         id=invitation.id,
