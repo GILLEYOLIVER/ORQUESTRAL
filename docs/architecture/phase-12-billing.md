@@ -23,17 +23,17 @@ Quando a fiscalização está ativa:
 
 ## Recursos medidos
 
-| Métrica | Fonte de verdade |
-| --- | --- |
-| Usuários | vínculos ativos ou convidados da empresa |
-| Agentes | agentes ativos |
-| Automações | workflows cadastrados |
-| Execuções | execuções no período corrente |
-| Tokens | consumo de agentes no período corrente |
-| Armazenamento | soma dos documentos armazenados |
-| Integrações | plugins ativos da empresa |
-| Documentos | documentos da base de conhecimento |
-| Chamadas de API | registros idempotentes de consumo |
+| Métrica         | Fonte de verdade                         |
+| --------------- | ---------------------------------------- |
+| Usuários        | vínculos ativos ou convidados da empresa |
+| Agentes         | agentes ativos                           |
+| Automações      | workflows cadastrados                    |
+| Execuções       | execuções no período corrente            |
+| Tokens          | consumo de agentes no período corrente   |
+| Armazenamento   | soma dos documentos armazenados          |
+| Integrações     | plugins ativos da empresa                |
+| Documentos      | documentos da base de conhecimento       |
+| Chamadas de API | registros idempotentes de consumo        |
 
 ## Operação
 
