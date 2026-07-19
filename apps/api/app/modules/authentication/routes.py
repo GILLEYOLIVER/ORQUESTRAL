@@ -63,11 +63,11 @@ def _token_response(issued: IssuedTokens) -> AccessTokenResponse:
 
 def _development_access_enabled(settings: RequestSettings) -> bool:
     return bool(
-        settings.app_env == "development"
+        settings.app_env == "local"
         and settings.development_expose_tokens
         and settings.bootstrap_enabled
         and settings.bootstrap_admin_email
-        and settings.bootstrap_admin_password
+        and settings.effective_bootstrap_admin_password
     )
 
 
@@ -87,11 +87,12 @@ async def development_login(
     if not _development_access_enabled(settings):
         raise HTTPException(status_code=404, detail="Recurso não disponível.")
     assert settings.bootstrap_admin_email is not None
-    assert settings.bootstrap_admin_password is not None
+    password = settings.effective_bootstrap_admin_password
+    assert password is not None
     try:
         issued = await AuthenticationService(database, redis, settings).login(
             email=settings.bootstrap_admin_email,
-            password=settings.bootstrap_admin_password,
+            password=password,
             ip_address=_client_ip(request),
             user_agent=request.headers.get("user-agent"),
         )

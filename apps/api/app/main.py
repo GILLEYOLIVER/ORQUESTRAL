@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import install_exception_handlers
@@ -28,6 +31,7 @@ from app.modules.users.routes import router as users_router
 from app.modules.workflows.routes import router as workflows_router
 from app.modules.workflows.routes import webhook_router as workflow_webhooks_router
 from app.routes.health import router as health_router
+from app.routes.system import router as system_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -65,6 +69,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.add_middleware(ObservabilityMiddleware)
     install_exception_handlers(application)
     application.include_router(health_router)
+    application.include_router(system_router)
     application.include_router(agents_router)
     application.include_router(authentication_router)
     application.include_router(audit_router)
@@ -82,6 +87,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for module in module_registry.installed():
         for module_router in module.routers:
             application.include_router(module_router)
+    if resolved_settings.web_static_directory:
+        static_root = Path(resolved_settings.web_static_directory)
+        index_file = static_root / "index.html"
+        assets_root = static_root / "assets"
+        if index_file.is_file():
+            if assets_root.is_dir():
+                application.mount("/assets", StaticFiles(directory=assets_root), name="assets")
+
+            async def robots() -> PlainTextResponse:
+                return PlainTextResponse("User-agent: *\nDisallow: /\n")
+
+            async def spa() -> FileResponse:
+                return FileResponse(index_file)
+
+            application.add_api_route(
+                "/robots.txt", robots, methods=["GET"], include_in_schema=False
+            )
+            for route in ("/", "/login", "/selecionar-empresa", "/app"):
+                application.add_api_route(route, spa, methods=["GET"], include_in_schema=False)
+            application.add_api_route(
+                "/app/{path:path}", spa, methods=["GET"], include_in_schema=False
+            )
     return application
 
 

@@ -15,6 +15,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { environment } from "../lib/environment";
 import { isModuleActive, useModules } from "../modules/useModules";
 import { useNotificationSummary } from "../notifications/useNotifications";
 import { useSession } from "../session/context";
@@ -68,7 +69,9 @@ export function AuthenticatedLayout({
               ) : null}
             </NavLink>
           ) : null}
-          {!preview && session.me?.permissions.includes("workflows.view") ? (
+          {!preview &&
+          environment.n8nEnabled &&
+          session.me?.permissions.includes("workflows.view") ? (
             <NavLink className="sidebar__link" to="/app/automacoes">
               <Workflow size={18} />
               Automações
@@ -80,7 +83,9 @@ export function AuthenticatedLayout({
               Agentes
             </NavLink>
           ) : null}
-          {!preview && session.me?.permissions.includes("knowledge.view") ? (
+          {!preview &&
+          environment.objectStorageEnabled &&
+          session.me?.permissions.includes("knowledge.view") ? (
             <NavLink className="sidebar__link" to="/app/conhecimento">
               <BookOpenText size={18} />
               Conhecimento
@@ -141,6 +146,11 @@ export function AuthenticatedLayout({
         <div className="sidebar__footer">Operação segura e integrada</div>
       </aside>
       <div className="app-main">
+        {environment.remoteDevelopment ? (
+          <div className="remote-development-banner" role="status">
+            Ambiente de desenvolvimento remoto · dados de teste · recursos reduzidos
+          </div>
+        ) : null}
         {preview ? (
           <div className="preview-banner" role="status">
             Prévia de desenvolvimento · sem sessão real

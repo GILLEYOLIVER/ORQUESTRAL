@@ -1,0 +1,49 @@
+FROM node:24.18.0-alpine3.23 AS web-build
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
+WORKDIR /workspace
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
+COPY packages/ui-components/package.json packages/ui-components/package.json
+RUN pnpm install --frozen-lockfile
+COPY apps/web apps/web
+COPY packages packages
+ARG VITE_API_BASE_URL=""
+ARG VITE_REMOTE_DEVELOPMENT=true
+ARG VITE_N8N_ENABLED=false
+ARG VITE_OBJECT_STORAGE_ENABLED=false
+RUN VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+    VITE_REMOTE_DEVELOPMENT="$VITE_REMOTE_DEVELOPMENT" \
+    VITE_N8N_ENABLED="$VITE_N8N_ENABLED" \
+    VITE_OBJECT_STORAGE_ENABLED="$VITE_OBJECT_STORAGE_ENABLED" \
+    VITE_AUTH_PREVIEW_ENABLED=false \
+    pnpm --filter @orkestral/web build
+
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH="/workspace/.venv/bin:$PATH" \
+    WEB_STATIC_DIRECTORY=/workspace/apps/web/dist \
+    PORT=10000
+
+WORKDIR /workspace
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir uv==0.11.29
+COPY pyproject.toml uv.lock ./
+COPY apps/api ./apps/api
+COPY packages/plugin-sdk ./packages/plugin-sdk
+RUN uv sync --project apps/api --frozen --no-dev
+COPY --from=web-build /workspace/apps/web/dist ./apps/web/dist
+COPY infrastructure/docker/api/entrypoint.sh /usr/local/bin/orkestral-entrypoint
+RUN chmod +x /usr/local/bin/orkestral-entrypoint
+
+EXPOSE 10000
+ENTRYPOINT ["/usr/local/bin/orkestral-entrypoint"]

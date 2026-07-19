@@ -39,7 +39,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if response is None:
             response = await call_next(request)
 
-        self._apply_security_headers(response, settings)
+        self._apply_security_headers(request, response, settings)
         if (
             settings.audit_capture_enabled
             and settings.app_env != "testing"
@@ -115,7 +115,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         return response
 
     @staticmethod
-    def _apply_security_headers(response: Response, settings: Settings) -> None:
+    def _apply_security_headers(
+        request: Request, response: Response, settings: Settings
+    ) -> None:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
@@ -123,6 +125,18 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
         )
+        if settings.web_static_directory and (
+            request.url.path in {"/", "/login", "/selecionar-empresa", "/app"}
+            or request.url.path.startswith("/app/")
+            or request.url.path.startswith("/assets/")
+        ):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; "
+                "script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                "font-src 'self' data:; img-src 'self' data:; connect-src 'self'"
+            )
+        if settings.remote_development_enabled:
+            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
         response.headers["Cache-Control"] = "no-store"
         if settings.auth_cookie_secure and settings.security_hsts_seconds:
             response.headers["Strict-Transport-Security"] = (

@@ -1,0 +1,68 @@
+services:
+  - type: web
+    name: orkestral-development
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.remote
+    dockerContext: .
+    healthCheckPath: /ready
+    autoDeploy: false
+    envVars:
+      - key: APP_ENV
+        value: development
+      - key: APP_VERSION
+        value: 0.13.0
+      - key: LOG_LEVEL
+        value: INFO
+      - key: REMOTE_DEVELOPMENT_ENABLED
+        value: "true"
+      - key: CORS_ORIGINS
+        value: "[]"
+      - key: N8N_ENABLED
+        value: "false"
+      - key: OBJECT_STORAGE_ENABLED
+        value: "false"
+      - key: BACKGROUND_WORKER_ENABLED
+        value: "false"
+      - key: EMAIL_DELIVERY_ENABLED
+        value: "false"
+      - key: DEVELOPMENT_EXPOSE_TOKENS
+        value: "false"
+      - key: BOOTSTRAP_ENABLED
+        value: "true"
+      - key: BOOTSTRAP_ADMIN_NAME
+        value: Administrador Orkestral
+      - key: BOOTSTRAP_COMPANY_NAME
+        value: Orkestral Development
+      - key: BOOTSTRAP_COMPANY_SLUG
+        value: orkestral-development
+      - key: BOOTSTRAP_COMPANY_DOCUMENT
+        value: REMOTE-DEVELOPMENT
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: N8N_BASE_URL
+        value: http://127.0.0.1:5678
+      - key: N8N_API_KEY
+        value: disabled-in-remote-development
+      - key: STORAGE_ENDPOINT
+        value: http://127.0.0.1:9000
+      - key: STORAGE_ACCESS_KEY
+        value: disabled
+      - key: STORAGE_SECRET_KEY
+        value: disabled-in-remote-development
+      - key: STORAGE_BUCKET
+        value: orkestral-development

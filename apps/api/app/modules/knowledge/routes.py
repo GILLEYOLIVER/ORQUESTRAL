@@ -44,6 +44,8 @@ async def _base(db: AsyncSession, base_id: UUID, company_id: UUID) -> KnowledgeB
 
 
 def _enqueue(settings: Settings, doc_id: UUID) -> None:
+    if not settings.background_worker_enabled:
+        return
     Celery(broker=str(settings.celery_broker_url)).send_task(
         "orkestral.knowledge.process_document", args=[str(doc_id)]
     )
@@ -106,6 +108,11 @@ async def _store(
     source_type: str = "upload",
     source_url: str | None = None,
 ) -> DocumentResponse:
+    if not settings.object_storage_enabled:
+        raise HTTPException(
+            503,
+            "Arquivos da base de conhecimento estão indisponíveis no ambiente remoto reduzido.",
+        )
     try:
         validate_file(data, mime, settings.knowledge_max_file_bytes)
     except KnowledgeSecurityError as exc:
