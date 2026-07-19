@@ -6,6 +6,7 @@ from typing import Literal, TypedDict
 from app.core import model_registry as _model_registry  # noqa: F401
 from app.modules.knowledge.processing import process_document_sync
 from app.modules.metrics.aggregation import aggregate_metrics_sync
+from app.modules.notifications.service import run_notification_maintenance_sync
 from worker.main import celery_app
 
 
@@ -29,3 +30,9 @@ def process_knowledge_document(document_id: str) -> dict[str, str]:
 def aggregate_metrics_task() -> dict[str, int | str]:
     rows = aggregate_metrics_sync()
     return {"status": "ok", "rows": rows}
+
+
+@celery_app.task(name="orkestral.notifications.maintain")
+def maintain_notifications_task() -> dict[str, int | str]:
+    result = run_notification_maintenance_sync()
+    return {"status": "ok", **result}

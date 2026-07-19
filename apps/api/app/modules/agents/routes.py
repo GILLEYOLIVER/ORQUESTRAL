@@ -10,6 +10,7 @@ from sqlalchemy import select
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.agents.approvals import decide_agent_tool_run
 from app.modules.agents.models import (
     Agent,
     AgentConversation,
@@ -55,6 +56,7 @@ from app.modules.authorization.service import record_authorization_audit
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.knowledge.models import KnowledgeBase
 from app.modules.knowledge.processing import search_knowledge
+from app.modules.notifications.service import create_approval_request
 from app.modules.workflows.definition import as_summary_object
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -187,57 +189,14 @@ async def decide_action(
     settings: RequestSettings,
 ) -> AgentToolRunResponse:
     context = get_request_context(principal)
-    run = await database.scalar(
-        select(AgentToolRun).where(
-            AgentToolRun.id == run_id, AgentToolRun.company_id == context.company_id
-        )
-    )
-    if run is None:
-        raise HTTPException(status_code=404, detail="Ação não encontrada nesta empresa.")
-    if run.state != "awaiting_confirmation":
-        raise HTTPException(status_code=409, detail="Esta ação já recebeu uma decisão.")
-    tool = await database.scalar(
-        select(AgentTool).where(
-            AgentTool.id == run.tool_id, AgentTool.company_id == context.company_id
-        )
-    )
-    if tool is None:
-        raise HTTPException(status_code=404, detail="Ferramenta da ação não encontrada.")
-    now = utc_now()
-    if payload.decision == "rejected":
-        run.state = "rejected"
-        run.rejected_by_user_id = context.user_id
-        run.rejected_at = now
-        run.finished_at = now
-    else:
-        run.approved_by_user_id = context.user_id
-        run.approved_at = now
-        try:
-            assert_tool_access(tool, principal.permissions)
-            validate_tool_arguments(tool.input_schema, run.arguments)
-            run.state = "executing"
-            run.started_at = now
-            result = await execute_builtin_tool(
-                tool_key=tool.tool_key,
-                arguments=run.arguments,
-                company_id=context.company_id,
-                database=database,
-                settings=settings,
-            )
-            run.result_summary = as_summary_object(result)
-            run.state = "completed"
-        except (ToolAccessError, ToolArgumentsError, ToolExecutionError) as exc:
-            run.state = "failed"
-            run.error_summary = str(exc)
-        run.finished_at = utc_now()
-    record_authorization_audit(
+    run = await decide_agent_tool_run(
         database,
+        run_id=run_id,
         company_id=context.company_id,
         actor_user_id=context.user_id,
-        action=f"agent.tool.{run.state}",
-        target_type="agent_tool_run",
-        target_id=run.id,
-        details={"tool_key": tool.tool_key, "decision": payload.decision},
+        permissions=principal.permissions,
+        decision=payload.decision,
+        settings=settings,
     )
     await database.commit()
     await database.refresh(run)
@@ -699,6 +658,23 @@ async def chat_with_agent(
         await database.flush()
         created_runs.append(run)
         if tool.is_sensitive:
+            await create_approval_request(
+                database,
+                company_id=context.company_id,
+                requested_by_user_id=context.user_id,
+                source_type="agent",
+                title=f"Autorizar ação do agente {agent.name}",
+                description=f"A ferramenta {tool.name} exige confirmação humana antes da execução.",
+                context={
+                    "agent_id": str(agent.id),
+                    "agent_name": agent.name,
+                    "tool_key": tool.tool_key,
+                    "tool_name": tool.name,
+                    "arguments": run.arguments,
+                },
+                agent_tool_run_id=run.id,
+                reminder_minutes=settings.notification_reminder_minutes,
+            )
             result_status = "awaiting_confirmation"
             result_messages.append(f"A ação {tool.name} aguarda sua confirmação.")
             continue

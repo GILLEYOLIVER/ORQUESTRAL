@@ -18,6 +18,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { KnowledgePage } from "./pages/KnowledgePage";
 import { LoginPage } from "./pages/LoginPage";
 import { ModulesPage } from "./pages/ModulesPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 import { PluginsPage } from "./pages/PluginsPage";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -130,6 +131,7 @@ export const router = createBrowserRouter([
     element: <ProtectedApp />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: "notificacoes", element: <NotificationsPage /> },
       { path: "perfil", element: <ProfilePage /> },
       {
         path: "plano",

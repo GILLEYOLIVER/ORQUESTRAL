@@ -27,6 +27,12 @@ from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
 from app.modules.metrics.models import MetricAggregationRun, MetricDailySummary
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
+from app.modules.notifications.models import (
+    ApprovalAction,
+    ApprovalRequest,
+    Notification,
+    NotificationPreference,
+)
 from app.modules.plugins.models import (
     CompanyPlugin,
     IntegrationCredential,
@@ -43,6 +49,8 @@ __all__ = [
     "AgentTool",
     "AgentToolRun",
     "AgentUsageRecord",
+    "ApprovalAction",
+    "ApprovalRequest",
     "AuditEvent",
     "AuthAttempt",
     "AuthSession",
@@ -62,6 +70,8 @@ __all__ = [
     "MetricAggregationRun",
     "MetricDailySummary",
     "ModuleCatalog",
+    "Notification",
+    "NotificationPreference",
     "PasswordResetToken",
     "Permission",
     "Plan",

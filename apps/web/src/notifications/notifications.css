@@ -1,0 +1,321 @@
+.attention-page {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.attention-hero {
+  align-items: end;
+  background:
+    radial-gradient(circle at 88% 12%, rgb(235 191 82 / 24%), transparent 26%),
+    linear-gradient(135deg, #0b322d, #1b5d4f 72%, #326e55);
+  border-radius: 1.8rem 1.8rem 1.8rem 0.55rem;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  min-height: 280px;
+  overflow: hidden;
+  padding: clamp(1.8rem, 4vw, 3.1rem);
+  position: relative;
+}
+
+.attention-hero::after {
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 50%;
+  content: "";
+  height: 310px;
+  position: absolute;
+  right: -90px;
+  top: -190px;
+  width: 310px;
+}
+
+.attention-hero h1 {
+  color: inherit;
+  font-family: "Fraunces", serif;
+  font-size: clamp(2.4rem, 5vw, 4.6rem);
+  line-height: 0.98;
+  margin: 0.45rem 0 0.9rem;
+  max-width: 670px;
+}
+
+.attention-hero p {
+  color: rgb(255 255 255 / 76%);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 620px;
+}
+
+.attention-hero__numbers {
+  display: flex;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.attention-hero__numbers article {
+  backdrop-filter: blur(12px);
+  background: rgb(255 255 255 / 9%);
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 1rem;
+  display: grid;
+  min-width: 128px;
+  padding: 1rem;
+}
+
+.attention-hero__numbers strong {
+  font-family: "Fraunces", serif;
+  font-size: 2.2rem;
+}
+
+.attention-hero__numbers span {
+  color: rgb(255 255 255 / 70%);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.attention-grid {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.attention-panel,
+.preference-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 50px rgb(20 48 41 / 6%);
+  padding: 1.35rem;
+}
+
+.attention-panel__heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+
+.attention-panel__heading h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.45rem;
+  margin: 0.25rem 0 0;
+}
+
+.approval-list,
+.notification-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.approval-card {
+  background: linear-gradient(145deg, #fff9e8, #fffdf6);
+  border: 1px solid #ead7a7;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.approval-card__meta,
+.notification-row__heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.approval-card__meta {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.approval-card__meta span:last-child {
+  align-items: center;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.approval-card h3 {
+  font-size: 1rem;
+  margin: 0.7rem 0 0.35rem;
+}
+
+.approval-card p,
+.notification-row p {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.approval-card__actions {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.notification-row {
+  align-items: start;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0.9rem;
+}
+
+.notification-row--unread {
+  background: #f5fbf8;
+  border-color: #9ccaba;
+}
+
+.notification-row__icon {
+  align-items: center;
+  background: var(--color-brand-100);
+  border-radius: 0.7rem;
+  color: var(--color-brand-800);
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.notification-row--warning .notification-row__icon {
+  background: #fff0c8;
+  color: #8a5a00;
+}
+
+.notification-row--error .notification-row__icon {
+  background: #ffe2da;
+  color: #a4341d;
+}
+
+.notification-row__heading {
+  gap: 0.75rem;
+}
+
+.notification-row__heading strong {
+  font-size: 0.86rem;
+}
+
+.notification-row__heading time {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+
+.notification-row > button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-brand-700);
+  cursor: pointer;
+  display: flex;
+  padding: 0.3rem;
+}
+
+.attention-empty {
+  align-items: center;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  justify-content: center;
+  min-height: 170px;
+  text-align: center;
+}
+
+.preference-panel {
+  background: #fffefa;
+}
+
+.preference-panel__note {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  max-width: 280px;
+  text-align: right;
+}
+
+.preference-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.channel-option {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  cursor: pointer;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  padding: 1rem;
+}
+
+.channel-option input[type="checkbox"] {
+  accent-color: var(--color-brand-700);
+  height: 17px;
+  width: 17px;
+}
+
+.channel-option > svg {
+  color: var(--color-brand-700);
+}
+
+.channel-option span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.channel-option small {
+  color: var(--color-text-muted);
+}
+
+.channel-option--whatsapp > input[type="tel"] {
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  grid-column: 3;
+  padding: 0.65rem;
+}
+
+.preference-panel__save {
+  margin-top: 1rem;
+}
+
+@media (max-width: 960px) {
+  .attention-hero {
+    align-items: start;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .attention-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .attention-hero__numbers,
+  .approval-card__actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .attention-hero__numbers article,
+  .approval-card__actions .ui-button {
+    width: 100%;
+  }
+
+  .preference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attention-panel__heading {
+    flex-direction: column;
+  }
+
+  .preference-panel__note {
+    text-align: left;
+  }
+}

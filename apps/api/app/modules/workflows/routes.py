@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from time import perf_counter
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -23,12 +22,12 @@ from app.modules.workflows.compiler import (
 from app.modules.workflows.definition import (
     WorkflowDefinitionError,
     analyze_definition,
-    as_summary_object,
     block_catalog,
     compare_definitions,
     export_definition,
     prepare_definition,
 )
+from app.modules.workflows.execution import run_workflow
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 from app.modules.workflows.schemas import (
     WorkflowComparisonResponse,
@@ -49,7 +48,6 @@ from app.modules.workflows.security import (
     new_internal_webhook_path,
     new_webhook_key,
     new_webhook_secret,
-    sign_webhook_body,
     verify_webhook_signature,
 )
 from app.modules.workflows.services.n8n_client import N8nClient, N8nClientError
@@ -197,72 +195,6 @@ async def _create_workflow_record(
     await database.commit()
     await database.refresh(workflow)
     return workflow, secret
-
-
-async def _run_workflow(
-    workflow: Workflow,
-    input_data: dict[str, Any],
-    database: DatabaseSession,
-    settings: Settings,
-    *,
-    source: str,
-    requested_by_user_id: UUID | None,
-) -> WorkflowExecution:
-    await enforce_limit(
-        database,
-        company_id=workflow.company_id,
-        metric=UsageMetric.WORKFLOW_EXECUTIONS,
-        enforcement_enabled=settings.billing_enforcement_enabled,
-    )
-    execution = WorkflowExecution(
-        company_id=workflow.company_id,
-        workflow_id=workflow.id,
-        requested_by_user_id=requested_by_user_id,
-        source=source,
-        status="running",
-        input_summary=as_summary_object(input_data),
-        started_at=utc_now(),
-    )
-    database.add(execution)
-    await database.flush()
-    internal_payload = {
-        "company_id": str(workflow.company_id),
-        "workflow_id": str(workflow.id),
-        "execution_id": str(execution.id),
-        "input": input_data,
-    }
-    canonical = json.dumps(
-        internal_payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
-    internal_payload["orkestral_signature"] = sign_webhook_body(settings.encryption_key, canonical)
-    started = perf_counter()
-    try:
-        output = await N8nClient(settings).trigger_webhook(
-            workflow.internal_webhook_path, internal_payload
-        )
-        execution.status = "success"
-        execution.output_summary = as_summary_object(output)
-    except N8nClientError as exc:
-        execution.status = "error"
-        execution.error_summary = str(exc)
-    execution.duration_ms = max(0, round((perf_counter() - started) * 1_000))
-    execution.finished_at = utc_now()
-    await record_usage(
-        database,
-        company_id=workflow.company_id,
-        metric=UsageMetric.WORKFLOW_EXECUTIONS,
-        quantity=1,
-        metadata={
-            "workflow_id": str(workflow.id),
-            "execution_id": str(execution.id),
-            "source": source,
-            "status": execution.status,
-        },
-        idempotency_key=f"workflow-execution:{execution.id}",
-    )
-    await database.commit()
-    await database.refresh(execution)
-    return execution
 
 
 @router.get("/engine/status", response_model=WorkflowEngineStatusResponse)
@@ -529,7 +461,7 @@ async def execute_workflow(
     workflow = await _get_workflow(database, context.company_id, workflow_id)
     if workflow.status != "active":
         raise HTTPException(status_code=409, detail="Ative a automação antes de executá-la.")
-    execution = await _run_workflow(
+    execution = await run_workflow(
         workflow,
         payload.input,
         database,
@@ -541,7 +473,9 @@ async def execute_workflow(
         database,
         company_id=context.company_id,
         actor_user_id=context.user_id,
-        action="workflow.executed",
+        action="workflow.approval_requested"
+        if execution.status == "waiting"
+        else "workflow.executed",
         target_type="workflow_execution",
         target_id=execution.id,
         details={"workflow_id": str(workflow.id), "status": execution.status},
@@ -807,7 +741,7 @@ async def receive_workflow_webhook(
         raise HTTPException(status_code=422, detail="O webhook deve enviar JSON válido.") from exc
     if not isinstance(payload, dict):
         raise HTTPException(status_code=422, detail="O webhook deve enviar um objeto JSON.")
-    execution = await _run_workflow(
+    execution = await run_workflow(
         workflow,
         payload,
         database,
