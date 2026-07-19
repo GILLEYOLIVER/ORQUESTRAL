@@ -136,8 +136,8 @@ p {
 .hero h1 {
   color: var(--color-brand-950);
   font-size: clamp(2.7rem, 5vw, 4.9rem);
-  letter-spacing: -0.065em;
-  line-height: 0.99;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
   margin-bottom: 1.45rem;
   max-width: 700px;
 }
@@ -296,8 +296,8 @@ p {
 
 .auth-aside h1 {
   font-size: clamp(2rem, 3vw, 3.5rem);
-  letter-spacing: -0.055em;
-  line-height: 1.08;
+  letter-spacing: -0.025em;
+  line-height: 1.14;
   margin-bottom: 1.3rem;
 }
 
