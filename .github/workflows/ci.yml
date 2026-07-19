@@ -152,6 +152,8 @@ jobs:
         run: bash scripts/check-secrets.sh
       - name: Check CI/CD contracts
         run: bash scripts/check-cicd-contracts.sh
+      - name: Check remote development contract
+        run: bash scripts/check-remote-development-contract.sh
       - name: Check production readiness
         run: bash scripts/check-production-readiness.sh
       - name: Build reduced remote image
