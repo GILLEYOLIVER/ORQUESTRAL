@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID, uuid4
 from celery import Celery
 import httpx
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import select
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.tenancy import Principal, get_request_context, require_permission
@@ -64,6 +64,15 @@ async def reprocess(base_id:UUID,document_id:UUID,principal:CanManage,db:Databas
     if not doc: raise HTTPException(404,"Documento não encontrado.")
     doc.status="uploaded"; doc.error_summary=None; await db.commit(); _enqueue(settings,doc.id); return DocumentResponse.model_validate(doc,from_attributes=True)
 
+@router.post("/{base_id}/reindex",response_model=dict[str,int],status_code=202)
+async def reindex(base_id:UUID,principal:CanManage,db:DatabaseSession,settings:RequestSettings):
+    context=get_request_context(principal); await _base(db,base_id,context.company_id)
+    documents=(await db.scalars(select(KnowledgeDocument).where(KnowledgeDocument.knowledge_base_id==base_id,KnowledgeDocument.company_id==context.company_id))).all()
+    for document in documents: document.status="uploaded"; document.error_summary=None; document.processed_at=None
+    await db.commit()
+    for document in documents: _enqueue(settings,document.id)
+    return {"queued":len(documents)}
+
 @router.delete("/{base_id}/documents/{document_id}",status_code=204)
 async def remove(base_id:UUID,document_id:UUID,principal:CanManage,db:DatabaseSession,settings:RequestSettings):
     context=get_request_context(principal); doc=await db.scalar(select(KnowledgeDocument).where(KnowledgeDocument.id==document_id,KnowledgeDocument.knowledge_base_id==base_id,KnowledgeDocument.company_id==context.company_id));
@@ -71,5 +80,5 @@ async def remove(base_id:UUID,document_id:UUID,principal:CanManage,db:DatabaseSe
     await asyncio.to_thread(storage(settings).remove_object,settings.storage_bucket,doc.storage_key); await db.delete(doc); await db.commit()
 
 @router.get("/{base_id}/search",response_model=list[SearchResult])
-async def search(base_id:UUID,principal:CanView,db:DatabaseSession,q:str=Query(min_length=2,max_length=1000),limit:int=Query(5,ge=1,le=20)):
-    context=get_request_context(principal); await _base(db,base_id,context.company_id); return [SearchResult.model_validate(x) for x in await search_knowledge(db,company_id=context.company_id,base_id=base_id,query=q,limit=limit)]
+async def search(base_id:UUID,principal:CanView,db:DatabaseSession,settings:RequestSettings,q:str=Query(min_length=2,max_length=1000),limit:int=Query(5,ge=1,le=20)):
+    context=get_request_context(principal); await _base(db,base_id,context.company_id); return [SearchResult.model_validate(x) for x in await search_knowledge(db,settings=settings,company_id=context.company_id,base_id=base_id,query=q,limit=limit)]

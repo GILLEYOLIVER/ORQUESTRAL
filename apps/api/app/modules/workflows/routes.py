@@ -23,7 +23,11 @@ from app.modules.workflows.definition import (
     export_definition,
     prepare_definition,
 )
-from app.modules.workflows.compiler import compile_definition
+from app.modules.workflows.compiler import (
+    analyze_compiler_compatibility,
+    compile_definition,
+    compiler_compatibility,
+)
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 from app.modules.workflows.schemas import (
     WorkflowCreate,
@@ -95,7 +99,7 @@ def _version_record(
 
 
 def _assert_publishable(definition: dict[str, Any]) -> None:
-    issues = analyze_definition(definition)
+    issues = [*analyze_definition(definition), *analyze_compiler_compatibility(definition)]
     errors = [issue for issue in issues if issue["severity"] == "error"]
     if errors:
         raise HTTPException(
@@ -126,7 +130,7 @@ async def _sync_workflow(workflow: Workflow, settings: Settings) -> None:
             internal_webhook_path=workflow.internal_webhook_path,
         )
         if workflow.n8n_workflow_id:
-            result = await client.update_workflow(
+            result = await client.update_workflow_with_rollback(
                 workflow.n8n_workflow_id, workflow.name, compiled
             )
         else:
@@ -262,6 +266,14 @@ async def list_workflow_blocks(principal: CanViewWorkflows) -> list[dict[str, An
     return block_catalog()
 
 
+@router.get("/blocks/compatibility", response_model=list[dict[str, Any]])
+async def list_workflow_block_compatibility(
+    principal: CanViewWorkflows,
+) -> list[dict[str, Any]]:
+    del principal
+    return compiler_compatibility()
+
+
 @router.get("", response_model=list[WorkflowResponse])
 async def list_workflows(
     principal: CanViewWorkflows, database: DatabaseSession
@@ -376,7 +388,7 @@ async def validate_workflow_draft(
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
     definition = payload.definition if payload.definition is not None else workflow.definition
-    issues = analyze_definition(definition)
+    issues = [*analyze_definition(definition), *analyze_compiler_compatibility(definition)]
     return WorkflowValidationResponse(
         valid=not any(issue["severity"] == "error" for issue in issues),
         issues=issues,

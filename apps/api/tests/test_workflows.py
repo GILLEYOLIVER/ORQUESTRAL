@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
-from app.modules.workflows.compiler import compile_definition
+from app.modules.workflows.compiler import (
+    WorkflowCompilerError,
+    compile_definition,
+    compiler_compatibility,
+)
 from app.modules.workflows.definition import (
     WorkflowDefinitionError,
     analyze_definition,
@@ -35,6 +42,46 @@ def test_compiler_injects_private_webhook_without_changing_source() -> None:
     assert "never-expose-this" in str(compiled)
     assert "never-expose-this" not in str(definition)
     assert any(node["type"] == "n8n-nodes-base.webhook" for node in compiled["nodes"])
+
+
+def test_compiler_matches_golden_default_fixture() -> None:
+    fixture = Path(__file__).parent / "fixtures" / "workflows" / "basic_compiled.json"
+    expected = json.loads(fixture.read_text(encoding="utf-8"))
+    assert compile_definition(
+        build_default_definition(), internal_webhook_path="private-entry"
+    ) == expected
+
+
+def test_compiler_compatibility_covers_catalog_and_rejects_missing_adapter() -> None:
+    matrix = compiler_compatibility()
+    assert len(matrix) == len(block_catalog()) == 16
+    assert {item["block_type"] for item in matrix if item["supported"]} == {
+        "trigger.manual",
+        "trigger.schedule",
+        "trigger.webhook",
+        "trigger.message_received",
+        "trigger.contact_created",
+        "logic.condition",
+        "logic.wait",
+        "flow.end",
+    }
+    definition = build_default_definition()
+    definition["nodes"].insert(
+        1,
+        {
+            "id": "loop",
+            "type": "logic.loop",
+            "label": "Repeticao",
+            "position": {"x": 250, "y": 180},
+            "config": {"max_iterations": 3},
+        },
+    )
+    definition["connections"] = [
+        {"id": "first", "source": "trigger-manual", "target": "loop"},
+        {"id": "second", "source": "loop", "target": "flow-end"},
+    ]
+    with pytest.raises(WorkflowCompilerError, match="logic.loop"):
+        compile_definition(definition, internal_webhook_path="private")
 
 
 def test_workflow_rejects_disconnected_cycle_and_embedded_secret() -> None:

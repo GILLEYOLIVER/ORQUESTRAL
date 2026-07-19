@@ -2,7 +2,7 @@ name: orkestral
 
 services:
   postgres:
-    image: postgres:18.4-bookworm
+    image: pgvector/pgvector:pg18-bookworm
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}

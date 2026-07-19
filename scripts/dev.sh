@@ -94,6 +94,8 @@ case "$ACTION" in
       UP_ARGS+=(--build)
     fi
     run_compose "${UP_ARGS[@]}"
+    # Recarrega o DNS dos upstreams quando a API ou o web foram recriados.
+    run_compose restart nginx
     wait_orkestral
     ;;
   stop)
@@ -107,6 +109,7 @@ case "$ACTION" in
       UP_ARGS+=(--build)
     fi
     run_compose "${UP_ARGS[@]}"
+    run_compose restart nginx
     wait_orkestral
     ;;
   status)

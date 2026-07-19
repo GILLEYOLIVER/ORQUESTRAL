@@ -4315,7 +4315,7 @@
   },
   "info": {
     "title": "Orkestral API",
-    "version": "0.11.0"
+    "version": "0.11.1"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -8151,6 +8151,78 @@
         ]
       }
     },
+    "/knowledge-bases/{base_id}/reindex": {
+      "post": {
+        "operationId": "reindex_knowledge_bases__base_id__reindex_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "base_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Base Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Reindex Knowledge Bases  Base Id  Reindex Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reindex",
+        "tags": [
+          "knowledge"
+        ]
+      }
+    },
     "/knowledge-bases/{base_id}/search": {
       "get": {
         "operationId": "search_knowledge_bases__base_id__search_get",
@@ -9687,6 +9759,67 @@
           }
         ],
         "summary": "List Workflow Blocks",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/workflows/blocks/compatibility": {
+      "get": {
+        "operationId": "list_workflow_block_compatibility_workflows_blocks_compatibility_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Workflow Block Compatibility Workflows Blocks Compatibility Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Workflow Block Compatibility",
         "tags": [
           "workflows"
         ]

@@ -11,6 +11,7 @@ def production_settings(
     development_expose_tokens: bool = False,
     bootstrap_enabled: bool = False,
     database_url: str = "postgresql+asyncpg://orkestral:strong-password@database.internal/orkestral",
+    knowledge_embedding_provider: str = "openai_compatible",
 ) -> Settings:
     return Settings(
         app_env="production",
@@ -26,6 +27,8 @@ def production_settings(
         n8n_api_key="production-n8n-key-with-at-least-32-characters",
         storage_access_key="production-storage-access-key-32-characters",
         storage_secret_key="production-storage-secret-key-32-characters",  # noqa: S106
+        ai_provider_api_key="production-ai-provider-key-with-32-characters",
+        knowledge_embedding_provider=knowledge_embedding_provider,
         development_expose_tokens=development_expose_tokens,
         bootstrap_enabled=bootstrap_enabled,
     )
@@ -49,3 +52,8 @@ def test_production_rejects_bootstrap() -> None:
 def test_production_rejects_local_infrastructure() -> None:
     with pytest.raises(ValidationError, match="Configurações inseguras para produção"):
         production_settings(database_url="postgresql://localhost/db")
+
+
+def test_production_rejects_local_embedding_fallback() -> None:
+    with pytest.raises(ValidationError, match="KNOWLEDGE_EMBEDDING_PROVIDER"):
+        production_settings(knowledge_embedding_provider="local_hash")

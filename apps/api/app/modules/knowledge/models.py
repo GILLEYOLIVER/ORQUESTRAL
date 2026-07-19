@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+from pgvector.sqlalchemy import Vector
 from app.core.database import Base
 
 
@@ -56,6 +57,6 @@ class KnowledgeChunk(Base):
     content: Mapped[str] = mapped_column(Text)
     token_count: Mapped[int] = mapped_column(Integer)
     embedding_ref: Mapped[str] = mapped_column(String(120))
-    embedding: Mapped[list[float]] = mapped_column(JSONB)
+    embedding: Mapped[list[float]] = mapped_column(Vector(384))
     chunk_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now())
