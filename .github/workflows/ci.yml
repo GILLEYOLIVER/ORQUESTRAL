@@ -108,6 +108,8 @@ jobs:
 
   end-to-end:
     runs-on: ubuntu-latest
+    env:
+      PHASE14_E2E: "true"
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -123,6 +125,7 @@ jobs:
           docker compose --env-file .env.example
           -f docker-compose.yml
           -f docker-compose.development.yml
+          -f docker-compose.test.yml
           up --build --detach --wait --wait-timeout 240
       - run: pnpm test:e2e
       - if: always()
@@ -130,12 +133,14 @@ jobs:
           docker compose --env-file .env.example
           -f docker-compose.yml
           -f docker-compose.development.yml
+          -f docker-compose.test.yml
           logs --no-color --tail 200
       - if: always()
         run: >-
           docker compose --env-file .env.example
           -f docker-compose.yml
           -f docker-compose.development.yml
+          -f docker-compose.test.yml
           down --volumes
 
   remote-deployment:
