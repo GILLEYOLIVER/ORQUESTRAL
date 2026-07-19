@@ -12,6 +12,7 @@ def production_settings(
     bootstrap_enabled: bool = False,
     database_url: str = "postgresql+asyncpg://orkestral:strong-password@database.internal/orkestral",
     knowledge_embedding_provider: str = "openai_compatible",
+    billing_enforcement_enabled: bool = True,
 ) -> Settings:
     return Settings(
         app_env="production",
@@ -29,6 +30,7 @@ def production_settings(
         storage_secret_key="production-storage-secret-key-32-characters",  # noqa: S106
         ai_provider_api_key="production-ai-provider-key-with-32-characters",
         knowledge_embedding_provider=knowledge_embedding_provider,
+        billing_enforcement_enabled=billing_enforcement_enabled,
         development_expose_tokens=development_expose_tokens,
         bootstrap_enabled=bootstrap_enabled,
     )
@@ -57,3 +59,8 @@ def test_production_rejects_local_infrastructure() -> None:
 def test_production_rejects_local_embedding_fallback() -> None:
     with pytest.raises(ValidationError, match="KNOWLEDGE_EMBEDDING_PROVIDER"):
         production_settings(knowledge_embedding_provider="local_hash")
+
+
+def test_production_requires_billing_enforcement() -> None:
+    with pytest.raises(ValidationError, match="BILLING_ENFORCEMENT_ENABLED"):
+        production_settings(billing_enforcement_enabled=False)

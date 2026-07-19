@@ -175,7 +175,7 @@ export function AgentsPage() {
     <div className="management-page agents-page">
       <div className="dashboard__heading">
         <div>
-          <span className="eyebrow">Fase 7 · Inteligência com limites</span>
+          <span className="eyebrow">Inteligência com limites</span>
           <h1>Agentes</h1>
           <p>
             Crie especialistas, autorize ferramentas e mantenha decisões

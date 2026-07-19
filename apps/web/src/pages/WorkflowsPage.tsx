@@ -443,7 +443,7 @@ export function WorkflowsPage() {
     <div className="visual-workflow-page">
       <header className="visual-workflow-hero">
         <div>
-          <span>Fase 9 · Estudio de automacoes</span>
+          <span>Estúdio de automações</span>
           <h1>
             Desenhe a operacao.
             <br />A Orkestral cuida do motor.

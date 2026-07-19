@@ -90,9 +90,7 @@ export function LoginPage() {
           <h1>Seu centro de operações inteligentes.</h1>
           <p>Uma base segura para conectar pessoas, processos e tecnologia.</p>
         </div>
-        <span className="auth-aside__caption">
-          Acesso multiempresa · Fase 4
-        </span>
+        <span className="auth-aside__caption">Acesso seguro multiempresa</span>
       </section>
       <section className="auth-content" aria-labelledby="login-title">
         <div className="auth-card">

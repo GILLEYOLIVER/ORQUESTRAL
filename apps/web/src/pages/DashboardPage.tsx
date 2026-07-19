@@ -213,7 +213,7 @@ export function DashboardPage() {
     <div className="metrics-dashboard">
       <header className="metrics-hero">
         <div>
-          <span>Fase 10 · Inteligencia operacional</span>
+          <span>Inteligência operacional</span>
           <h1>Resultados que mostram onde a operacao esta ganhando tempo.</h1>
           <p>
             {me?.current_company?.trade_name ?? "Orkestral"} · dados agregados e

@@ -9,10 +9,11 @@ from orkestral_plugin_sdk import PluginSDKError
 from sqlalchemy import and_, select
 
 from app.core.config import get_settings
-from app.core.dependencies import DatabaseSession
+from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
+from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.plugins.adapters import get_plugin_runtime
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError, mask_credential_fields
 from app.modules.plugins.models import (
@@ -115,6 +116,7 @@ async def update_company_plugin(
     payload: CompanyPluginUpdate,
     principal: CanManagePlugins,
     database: DatabaseSession,
+    settings: RequestSettings,
 ) -> PluginResponse:
     context = get_request_context(principal)
     plugin = await database.scalar(select(Plugin).where(Plugin.code == plugin_code))
@@ -128,6 +130,16 @@ async def update_company_plugin(
             CompanyPlugin.plugin_id == plugin.id,
         )
     )
+    consumes_capacity = payload.status == "active" and (
+        company_plugin is None or company_plugin.status != "active"
+    )
+    if consumes_capacity:
+        await enforce_limit(
+            database,
+            company_id=context.company_id,
+            metric=UsageMetric.INTEGRATIONS,
+            enforcement_enabled=settings.billing_enforcement_enabled,
+        )
     if company_plugin is None:
         company_plugin = CompanyPlugin(company_id=context.company_id, plugin_id=plugin.id)
         database.add(company_plugin)
@@ -146,6 +158,15 @@ async def update_company_plugin(
         target_id=plugin.id,
         details={"code": plugin.code},
     )
+    if consumes_capacity:
+        await record_usage(
+            database,
+            company_id=context.company_id,
+            metric=UsageMetric.INTEGRATIONS,
+            quantity=1,
+            metadata={"plugin_id": str(plugin.id), "code": plugin.code},
+            idempotency_key=f"plugin-activation:{company_plugin.id}:{now.isoformat()}",
+        )
     await database.commit()
     await database.refresh(company_plugin)
     return _plugin_response(plugin, company_plugin)
