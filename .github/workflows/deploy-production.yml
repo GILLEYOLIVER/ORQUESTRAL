@@ -1,0 +1,206 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Operation to execute
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - rollback
+      release_sha:
+        description: Full immutable commit SHA to deploy or restore
+        required: true
+        type: string
+      previous_sha:
+        description: Last known-good SHA required for automatic rollback
+        required: false
+        type: string
+      staging_evidence:
+        description: Successful staging workflow URL required for deploy
+        required: false
+        type: string
+      change_ticket:
+        description: Approved change or incident reference
+        required: true
+        type: string
+      confirmation:
+        description: Type PROMOVER-PRODUCAO
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_BASE_URL }}
+    permissions:
+      contents: read
+      packages: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - name: Validate immutable release and approval evidence
+        env:
+          ACTION: ${{ inputs.action }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PREVIOUS_SHA: ${{ inputs.previous_sha }}
+          STAGING_EVIDENCE: ${{ inputs.staging_evidence }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$CONFIRMATION" = "PROMOVER-PRODUCAO"
+          test -n "$CHANGE_TICKET"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch origin main
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+          if [ "$ACTION" = "deploy" ]; then
+            [[ "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ ]]
+            test "$PREVIOUS_SHA" != "$RELEASE_SHA"
+            evidence_prefix="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/"
+            [[ "$STAGING_EVIDENCE" == "$evidence_prefix"* ]]
+          fi
+      - name: Authenticate to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify immutable images and provenance
+        env:
+          ACTION: ${{ inputs.action }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PREVIOUS_SHA: ${{ inputs.previous_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          repository="${GITHUB_REPOSITORY,,}"
+          shas="$RELEASE_SHA"
+          if [ "$ACTION" = "deploy" ]; then
+            shas="$shas $PREVIOUS_SHA"
+          fi
+          for sha in $shas; do
+            for component in api web remote; do
+              image="ghcr.io/${repository}-${component}:sha-${sha}"
+              docker manifest inspect "$image" >/dev/null
+              gh attestation verify "oci://$image" +                --repo "$GITHUB_REPOSITORY" >/dev/null
+            done
+          done
+      - name: Validate protected production configuration
+        env:
+          BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
+          BACKUP_HOOK: ${{ secrets.PRODUCTION_BACKUP_HOOK }}
+          MIGRATION_HOOK: ${{ secrets.PRODUCTION_MIGRATION_HOOK }}
+          DEPLOY_HOOK: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
+          ROLLBACK_HOOK: ${{ secrets.PRODUCTION_ROLLBACK_HOOK }}
+          ALERT_HOOK: ${{ secrets.PRODUCTION_ALERT_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+        run: |
+          for name in BASE_URL BACKUP_HOOK MIGRATION_HOOK DEPLOY_HOOK ROLLBACK_HOOK ALERT_HOOK; do
+            value="${!name}"
+            test -n "$value"
+            [[ "$value" == https://* ]]
+            [[ "$value" != *localhost* ]]
+            [[ "$value" != *127.0.0.1* ]]
+          done
+          test "${#HOOK_TOKEN}" -ge 32
+      - name: Create pre-change backup
+        env:
+          HOOK_URL: ${{ secrets.PRODUCTION_BACKUP_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+          ACTION: ${{ inputs.action }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+        run: |
+          payload=$(jq -n +            --arg action "$ACTION" +            --arg sha "$RELEASE_SHA" +            --arg ticket "$CHANGE_TICKET" +            '{action: $action, release_sha: $sha, change_ticket: $ticket}')
+          curl --fail --silent --show-error --retry 3 +            -H "Authorization: Bearer $HOOK_TOKEN" +            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Run database migration task
+        if: inputs.action == 'deploy'
+        env:
+          HOOK_URL: ${{ secrets.PRODUCTION_MIGRATION_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+        run: |
+          payload=$(jq -n +            --arg sha "$RELEASE_SHA" +            --arg ticket "$CHANGE_TICKET" +            '{release_sha: $sha, change_ticket: $ticket}')
+          curl --fail --silent --show-error --retry 3 +            -H "Authorization: Bearer $HOOK_TOKEN" +            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Deploy immutable release
+        if: inputs.action == 'deploy'
+        env:
+          HOOK_URL: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PREVIOUS_SHA: ${{ inputs.previous_sha }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+        run: |
+          payload=$(jq -n +            --arg sha "$RELEASE_SHA" +            --arg previous_sha "$PREVIOUS_SHA" +            --arg ticket "$CHANGE_TICKET" +            '{release_sha: $sha, previous_sha: $previous_sha, change_ticket: $ticket}')
+          curl --fail --silent --show-error --retry 3 +            -H "Authorization: Bearer $HOOK_TOKEN" +            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Restore selected immutable release
+        if: inputs.action == 'rollback'
+        env:
+          HOOK_URL: ${{ secrets.PRODUCTION_ROLLBACK_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+        run: |
+          payload=$(jq -n +            --arg sha "$RELEASE_SHA" +            --arg ticket "$CHANGE_TICKET" +            '{release_sha: $sha, change_ticket: $ticket}')
+          curl --fail --silent --show-error --retry 3 +            -H "Authorization: Bearer $HOOK_TOKEN" +            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+      - name: Verify selected production release
+        id: verify
+        continue-on-error: true
+        env:
+          BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: bash scripts/verify-deployment.sh "$BASE_URL" "$RELEASE_SHA"
+      - name: Automatically restore last known-good release
+        if: inputs.action == 'deploy' && steps.verify.outcome == 'failure'
+        env:
+          HOOK_URL: ${{ secrets.PRODUCTION_ROLLBACK_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+          BASE_URL: ${{ vars.PRODUCTION_BASE_URL }}
+          PREVIOUS_SHA: ${{ inputs.previous_sha }}
+          FAILED_SHA: ${{ inputs.release_sha }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+        run: |
+          payload=$(jq -n +            --arg sha "$PREVIOUS_SHA" +            --arg failed_sha "$FAILED_SHA" +            --arg ticket "$CHANGE_TICKET" +            '{release_sha: $sha, failed_sha: $failed_sha, change_ticket: $ticket}')
+          curl --fail --silent --show-error --retry 3 +            -H "Authorization: Bearer $HOOK_TOKEN" +            -H 'Content-Type: application/json' -d "$payload" "$HOOK_URL"
+          bash scripts/verify-deployment.sh "$BASE_URL" "$PREVIOUS_SHA"
+      - name: Fail an unhealthy promotion
+        if: steps.verify.outcome == 'failure'
+        run: |
+          echo "The selected production release did not become healthy." >&2
+          exit 1
+      - name: Notify successful production change
+        if: success()
+        env:
+          ALERT_HOOK: ${{ secrets.PRODUCTION_ALERT_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+          ACTION: ${{ inputs.action }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+        run: |
+          payload=$(jq -n +            --arg status success +            --arg action "$ACTION" +            --arg sha "$RELEASE_SHA" +            --arg ticket "$CHANGE_TICKET" +            '{status: $status, action: $action, release_sha: $sha, change_ticket: $ticket}')
+          curl --fail --silent --show-error --retry 3 +            -H "Authorization: Bearer $HOOK_TOKEN" +            -H 'Content-Type: application/json' -d "$payload" "$ALERT_HOOK"
+      - name: Notify unsuccessful production change
+        if: failure()
+        env:
+          ALERT_HOOK: ${{ secrets.PRODUCTION_ALERT_HOOK }}
+          HOOK_TOKEN: ${{ secrets.PRODUCTION_HOOK_TOKEN }}
+          ACTION: ${{ inputs.action }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CHANGE_TICKET: ${{ inputs.change_ticket }}
+        run: |
+          payload=$(jq -n +            --arg status failure +            --arg action "$ACTION" +            --arg sha "$RELEASE_SHA" +            --arg ticket "$CHANGE_TICKET" +            '{status: $status, action: $action, release_sha: $sha, change_ticket: $ticket}')
+          curl --fail --silent --show-error --retry 3 +            -H "Authorization: Bearer $HOOK_TOKEN" +            -H 'Content-Type: application/json' -d "$payload" "$ALERT_HOOK" || true

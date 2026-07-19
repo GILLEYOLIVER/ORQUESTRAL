@@ -46,3 +46,14 @@ python -m app.scripts.seed_development
 4. Se necessário, restaure um dump em um banco novo e altere `DATABASE_URL` somente após validar o novo banco.
 
 Em staging, use `action=rollback` no workflow `Deploy staging` com o ultimo SHA saudavel. O mesmo artefato homologado deve ser promovido para producao sem rebuild.
+
+## Producao
+
+Producao usa o workflow manual protegido `Deploy production`. Ele exige um SHA completo
+publicado, o ultimo SHA saudavel, evidencia de staging, referencia de mudanca e confirmacao
+explicita. O workflow verifica a proveniencia das imagens, cria backup, executa a migration em
+tarefa unica, promove a release e valida versao e readiness.
+
+Se a verificacao falhar, o ultimo SHA saudavel e restaurado automaticamente e a promocao permanece
+com estado de falha para investigacao. Provisionamento, secrets, gates de lancamento e recuperacao
+estao detalhados em `docs/infrastructure/production.md`.

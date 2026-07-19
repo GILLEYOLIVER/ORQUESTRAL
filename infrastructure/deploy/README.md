@@ -5,3 +5,7 @@ O deploy de desenvolvimento usa a imagem única `Dockerfile.remote`: o React é 
 Dependências externas: Neon PostgreSQL gratuito e Upstash Redis gratuito. n8n, worker, e-mail externo e armazenamento de objetos permanecem desligados pelas flags do ambiente.
 
 Consulte `docs/infrastructure/remote-development.md` antes de provisionar.
+
+Staging e producao promovem imagens imutaveis ja publicadas no GHCR; nao usam o Blueprint gratuito
+de desenvolvimento. O contrato e o runbook de producao estao em
+`docs/infrastructure/production.md`.
