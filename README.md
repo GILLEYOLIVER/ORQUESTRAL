@@ -1,8 +1,14 @@
 # Orkestral
 
-Fundação da plataforma SaaS multiempresa de automação empresarial e agentes de inteligência artificial.
+Plataforma SaaS multiempresa de automação empresarial, integrações, agentes de inteligência artificial e módulos operacionais.
 
-O repositório contém as Fases 1 a 4 da plataforma: fundação executável, identidade multiempresa, autorização granular e núcleo modular. O primeiro módulo funcional é um CRM básico com contatos, etiquetas, pesquisa, filtros, paginação, exclusão lógica e auditoria.
+O repositório contém a fundação executável, identidade multiempresa, autorização granular, núcleo modular, CRM, agentes, conhecimento, automações, integrações, relatórios, auditoria, planos, notificações e módulos operacionais.
+
+## Manual da plataforma
+
+O [Guia completo de uso da Orkestral](docs/GUIA_COMPLETO_DE_USO.md) explica a plataforma em linguagem simples, com imagens reais, endereços de cada tela, cuidados de segurança e exemplos práticos de automações e integrações.
+
+A avaliação das atualizações automáticas está registrada na [Revisão de dependências de 20/07/2026](docs/maintenance/dependency-review-2026-07-20.md).
 
 ## Pré-requisitos
 
@@ -137,4 +143,4 @@ docs           arquitetura, APIs, banco, plugins e decisões
 tests          integração, segurança e ponta a ponta
 ```
 
-Consulte [a visão de arquitetura](docs/architecture/overview.md), [a API de autenticação](docs/api/authentication.md), [a API de autorização](docs/api/authorization.md), [o núcleo modular](docs/architecture/modularity.md), [a API do CRM](docs/api/crm.md) e o [guia de solução de problemas](docs/troubleshooting.md).
+Consulte o [guia completo de uso](docs/GUIA_COMPLETO_DE_USO.md), [a visão de arquitetura](docs/architecture/overview.md), [a API de autenticação](docs/api/authentication.md), [a API de autorização](docs/api/authorization.md), [o núcleo modular](docs/architecture/modularity.md), [a API do CRM](docs/api/crm.md) e o [guia de solução de problemas](docs/troubleshooting.md).

@@ -22,7 +22,7 @@ RUN VITE_API_BASE_URL="$VITE_API_BASE_URL" \
     VITE_AUTH_PREVIEW_ENABLED=false \
     pnpm --filter @orkestral/web build
 
-FROM python:3.14-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
