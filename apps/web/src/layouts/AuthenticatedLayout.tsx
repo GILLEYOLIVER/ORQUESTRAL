@@ -6,6 +6,7 @@ import {
   Building2,
   ContactRound,
   CreditCard,
+  FolderKanban,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -124,6 +125,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/suporte">
               <LifeBuoy size={18} />
               Suporte
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("projects.view") &&
+          isModuleActive(modules.data, "projects") ? (
+            <NavLink className="sidebar__link" to="/app/projetos">
+              <FolderKanban size={18} />
+              Projetos
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (

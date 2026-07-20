@@ -23,6 +23,7 @@ import { PluginsPage } from "./pages/PluginsPage";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { ProjectsPage } from "./pages/ProjectsPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { RolesPage } from "./pages/RolesPage";
 import { SupportPage } from "./pages/SupportPage";
@@ -219,6 +220,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="support" permission="support.tickets.view">
             <SupportPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "projetos",
+        element: (
+          <ModuleRoute moduleCode="projects" permission="projects.view">
+            <ProjectsPage />
           </ModuleRoute>
         ),
       },
