@@ -12,6 +12,7 @@ def test_registry_loads_only_installed_modules() -> None:
     assert [module.code for module in installed] == [
         "crm",
         "finance",
+        "hr",
         "inventory",
         "marketing",
         "projects",
@@ -22,14 +23,16 @@ def test_registry_loads_only_installed_modules() -> None:
     assert "crm.contacts.view" in installed[0].permissions
     assert installed[1].migrations == ("20260720_0020",)
     assert "finance.entries.settle" in installed[1].permissions
-    assert installed[2].migrations == ("20260720_0019",)
-    assert "inventory.movements.create" in installed[2].permissions
-    assert installed[3].migrations == ("20260720_0018",)
-    assert "marketing.journeys.manage" in installed[3].permissions
-    assert installed[4].migrations == ("20260720_0017",)
-    assert "projects.tasks.manage" in installed[4].permissions
-    assert installed[5].migrations == ("20260720_0016",)
-    assert "support.tickets.view" in installed[5].permissions
+    assert installed[2].migrations == ("20260720_0021",)
+    assert "hr.leave.decide" in installed[2].permissions
+    assert installed[3].migrations == ("20260720_0019",)
+    assert "inventory.movements.create" in installed[3].permissions
+    assert installed[4].migrations == ("20260720_0018",)
+    assert "marketing.journeys.manage" in installed[4].permissions
+    assert installed[5].migrations == ("20260720_0017",)
+    assert "projects.tasks.manage" in installed[5].permissions
+    assert installed[6].migrations == ("20260720_0016",)
+    assert "support.tickets.view" in installed[6].permissions
 
 
 def test_registry_rejects_duplicate_module_codes() -> None:

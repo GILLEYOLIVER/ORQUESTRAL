@@ -18,6 +18,7 @@ import { FinancePage } from "./pages/FinancePage";
 import { LandingPage } from "./pages/LandingPage";
 import { KnowledgePage } from "./pages/KnowledgePage";
 import { InventoryPage } from "./pages/InventoryPage";
+import { HRPage } from "./pages/HRPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MarketingPage } from "./pages/MarketingPage";
 import { ModulesPage } from "./pages/ModulesPage";
@@ -255,6 +256,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="finance" permission="finance.view">
             <FinancePage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "recursos-humanos",
+        element: (
+          <ModuleRoute moduleCode="hr" permission="hr.view">
+            <HRPage />
           </ModuleRoute>
         ),
       },

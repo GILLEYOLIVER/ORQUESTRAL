@@ -14,6 +14,7 @@ import {
   Megaphone,
   PackageOpen,
   ShieldCheck,
+  UserRoundCog,
   UserRound,
   UsersRound,
   Workflow,
@@ -160,6 +161,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/financeiro">
               <Landmark size={18} />
               Financeiro
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("hr.view") &&
+          isModuleActive(modules.data, "hr") ? (
+            <NavLink className="sidebar__link" to="/app/recursos-humanos">
+              <UserRoundCog size={18} />
+              Recursos humanos
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (
