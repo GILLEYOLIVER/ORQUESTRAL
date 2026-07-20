@@ -789,8 +789,8 @@ Telas:
 
 Todos os módulos acima possuem contrato próprio, permissões no servidor, menu condicionado à
 ativação, rotas protegidas, tabelas com `company_id`, migrações reversíveis e testes automatizados.
-As migrações dos módulos empresariais adicionais ocupam a sequência `20260720_0016` até
-`20260720_0022`.
+As migrações dos módulos empresariais adicionais e da sincronização do catálogo ocupam a sequência
+`20260720_0016` até `20260720_0023`.
 
 ---
 
@@ -1576,7 +1576,7 @@ Disponibilizar a Orkestral pela internet para desenvolvimento e testes sem depen
 
 - Aplicação e API: `https://orkestral-development.onrender.com`.
 - Render Web Service `orkestral-development`: Docker Free, região Virginia e health check em `/ready`.
-- Neon Free: PostgreSQL remoto com TLS e migrations Alembic controladas até `20260720_0022`.
+- Neon Free: PostgreSQL remoto com TLS e migrations Alembic controladas até `20260720_0023`.
 - Upstash Free: Redis remoto com TLS para autenticação, sessões e rate limiting.
 - GitHub Environment `development`: secret do deploy hook, URL pública e regra exclusiva para a branch `development`.
 - Repositório `GILLEYOLIVER/ORQUESTRAL` confirmado como privado.
@@ -1613,7 +1613,7 @@ O ambiente remoto contém somente dados fictícios e não substitui produção. 
 - Ponta a ponta local: 5 jornadas aprovadas e 2 integrações externas reservadas ao CI completo.
 - Ponta a ponta no CI: 7 jornadas obrigatórias, incluindo PostgreSQL, Redis, MinIO, n8n e contratos
   externos.
-- Migrações Alembic aplicadas integralmente da base até `20260720_0022`.
+- Migrações Alembic aplicadas integralmente da base até `20260720_0023`.
 - O ambiente local é restaurado automaticamente após a execução das jornadas completas.
 
 ## Testes obrigatórios

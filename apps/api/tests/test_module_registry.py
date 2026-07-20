@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.modules.authorization.catalog import TENANT_PERMISSION_CODES
 from app.modules.modularity.contract import ModuleRegistry
 from app.modules.modularity.registry import module_registry
 
@@ -36,6 +37,8 @@ def test_registry_loads_only_installed_modules() -> None:
     assert "projects.tasks.manage" in installed[6].permissions
     assert installed[7].migrations == ("20260720_0016",)
     assert "support.tickets.view" in installed[7].permissions
+    for module in installed:
+        assert set(module.permissions) <= TENANT_PERMISSION_CODES
 
 
 def test_registry_rejects_duplicate_module_codes() -> None:

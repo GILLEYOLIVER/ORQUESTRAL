@@ -20,17 +20,19 @@ CanManageModules = Annotated[Principal, Depends(require_permission("modules.mana
 
 
 def _response(catalog: ModuleCatalog, company_module: CompanyModule | None) -> ModuleResponse:
+    definition = module_registry.get(catalog.code)
+    installed = definition is not None and catalog.status == "installed"
     is_core_active = catalog.is_core and catalog.status == "installed"
     return ModuleResponse(
         id=catalog.id,
         code=catalog.code,
         name=catalog.name,
         description=catalog.description,
-        version=catalog.version,
+        version=definition.version if definition is not None and installed else catalog.version,
         category=catalog.category,
         is_core=catalog.is_core,
         catalog_status=catalog.status,
-        installed=module_registry.get(catalog.code) is not None,
+        installed=installed,
         company_status=(
             company_module.status
             if company_module is not None
