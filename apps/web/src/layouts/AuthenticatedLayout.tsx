@@ -7,6 +7,7 @@ import {
   ContactRound,
   CreditCard,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   PackageOpen,
   ShieldCheck,
@@ -115,6 +116,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/crm/contatos">
               <ContactRound size={18} />
               Contatos
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("support.tickets.view") &&
+          isModuleActive(modules.data, "support") ? (
+            <NavLink className="sidebar__link" to="/app/suporte">
+              <LifeBuoy size={18} />
+              Suporte
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (
