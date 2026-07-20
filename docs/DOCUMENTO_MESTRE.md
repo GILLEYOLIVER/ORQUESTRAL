@@ -1,6 +1,6 @@
 # DOCUMENTO MESTRE DE DESENVOLVIMENTO — ORKESTRAL
 
-**Versão:** 1.2 — especificação integral com fluxo de desenvolvimento F5
+**Versão:** 1.3 — especificação integral, módulos empresariais e deploy automatizado
 
 ## 1. IDENTIFICAÇÃO DO PROJETO
 
@@ -775,6 +775,22 @@ Telas:
 - Empresa sem o módulo ativo não acessa as rotas.
 - Contatos ficam isolados por empresa.
 - O módulo possui testes próprios.
+
+## Estado dos módulos empresariais em 20/07/2026
+
+- [x] CRM: contatos, etiquetas, pesquisa, filtros e isolamento multiempresa.
+- [x] Suporte: chamados, prioridades, interações, responsáveis e ciclo de atendimento.
+- [x] Projetos: projetos, responsáveis, tarefas, prazos e acompanhamento de execução.
+- [x] Marketing: campanhas, públicos, jornadas e etapas de comunicação.
+- [x] Estoque: itens, categorias, locais, saldos e movimentações rastreáveis.
+- [x] Financeiro: contas, categorias, receitas, despesas, vencimentos e liquidação.
+- [x] Recursos Humanos: departamentos, colaboradores, férias e afastamentos.
+- [x] Analytics: indicadores, metas, medições por período, evolução e situação das metas.
+
+Todos os módulos acima possuem contrato próprio, permissões no servidor, menu condicionado à
+ativação, rotas protegidas, tabelas com `company_id`, migrações reversíveis e testes automatizados.
+As migrações dos módulos empresariais adicionais ocupam a sequência `20260720_0016` até
+`20260720_0022`.
 
 ---
 
@@ -1556,15 +1572,16 @@ Disponibilizar a Orkestral pela internet para desenvolvimento e testes sem depen
 - [x] Exportação, restauração, rollback, limites e troubleshooting documentados.
 - [x] URL pública ativada após cadastro dos segredos gratuitos nos provedores.
 
-## Implantação ativa em 19/07/2026
+## Implantação ativa e atualizada em 20/07/2026
 
 - Aplicação e API: `https://orkestral-development.onrender.com`.
 - Render Web Service `orkestral-development`: Docker Free, região Virginia e health check em `/ready`.
-- Neon Free: PostgreSQL remoto com TLS, migrations Alembic aplicadas até `20260719_0015`.
+- Neon Free: PostgreSQL remoto com TLS e migrations Alembic controladas até `20260720_0022`.
 - Upstash Free: Redis remoto com TLS para autenticação, sessões e rate limiting.
 - GitHub Environment `development`: secret do deploy hook, URL pública e regra exclusiva para a branch `development`.
 - Repositório `GILLEYOLIVER/ORQUESTRAL` confirmado como privado.
-- Pipeline `Deploy development` e deploy por hook validados com sucesso.
+- Pipeline automático `CI` → `Publish images` → `Deploy development` acionado por push na branch
+  `development`, com publicação por SHA e verificação do commit implantado.
 - `/health`, `/ready`, `/system/version`, `robots.txt`, HTTPS, CORS restrito e login administrativo validados remotamente.
 - Nenhum recurso com cobrança obrigatória ou método de pagamento foi ativado.
 
@@ -1585,14 +1602,17 @@ O ambiente remoto contém somente dados fictícios e não substitui produção. 
 - [x] Execução local isolada e restauração automática do ambiente de desenvolvimento.
 - [x] Execução obrigatória das suítes no GitHub Actions.
 
-## Validação concluída em 19/07/2026
+## Validação atualizada em 20/07/2026
 
-- Backend e worker: 77 testes aprovados.
-- Frontend: 9 testes aprovados.
-- Integrações PostgreSQL e Redis: 4 testes aprovados em serviços descartáveis isolados.
-- Ponta a ponta: 7 testes aprovados com PostgreSQL, Redis, MinIO, n8n e contratos externos.
-- Total: 97 testes automatizados aprovados.
-- O ambiente local foi restaurado com todos os containers saudáveis após a execução.
+- API: 90 testes aprovados.
+- Worker: 1 teste aprovado.
+- Frontend: 9 testes aprovados, além de lint, tipos e build de produção.
+- Integrações PostgreSQL e Redis: 5 testes aprovados em serviços descartáveis isolados.
+- Ponta a ponta local: 5 jornadas aprovadas e 2 integrações externas reservadas ao CI completo.
+- Ponta a ponta no CI: 7 jornadas obrigatórias, incluindo PostgreSQL, Redis, MinIO, n8n e contratos
+  externos.
+- Migrações Alembic aplicadas integralmente da base até `20260720_0022`.
+- O ambiente local é restaurado automaticamente após a execução das jornadas completas.
 
 ## Testes obrigatórios
 
