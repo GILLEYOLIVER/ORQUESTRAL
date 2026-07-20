@@ -8,6 +8,7 @@ from app.modules.agents.models import (
     AgentToolRun,
     AgentUsageRecord,
 )
+from app.modules.analytics.models import AnalyticsIndicator, AnalyticsMeasurement
 from app.modules.audit.models import AuditEvent
 from app.modules.authentication.models import (
     AuthAttempt,
@@ -66,6 +67,8 @@ __all__ = [
     "AgentTool",
     "AgentToolRun",
     "AgentUsageRecord",
+    "AnalyticsIndicator",
+    "AnalyticsMeasurement",
     "ApprovalAction",
     "ApprovalRequest",
     "AuditEvent",
