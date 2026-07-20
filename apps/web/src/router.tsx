@@ -25,6 +25,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { RolesPage } from "./pages/RolesPage";
+import { SupportPage } from "./pages/SupportPage";
 import { useSession } from "./session/context";
 import { isModuleActive, useModules } from "./modules/useModules";
 
@@ -210,6 +211,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="crm" permission="crm.contacts.view">
             <CRMContactsPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "suporte",
+        element: (
+          <ModuleRoute moduleCode="support" permission="support.tickets.view">
+            <SupportPage />
           </ModuleRoute>
         ),
       },

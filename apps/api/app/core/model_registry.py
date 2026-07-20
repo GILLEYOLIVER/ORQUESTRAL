@@ -39,6 +39,7 @@ from app.modules.plugins.models import (
     Plugin,
     PluginConnectionTest,
 )
+from app.modules.support.models import SupportInteraction, SupportTicket
 from app.modules.users.models import CompanyUser, User
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 
@@ -80,6 +81,8 @@ __all__ = [
     "Role",
     "RolePermission",
     "Subscription",
+    "SupportInteraction",
+    "SupportTicket",
     "UsageRecord",
     "User",
     "Workflow",

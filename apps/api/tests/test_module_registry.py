@@ -9,10 +9,12 @@ from app.modules.modularity.registry import module_registry
 def test_registry_loads_only_installed_modules() -> None:
     installed = module_registry.installed()
 
-    assert [module.code for module in installed] == ["crm"]
+    assert [module.code for module in installed] == ["crm", "support"]
     assert installed[0].version == "1.0.0"
     assert installed[0].migrations == ("20260716_0004",)
     assert "crm.contacts.view" in installed[0].permissions
+    assert installed[1].migrations == ("20260720_0016",)
+    assert "support.tickets.view" in installed[1].permissions
 
 
 def test_registry_rejects_duplicate_module_codes() -> None:

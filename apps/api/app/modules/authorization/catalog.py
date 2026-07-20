@@ -45,6 +45,21 @@ PERMISSION_CATALOG = (
     PermissionDefinition(
         "crm.contacts.delete", "crm", "contacts.delete", "Excluir contatos do CRM"
     ),
+    PermissionDefinition(
+        "support.tickets.view", "support", "tickets.view", "Visualizar chamados de suporte"
+    ),
+    PermissionDefinition(
+        "support.tickets.create", "support", "tickets.create", "Criar chamados de suporte"
+    ),
+    PermissionDefinition(
+        "support.tickets.update", "support", "tickets.update", "Atualizar chamados de suporte"
+    ),
+    PermissionDefinition(
+        "support.tickets.comment",
+        "support",
+        "tickets.comment",
+        "Registrar interacoes em chamados",
+    ),
     PermissionDefinition("agents.view", "agents", "view", "Visualizar agentes"),
     PermissionDefinition("agents.create", "agents", "create", "Criar agentes"),
     PermissionDefinition("agents.execute", "agents", "execute", "Executar agentes"),
