@@ -17,6 +17,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LandingPage } from "./pages/LandingPage";
 import { KnowledgePage } from "./pages/KnowledgePage";
 import { LoginPage } from "./pages/LoginPage";
+import { MarketingPage } from "./pages/MarketingPage";
 import { ModulesPage } from "./pages/ModulesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { PluginsPage } from "./pages/PluginsPage";
@@ -228,6 +229,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="projects" permission="projects.view">
             <ProjectsPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "marketing",
+        element: (
+          <ModuleRoute moduleCode="marketing" permission="marketing.view">
+            <MarketingPage />
           </ModuleRoute>
         ),
       },
