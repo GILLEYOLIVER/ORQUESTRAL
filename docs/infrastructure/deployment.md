@@ -1,28 +1,43 @@
 # Deploy
 
-## Fluxo
+## Fluxo gratuito ativo
 
 1. Mudanças entram em `development` por pull request.
-2. O workflow `CI` deve concluir com sucesso.
-3. `Publish images` constrói, escaneia e publica `api`, `web` e `remote` no GHCR por SHA.
-4. Cada imagem recebe uma attestação de proveniência.
-5. `Deploy development` chama o deploy hook do Render somente depois da publicação.
-6. O workflow usa `scripts/verify-deployment.sh` para confirmar `/system/version` e `/ready`.
+2. O Render detecta o commit na branch privada `development`.
+3. O Auto-Deploy constrói `Dockerfile.remote` e publica a nova versão.
+4. O entrypoint valida variáveis, aplica migrações com lock e executa o bootstrap idempotente.
+5. O Render valida `/ready` antes de marcar o deploy como `Live`.
+6. A versão pode ser confirmada em `/system/version` e a aplicação em sua URL pública.
+
+Esse fluxo usa o plano Render Free e não depende de minutos do GitHub Actions. Em 20/07/2026, a
+conta do GitHub informou indisponibilidade dos runners por limite de gastos ou pagamento. Nenhum
+limite foi aumentado e nenhum meio de pagamento foi adicionado, preservando a regra de custo zero.
+
+## Fluxo completo preservado
+
+Quando houver cota gratuita disponível, o workflow `CI` valida código, testes, integrações,
+containers e contratos. Depois, `Publish images` constrói, escaneia e publica `api`, `web` e
+`remote` no GHCR por SHA, com proveniência. Por fim, `Deploy development` chama o hook do Render e
+usa `scripts/verify-deployment.sh` para confirmar `/system/version` e `/ready`.
 
 Staging usa o workflow manual protegido `Deploy staging`. Ele aceita somente um SHA completo ja publicado, confirma as imagens imutaveis, cria backup, executa a migracao em tarefa unica, implanta e verifica o commit. O procedimento e os secrets exigidos estao em `docs/infrastructure/staging.md`.
 
-O deploy também pode ser iniciado manualmente por `workflow_dispatch`. Um deploy nunca é considerado concluído apenas porque a imagem iniciou.
+Os workflows também podem ser iniciados por `workflow_dispatch` quando runners estiverem
+disponíveis. Um deploy nunca é considerado concluído apenas porque a imagem iniciou.
 
 ## Desenvolvimento remoto ativo
 
 - URL: `https://orkestral-development.onrender.com`.
 - Branch: `development`.
 - GitHub Environment: `development`, restrito à branch de mesmo nome.
-- Workflow: `Deploy development`.
-- Render: serviço Docker Free `orkestral-development`, conectado ao repositório privado.
+- Deploy ativo: Auto-Deploy nativo por commit.
+- Render: serviço Docker Free `orkestral-development`, conectado ao repositório privado e à branch
+  `development`.
 - Verificação: commit publicado em `/system/version` e dependências em `/ready`.
 
-Em 19/07/2026, o workflow manual de validação `29702874801` acionou o Render pelo deploy hook, verificou o commit `b987f45` e terminou com sucesso. O deploy correspondente também terminou como `Live` no Render.
+Em 20/07/2026, o Auto-Deploy publicou o commit `5947b37` em 1m39s e o marcou como `Live`. O
+histórico anterior também preserva a validação manual `29702874801`, que publicou `b987f45` pelo
+deploy hook com sucesso.
 
 ## Ambientes protegidos
 
