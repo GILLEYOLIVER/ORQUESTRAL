@@ -60,6 +60,92 @@ PERMISSION_CATALOG = (
         "tickets.comment",
         "Registrar interacoes em chamados",
     ),
+    PermissionDefinition("projects.view", "projects", "view", "Visualizar projetos"),
+    PermissionDefinition("projects.create", "projects", "create", "Criar projetos"),
+    PermissionDefinition("projects.update", "projects", "update", "Alterar projetos"),
+    PermissionDefinition("projects.delete", "projects", "delete", "Excluir projetos"),
+    PermissionDefinition(
+        "projects.tasks.manage", "projects", "tasks.manage", "Gerenciar tarefas de projetos"
+    ),
+    PermissionDefinition("marketing.view", "marketing", "view", "Visualizar marketing"),
+    PermissionDefinition("marketing.create", "marketing", "create", "Criar campanhas"),
+    PermissionDefinition("marketing.update", "marketing", "update", "Alterar campanhas"),
+    PermissionDefinition("marketing.delete", "marketing", "delete", "Excluir campanhas"),
+    PermissionDefinition(
+        "marketing.audience.manage",
+        "marketing",
+        "audience.manage",
+        "Gerenciar publicos de campanhas",
+    ),
+    PermissionDefinition(
+        "marketing.journeys.manage",
+        "marketing",
+        "journeys.manage",
+        "Gerenciar jornadas de marketing",
+    ),
+    PermissionDefinition("inventory.view", "inventory", "view", "Visualizar estoque"),
+    PermissionDefinition(
+        "inventory.items.manage", "inventory", "items.manage", "Gerenciar itens de estoque"
+    ),
+    PermissionDefinition(
+        "inventory.movements.create",
+        "inventory",
+        "movements.create",
+        "Registrar movimentacoes de estoque",
+    ),
+    PermissionDefinition(
+        "inventory.locations.manage",
+        "inventory",
+        "locations.manage",
+        "Gerenciar locais de estoque",
+    ),
+    PermissionDefinition(
+        "inventory.categories.manage",
+        "inventory",
+        "categories.manage",
+        "Gerenciar categorias de estoque",
+    ),
+    PermissionDefinition("finance.view", "finance", "view", "Visualizar financeiro"),
+    PermissionDefinition(
+        "finance.accounts.manage", "finance", "accounts.manage", "Gerenciar contas financeiras"
+    ),
+    PermissionDefinition(
+        "finance.entries.create", "finance", "entries.create", "Criar lancamentos financeiros"
+    ),
+    PermissionDefinition(
+        "finance.entries.update", "finance", "entries.update", "Alterar lancamentos financeiros"
+    ),
+    PermissionDefinition(
+        "finance.entries.settle", "finance", "entries.settle", "Liquidar lancamentos financeiros"
+    ),
+    PermissionDefinition(
+        "finance.categories.manage",
+        "finance",
+        "categories.manage",
+        "Gerenciar categorias financeiras",
+    ),
+    PermissionDefinition("hr.view", "hr", "view", "Visualizar recursos humanos"),
+    PermissionDefinition(
+        "hr.employees.manage", "hr", "employees.manage", "Gerenciar colaboradores"
+    ),
+    PermissionDefinition(
+        "hr.departments.manage", "hr", "departments.manage", "Gerenciar departamentos"
+    ),
+    PermissionDefinition("hr.leave.create", "hr", "leave.create", "Solicitar afastamentos"),
+    PermissionDefinition("hr.leave.decide", "hr", "leave.decide", "Decidir afastamentos"),
+    PermissionDefinition("analytics.view", "analytics", "view", "Visualizar Analytics"),
+    PermissionDefinition(
+        "analytics.indicators.manage",
+        "analytics",
+        "indicators.manage",
+        "Gerenciar indicadores e metas",
+    ),
+    PermissionDefinition(
+        "analytics.measurements.manage",
+        "analytics",
+        "measurements.manage",
+        "Registrar medicoes de indicadores",
+    ),
     PermissionDefinition("agents.view", "agents", "view", "Visualizar agentes"),
     PermissionDefinition("agents.create", "agents", "create", "Criar agentes"),
     PermissionDefinition("agents.execute", "agents", "execute", "Executar agentes"),
