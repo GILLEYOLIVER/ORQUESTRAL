@@ -22,7 +22,10 @@ done
 
 bash -n scripts/verify-deployment.sh scripts/check-cicd-contracts.sh
 grep -q 'aquasecurity/trivy-action' .github/workflows/publish-images.yml
-grep -q 'actions/attest@' .github/workflows/publish-images.yml
+grep -q 'provenance: mode=max' .github/workflows/publish-images.yml
+grep -q 'sbom: true' .github/workflows/publish-images.yml
+grep -q 'imagetools inspect' .github/workflows/publish-images.yml
+grep -q 'actions/workflows/ci.yml/runs' .github/workflows/publish-images.yml
 grep -q 'ghcr.io' .github/workflows/publish-images.yml
 grep -q 'environment: staging' .github/workflows/deploy-staging.yml
 grep -q 'STAGING_MIGRATION_HOOK' .github/workflows/deploy-staging.yml
