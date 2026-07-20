@@ -16,6 +16,7 @@ import { ErrorPage } from "./pages/ErrorPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LandingPage } from "./pages/LandingPage";
 import { KnowledgePage } from "./pages/KnowledgePage";
+import { InventoryPage } from "./pages/InventoryPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MarketingPage } from "./pages/MarketingPage";
 import { ModulesPage } from "./pages/ModulesPage";
@@ -237,6 +238,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="marketing" permission="marketing.view">
             <MarketingPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "estoque",
+        element: (
+          <ModuleRoute moduleCode="inventory" permission="inventory.view">
+            <InventoryPage />
           </ModuleRoute>
         ),
       },

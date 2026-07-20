@@ -24,6 +24,13 @@ from app.modules.authorization.models import (
 from app.modules.billing.models import Plan, Subscription, UsageRecord
 from app.modules.companies.models import Company
 from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
+from app.modules.inventory.models import (
+    InventoryBalance,
+    InventoryCategory,
+    InventoryItem,
+    InventoryLocation,
+    InventoryMovement,
+)
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
 from app.modules.marketing.models import (
     MarketingCampaign,
@@ -72,6 +79,11 @@ __all__ = [
     "CompanyPlugin",
     "CompanyUser",
     "IntegrationCredential",
+    "InventoryBalance",
+    "InventoryCategory",
+    "InventoryItem",
+    "InventoryLocation",
+    "InventoryMovement",
     "KnowledgeBase",
     "KnowledgeChunk",
     "KnowledgeDocument",
