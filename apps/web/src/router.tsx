@@ -14,6 +14,7 @@ import { CRMContactsPage } from "./pages/CRMContactsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ErrorPage } from "./pages/ErrorPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { FinancePage } from "./pages/FinancePage";
 import { LandingPage } from "./pages/LandingPage";
 import { KnowledgePage } from "./pages/KnowledgePage";
 import { InventoryPage } from "./pages/InventoryPage";
@@ -246,6 +247,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="inventory" permission="inventory.view">
             <InventoryPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "financeiro",
+        element: (
+          <ModuleRoute moduleCode="finance" permission="finance.view">
+            <FinancePage />
           </ModuleRoute>
         ),
       },

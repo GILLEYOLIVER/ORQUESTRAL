@@ -8,6 +8,7 @@ import {
   CreditCard,
   FolderKanban,
   LayoutDashboard,
+  Landmark,
   LifeBuoy,
   LogOut,
   Megaphone,
@@ -151,6 +152,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/estoque">
               <Warehouse size={18} />
               Estoque
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("finance.view") &&
+          isModuleActive(modules.data, "finance") ? (
+            <NavLink className="sidebar__link" to="/app/financeiro">
+              <Landmark size={18} />
+              Financeiro
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (

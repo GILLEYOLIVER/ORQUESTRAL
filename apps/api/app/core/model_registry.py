@@ -24,6 +24,7 @@ from app.modules.authorization.models import (
 from app.modules.billing.models import Plan, Subscription, UsageRecord
 from app.modules.companies.models import Company
 from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
+from app.modules.finance.models import FinancialAccount, FinancialCategory, FinancialEntry
 from app.modules.inventory.models import (
     InventoryBalance,
     InventoryCategory,
@@ -78,6 +79,9 @@ __all__ = [
     "CompanyModule",
     "CompanyPlugin",
     "CompanyUser",
+    "FinancialAccount",
+    "FinancialCategory",
+    "FinancialEntry",
     "IntegrationCredential",
     "InventoryBalance",
     "InventoryCategory",
