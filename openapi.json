@@ -3919,6 +3919,559 @@
         "title": "ProblemDetails",
         "type": "object"
       },
+      "ProjectCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "name": {
+            "maxLength": 180,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "default": "normal",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "default": "planning",
+            "enum": [
+              "planning",
+              "active",
+              "on_hold",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreate",
+        "type": "object"
+      },
+      "ProjectResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "priority": {
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "progress_percent": {
+            "title": "Progress Percent",
+            "type": "integer"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "enum": [
+              "planning",
+              "active",
+              "on_hold",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_done": {
+            "title": "Task Done",
+            "type": "integer"
+          },
+          "task_total": {
+            "title": "Task Total",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "status",
+          "priority",
+          "start_date",
+          "due_date",
+          "completed_at",
+          "task_total",
+          "task_done",
+          "progress_percent",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProjectResponse",
+        "type": "object"
+      },
+      "ProjectTaskCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "position": {
+            "default": 0,
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          },
+          "priority": {
+            "default": "normal",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "status": {
+            "default": "todo",
+            "enum": [
+              "todo",
+              "in_progress",
+              "blocked",
+              "done",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "ProjectTaskCreate",
+        "type": "object"
+      },
+      "ProjectTaskResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "priority": {
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "urgent"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "project_id": {
+            "format": "uuid",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "todo",
+              "in_progress",
+              "blocked",
+              "done",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "title",
+          "description",
+          "status",
+          "priority",
+          "due_date",
+          "position",
+          "completed_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProjectTaskResponse",
+        "type": "object"
+      },
+      "ProjectTaskUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "enum": [
+                  "low",
+                  "normal",
+                  "high",
+                  "urgent"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "todo",
+                  "in_progress",
+                  "blocked",
+                  "done",
+                  "cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ProjectTaskUpdate",
+        "type": "object"
+      },
+      "ProjectUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 180,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "enum": [
+                  "low",
+                  "normal",
+                  "high",
+                  "urgent"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "planning",
+                  "active",
+                  "on_hold",
+                  "completed",
+                  "cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "ProjectUpdate",
+        "type": "object"
+      },
       "PurgeAuditEventsRequest": {
         "additionalProperties": false,
         "properties": {
@@ -12477,6 +13030,656 @@
         "summary": "List Connection Tests",
         "tags": [
           "plugins"
+        ]
+      }
+    },
+    "/projects": {
+      "get": {
+        "operationId": "list_projects_projects_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectResponse"
+                  },
+                  "title": "Response List Projects Projects Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Projects",
+        "tags": [
+          "projects"
+        ]
+      },
+      "post": {
+        "operationId": "create_project_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/projects/{project_id}": {
+      "delete": {
+        "operationId": "archive_project_projects__project_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Project",
+        "tags": [
+          "projects"
+        ]
+      },
+      "get": {
+        "operationId": "get_project_projects__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Project",
+        "tags": [
+          "projects"
+        ]
+      },
+      "patch": {
+        "operationId": "update_project_projects__project_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/projects/{project_id}/tasks": {
+      "get": {
+        "operationId": "list_tasks_projects__project_id__tasks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectTaskResponse"
+                  },
+                  "title": "Response List Tasks Projects  Project Id  Tasks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tasks",
+        "tags": [
+          "projects"
+        ]
+      },
+      "post": {
+        "operationId": "create_task_projects__project_id__tasks_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Task",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/projects/{project_id}/tasks/{task_id}": {
+      "delete": {
+        "operationId": "delete_task_projects__project_id__tasks__task_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Task",
+        "tags": [
+          "projects"
+        ]
+      },
+      "patch": {
+        "operationId": "update_task_projects__project_id__tasks__task_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Task",
+        "tags": [
+          "projects"
         ]
       }
     },

@@ -1296,6 +1296,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Projects */
+        get: operations["list_projects_projects_get"];
+        put?: never;
+        /** Create Project */
+        post: operations["create_project_projects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Project */
+        get: operations["get_project_projects__project_id__get"];
+        put?: never;
+        post?: never;
+        /** Archive Project */
+        delete: operations["archive_project_projects__project_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Project */
+        patch: operations["update_project_projects__project_id__patch"];
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tasks */
+        get: operations["list_tasks_projects__project_id__tasks_get"];
+        put?: never;
+        /** Create Task */
+        post: operations["create_task_projects__project_id__tasks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Task */
+        delete: operations["delete_task_projects__project_id__tasks__task_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Task */
+        patch: operations["update_task_projects__project_id__tasks__task_id__patch"];
+        trace?: never;
+    };
     "/ready": {
         parameters: {
             query?: never;
@@ -3295,6 +3368,172 @@ export interface components {
              * @default about:blank
              */
             type: string;
+        };
+        /** ProjectCreate */
+        ProjectCreate: {
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Priority
+             * @default normal
+             * @enum {string}
+             */
+            priority: "low" | "normal" | "high" | "urgent";
+            /** Start Date */
+            start_date?: string | null;
+            /**
+             * Status
+             * @default planning
+             * @enum {string}
+             */
+            status: "planning" | "active" | "on_hold" | "completed" | "cancelled";
+        };
+        /** ProjectResponse */
+        ProjectResponse: {
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "low" | "normal" | "high" | "urgent";
+            /** Progress Percent */
+            progress_percent: number;
+            /** Start Date */
+            start_date: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planning" | "active" | "on_hold" | "completed" | "cancelled";
+            /** Task Done */
+            task_done: number;
+            /** Task Total */
+            task_total: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ProjectTaskCreate */
+        ProjectTaskCreate: {
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /**
+             * Position
+             * @default 0
+             */
+            position: number;
+            /**
+             * Priority
+             * @default normal
+             * @enum {string}
+             */
+            priority: "low" | "normal" | "high" | "urgent";
+            /**
+             * Status
+             * @default todo
+             * @enum {string}
+             */
+            status: "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+            /** Title */
+            title: string;
+        };
+        /** ProjectTaskResponse */
+        ProjectTaskResponse: {
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Position */
+            position: number;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "low" | "normal" | "high" | "urgent";
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ProjectTaskUpdate */
+        ProjectTaskUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Position */
+            position?: number | null;
+            /** Priority */
+            priority?: ("low" | "normal" | "high" | "urgent") | null;
+            /** Status */
+            status?: ("todo" | "in_progress" | "blocked" | "done" | "cancelled") | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** ProjectUpdate */
+        ProjectUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Priority */
+            priority?: ("low" | "normal" | "high" | "urgent") | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** Status */
+            status?: ("planning" | "active" | "on_hold" | "completed" | "cancelled") | null;
         };
         /** PurgeAuditEventsRequest */
         PurgeAuditEventsRequest: {
@@ -8601,6 +8840,459 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectionTestHistoryResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_projects_projects_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_project_projects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_project_projects__project_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    archive_project_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_project_projects__project_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_tasks_projects__project_id__tasks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTaskResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_task_projects__project_id__tasks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectTaskCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTaskResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    delete_task_projects__project_id__tasks__task_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_task_projects__project_id__tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectTaskUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTaskResponse"];
                 };
             };
             /** @description Solicitação inválida */
