@@ -196,6 +196,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/indicators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Indicators */
+        get: operations["list_indicators_analytics_indicators_get"];
+        put?: never;
+        /** Create Indicator */
+        post: operations["create_indicator_analytics_indicators_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/indicators/{indicator_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Deactivate Indicator */
+        delete: operations["deactivate_indicator_analytics_indicators__indicator_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Indicator */
+        patch: operations["update_indicator_analytics_indicators__indicator_id__patch"];
+        trace?: never;
+    };
+    "/analytics/indicators/{indicator_id}/measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Measurements */
+        get: operations["list_measurements_analytics_indicators__indicator_id__measurements_get"];
+        put?: never;
+        /** Create Measurement */
+        post: operations["create_measurement_analytics_indicators__indicator_id__measurements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_analytics_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit/events": {
         parameters: {
             query?: never;
@@ -2817,6 +2888,40 @@ export interface components {
             /** Total Tokens */
             total_tokens: number;
         };
+        /** AnalyticsOverviewResponse */
+        AnalyticsOverviewResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Indicators */
+            indicators: components["schemas"]["IndicatorSnapshot"][];
+            summary: components["schemas"]["AnalyticsSummary"];
+        };
+        /** AnalyticsSummary */
+        AnalyticsSummary: {
+            /**
+             * Active Indicators
+             * @default 0
+             */
+            active_indicators: number;
+            /**
+             * Indicators With Data
+             * @default 0
+             */
+            indicators_with_data: number;
+            /**
+             * Targets Achieved
+             * @default 0
+             */
+            targets_achieved: number;
+            /**
+             * Targets Behind
+             * @default 0
+             */
+            targets_behind: number;
+        };
         /** ApprovalActionResponse */
         ApprovalActionResponse: {
             /** Action */
@@ -3922,6 +4027,147 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** IndicatorCreate */
+        IndicatorCreate: {
+            /**
+             * Category
+             * @default Geral
+             */
+            category: string;
+            /** Code */
+            code: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Direction
+             * @default higher_better
+             * @enum {string}
+             */
+            direction: "higher_better" | "lower_better" | "neutral";
+            /** Name */
+            name: string;
+            /** Target Value */
+            target_value?: number | string | null;
+            /**
+             * Unit
+             * @default number
+             * @enum {string}
+             */
+            unit: "number" | "currency" | "percent" | "hours" | "days";
+        };
+        /** IndicatorResponse */
+        IndicatorResponse: {
+            /** Active */
+            active: boolean;
+            /** Category */
+            category: string;
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "higher_better" | "lower_better" | "neutral";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Target Value */
+            target_value: string | null;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "number" | "currency" | "percent" | "hours" | "days";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** IndicatorSnapshot */
+        IndicatorSnapshot: {
+            /** Active */
+            active: boolean;
+            /** Category */
+            category: string;
+            /** Change Percent */
+            change_percent?: string | null;
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "higher_better" | "lower_better" | "neutral";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Latest Value */
+            latest_value?: string | null;
+            /** Measured At */
+            measured_at?: string | null;
+            /** Name */
+            name: string;
+            /** Previous Value */
+            previous_value?: string | null;
+            /** Target Progress Percent */
+            target_progress_percent?: string | null;
+            /**
+             * Target Status
+             * @default no_data
+             * @enum {string}
+             */
+            target_status: "achieved" | "behind" | "no_target" | "no_data";
+            /** Target Value */
+            target_value: string | null;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "number" | "currency" | "percent" | "hours" | "days";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** IndicatorUpdate */
+        IndicatorUpdate: {
+            /** Active */
+            active?: boolean | null;
+            /** Category */
+            category?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Direction */
+            direction?: ("higher_better" | "lower_better" | "neutral") | null;
+            /** Name */
+            name?: string | null;
+            /** Target Value */
+            target_value?: number | string | null;
+            /** Unit */
+            unit?: ("number" | "currency" | "percent" | "hours" | "days") | null;
+        };
         /** InventorySummaryResponse */
         InventorySummaryResponse: {
             /** Items Total */
@@ -4363,6 +4609,62 @@ export interface components {
             /** Requires Company Selection */
             requires_company_selection: boolean;
             user: components["schemas"]["UserResponse"];
+        };
+        /** MeasurementCreate */
+        MeasurementCreate: {
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /**
+             * Source
+             * @default manual
+             */
+            source: string;
+            /** Value */
+            value: number | string;
+        };
+        /** MeasurementResponse */
+        MeasurementResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Indicator Id
+             * Format: uuid
+             */
+            indicator_id: string;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Source */
+            source: string;
+            /** Value */
+            value: string;
         };
         /** MembershipResponse */
         MembershipResponse: {
@@ -6631,6 +6933,361 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentToolResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_indicators_analytics_indicators_get: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndicatorResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_indicator_analytics_indicators_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndicatorCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndicatorResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deactivate_indicator_analytics_indicators__indicator_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indicator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_indicator_analytics_indicators__indicator_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indicator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndicatorUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndicatorResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_measurements_analytics_indicators__indicator_id__measurements_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                indicator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeasurementResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_measurement_analytics_indicators__indicator_id__measurements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indicator_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeasurementResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    overview_analytics_overview_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+                category?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsOverviewResponse"];
                 };
             };
             /** @description Solicitação inválida */

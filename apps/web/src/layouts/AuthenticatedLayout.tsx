@@ -4,6 +4,7 @@ import {
   Bot,
   Boxes,
   Building2,
+  ChartColumnBig,
   ContactRound,
   CreditCard,
   FolderKanban,
@@ -169,6 +170,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/recursos-humanos">
               <UserRoundCog size={18} />
               Recursos humanos
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("analytics.view") &&
+          isModuleActive(modules.data, "analytics") ? (
+            <NavLink className="sidebar__link" to="/app/analytics">
+              <ChartColumnBig size={18} />
+              Analytics
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (

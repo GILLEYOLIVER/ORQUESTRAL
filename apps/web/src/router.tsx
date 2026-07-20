@@ -6,6 +6,7 @@ import { AuthenticatedLayout } from "./layouts/AuthenticatedLayout";
 import { PublicLayout } from "./layouts/PublicLayout";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage";
 import { AgentsPage } from "./pages/AgentsPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { BillingPage } from "./pages/BillingPage";
 import { CompaniesPage } from "./pages/CompaniesPage";
 import { CompanySelectionPage } from "./pages/CompanySelectionPage";
@@ -264,6 +265,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="hr" permission="hr.view">
             <HRPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "analytics",
+        element: (
+          <ModuleRoute moduleCode="analytics" permission="analytics.view">
+            <AnalyticsPage />
           </ModuleRoute>
         ),
       },
