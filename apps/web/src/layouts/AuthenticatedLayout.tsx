@@ -16,6 +16,7 @@ import {
   UserRound,
   UsersRound,
   Workflow,
+  Warehouse,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { environment } from "../lib/environment";
@@ -142,6 +143,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/marketing">
               <Megaphone size={18} />
               Marketing
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("inventory.view") &&
+          isModuleActive(modules.data, "inventory") ? (
+            <NavLink className="sidebar__link" to="/app/estoque">
+              <Warehouse size={18} />
+              Estoque
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (
