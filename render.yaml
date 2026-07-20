@@ -5,8 +5,9 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile.remote
     dockerContext: .
+    branch: development
     healthCheckPath: /ready
-    autoDeploy: false
+    autoDeployTrigger: commit
     envVars:
       - key: APP_ENV
         value: development

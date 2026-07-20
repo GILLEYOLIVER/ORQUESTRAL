@@ -1580,8 +1580,10 @@ Disponibilizar a Orkestral pela internet para desenvolvimento e testes sem depen
 - Upstash Free: Redis remoto com TLS para autenticação, sessões e rate limiting.
 - GitHub Environment `development`: secret do deploy hook, URL pública e regra exclusiva para a branch `development`.
 - Repositório `GILLEYOLIVER/ORQUESTRAL` confirmado como privado.
-- Pipeline automático `CI` → `Publish images` → `Deploy development` acionado por push na branch
-  `development`, com publicação por SHA e verificação do commit implantado.
+- Auto-Deploy nativo do Render acionado por commit na branch privada `development`, sem consumir
+  minutos do GitHub Actions e sem cobrança obrigatória.
+- Pipeline completo `CI` → `Publish images` → `Deploy development` preservado para validação por
+  SHA quando houver cota gratuita disponível no GitHub Actions.
 - `/health`, `/ready`, `/system/version`, `robots.txt`, HTTPS, CORS restrito e login administrativo validados remotamente.
 - Nenhum recurso com cobrança obrigatória ou método de pagamento foi ativado.
 
@@ -1670,7 +1672,8 @@ Não considere uma fase concluída sem testes automatizados.
 - [x] Publicação de imagens OCI imutáveis por SHA no GHCR.
 - [x] Proveniência verificável para imagens publicadas.
 - [x] Contratos separados para local, testing, development, staging e production.
-- [x] Deploy de development condicionado a CI e publicação aprovados.
+- [x] Deploy gratuito de development por Auto-Deploy nativo do Render na branch `development`.
+- [x] Deploy condicionado a CI e publicação por SHA preservado como trilha de promoção completa.
 - [x] Health check valida versão e commit implantados.
 - [x] Migração serializada no development e separável em staging/production.
 - [x] Rollback, backups, monitoramento e promoção documentados.
