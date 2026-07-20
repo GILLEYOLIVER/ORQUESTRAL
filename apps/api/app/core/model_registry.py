@@ -25,6 +25,12 @@ from app.modules.billing.models import Plan, Subscription, UsageRecord
 from app.modules.companies.models import Company
 from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
+from app.modules.marketing.models import (
+    MarketingCampaign,
+    MarketingCampaignContact,
+    MarketingJourney,
+    MarketingJourneyStep,
+)
 from app.modules.metrics.models import MetricAggregationRun, MetricDailySummary
 from app.modules.modularity.models import CompanyModule, ModuleCatalog
 from app.modules.notifications.models import (
@@ -69,6 +75,10 @@ __all__ = [
     "KnowledgeBase",
     "KnowledgeChunk",
     "KnowledgeDocument",
+    "MarketingCampaign",
+    "MarketingCampaignContact",
+    "MarketingJourney",
+    "MarketingJourneyStep",
     "MetricAggregationRun",
     "MetricDailySummary",
     "ModuleCatalog",

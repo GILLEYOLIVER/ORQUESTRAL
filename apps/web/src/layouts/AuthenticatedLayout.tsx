@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  Megaphone,
   PackageOpen,
   ShieldCheck,
   UserRound,
@@ -133,6 +134,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/projetos">
               <FolderKanban size={18} />
               Projetos
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("marketing.view") &&
+          isModuleActive(modules.data, "marketing") ? (
+            <NavLink className="sidebar__link" to="/app/marketing">
+              <Megaphone size={18} />
+              Marketing
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("users.view") ? (

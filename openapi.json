@@ -1882,6 +1882,507 @@
         "title": "CRMTagResponse",
         "type": "object"
       },
+      "CampaignAudienceCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "title": "CampaignAudienceCreate",
+        "type": "object"
+      },
+      "CampaignAudienceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "campaign_id": {
+            "format": "uuid",
+            "title": "Campaign Id",
+            "type": "string"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_interaction_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Interaction At"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "sent",
+              "delivered",
+              "engaged",
+              "converted",
+              "failed",
+              "unsubscribed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "campaign_id",
+          "contact_id",
+          "status",
+          "scheduled_at",
+          "sent_at",
+          "last_interaction_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CampaignAudienceResponse",
+        "type": "object"
+      },
+      "CampaignAudienceUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "planned",
+              "sent",
+              "delivered",
+              "engaged",
+              "converted",
+              "failed",
+              "unsubscribed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "CampaignAudienceUpdate",
+        "type": "object"
+      },
+      "CampaignCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_cents": {
+            "default": 0,
+            "maximum": 10000000000.0,
+            "minimum": 0.0,
+            "title": "Budget Cents",
+            "type": "integer"
+          },
+          "channel": {
+            "enum": [
+              "email",
+              "whatsapp",
+              "sms",
+              "social",
+              "multi_channel"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End At"
+          },
+          "name": {
+            "maxLength": 180,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "start_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start At"
+          },
+          "status": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "scheduled",
+              "active",
+              "paused",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "channel"
+        ],
+        "title": "CampaignCreate",
+        "type": "object"
+      },
+      "CampaignResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "audience_total": {
+            "title": "Audience Total",
+            "type": "integer"
+          },
+          "budget_cents": {
+            "title": "Budget Cents",
+            "type": "integer"
+          },
+          "channel": {
+            "enum": [
+              "email",
+              "whatsapp",
+              "sms",
+              "social",
+              "multi_channel"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "converted_total": {
+            "title": "Converted Total",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End At"
+          },
+          "engaged_total": {
+            "title": "Engaged Total",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "spent_cents": {
+            "title": "Spent Cents",
+            "type": "integer"
+          },
+          "start_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start At"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "scheduled",
+              "active",
+              "paused",
+              "completed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "objective",
+          "channel",
+          "status",
+          "start_at",
+          "end_at",
+          "budget_cents",
+          "spent_cents",
+          "audience_total",
+          "engaged_total",
+          "converted_total",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CampaignResponse",
+        "type": "object"
+      },
+      "CampaignUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_cents": {
+            "anyOf": [
+              {
+                "maximum": 10000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Cents"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "email",
+                  "whatsapp",
+                  "sms",
+                  "social",
+                  "multi_channel"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 180,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objective"
+          },
+          "spent_cents": {
+            "anyOf": [
+              {
+                "maximum": 10000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spent Cents"
+          },
+          "start_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start At"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "scheduled",
+                  "active",
+                  "paused",
+                  "completed",
+                  "cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "CampaignUpdate",
+        "type": "object"
+      },
       "CapabilitiesResponse": {
         "properties": {
           "background_worker": {
@@ -2834,6 +3335,357 @@
         "title": "InvitationResponse",
         "type": "object"
       },
+      "JourneyCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 180,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "active",
+              "paused",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trigger_type": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "contact_created",
+              "contact_tagged",
+              "scheduled"
+            ],
+            "title": "Trigger Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "JourneyCreate",
+        "type": "object"
+      },
+      "JourneyResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "paused",
+              "archived"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_total": {
+            "title": "Step Total",
+            "type": "integer"
+          },
+          "trigger_type": {
+            "enum": [
+              "manual",
+              "contact_created",
+              "contact_tagged",
+              "scheduled"
+            ],
+            "title": "Trigger Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "trigger_type",
+          "status",
+          "step_total",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JourneyResponse",
+        "type": "object"
+      },
+      "JourneyStepCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "enum": [
+              "wait",
+              "email",
+              "whatsapp",
+              "task",
+              "webhook"
+            ],
+            "title": "Action Type",
+            "type": "string"
+          },
+          "configuration": {
+            "additionalProperties": true,
+            "title": "Configuration",
+            "type": "object"
+          },
+          "name": {
+            "maxLength": 180,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "action_type",
+          "position"
+        ],
+        "title": "JourneyStepCreate",
+        "type": "object"
+      },
+      "JourneyStepResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "enum": [
+              "wait",
+              "email",
+              "whatsapp",
+              "task",
+              "webhook"
+            ],
+            "title": "Action Type",
+            "type": "string"
+          },
+          "configuration": {
+            "additionalProperties": true,
+            "title": "Configuration",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "journey_id": {
+            "format": "uuid",
+            "title": "Journey Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "journey_id",
+          "name",
+          "action_type",
+          "position",
+          "configuration",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JourneyStepResponse",
+        "type": "object"
+      },
+      "JourneyStepUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "wait",
+                  "email",
+                  "whatsapp",
+                  "task",
+                  "webhook"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Type"
+          },
+          "configuration": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 180,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "title": "JourneyStepUpdate",
+        "type": "object"
+      },
+      "JourneyUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 180,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "active",
+                  "paused",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "trigger_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manual",
+                  "contact_created",
+                  "contact_tagged",
+                  "scheduled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Type"
+          }
+        },
+        "title": "JourneyUpdate",
+        "type": "object"
+      },
       "LimitResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2930,6 +3782,35 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "MarketingSummaryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "audience_total": {
+            "title": "Audience Total",
+            "type": "integer"
+          },
+          "campaigns_active": {
+            "title": "Campaigns Active",
+            "type": "integer"
+          },
+          "campaigns_total": {
+            "title": "Campaigns Total",
+            "type": "integer"
+          },
+          "conversions_total": {
+            "title": "Conversions Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "campaigns_total",
+          "campaigns_active",
+          "audience_total",
+          "conversions_total"
+        ],
+        "title": "MarketingSummaryResponse",
         "type": "object"
       },
       "MeResponse": {
@@ -11297,6 +12178,1278 @@
         "summary": "Import Web",
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/marketing/campaigns": {
+      "get": {
+        "operationId": "list_campaigns_marketing_campaigns_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CampaignResponse"
+                  },
+                  "title": "Response List Campaigns Marketing Campaigns Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Campaigns",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "post": {
+        "operationId": "create_campaign_marketing_campaigns_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Campaign",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/campaigns/{campaign_id}": {
+      "delete": {
+        "operationId": "archive_campaign_marketing_campaigns__campaign_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Campaign",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "get": {
+        "operationId": "get_campaign_marketing_campaigns__campaign_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Campaign",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "patch": {
+        "operationId": "update_campaign_marketing_campaigns__campaign_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Campaign",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/campaigns/{campaign_id}/audience": {
+      "get": {
+        "operationId": "list_campaign_audience_marketing_campaigns__campaign_id__audience_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CampaignAudienceResponse"
+                  },
+                  "title": "Response List Campaign Audience Marketing Campaigns  Campaign Id  Audience Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Campaign Audience",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "post": {
+        "operationId": "add_campaign_contact_marketing_campaigns__campaign_id__audience_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignAudienceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignAudienceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Add Campaign Contact",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/campaigns/{campaign_id}/audience/{item_id}": {
+      "delete": {
+        "operationId": "remove_campaign_contact_marketing_campaigns__campaign_id__audience__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Campaign Contact",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "patch": {
+        "operationId": "update_campaign_contact_marketing_campaigns__campaign_id__audience__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "campaign_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Campaign Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampaignAudienceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignAudienceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Campaign Contact",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/journeys": {
+      "get": {
+        "operationId": "list_journeys_marketing_journeys_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JourneyResponse"
+                  },
+                  "title": "Response List Journeys Marketing Journeys Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Journeys",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "post": {
+        "operationId": "create_journey_marketing_journeys_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Journey",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/journeys/{journey_id}": {
+      "delete": {
+        "operationId": "archive_journey_marketing_journeys__journey_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "journey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Journey Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Archive Journey",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "patch": {
+        "operationId": "update_journey_marketing_journeys__journey_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "journey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Journey Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Journey",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/journeys/{journey_id}/steps": {
+      "get": {
+        "operationId": "list_journey_steps_marketing_journeys__journey_id__steps_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "journey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Journey Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JourneyStepResponse"
+                  },
+                  "title": "Response List Journey Steps Marketing Journeys  Journey Id  Steps Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Journey Steps",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "post": {
+        "operationId": "create_journey_step_marketing_journeys__journey_id__steps_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "journey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Journey Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneyStepCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyStepResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Journey Step",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/journeys/{journey_id}/steps/{step_id}": {
+      "delete": {
+        "operationId": "delete_journey_step_marketing_journeys__journey_id__steps__step_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "journey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Journey Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Journey Step",
+        "tags": [
+          "marketing"
+        ]
+      },
+      "patch": {
+        "operationId": "update_journey_step_marketing_journeys__journey_id__steps__step_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "journey_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Journey Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "step_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Step Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneyStepUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyStepResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Journey Step",
+        "tags": [
+          "marketing"
+        ]
+      }
+    },
+    "/marketing/summary": {
+      "get": {
+        "operationId": "marketing_summary_marketing_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Marketing Summary",
+        "tags": [
+          "marketing"
         ]
       }
     },

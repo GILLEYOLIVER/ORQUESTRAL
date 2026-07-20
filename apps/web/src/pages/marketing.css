@@ -1,0 +1,422 @@
+.marketing-page {
+  display: grid;
+  gap: 22px;
+}
+.marketing-hero {
+  align-items: end;
+  background:
+    radial-gradient(
+      circle at 85% 20%,
+      rgba(255, 196, 96, 0.45),
+      transparent 25%
+    ),
+    linear-gradient(135deg, #174941, #0d302c);
+  border-radius: 28px;
+  color: #f8fbf9;
+  display: flex;
+  justify-content: space-between;
+  min-height: 230px;
+  padding: 38px;
+}
+.marketing-hero h1 {
+  font-size: clamp(2rem, 4.3vw, 3.7rem);
+  letter-spacing: -0.05em;
+  line-height: 1;
+  margin: 10px 0 15px;
+  max-width: 760px;
+}
+.marketing-hero p {
+  color: #c7ded8;
+  margin: 0;
+  max-width: 690px;
+}
+.marketing-metrics {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, 1fr);
+}
+.marketing-metrics > * {
+  display: grid;
+  gap: 6px;
+}
+.marketing-metrics strong {
+  color: #173c35;
+  font-size: 2rem;
+}
+.marketing-metrics span {
+  color: #6b7d78;
+}
+.marketing-tabs {
+  background: #e8efec;
+  border-radius: 14px;
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  width: fit-content;
+}
+.marketing-tabs button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: #55706a;
+  cursor: pointer;
+  display: flex;
+  gap: 7px;
+  padding: 10px 16px;
+}
+.marketing-tabs button.active {
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(25, 66, 58, 0.09);
+  color: #17493f;
+  font-weight: 700;
+}
+.marketing-heading,
+.campaign-detail__top,
+.audience-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.marketing-heading h2 {
+  margin: 4px 0 0;
+}
+.marketing-form {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr;
+}
+.marketing-form label {
+  display: grid;
+  font-size: 0.76rem;
+  font-weight: 700;
+  gap: 6px;
+}
+.marketing-form .wide {
+  grid-column: 1 / -1;
+}
+.marketing-form input,
+.marketing-form select,
+.marketing-form textarea,
+.audience-add select,
+.journey-create input,
+.journey-flow input {
+  background: #fbfdfc;
+  border: 1px solid #c8d7d2;
+  border-radius: 11px;
+  color: #17332e;
+  font: inherit;
+  padding: 11px 12px;
+}
+.marketing-form textarea {
+  min-height: 75px;
+  resize: vertical;
+}
+.marketing-workspace {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(230px, 0.7fr) minmax(0, 1.7fr);
+}
+.campaign-list {
+  background: #edf3f0;
+  border: 1px solid #d8e3df;
+  border-radius: 18px;
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+}
+.campaign-list button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: #17352f;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 14px;
+  text-align: left;
+}
+.campaign-list button.active {
+  background: #fff;
+  border-color: #a8c9bf;
+  box-shadow: 0 8px 20px rgba(21, 58, 51, 0.08);
+}
+.campaign-list strong,
+.campaign-list small {
+  display: block;
+}
+.campaign-list small {
+  color: #72827e;
+  margin-top: 5px;
+}
+.campaign-list i {
+  color: #427267;
+  font-size: 0.7rem;
+  font-style: normal;
+  text-transform: uppercase;
+}
+.campaign-detail {
+  min-height: 520px;
+  padding: 27px;
+}
+.campaign-detail__top h2 {
+  font-size: 2rem;
+  margin: 10px 0 7px;
+}
+.campaign-detail__top p {
+  color: #667873;
+  margin: 0;
+}
+.campaign-pill {
+  border-radius: 99px;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 6px 9px;
+  text-transform: uppercase;
+}
+.campaign-pill--draft {
+  background: #ece9e2;
+  color: #625d52;
+}
+.campaign-pill--active {
+  background: #d8eee6;
+  color: #17624f;
+}
+.campaign-pill--paused,
+.campaign-pill--scheduled {
+  background: #f6e7ce;
+  color: #855a16;
+}
+.campaign-pill--completed {
+  background: #dcebd8;
+  color: #386c30;
+}
+.campaign-pill--cancelled {
+  background: #f1dddd;
+  color: #843e38;
+}
+.marketing-danger {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #a34033;
+  cursor: pointer;
+  display: flex;
+  gap: 6px;
+}
+.campaign-numbers {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 24px 0 13px;
+}
+.campaign-numbers article {
+  background: #f2f6f4;
+  border-radius: 12px;
+  padding: 13px;
+}
+.campaign-numbers strong,
+.campaign-numbers span {
+  display: block;
+}
+.campaign-numbers span {
+  color: #71817d;
+  font-size: 0.76rem;
+  margin-top: 3px;
+}
+.campaign-actions {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 28px;
+}
+.campaign-actions button {
+  background: #fff;
+  border: 1px solid #cbd9d5;
+  border-radius: 9px;
+  color: #244b42;
+  cursor: pointer;
+  padding: 8px 12px;
+}
+.audience-heading {
+  border-top: 1px solid #e0e8e5;
+  padding-top: 20px;
+}
+.audience-heading > div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+.audience-add {
+  display: grid !important;
+  grid-template-columns: minmax(150px, 1fr) auto;
+}
+.audience-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+.audience-list article {
+  align-items: center;
+  border: 1px solid #dde6e3;
+  border-radius: 11px;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: auto 1fr auto;
+  padding: 10px;
+}
+.audience-list strong,
+.audience-list small {
+  display: block;
+}
+.audience-list small {
+  color: #71817d;
+}
+.audience-list button {
+  background: transparent;
+  border: 0;
+  color: #a34033;
+  cursor: pointer;
+}
+.journey-create {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr auto;
+}
+.journey-grid {
+  align-items: start;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.4fr);
+}
+.journey-list {
+  display: grid;
+  gap: 8px;
+}
+.journey-list button {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d7e2df;
+  border-radius: 13px;
+  color: #20443c;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto 1fr auto;
+  padding: 14px;
+  text-align: left;
+}
+.journey-list button.active {
+  border-color: #4f9482;
+  box-shadow: 0 8px 22px rgba(22, 65, 56, 0.1);
+}
+.journey-list strong,
+.journey-list small {
+  display: block;
+}
+.journey-list small {
+  color: #71817d;
+  margin-top: 4px;
+}
+.journey-flow {
+  min-height: 360px;
+}
+.journey-flow h3 {
+  margin-top: 0;
+}
+.journey-steps {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 15px;
+}
+.journey-steps article {
+  align-items: center;
+  background: #f2f6f4;
+  border-radius: 12px;
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+}
+.journey-steps i {
+  align-items: center;
+  background: #1d5e50;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  font-style: normal;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+.journey-steps strong,
+.journey-steps small {
+  display: block;
+}
+.journey-steps small {
+  color: #71817d;
+}
+.journey-flow form {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 1fr auto;
+}
+.marketing-empty {
+  color: #71817d;
+  padding: 28px 15px;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .marketing-workspace,
+  .journey-grid {
+    grid-template-columns: 1fr;
+  }
+  .campaign-list {
+    grid-auto-columns: minmax(230px, 75vw);
+    grid-auto-flow: column;
+    overflow-x: auto;
+  }
+  .campaign-numbers {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .marketing-hero {
+    align-items: flex-start;
+    border-radius: 20px;
+    flex-direction: column;
+    gap: 25px;
+    min-height: 0;
+    padding: 25px 20px;
+  }
+  .marketing-metrics {
+    grid-template-columns: 1fr;
+  }
+  .marketing-heading,
+  .campaign-detail__top,
+  .audience-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 13px;
+  }
+  .marketing-form {
+    grid-template-columns: 1fr;
+  }
+  .marketing-form .wide {
+    grid-column: auto;
+  }
+  .campaign-detail {
+    padding: 19px;
+  }
+  .campaign-numbers {
+    grid-template-columns: 1fr 1fr;
+  }
+  .audience-add,
+  .journey-create,
+  .journey-flow form {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+}
