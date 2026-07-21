@@ -346,7 +346,9 @@ class AgentDelegationResponse(StrictSchema):
     objective_fingerprint: str
     result_fingerprint: str | None
     context_keys: list[str]
-    status: Literal["queued", "in_progress", "completed", "failed", "cancelled"]
+    status: Literal[
+        "queued", "in_progress", "awaiting_approval", "completed", "failed", "cancelled"
+    ]
     depth: int
     reserved_cost_microunits: int
     consumed_cost_microunits: int

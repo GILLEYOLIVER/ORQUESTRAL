@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import socket
+from collections.abc import Sequence
 from datetime import timedelta
 from time import perf_counter
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,12 +16,17 @@ from app.core.security import utc_now
 from app.modules.agents.coordination import coordination_fingerprint
 from app.modules.agents.coordination_models import (
     AgentDelegation,
+    AgentDelegationApproval,
     AgentDelegationPayload,
     AgentTaskContract,
 )
-from app.modules.agents.coordination_payload import decrypt_delegation_objective
+from app.modules.agents.coordination_payload import (
+    decrypt_approval_arguments,
+    decrypt_delegation_objective,
+    encrypt_approval_arguments,
+)
 from app.modules.agents.governance import active_agent_version, evaluate_tool_autonomy
-from app.modules.agents.models import Agent, AgentDataPolicy, AgentRun, AgentTool
+from app.modules.agents.models import Agent, AgentDataPolicy, AgentRun, AgentTool, AgentVersion
 from app.modules.agents.providers.base import (
     LanguageModelProviderError,
     ModelMessage,
@@ -45,6 +51,8 @@ from app.modules.authorization.models import Permission, RolePermission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
+from app.modules.notifications.models import ApprovalRequest
+from app.modules.notifications.service import create_approval_request
 from app.modules.users.models import CompanyUser
 
 
@@ -157,6 +165,29 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                     )
                 )
             ).all()
+            approved = await database.scalar(
+                select(AgentDelegationApproval)
+                .where(
+                    AgentDelegationApproval.delegation_id == delegation.id,
+                    AgentDelegationApproval.company_id == delegation.company_id,
+                    AgentDelegationApproval.status == "approved",
+                )
+                .order_by(AgentDelegationApproval.decided_at.desc())
+                .limit(1)
+            )
+            if approved is not None:
+                return await _execute_approved_tool(
+                    database=database,
+                    settings=settings,
+                    delegation=delegation,
+                    payload=payload,
+                    contract=contract,
+                    agent=agent,
+                    version=version,
+                    tools=tools,
+                    permissions=permissions,
+                    approval=approved,
+                )
             provider_tools = [
                 ToolDefinition(
                     key=tool.tool_key,
@@ -195,6 +226,87 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
             denied: list[str] = []
             tool_by_key = {tool.tool_key: tool for tool in tools}
             error_code: str | None = None
+            for call in result.tool_calls[: contract.max_steps]:
+                tool = tool_by_key.get(call.key)
+                if tool is None:
+                    continue
+                try:
+                    assert_tool_access(tool, permissions)
+                    validate_tool_arguments(tool.input_schema, call.arguments)
+                except (ToolAccessError, ToolArgumentsError):
+                    continue
+                autonomy = evaluate_tool_autonomy(
+                    autonomy_level=version.autonomy_level, risk_level=tool.risk_level
+                )
+                if autonomy.allowed and autonomy.requires_approval:
+                    approval_id = uuid4()
+                    linked = AgentDelegationApproval(
+                        id=approval_id,
+                        company_id=delegation.company_id,
+                        delegation_id=delegation.id,
+                        tool_id=tool.id,
+                        encrypted_arguments=encrypt_approval_arguments(
+                            settings,
+                            company_id=delegation.company_id,
+                            delegation_id=delegation.id,
+                            approval_id=approval_id,
+                            arguments=call.arguments,
+                        ),
+                        requested_by_user_id=delegation.requested_by_user_id,
+                        expires_at=delegation.due_at,
+                    )
+                    database.add(linked)
+                    await database.flush()
+                    approval_request = await create_approval_request(
+                        database,
+                        company_id=delegation.company_id,
+                        requested_by_user_id=delegation.requested_by_user_id,
+                        source_type="agent",
+                        title="Autorizar ferramenta de delegação",
+                        description=(
+                            f"A ferramenta {tool.name} exige aprovação antes da execução."
+                        ),
+                        context={
+                            "delegation_id": str(delegation.id),
+                            "agent_id": str(agent.id),
+                            "tool_key": tool.tool_key,
+                        },
+                        expires_at=delegation.due_at,
+                        reminder_minutes=settings.notification_reminder_minutes,
+                    )
+                    linked.approval_request_id = approval_request.id
+                    duration_ms = max(0, round((perf_counter() - started) * 1000))
+                    agent_run = AgentRun(
+                        company_id=delegation.company_id,
+                        agent_id=agent.id,
+                        agent_version_id=version.id,
+                        requested_by_user_id=delegation.requested_by_user_id,
+                        execution_mode="live",
+                        status="awaiting_approval",
+                        request_fingerprint=delegation.objective_fingerprint,
+                        planned_tool_keys=[item.key for item in result.tool_calls],
+                        completed_tool_keys=[],
+                        denied_tool_keys=[],
+                        step_count=min(len(result.tool_calls), contract.max_steps),
+                        total_tokens=usage.total_tokens,
+                        cost_microunits=usage.cost_microunits,
+                        duration_ms=duration_ms,
+                        max_steps=contract.max_steps,
+                        max_runtime_seconds=min(
+                            version.max_runtime_seconds, contract.deadline_seconds
+                        ),
+                        finished_at=utc_now(),
+                    )
+                    database.add(agent_run)
+                    delegation.status = "awaiting_approval"
+                    delegation.consumed_cost_microunits = usage.cost_microunits
+                    delegation.claimed_by = None
+                    delegation.lease_expires_at = None
+                    await database.commit()
+                    return {
+                        "status": "awaiting_approval",
+                        "delegation_id": str(delegation.id),
+                    }
             for index, call in enumerate(result.tool_calls):
                 if index >= contract.max_steps:
                     denied.append(call.key)
@@ -300,6 +412,121 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
         await resources.close()
 
 
+async def _execute_approved_tool(
+    *,
+    database: AsyncSession,
+    settings: Settings,
+    delegation: AgentDelegation,
+    payload: AgentDelegationPayload,
+    contract: AgentTaskContract,
+    agent: Agent,
+    version: AgentVersion,
+    tools: Sequence[AgentTool],
+    permissions: frozenset[str],
+    approval: AgentDelegationApproval,
+) -> dict[str, str | int]:
+    if approval.encrypted_arguments is None:
+        return await _fail(database, delegation, payload, "approved_arguments_destroyed")
+    tool = next((item for item in tools if item.id == approval.tool_id), None)
+    if tool is None or tool.tool_key not in contract.allowed_tool_keys:
+        return await _fail(database, delegation, payload, "approved_tool_unavailable")
+    try:
+        arguments = decrypt_approval_arguments(
+            settings,
+            company_id=delegation.company_id,
+            delegation_id=delegation.id,
+            approval_id=approval.id,
+            encrypted=approval.encrypted_arguments,
+        )
+        assert_tool_access(tool, permissions)
+        validate_tool_arguments(tool.input_schema, arguments)
+        autonomy = evaluate_tool_autonomy(
+            autonomy_level=version.autonomy_level, risk_level=tool.risk_level
+        )
+        if not autonomy.allowed:
+            raise ToolAccessError("A autonomia atual não permite esta ferramenta.")
+        started = perf_counter()
+        async with asyncio.timeout(min(version.max_runtime_seconds, contract.deadline_seconds)):
+            tool_result = await execute_builtin_tool(
+                tool_key=tool.tool_key,
+                arguments=arguments,
+                company_id=delegation.company_id,
+                database=database,
+                settings=settings,
+            )
+    except (
+        ToolAccessError,
+        ToolArgumentsError,
+        ToolExecutionError,
+        TimeoutError,
+        ValueError,
+    ):
+        approval.encrypted_arguments = None
+        return await _fail(database, delegation, payload, "approved_tool_execution_failed")
+    duration_ms = max(0, round((perf_counter() - started) * 1000))
+    agent_run = AgentRun(
+        company_id=delegation.company_id,
+        agent_id=agent.id,
+        agent_version_id=version.id,
+        requested_by_user_id=delegation.requested_by_user_id,
+        execution_mode="live",
+        status="completed",
+        request_fingerprint=delegation.objective_fingerprint,
+        planned_tool_keys=[tool.tool_key],
+        completed_tool_keys=[tool.tool_key],
+        denied_tool_keys=[],
+        step_count=1,
+        total_tokens=0,
+        cost_microunits=0,
+        duration_ms=duration_ms,
+        max_steps=contract.max_steps,
+        max_runtime_seconds=min(version.max_runtime_seconds, contract.deadline_seconds),
+        finished_at=utc_now(),
+    )
+    database.add(agent_run)
+    delegation.status = "completed"
+    delegation.last_error_code = None
+    delegation.result_fingerprint = coordination_fingerprint(
+        company_id=delegation.company_id, value=str(tool_result)
+    )
+    delegation.finished_at = utc_now()
+    delegation.claimed_by = None
+    delegation.lease_expires_at = None
+    approval.encrypted_arguments = None
+    payload.encrypted_objective = None
+    payload.destroyed_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=delegation.company_id,
+        actor_user_id=delegation.requested_by_user_id,
+        action="agent.delegation.completed",
+        target_type="agent_delegation",
+        target_id=delegation.id,
+        details={"agent_run_id": str(agent_run.id), "approval_id": str(approval.id)},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.delegation.completed",
+            company_id=delegation.company_id,
+            actor_user_id=delegation.requested_by_user_id,
+            classification="confidential",
+            payload={
+                "delegation_id": str(delegation.id),
+                "agent_run_id": str(agent_run.id),
+                "approval_id": str(approval.id),
+                "status": "completed",
+            },
+        ),
+    )
+    await database.commit()
+    return {
+        "status": "completed",
+        "delegation_id": str(delegation.id),
+        "completed_tools": 1,
+    }
+
+
 async def _fail(
     database: AsyncSession,
     delegation: AgentDelegation,
@@ -312,6 +539,23 @@ async def _fail(
     delegation.lease_expires_at = None
     payload.encrypted_objective = None
     payload.destroyed_at = utc_now()
+    approvals = list(
+        await database.scalars(
+            select(AgentDelegationApproval).where(
+                AgentDelegationApproval.delegation_id == delegation.id
+            )
+        )
+    )
+    for approval in approvals:
+        approval.encrypted_arguments = None
+        if approval.status == "pending":
+            approval.status = "expired"
+            approval.decided_at = utc_now()
+        if approval.approval_request_id is not None:
+            request = await database.get(ApprovalRequest, approval.approval_request_id)
+            if request is not None and request.status == "pending":
+                request.status = "expired"
+                request.decided_at = utc_now()
     await database.commit()
     return {"status": "failed", "delegation_id": str(delegation.id)}
 
@@ -325,7 +569,7 @@ async def maintain_delegations(*, settings: Settings) -> dict[str, int]:
             rows = list(
                 await database.scalars(
                     select(AgentDelegation).where(
-                        AgentDelegation.status.in_(("queued", "in_progress"))
+                        AgentDelegation.status.in_(("queued", "in_progress", "awaiting_approval"))
                     )
                 )
             )
@@ -343,6 +587,25 @@ async def maintain_delegations(*, settings: Settings) -> dict[str, int]:
                     if payload:
                         payload.encrypted_objective = None
                         payload.destroyed_at = now
+                    approvals = list(
+                        await database.scalars(
+                            select(AgentDelegationApproval).where(
+                                AgentDelegationApproval.delegation_id == delegation.id,
+                                AgentDelegationApproval.status == "pending",
+                            )
+                        )
+                    )
+                    for approval in approvals:
+                        approval.status = "expired"
+                        approval.encrypted_arguments = None
+                        approval.decided_at = now
+                        if approval.approval_request_id is not None:
+                            request = await database.get(
+                                ApprovalRequest, approval.approval_request_id
+                            )
+                            if request is not None and request.status == "pending":
+                                request.status = "expired"
+                                request.decided_at = now
                     expired += 1
                 elif (
                     delegation.status == "in_progress"

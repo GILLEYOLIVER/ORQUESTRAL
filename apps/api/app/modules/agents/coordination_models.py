@@ -79,7 +79,7 @@ class AgentDelegation(Base):
     __table_args__ = (
         UniqueConstraint("company_id", "idempotency_key", name="uq_agent_delegation_idempotency"),
         CheckConstraint(
-            "status IN ('queued', 'in_progress', 'completed', 'failed', 'cancelled')",
+            "status IN ('queued', 'in_progress', 'awaiting_approval', 'completed', 'failed', 'cancelled')",
             name="ck_agent_delegation_status",
         ),
         CheckConstraint("depth BETWEEN 1 AND 5", name="ck_agent_delegation_depth"),
@@ -153,6 +153,48 @@ class AgentDelegationPayload(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
     destroyed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class AgentDelegationApproval(Base):
+    __tablename__ = "agent_delegation_approvals"
+    __table_args__ = (
+        UniqueConstraint("approval_request_id", name="uq_agent_delegation_approval_request"),
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'expired')",
+            name="ck_agent_delegation_approval_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    delegation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_delegations.id", ondelete="CASCADE"), index=True
+    )
+    approval_request_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("approval_requests.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    tool_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_tools.id", ondelete="RESTRICT"), index=True
+    )
+    encrypted_arguments: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending", index=True
+    )
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    decided_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AgentHandoff(Base):

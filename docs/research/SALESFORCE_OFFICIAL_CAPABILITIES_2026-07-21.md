@@ -112,18 +112,18 @@ Fontes:
 
 ## Matriz resumida da pesquisa
 
-| Capacidade de referencia | Orkestral atual | Nivel | Proximo passo original |
-| --- | --- | ---: | --- |
-| Kernel multi-tenant e metadados | Kernel modular e `company_id`; sem plataforma dinamica | 1 | Definicoes versionadas e renderer compartilhado |
-| Seguranca objeto/campo/registro | Permissao por acao e tenant | 2 | Policy engine e compartilhamento granular |
-| Agentes com acoes | 3 ferramentas tipadas e aprovacao | 2 | Versoes, politicas, budgets e catalogo extensivel |
-| Testes de agentes | Testes tecnicos do runtime | 1 | Suites funcionais, ataques e gates de publicacao |
-| Observabilidade de agentes | Tokens, custo, duracao e runs de ferramenta | 2 | Trace, metricas, violacoes e painel operacional |
-| Modelo de dados unificado | Dominios separados | 1 | Identidade canonica, fontes, matching e linhagem |
-| Eventos empresariais | Execucoes e filas sem outbox canonica | 1 | Outbox, consumidores, DLQ e replay |
-| Automacao visual | 16 blocos e definicao canonica | 3 | Simulacao, confiabilidade e provedores multiplos |
-| Governanca de API | OpenAPI e permissoes de rota | 1 | Catalogo, politicas, conformidade e ambientes |
-| Credenciais e conectores | 7 plugins e cofre cifrado | 2 | SDK, OAuth, schemas, rate limit e revogacao |
+| Capacidade de referencia        | Orkestral atual                                        | Nivel | Proximo passo original                            |
+| ------------------------------- | ------------------------------------------------------ | ----: | ------------------------------------------------- |
+| Kernel multi-tenant e metadados | Kernel modular e `company_id`; sem plataforma dinamica |     1 | Definicoes versionadas e renderer compartilhado   |
+| Seguranca objeto/campo/registro | Permissao por acao e tenant                            |     2 | Policy engine e compartilhamento granular         |
+| Agentes com acoes               | 3 ferramentas tipadas e aprovacao                      |     2 | Versoes, politicas, budgets e catalogo extensivel |
+| Testes de agentes               | Testes tecnicos do runtime                             |     1 | Suites funcionais, ataques e gates de publicacao  |
+| Observabilidade de agentes      | Tokens, custo, duracao e runs de ferramenta            |     2 | Trace, metricas, violacoes e painel operacional   |
+| Modelo de dados unificado       | Dominios separados                                     |     1 | Identidade canonica, fontes, matching e linhagem  |
+| Eventos empresariais            | Execucoes e filas sem outbox canonica                  |     1 | Outbox, consumidores, DLQ e replay                |
+| Automacao visual                | 16 blocos e definicao canonica                         |     3 | Simulacao, confiabilidade e provedores multiplos  |
+| Governanca de API               | OpenAPI e permissoes de rota                           |     1 | Catalogo, politicas, conformidade e ambientes     |
+| Credenciais e conectores        | 7 plugins e cofre cifrado                              |     2 | SDK, OAuth, schemas, rate limit e revogacao       |
 
 ## Decisoes para o roadmap
 

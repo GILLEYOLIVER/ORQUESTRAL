@@ -299,6 +299,7 @@ Data: 21 de julho de 2026.
 - Studio E2E: login, schema, validacao, publicacao, registro e exclusao aprovados.
 - Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
 - Divida tecnica: bundle principal possui aviso de 853 kB; aplicar code splitting em ciclo futuro.
+
 ## Ciclo 10 - Governança de agentes
 
 - Versões de agentes com rascunho, publicação, aposentadoria, checksum e migração de agentes existentes.
@@ -309,6 +310,7 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 119 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0032_agent_governance.py`.
 - Próximo passo: ciclo 11, trace de execuções, limites de passos/tempo e modo sombra.
+
 ## Ciclo 11 - Observabilidade e modo sombra de agentes
 
 - Trace seguro por execução, sem persistir prompt ou raciocínio interno.
@@ -318,6 +320,7 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 121 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0033_agent_run_observability.py`.
 - Próximo passo: ciclo 12, políticas de dados por provedor e defesa contra prompt injection.
+
 ## Ciclo 12 - Segurança de dados dos agentes
 
 - Política de saída de dados por agente e provedor, aplicada no back-end.
@@ -327,6 +330,7 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 123 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0034_agent_data_security.py`.
 - Próximo passo: ciclo 13, suites de avaliação, casos adversariais e bloqueio de publicação.
+
 ## Ciclo 13 - Avaliação e gate de publicação de agentes
 
 - Suítes e casos adversariais vinculados à versão do agente.
@@ -336,6 +340,7 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 124 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0035_agent_evaluation_gate.py`.
 - Próximo passo: ciclo 14, contratos de tarefa e coordenação multiagente.
+
 ## Ciclo 14 - Coordenação multiagente
 
 - Contratos entre supervisor e especialista com propagação de ferramentas, passos e custo.
@@ -345,6 +350,7 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 126 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0036_multiagent_coordination.py`.
 - Próximo passo: ciclo 15, fila assíncrona de delegações e execução coordenada.
+
 ## Ciclo 15 - Worker seguro de delegações
 
 - Payload temporário protegido por AES-256-GCM e vinculado a empresa/delegação.
@@ -355,3 +361,18 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 127 testes unitários da API, 11 testes de integração e 2 testes do worker aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0037_delegation_worker_payloads.py`.
 - Próximo passo: ciclo 16, aprovação humana assíncrona em delegações de alto risco.
+
+## Ciclo 16 - Aprovação assíncrona de delegações
+
+- Pausa antes de ferramentas que exigem aprovação humana.
+- Argumentos protegidos por AES-256-GCM e ausentes de notificações/eventos.
+- Integração com a central de aprovações e retomada pela fila após commit.
+- Revalidação completa antes de executar a chamada aprovada.
+- Destruição de objetivo e argumentos em rejeição, expiração ou falha.
+- Migração: `20260721_0038_delegation_approvals.py`.
+- Contratos OpenAPI e tipos TypeScript regenerados para os ciclos empresariais acumulados.
+- Validação local: Ruff e MyPy aprovados; 128 testes da API, 11 integrações,
+  2 testes do worker e 12 testes do front-end aprovados; E2E com 6 aprovados e
+  2 cenários explicitamente ignorados; build, migração reversível, auditoria de
+  dependências e varredura de segredos aprovados.
+- Próximo passo: ciclo 17, políticas de aprovação por valor e contexto.

@@ -15,7 +15,9 @@ from app.modules.agents.coordination import (
     validate_task_contract,
 )
 from app.modules.agents.coordination_payload import (
+    decrypt_approval_arguments,
     decrypt_delegation_objective,
+    encrypt_approval_arguments,
     encrypt_delegation_objective,
 )
 from app.modules.agents.evaluation import evaluate_agent_case
@@ -252,3 +254,25 @@ def test_delegation_payload_is_authenticated_to_tenant_and_delegation() -> None:
             delegation_id=delegation_id,
             encrypted=token,
         )
+
+
+def test_approval_arguments_are_encrypted_and_bound_to_approval() -> None:
+    settings = Settings(app_env="testing")
+    company_id = UUID("00000000-0000-0000-0000-000000000020")
+    delegation_id = UUID("00000000-0000-0000-0000-000000000021")
+    approval_id = UUID("00000000-0000-0000-0000-000000000022")
+    token = encrypt_approval_arguments(
+        settings,
+        company_id=company_id,
+        delegation_id=delegation_id,
+        approval_id=approval_id,
+        arguments={"reason": "confidencial"},
+    )
+    assert "confidencial" not in token
+    assert decrypt_approval_arguments(
+        settings,
+        company_id=company_id,
+        delegation_id=delegation_id,
+        approval_id=approval_id,
+        encrypted=token,
+    ) == {"reason": "confidencial"}

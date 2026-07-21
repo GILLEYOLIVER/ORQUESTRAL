@@ -69,15 +69,15 @@ A Empresa A tenta consultar e excluir esses identificadores. O resultado exigido
 
 ## Riscos registrados
 
-| Risco | Severidade | Situacao | Tratamento |
-| --- | --- | --- | --- |
-| Nova tabela empresarial sem `company_id` | Critica | Mitigado neste ciclo | Contrato automatico de metadata |
-| Nova rota de escrita sem permissao | Critica | Mitigado neste ciclo | Contrato automatico de dependencias |
-| Codigo de permissao inexistente no catalogo | Alta | Mitigado neste ciclo | Comparacao automatica rota versus catalogo |
-| Chave estrangeira entre tenants sem composicao por empresa | Alta | Parcial | Validacao na aplicacao; planejar constraints compostas por dominio |
-| Ausencia de PostgreSQL RLS | Alta | Planejado | ADR, prototipo, testes de worker/admin e medicao antes de ativar |
-| Cobertura negativa ainda nao inclui todo endpoint | Media | Parcial | Expandir matriz a cada ciclo de dominio |
-| Administrador de plataforma com alto privilegio | Alta | Controlado | Auditoria, menor privilegio, MFA/SSO e segregacao futura |
+| Risco                                                      | Severidade | Situacao             | Tratamento                                                         |
+| ---------------------------------------------------------- | ---------- | -------------------- | ------------------------------------------------------------------ |
+| Nova tabela empresarial sem `company_id`                   | Critica    | Mitigado neste ciclo | Contrato automatico de metadata                                    |
+| Nova rota de escrita sem permissao                         | Critica    | Mitigado neste ciclo | Contrato automatico de dependencias                                |
+| Codigo de permissao inexistente no catalogo                | Alta       | Mitigado neste ciclo | Comparacao automatica rota versus catalogo                         |
+| Chave estrangeira entre tenants sem composicao por empresa | Alta       | Parcial              | Validacao na aplicacao; planejar constraints compostas por dominio |
+| Ausencia de PostgreSQL RLS                                 | Alta       | Planejado            | ADR, prototipo, testes de worker/admin e medicao antes de ativar   |
+| Cobertura negativa ainda nao inclui todo endpoint          | Media      | Parcial              | Expandir matriz a cada ciclo de dominio                            |
+| Administrador de plataforma com alto privilegio            | Alta       | Controlado           | Auditoria, menor privilegio, MFA/SSO e segregacao futura           |
 
 ## Proximas melhorias obrigatorias
 

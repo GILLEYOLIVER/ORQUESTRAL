@@ -12,29 +12,29 @@ Ainda nao e um runtime autonomo empresarial. Faltam versoes publicaveis do agent
 
 ### Provedores
 
-| Provedor | Configurado localmente | Observacao |
-| --- | --- | --- |
-| `local` | Sim | Permite testes sem enviar dados a um provedor externo |
-| `openai_compatible` | Nao | Contrato existe, mas depende de configuracao e credencial externa |
+| Provedor            | Configurado localmente | Observacao                                                        |
+| ------------------- | ---------------------- | ----------------------------------------------------------------- |
+| `local`             | Sim                    | Permite testes sem enviar dados a um provedor externo             |
+| `openai_compatible` | Nao                    | Contrato existe, mas depende de configuracao e credencial externa |
 
 ### Ferramentas registradas
 
-| Chave | Risco | Permissao |
-| --- | --- | --- |
-| `orkestral.company.summary` | Consulta | `agents.execute` |
-| `orkestral.workflow.status` | Consulta | `workflows.view` |
+| Chave                           | Risco    | Permissao             |
+| ------------------------------- | -------- | --------------------- |
+| `orkestral.company.summary`     | Consulta | `agents.execute`      |
+| `orkestral.workflow.status`     | Consulta | `workflows.view`      |
 | `orkestral.workflow.deactivate` | Sensivel | `workflows.configure` |
 
 ### Persistencia existente
 
-| Estrutura | Funcao atual |
-| --- | --- |
-| `agents` | Configuracao, modelo, instrucoes, limites de tokens, base de conhecimento e status |
-| `agent_tools` | Ferramentas habilitadas, schema de entrada, permissao e sensibilidade |
-| `agent_conversations` | Conversas vinculadas a empresa, agente e usuario |
-| `agent_messages` | Mensagens, chamada de ferramenta, modelo, tokens, custo e duracao |
-| `agent_tool_runs` | Estado da operacao, argumentos, resultado, erro e aprovacao humana |
-| `agent_usage_records` | Consumo por empresa, agente, conversa, modelo e ferramenta |
+| Estrutura             | Funcao atual                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| `agents`              | Configuracao, modelo, instrucoes, limites de tokens, base de conhecimento e status |
+| `agent_tools`         | Ferramentas habilitadas, schema de entrada, permissao e sensibilidade              |
+| `agent_conversations` | Conversas vinculadas a empresa, agente e usuario                                   |
+| `agent_messages`      | Mensagens, chamada de ferramenta, modelo, tokens, custo e duracao                  |
+| `agent_tool_runs`     | Estado da operacao, argumentos, resultado, erro e aprovacao humana                 |
+| `agent_usage_records` | Consumo por empresa, agente, conversa, modelo e ferramenta                         |
 
 ## Capacidades existentes
 
@@ -52,20 +52,20 @@ Ainda nao e um runtime autonomo empresarial. Faltam versoes publicaveis do agent
 
 ## Lacunas para nivel empresarial
 
-| Capacidade | Estado atual | Risco |
-| --- | --- | --- |
-| `AgentVersion` | Configuracao editada no mesmo registro | Alteracao sem rollback confiavel |
-| Politicas versionadas | Regras distribuidas no codigo e na ferramenta | Dificuldade de auditoria e promocao |
-| Niveis de autonomia | Aprovacao binaria por sensibilidade | Privilegio excessivo ou operacao travada |
-| Orcamento preventivo | Consumo e registrado depois | Estouro de custo antes do bloqueio |
-| Limite de passos e tempo | Parcial | Loops, latencia e consumo descontrolado |
-| Modo simulacao/sombra | Ausente | Risco ao validar agentes com dados reais |
-| Suites de avaliacao | Ausente | Regressoes nao detectadas antes da publicacao |
-| Trace operacional | Parcial | Investigacao incompleta de decisao e ferramenta |
-| Memoria governada | Conversa e mensagens basicas | Retencao, consentimento e exclusao insuficientes |
-| Citacoes RAG | Busca existe, contrato incompleto | Respostas sem evidencia visivel |
-| Multiagentes | Ausente | Sem delegacao, consolidacao ou supervisor |
-| Politica de dados por provedor | Ausente | Dados podem sair sem classificacao granular futura |
+| Capacidade                     | Estado atual                                  | Risco                                              |
+| ------------------------------ | --------------------------------------------- | -------------------------------------------------- |
+| `AgentVersion`                 | Configuracao editada no mesmo registro        | Alteracao sem rollback confiavel                   |
+| Politicas versionadas          | Regras distribuidas no codigo e na ferramenta | Dificuldade de auditoria e promocao                |
+| Niveis de autonomia            | Aprovacao binaria por sensibilidade           | Privilegio excessivo ou operacao travada           |
+| Orcamento preventivo           | Consumo e registrado depois                   | Estouro de custo antes do bloqueio                 |
+| Limite de passos e tempo       | Parcial                                       | Loops, latencia e consumo descontrolado            |
+| Modo simulacao/sombra          | Ausente                                       | Risco ao validar agentes com dados reais           |
+| Suites de avaliacao            | Ausente                                       | Regressoes nao detectadas antes da publicacao      |
+| Trace operacional              | Parcial                                       | Investigacao incompleta de decisao e ferramenta    |
+| Memoria governada              | Conversa e mensagens basicas                  | Retencao, consentimento e exclusao insuficientes   |
+| Citacoes RAG                   | Busca existe, contrato incompleto             | Respostas sem evidencia visivel                    |
+| Multiagentes                   | Ausente                                       | Sem delegacao, consolidacao ou supervisor          |
+| Politica de dados por provedor | Ausente                                       | Dados podem sair sem classificacao granular futura |
 
 ## Modelo-alvo incremental
 

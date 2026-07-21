@@ -1,7 +1,4 @@
-import type {
-  MetadataDataType,
-  MetadataValue,
-} from "./useMetadata";
+import type { MetadataDataType, MetadataValue } from "./useMetadata";
 
 export function inputTypeForMetadataField(dataType: MetadataDataType) {
   const types: Partial<Record<MetadataDataType, string>> = {

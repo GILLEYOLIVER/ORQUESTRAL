@@ -39,7 +39,11 @@
   border-radius: 24px;
   color: #f8fffc;
   background:
-    radial-gradient(circle at 78% 20%, rgba(232, 169, 61, 0.32), transparent 24%),
+    radial-gradient(
+      circle at 78% 20%,
+      rgba(232, 169, 61, 0.32),
+      transparent 24%
+    ),
     linear-gradient(125deg, #103a32, #1d5b50 72%, #286d5e);
   box-shadow: 0 20px 50px rgba(16, 58, 50, 0.2);
 }
@@ -273,7 +277,11 @@
   border-radius: 5px;
   color: #24594e;
   background: #e2f1eb;
-  font: 700 0.64rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  font:
+    700 0.64rem ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
 }
 
 .metadata-lifecycle-actions,
@@ -343,7 +351,9 @@
 
 .metadata-field-row {
   display: grid;
-  grid-template-columns: auto minmax(130px, 1fr) minmax(150px, 1.4fr) minmax(150px, 1fr) auto auto;
+  grid-template-columns:
+    auto minmax(130px, 1fr) minmax(150px, 1.4fr) minmax(150px, 1fr)
+    auto auto;
   gap: 0.55rem;
   align-items: end;
   padding: 0.65rem;

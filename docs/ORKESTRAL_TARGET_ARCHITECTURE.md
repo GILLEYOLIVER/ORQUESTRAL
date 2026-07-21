@@ -226,24 +226,24 @@ Zero-copy nao e promessa universal. Cada fonte informa se os dados sao federados
 
 ## Limites dos dominios
 
-| Dominio | Responsabilidade | Nao deve possuir |
-| --- | --- | --- |
-| Identidade | Usuarios, sessoes e provedores | Regras de CRM |
-| Empresas | Tenant, membros e configuracao | Credenciais externas em texto |
-| Autorizacao | Papeis, policies e grants | Logica de tela |
-| Metadata | Definicoes e publicacao | Acesso irrestrito a registros |
-| CRM/Vendas | Cliente e ciclo comercial | Faturamento duplicado |
-| Suporte | Casos, SLA e roteamento | Copia do cadastro 360 |
-| Marketing | Segmentos, jornadas e consentimento | Envio sem policy de canal |
-| Comercio/Receita | Catalogo, pedido e contrato | Saldo de estoque paralelo |
-| Financeiro | Lancamento, conciliacao e caixa | Execucao autonoma irrestrita |
-| Estoque | Disponibilidade e rastreabilidade | Pedido comercial duplicado |
-| Projetos | Entrega, capacidade e risco | Cadastro de colaborador duplicado |
-| RH | Jornada e dados de pessoas | Exposicao ampla de dado sensivel |
-| Analytics | Semantica, relatorio e dashboard | Regra transacional principal |
-| Agentes | Interpretacao e coordenacao | SQL direto |
-| Automacoes | Orquestracao | Formato n8n como contrato publico |
-| Integracoes | Conectividade e transformacao | Regra de negocio do dominio |
+| Dominio          | Responsabilidade                    | Nao deve possuir                  |
+| ---------------- | ----------------------------------- | --------------------------------- |
+| Identidade       | Usuarios, sessoes e provedores      | Regras de CRM                     |
+| Empresas         | Tenant, membros e configuracao      | Credenciais externas em texto     |
+| Autorizacao      | Papeis, policies e grants           | Logica de tela                    |
+| Metadata         | Definicoes e publicacao             | Acesso irrestrito a registros     |
+| CRM/Vendas       | Cliente e ciclo comercial           | Faturamento duplicado             |
+| Suporte          | Casos, SLA e roteamento             | Copia do cadastro 360             |
+| Marketing        | Segmentos, jornadas e consentimento | Envio sem policy de canal         |
+| Comercio/Receita | Catalogo, pedido e contrato         | Saldo de estoque paralelo         |
+| Financeiro       | Lancamento, conciliacao e caixa     | Execucao autonoma irrestrita      |
+| Estoque          | Disponibilidade e rastreabilidade   | Pedido comercial duplicado        |
+| Projetos         | Entrega, capacidade e risco         | Cadastro de colaborador duplicado |
+| RH               | Jornada e dados de pessoas          | Exposicao ampla de dado sensivel  |
+| Analytics        | Semantica, relatorio e dashboard    | Regra transacional principal      |
+| Agentes          | Interpretacao e coordenacao         | SQL direto                        |
+| Automacoes       | Orquestracao                        | Formato n8n como contrato publico |
+| Integracoes      | Conectividade e transformacao       | Regra de negocio do dominio       |
 
 ## Implantacao
 

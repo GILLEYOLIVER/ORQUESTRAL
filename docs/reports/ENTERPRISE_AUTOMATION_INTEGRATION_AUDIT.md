@@ -10,14 +10,14 @@ A plataforma de integracoes e o sistema de plugins estao em Nivel 1 a 2. Existem
 
 ## Catalogo de blocos confirmado
 
-| Categoria | Blocos |
-| --- | --- |
-| Gatilhos | `trigger.manual`, `trigger.schedule`, `trigger.webhook`, `trigger.message_received`, `trigger.contact_created` |
-| Logica | `logic.condition`, `logic.wait`, `logic.loop` |
-| Dados | `data.query`, `data.update` |
-| Acoes | `action.email`, `action.message`, `action.plugin` |
-| Inteligencia | `action.agent`, `action.human_approval` |
-| Fluxo | `flow.end` |
+| Categoria    | Blocos                                                                                                         |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| Gatilhos     | `trigger.manual`, `trigger.schedule`, `trigger.webhook`, `trigger.message_received`, `trigger.contact_created` |
+| Logica       | `logic.condition`, `logic.wait`, `logic.loop`                                                                  |
+| Dados        | `data.query`, `data.update`                                                                                    |
+| Acoes        | `action.email`, `action.message`, `action.plugin`                                                              |
+| Inteligencia | `action.agent`, `action.human_approval`                                                                        |
+| Fluxo        | `flow.end`                                                                                                     |
 
 Total confirmado: 16 tipos de bloco.
 
@@ -43,15 +43,15 @@ Esse ponto deve ser corrigido por configuracao validada, nao por exposicao da UR
 
 ## Plugins confirmados
 
-| Plugin | Versao | Autenticacao |
-| --- | --- | --- |
-| `rest_api` | 1.0.0 | API key |
-| `imap_email` | 1.0.0 | Usuario e senha |
-| `smtp_email` | 1.0.0 | Usuario e senha |
-| `google_calendar` | 1.0.0 | OAuth 2.0 |
-| `external_postgresql` | 1.0.0 | String de conexao |
-| `generic_webhook` | 1.0.0 | Segredo |
-| `whatsapp_business` | 1.0.0 | OAuth 2.0 |
+| Plugin                | Versao | Autenticacao      |
+| --------------------- | ------ | ----------------- |
+| `rest_api`            | 1.0.0  | API key           |
+| `imap_email`          | 1.0.0  | Usuario e senha   |
+| `smtp_email`          | 1.0.0  | Usuario e senha   |
+| `google_calendar`     | 1.0.0  | OAuth 2.0         |
+| `external_postgresql` | 1.0.0  | String de conexao |
+| `generic_webhook`     | 1.0.0  | Segredo           |
+| `whatsapp_business`   | 1.0.0  | OAuth 2.0         |
 
 O status por empresa varia e nao representa que a integracao esteja operacional; ativacao, credencial valida e teste de conexao precisam ser avaliados separadamente.
 
@@ -69,20 +69,20 @@ O status por empresa varia e nao representa que a integracao esteja operacional;
 
 ## Lacunas prioritarias
 
-| Lacuna | Impacto | Prioridade |
-| --- | --- | ---: |
-| Transactional outbox | Evento pode divergir da transacao | Critica |
-| Consumidor idempotente | Reentrega pode duplicar efeito | Critica |
-| DLQ e reprocessamento | Falhas ficam sem recuperacao governada | Critica |
-| Timeout/retry/circuit breaker por conector | Integracao externa pode prender recursos | Alta |
-| Catalogo de APIs e versoes | Contratos ficam dispersos | Alta |
-| OAuth completo e revogacao | Ciclo de credencial incompleto | Alta |
-| Rate limit por empresa/conector | Um tenant pode saturar dependencia | Alta |
-| Correlation e trace por operacao | Diagnostico entre sistemas limitado | Alta |
-| Mapeamento e transformacao versionados | Sincronizacao fragil | Alta |
-| Operacoes em lote | Baixa eficiencia para volume | Media |
-| Assinatura e integridade de pacote | Risco de supply chain | Alta |
-| Isolamento de codigo de plugin | Manifesto nao impede codigo arbitrario futuro | Critica |
+| Lacuna                                     | Impacto                                       | Prioridade |
+| ------------------------------------------ | --------------------------------------------- | ---------: |
+| Transactional outbox                       | Evento pode divergir da transacao             |    Critica |
+| Consumidor idempotente                     | Reentrega pode duplicar efeito                |    Critica |
+| DLQ e reprocessamento                      | Falhas ficam sem recuperacao governada        |    Critica |
+| Timeout/retry/circuit breaker por conector | Integracao externa pode prender recursos      |       Alta |
+| Catalogo de APIs e versoes                 | Contratos ficam dispersos                     |       Alta |
+| OAuth completo e revogacao                 | Ciclo de credencial incompleto                |       Alta |
+| Rate limit por empresa/conector            | Um tenant pode saturar dependencia            |       Alta |
+| Correlation e trace por operacao           | Diagnostico entre sistemas limitado           |       Alta |
+| Mapeamento e transformacao versionados     | Sincronizacao fragil                          |       Alta |
+| Operacoes em lote                          | Baixa eficiencia para volume                  |      Media |
+| Assinatura e integridade de pacote         | Risco de supply chain                         |       Alta |
+| Isolamento de codigo de plugin             | Manifesto nao impede codigo arbitrario futuro |    Critica |
 
 ## Interfaces-alvo
 

@@ -17,13 +17,13 @@ O runtime executa agentes empresariais dentro de limites explícitos de empresa,
 
 ### Autonomia
 
-| Nível | Comportamento |
-| --- | --- |
-| 0 | Consulta, sem chamada de ferramenta |
-| 1 | Recomendação, sem execução |
-| 2 | Toda execução exige aprovação humana |
-| 3 | Ações de baixo e médio risco podem executar; alto risco exige aprovação |
-| 4 | Coordenação controlada; ações de alto risco continuam exigindo aprovação |
+| Nível | Comportamento                                                            |
+| ----- | ------------------------------------------------------------------------ |
+| 0     | Consulta, sem chamada de ferramenta                                      |
+| 1     | Recomendação, sem execução                                               |
+| 2     | Toda execução exige aprovação humana                                     |
+| 3     | Ações de baixo e médio risco podem executar; alto risco exige aprovação  |
+| 4     | Coordenação controlada; ações de alto risco continuam exigindo aprovação |
 
 Ferramentas possuem risco `low`, `medium`, `high` ou `critical`. O back-end aplica a decisão mesmo que um cliente tente contornar a interface.
 
@@ -48,7 +48,7 @@ Todos os acessos são filtrados por `company_id` e exigem `agents.configure`. A 
 
 ## Próximos incrementos
 
-- aprovação assíncrona de ferramentas de alto risco dentro de delegações.
+- políticas de aprovação por valor, ferramenta e contexto da delegação.
 
 ## Observabilidade e execução segura
 
@@ -101,3 +101,9 @@ O ciclo 15 conecta delegações ao Celery sem colocar objetivos na mensagem Redi
 O worker realiza claim transacional com lease, recupera leases vencidos, valida contrato, versão, política de dados, prompt injection, autonomia e ferramentas antes da execução. O custo e os passos permanecem limitados pelo contrato. A execução gera `AgentRun` e evento mínimo.
 
 O ciphertext é destruído quando a tarefa conclui, falha, é cancelada ou expira. A manutenção `orkestral.agents.maintain_delegations` roda a cada minuto para expirar payloads e recuperar trabalhos interrompidos. A tarefa `orkestral.agents.process_delegation` possui retry com backoff e jitter.
+
+## Aprovação humana assíncrona
+
+O ciclo 16 faz o worker pausar uma delegação antes de qualquer ferramenta que exija supervisão. Os argumentos são protegidos por AES-256-GCM com dados associados de empresa, delegação e aprovação. A solicitação entra na central existente de notificações sem argumentos ou objetivo.
+
+Uma aprovação válida move a delegação novamente para `queued`; o worker revalida usuário, permissões, contrato, agente e ferramenta, descriptografa exatamente a chamada aprovada e executa sem consultar novamente o modelo. Rejeição, expiração ou falha destroem objetivo e argumentos cifrados. A decisão é idempotente e isolada por empresa.

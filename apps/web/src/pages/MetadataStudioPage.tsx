@@ -1,9 +1,4 @@
-import {
-  type FormEvent,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Braces,
@@ -322,7 +317,9 @@ export function MetadataStudioPage() {
         createRecord.mutate(values);
       }
     } catch {
-      setLocalError("Revise os campos estruturados. O JSON informado não é válido.");
+      setLocalError(
+        "Revise os campos estruturados. O JSON informado não é válido.",
+      );
     }
   };
 
@@ -454,7 +451,10 @@ export function MetadataStudioPage() {
             </div>
             <div className="metadata-field-stack">
               {fields.map((field, index) => (
-                <div className="metadata-field-row" key={`${field.key}-${index}`}>
+                <div
+                  className="metadata-field-row"
+                  key={`${field.key}-${index}`}
+                >
                   <span className="metadata-field-index">{index + 1}</span>
                   <label>
                     <span>Chave</span>
@@ -613,7 +613,9 @@ export function MetadataStudioPage() {
                   {entity.key} · v{entity.current_version}
                 </small>
               </span>
-              <span className={`metadata-status metadata-status--${entity.status}`}>
+              <span
+                className={`metadata-status metadata-status--${entity.status}`}
+              >
                 {statusLabel(entity.status)}
               </span>
             </button>
@@ -644,19 +646,24 @@ export function MetadataStudioPage() {
                 </div>
                 <div className="metadata-contract-strip">
                   <span>
-                    <ShieldCheck size={16} /> {selected.version.fields.length} campos
+                    <ShieldCheck size={16} /> {selected.version.fields.length}{" "}
+                    campos
                   </span>
                   <span>
-                    <FileCheck2 size={16} /> checksum {selected.version.schema_checksum.slice(0, 10)}
+                    <FileCheck2 size={16} /> checksum{" "}
+                    {selected.version.schema_checksum.slice(0, 10)}
                   </span>
                   <span>
-                    <Layers3 size={16} /> publicada v{selected.published_version ?? "—"}
+                    <Layers3 size={16} /> publicada v
+                    {selected.published_version ?? "—"}
                   </span>
                 </div>
                 <div className="metadata-field-catalog">
                   {selected.version.fields.map((field) => (
                     <div key={field.id}>
-                      <span className="metadata-field-type">{field.data_type}</span>
+                      <span className="metadata-field-type">
+                        {field.data_type}
+                      </span>
                       <strong>{field.label}</strong>
                       <small>{field.key}</small>
                       <span>{field.required ? "Obrigatório" : "Opcional"}</span>
@@ -666,7 +673,10 @@ export function MetadataStudioPage() {
                 <div className="metadata-lifecycle-actions">
                   {selected.version.status === "draft" && canConfigure ? (
                     <>
-                      <Button onClick={() => loadSchema(selected)} variant="ghost">
+                      <Button
+                        onClick={() => loadSchema(selected)}
+                        variant="ghost"
+                      >
                         <Pencil size={16} /> Editar schema
                       </Button>
                       <Button
@@ -721,7 +731,10 @@ export function MetadataStudioPage() {
                       ) : null}
                     </div>
                     {canCreateRecords || (editingRecord && canUpdateRecords) ? (
-                      <form className="metadata-record-form" onSubmit={submitRecord}>
+                      <form
+                        className="metadata-record-form"
+                        onSubmit={submitRecord}
+                      >
                         {selectedFields.map((field) => (
                           <label key={field.id}>
                             <span>
@@ -739,7 +752,8 @@ export function MetadataStudioPage() {
                                 }
                                 type="checkbox"
                               />
-                            ) : field.data_type === "long_text" || field.data_type === "json" ? (
+                            ) : field.data_type === "long_text" ||
+                              field.data_type === "json" ? (
                               <textarea
                                 onChange={(event) =>
                                   setRecordValues((current) => ({
@@ -747,7 +761,11 @@ export function MetadataStudioPage() {
                                     [field.key]: event.target.value,
                                   }))
                                 }
-                                placeholder={field.data_type === "json" ? '{"chave":"valor"}' : "Digite o conteúdo"}
+                                placeholder={
+                                  field.data_type === "json"
+                                    ? '{"chave":"valor"}'
+                                    : "Digite o conteúdo"
+                                }
                                 required={field.required}
                                 rows={field.data_type === "json" ? 5 : 3}
                                 value={String(recordValues[field.key] ?? "")}
@@ -761,23 +779,40 @@ export function MetadataStudioPage() {
                                   }))
                                 }
                                 required={field.required}
-                                step={field.data_type === "decimal" ? "any" : undefined}
-                                type={inputTypeForMetadataField(field.data_type)}
+                                step={
+                                  field.data_type === "decimal"
+                                    ? "any"
+                                    : undefined
+                                }
+                                type={inputTypeForMetadataField(
+                                  field.data_type,
+                                )}
                                 value={String(recordValues[field.key] ?? "")}
                               />
                             )}
                           </label>
                         ))}
                         <Button
-                          loading={createRecord.isPending || updateRecord.isPending}
+                          loading={
+                            createRecord.isPending || updateRecord.isPending
+                          }
                           type="submit"
                         >
-                          {editingRecord ? <Pencil size={16} /> : <Plus size={16} />}
-                          {editingRecord ? "Salvar alteração" : `Criar ${selected.label}`}
+                          {editingRecord ? (
+                            <Pencil size={16} />
+                          ) : (
+                            <Plus size={16} />
+                          )}
+                          {editingRecord
+                            ? "Salvar alteração"
+                            : `Criar ${selected.label}`}
                         </Button>
                       </form>
                     ) : (
-                      <p>Você possui acesso de consulta, sem permissão para gravar.</p>
+                      <p>
+                        Você possui acesso de consulta, sem permissão para
+                        gravar.
+                      </p>
                     )}
                   </Card>
 
@@ -804,15 +839,23 @@ export function MetadataStudioPage() {
                         <article key={record.id} role="row">
                           <div className="metadata-record-primary">
                             <strong>
-                              {primaryField && record.values[primaryField.key] !== undefined
-                                ? displayMetadataValue(record.values[primaryField.key])
+                              {primaryField &&
+                              record.values[primaryField.key] !== undefined
+                                ? displayMetadataValue(
+                                    record.values[primaryField.key],
+                                  )
                                 : `Registro ${record.id.slice(0, 8)}`}
                             </strong>
-                            <small>v{record.record_version} · schema {record.schema_version}</small>
+                            <small>
+                              v{record.record_version} · schema{" "}
+                              {record.schema_version}
+                            </small>
                           </div>
                           <dl>
                             {selectedFields
-                              .filter((field) => field.key !== primaryField?.key)
+                              .filter(
+                                (field) => field.key !== primaryField?.key,
+                              )
                               .map((field) => (
                                 <div key={field.id}>
                                   <dt>{field.label}</dt>
@@ -821,14 +864,19 @@ export function MetadataStudioPage() {
                                       ? "Protegido"
                                       : record.values[field.key] === undefined
                                         ? "—"
-                                        : displayMetadataValue(record.values[field.key])}
+                                        : displayMetadataValue(
+                                            record.values[field.key],
+                                          )}
                                   </dd>
                                 </div>
                               ))}
                           </dl>
                           <div className="metadata-record-actions">
                             {canUpdateRecords ? (
-                              <button onClick={() => editRecord(record)} type="button">
+                              <button
+                                onClick={() => editRecord(record)}
+                                type="button"
+                              >
                                 <Pencil size={15} /> Editar
                               </button>
                             ) : null}
@@ -853,7 +901,10 @@ export function MetadataStudioPage() {
                   <Rocket size={24} />
                   <div>
                     <strong>Publique o primeiro schema</strong>
-                    <span>Os formulários e registros serão liberados depois da publicação.</span>
+                    <span>
+                      Os formulários e registros serão liberados depois da
+                      publicação.
+                    </span>
                   </div>
                 </div>
               )}

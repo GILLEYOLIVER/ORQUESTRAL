@@ -35,16 +35,16 @@ Consequencias operacionais:
 
 ## Ambiente local confirmado no ciclo anterior
 
-| Servico | Funcao |
-| --- | --- |
-| `nginx` | Entrada HTTP local e proxy reverso |
-| `web` | Interface React e TypeScript |
-| `api` | API FastAPI e regras empresariais |
-| `worker` | Tarefas assincronas Celery |
-| `postgres` | Persistencia transacional |
-| `redis` | Cache, sessoes e filas |
-| `n8n` | Provedor interno de execucao de automacoes |
-| `object-storage` | Arquivos compativeis com S3 |
+| Servico          | Funcao                                     |
+| ---------------- | ------------------------------------------ |
+| `nginx`          | Entrada HTTP local e proxy reverso         |
+| `web`            | Interface React e TypeScript               |
+| `api`            | API FastAPI e regras empresariais          |
+| `worker`         | Tarefas assincronas Celery                 |
+| `postgres`       | Persistencia transacional                  |
+| `redis`          | Cache, sessoes e filas                     |
+| `n8n`            | Provedor interno de execucao de automacoes |
+| `object-storage` | Arquivos compativeis com S3                |
 
 Os oito servicos estavam saudaveis, `/health`, `/ready` e `/app` responderam, e o banco alcancou o head Alembic `20260720_0027` na linha de base.
 

@@ -6,7 +6,6 @@ from time import perf_counter
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
-from celery import Celery
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 
@@ -28,6 +27,7 @@ from app.modules.agents.coordination_models import (
     AgentTaskContract,
 )
 from app.modules.agents.coordination_payload import encrypt_delegation_objective
+from app.modules.agents.coordination_queue import enqueue_delegation
 from app.modules.agents.evaluation import evaluate_agent_case
 from app.modules.agents.evaluation_models import (
     AgentEvaluationCase,
@@ -225,14 +225,6 @@ async def _published_version_required(
     if version is None:
         raise HTTPException(status_code=409, detail="O agente não possui versão publicada.")
     return version
-
-
-def _enqueue_delegation(settings: RequestSettings, delegation_id: UUID) -> None:
-    if not settings.background_worker_enabled:
-        return
-    Celery(broker=str(settings.celery_broker_url)).send_task(
-        "orkestral.agents.process_delegation", args=[str(delegation_id)]
-    )
 
 
 async def _budget(database: DatabaseSession, *, agent_id: UUID, company_id: UUID) -> AgentBudget:
@@ -1420,7 +1412,7 @@ async def create_agent_delegation(
     )
     await database.commit()
     await database.refresh(delegation)
-    _enqueue_delegation(settings, delegation.id)
+    enqueue_delegation(settings, delegation.id)
     return _delegation_response(delegation)
 
 

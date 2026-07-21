@@ -331,6 +331,57 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     settings, identity.company_ids[1], UUID(queued.json()["id"])
                 )
             )
+            approval_delegation = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json={
+                    "contract_id": contract.json()["id"],
+                    "objective": "/ferramenta orkestral.company.summary {}",
+                    "context_keys": ["customer_id"],
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert approval_delegation.status_code == 201
+            waiting = asyncio.run(
+                process_delegation(
+                    UUID(approval_delegation.json()["id"]), settings=settings
+                )
+            )
+            assert waiting["status"] == "awaiting_approval"
+            approvals_b = client.get("/notifications/approvals", headers=headers_b)
+            assert approvals_b.status_code == 200
+            linked = next(
+                item
+                for item in approvals_b.json()
+                if item["context"].get("delegation_id") == approval_delegation.json()["id"]
+            )
+            assert "arguments" not in linked["context"]
+            approvals_a = client.get("/notifications/approvals", headers=headers_a)
+            assert all(item["id"] != linked["id"] for item in approvals_a.json())
+            decision = client.post(
+                f"/notifications/approvals/{linked['id']}/decision",
+                headers=headers_b,
+                json={"decision": "approved"},
+            )
+            assert decision.status_code == 200
+            resumed = asyncio.run(
+                process_delegation(
+                    UUID(approval_delegation.json()["id"]), settings=settings
+                )
+            )
+            assert resumed["status"] == "completed"
+            approved_state = client.get(
+                f"/agents/{agent_id}/delegations/{approval_delegation.json()['id']}",
+                headers=headers_b,
+            )
+            assert approved_state.json()["status"] == "completed"
+            asyncio.run(
+                _assert_delegation_payload_destroyed(
+                    settings,
+                    identity.company_ids[1],
+                    UUID(approval_delegation.json()["id"]),
+                )
+            )
 
             budget = client.put(
                 f"/agents/{agent_id}/budget",

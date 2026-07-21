@@ -10,6 +10,8 @@ from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import CurrentPrincipal, Principal, get_request_context, require_permission
 from app.modules.agents.approvals import decide_agent_tool_run
+from app.modules.agents.coordination_approvals import decide_delegation_approval
+from app.modules.agents.coordination_queue import enqueue_delegation
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.notifications.models import (
     ApprovalAction,
@@ -310,6 +312,16 @@ async def decide_approval(
             settings=settings,
             sync_approval=False,
         )
+    try:
+        resumed_delegation_id = await decide_delegation_approval(
+            database,
+            approval_request_id=approval.id,
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            decision=payload.decision,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     await resolve_approval_request(
         database,
         approval=approval,
@@ -370,6 +382,8 @@ async def decide_approval(
         details={"source_type": approval.source_type},
     )
     await database.commit()
+    if resumed_delegation_id is not None:
+        enqueue_delegation(settings, resumed_delegation_id)
     await database.refresh(approval)
     return _approval_response(approval, await _approval_actions(database, approval.id))
 

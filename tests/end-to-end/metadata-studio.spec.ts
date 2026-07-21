@@ -46,11 +46,11 @@ test("administrador publica schema e opera registro no Orkestral Studio", async 
   ).toBeVisible();
   await page.getByRole("button", { name: "Publicar versão" }).click();
 
-  await expect(page.getByText("Dados publicados", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Dados publicados", { exact: true }),
+  ).toBeVisible();
   await page.getByLabel(/^Nome/).fill(recordName);
-  await page
-    .getByRole("button", { name: `Criar ${entityLabel}` })
-    .click();
+  await page.getByRole("button", { name: `Criar ${entityLabel}` }).click();
   const recordRow = page.getByRole("row").filter({ hasText: recordName });
   await expect(recordRow).toBeVisible();
   await recordRow.getByRole("button", { name: "Excluir" }).click();

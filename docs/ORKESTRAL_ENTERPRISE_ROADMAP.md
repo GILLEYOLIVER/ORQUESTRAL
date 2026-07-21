@@ -407,14 +407,14 @@ Uma entrega pronta possui requisito, modelo, migracao, schema, servico, autoriza
 
 ## Riscos de programa
 
-| Risco | Tratamento |
-| --- | --- |
-| Escopo de produto muito grande | Fatias verticais e niveis de maturidade honestos |
-| Regressao multiempresa | Contratos automaticos e testes A->B |
-| Complexidade prematura | Monolito modular e abstracoes somente em fronteiras reais |
-| IA nao deterministica | Policies, schemas, budgets, testes e aprovacao |
-| Dependencia de n8n/provedor | Definicoes canonicas e adaptadores |
-| Supply chain de plugins | Assinatura, manifestos e isolamento |
-| GitHub sem gates atuais | PRs sem merge ate checks executarem; manter privado |
-| Dados pessoais residuais | Retencao, eliminacao verificavel e backups governados |
-| Custos inesperados | Entitlements, budgets e nenhum recurso pago automatico |
+| Risco                          | Tratamento                                                |
+| ------------------------------ | --------------------------------------------------------- |
+| Escopo de produto muito grande | Fatias verticais e niveis de maturidade honestos          |
+| Regressao multiempresa         | Contratos automaticos e testes A->B                       |
+| Complexidade prematura         | Monolito modular e abstracoes somente em fronteiras reais |
+| IA nao deterministica          | Policies, schemas, budgets, testes e aprovacao            |
+| Dependencia de n8n/provedor    | Definicoes canonicas e adaptadores                        |
+| Supply chain de plugins        | Assinatura, manifestos e isolamento                       |
+| GitHub sem gates atuais        | PRs sem merge ate checks executarem; manter privado       |
+| Dados pessoais residuais       | Retencao, eliminacao verificavel e backups governados     |
+| Custos inesperados             | Entitlements, budgets e nenhum recurso pago automatico    |
