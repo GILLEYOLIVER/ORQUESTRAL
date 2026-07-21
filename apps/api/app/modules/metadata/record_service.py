@@ -43,7 +43,12 @@ from app.modules.metadata.record_schemas import (
     MetadataRecordUpdate,
 )
 from app.modules.metadata.repository import get_entity_definition, list_version_fields
-from app.modules.metadata.service import MetadataServiceError, published_version
+from app.modules.metadata.service import (
+    MetadataServiceError,
+    evaluate_record_validation_rules,
+    published_version,
+    validation_rules_for_version,
+)
 
 PolicyAction = Literal["view", "list", "create", "update", "delete"]
 EMAIL_ADAPTER = TypeAdapter(EmailStr)
@@ -392,6 +397,13 @@ async def create_custom_record(
         raise MetadataServiceError(
             f"Sem permissao para gravar: {', '.join(decision.denied_fields)}.", status_code=403
         )
+    rule_errors = evaluate_record_validation_rules(
+        await validation_rules_for_version(database, context.company_id, version.id),
+        normalized,
+    )
+    if rule_errors:
+        await database.commit()
+        raise MetadataServiceError(" ".join(rule_errors), status_code=422)
     if payload.idempotency_key is not None:
         existing = await get_record_by_idempotency_key(
             database, context.company_id, definition_id, payload.idempotency_key
@@ -487,6 +499,13 @@ async def update_custom_record(
     if errors:
         await database.commit()
         raise MetadataServiceError(" ".join(errors), status_code=422)
+    rule_errors = evaluate_record_validation_rules(
+        await validation_rules_for_version(database, context.company_id, version.id),
+        normalized,
+    )
+    if rule_errors:
+        await database.commit()
+        raise MetadataServiceError(" ".join(rule_errors), status_code=422)
     await _ensure_unique_values(
         database,
         context.company_id,

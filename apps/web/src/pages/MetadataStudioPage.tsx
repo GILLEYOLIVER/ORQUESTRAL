@@ -6,7 +6,9 @@ import {
   CirclePlus,
   Database,
   FileCheck2,
+  LayoutTemplate,
   Layers3,
+  ListChecks,
   Pencil,
   Plus,
   Rocket,
@@ -19,14 +21,18 @@ import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
 import {
   type MetadataDataType,
+  type MetadataComparisonOperator,
+  type MetadataDesignResponse,
   type MetadataEntityDetail,
   type MetadataEntitySummary,
   type MetadataFieldInput,
   type MetadataRecordResponse,
   type MetadataValidationResponse,
+  type MetadataValidationRuleInput,
   type MetadataValue,
   useMetadataEntities,
   useMetadataEntity,
+  useMetadataDesign,
   useMetadataRecords,
 } from "../metadata/useMetadata";
 import {
@@ -52,6 +58,19 @@ const FIELD_TYPES: Array<{ value: MetadataDataType; label: string }> = [
   { value: "json", label: "Objeto estruturado" },
 ];
 
+const RULE_OPERATORS: Array<{
+  value: MetadataComparisonOperator;
+  label: string;
+}> = [
+  { value: "equals", label: "É igual a" },
+  { value: "not_equals", label: "É diferente de" },
+  { value: "greater_than", label: "É maior que" },
+  { value: "less_than", label: "É menor que" },
+  { value: "contains", label: "Contém" },
+  { value: "is_empty", label: "Está vazio" },
+  { value: "is_not_empty", label: "Não está vazio" },
+];
+
 function blankField(position: number): MetadataFieldInput {
   return {
     key: "",
@@ -63,6 +82,21 @@ function blankField(position: number): MetadataFieldInput {
     default_value: null,
     settings: {},
     position,
+  };
+}
+
+function blankRule(
+  index: number,
+  fieldKey: string,
+): MetadataValidationRuleInput {
+  return {
+    key: `rule_${Date.now()}_${index}`,
+    label: "",
+    field_key: fieldKey,
+    operator: "is_not_empty",
+    comparison_value: null,
+    message: "",
+    active: true,
   };
 }
 
@@ -89,6 +123,7 @@ export function MetadataStudioPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedQuery = useMetadataEntity(selectedId);
   const selected = selectedQuery.data;
+  const design = useMetadataDesign(selectedId);
   const records = useMetadataRecords(
     selectedId,
     Boolean(selected?.published_version),
@@ -115,12 +150,40 @@ export function MetadataStudioPage() {
   const [editingRecord, setEditingRecord] =
     useState<MetadataRecordResponse | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [designOpen, setDesignOpen] = useState(false);
+  const [layoutLabel, setLayoutLabel] = useState("Formulário principal");
+  const [sectionLabel, setSectionLabel] = useState("Informações principais");
+  const [layoutFieldKeys, setLayoutFieldKeys] = useState<string[]>([]);
+  const [viewLabel, setViewLabel] = useState("Lista principal");
+  const [viewFieldKeys, setViewFieldKeys] = useState<string[]>([]);
+  const [validationRules, setValidationRules] = useState<
+    MetadataValidationRuleInput[]
+  >([]);
 
   useEffect(() => {
     if (!selectedId && entities.data?.length) {
       setSelectedId(entities.data[0].id);
     }
   }, [entities.data, selectedId]);
+
+  useEffect(() => {
+    if (!design.data) return;
+    const defaultLayout =
+      design.data.layouts.find((item) => item.is_default) ??
+      design.data.layouts[0];
+    const defaultView =
+      design.data.views.find((item) => item.is_default) ?? design.data.views[0];
+    setLayoutLabel(defaultLayout?.label ?? "Formulário principal");
+    setSectionLabel(
+      defaultLayout?.sections[0]?.label ?? "Informações principais",
+    );
+    setLayoutFieldKeys(
+      defaultLayout?.sections.flatMap((section) => section.fields) ?? [],
+    );
+    setViewLabel(defaultView?.label ?? "Lista principal");
+    setViewFieldKeys(defaultView?.columns ?? []);
+    setValidationRules(design.data.validation_rules);
+  }, [design.data]);
 
   const refresh = (definitionId = selectedId) => {
     void queryClient.invalidateQueries({ queryKey: ["metadata-entities"] });
@@ -129,6 +192,9 @@ export function MetadataStudioPage() {
     });
     void queryClient.invalidateQueries({
       queryKey: ["metadata-records", definitionId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["metadata-design", definitionId],
     });
   };
 
@@ -226,6 +292,48 @@ export function MetadataStudioPage() {
     },
   });
 
+  const saveDesign = useMutation({
+    mutationFn: () =>
+      request<MetadataDesignResponse>(
+        `/metadata/entities/${selectedId}/design`,
+        {
+          method: "PUT",
+          body: {
+            layouts: [
+              {
+                key: "default_layout",
+                label: layoutLabel,
+                is_default: true,
+                sections: [
+                  {
+                    key: "main_section",
+                    label: sectionLabel,
+                    fields: layoutFieldKeys,
+                    columns: 2,
+                  },
+                ],
+              },
+            ],
+            views: [
+              {
+                key: "default_view",
+                label: viewLabel,
+                columns: viewFieldKeys,
+                filters: [],
+                sorting: [],
+                is_default: true,
+              },
+            ],
+            validation_rules: validationRules,
+          },
+        },
+      ),
+    onSuccess: () => {
+      setDesignOpen(false);
+      refresh();
+    },
+  });
+
   const createRecord = useMutation({
     mutationFn: (values: Record<string, MetadataValue>) =>
       request<MetadataRecordResponse>(
@@ -277,6 +385,7 @@ export function MetadataStudioPage() {
     validateSchema.error ??
     publishSchema.error ??
     createVersion.error ??
+    saveDesign.error ??
     createRecord.error ??
     updateRecord.error ??
     deleteRecord.error;
@@ -285,9 +394,22 @@ export function MetadataStudioPage() {
     () => selected?.version.fields ?? [],
     [selected],
   );
+  const runtimeFields = useMemo(() => {
+    const order = new Map(layoutFieldKeys.map((key, index) => [key, index]));
+    return [...selectedFields].sort(
+      (left, right) =>
+        (order.get(left.key) ?? Number.MAX_SAFE_INTEGER) -
+        (order.get(right.key) ?? Number.MAX_SAFE_INTEGER),
+    );
+  }, [layoutFieldKeys, selectedFields]);
+  const visibleFields = useMemo(() => {
+    const allowed = new Set(viewFieldKeys);
+    const configured = runtimeFields.filter((field) => allowed.has(field.key));
+    return configured.length ? configured : runtimeFields;
+  }, [runtimeFields, viewFieldKeys]);
   const primaryField = useMemo(
-    () => selectedFields.find((field) => field.required) ?? selectedFields[0],
-    [selectedFields],
+    () => runtimeFields.find((field) => field.required) ?? runtimeFields[0],
+    [runtimeFields],
   );
 
   const submitSchema = (event: FormEvent) => {
@@ -321,6 +443,24 @@ export function MetadataStudioPage() {
         "Revise os campos estruturados. O JSON informado não é válido.",
       );
     }
+  };
+
+  const submitDesign = (event: FormEvent) => {
+    event.preventDefault();
+    setLocalError(null);
+    if (!layoutFieldKeys.length || !viewFieldKeys.length) {
+      setLocalError(
+        "Escolha pelo menos um campo para o formulário e para a lista.",
+      );
+      return;
+    }
+    if (
+      validationRules.some((rule) => !rule.label.trim() || !rule.message.trim())
+    ) {
+      setLocalError("Informe o nome e a mensagem de todas as regras.");
+      return;
+    }
+    saveDesign.mutate();
   };
 
   const editRecord = (record: MetadataRecordResponse) => {
@@ -706,6 +846,282 @@ export function MetadataStudioPage() {
                 </div>
               </Card>
 
+              <Card className="metadata-design-card">
+                <div className="metadata-card-heading">
+                  <div>
+                    <span className="eyebrow">Experiência configurável</span>
+                    <h2>Layout, lista e regras</h2>
+                    <p>
+                      A mesma versão orienta o formulário, a visualização e as
+                      validações executadas pela API.
+                    </p>
+                  </div>
+                  {selected.version.status === "draft" && canConfigure ? (
+                    <Button
+                      onClick={() => setDesignOpen((current) => !current)}
+                      variant="ghost"
+                    >
+                      <LayoutTemplate size={16} /> Configurar experiência
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="metadata-design-summary">
+                  <span>
+                    <LayoutTemplate size={16} />
+                    {design.data?.layouts.find((item) => item.is_default)
+                      ?.label ?? "Formulário principal"}
+                  </span>
+                  <span>
+                    <ListChecks size={16} />
+                    {design.data?.views.find((item) => item.is_default)
+                      ?.label ?? "Lista principal"}
+                  </span>
+                  <span>
+                    <ShieldCheck size={16} />
+                    {design.data?.validation_rules.length ?? 0} regras ativas
+                  </span>
+                </div>
+                {designOpen ? (
+                  <form
+                    className="metadata-design-form"
+                    onSubmit={submitDesign}
+                  >
+                    <div className="metadata-design-names">
+                      <label>
+                        <span>Nome do formulário</span>
+                        <input
+                          onChange={(event) =>
+                            setLayoutLabel(event.target.value)
+                          }
+                          required
+                          value={layoutLabel}
+                        />
+                      </label>
+                      <label>
+                        <span>Título da seção</span>
+                        <input
+                          onChange={(event) =>
+                            setSectionLabel(event.target.value)
+                          }
+                          required
+                          value={sectionLabel}
+                        />
+                      </label>
+                      <label>
+                        <span>Nome da lista</span>
+                        <input
+                          onChange={(event) => setViewLabel(event.target.value)}
+                          required
+                          value={viewLabel}
+                        />
+                      </label>
+                    </div>
+                    <div className="metadata-field-selection">
+                      <fieldset>
+                        <legend>Campos e ordem do formulário</legend>
+                        {selectedFields.map((field) => (
+                          <label key={`layout-${field.id}`}>
+                            <input
+                              checked={layoutFieldKeys.includes(field.key)}
+                              onChange={(event) =>
+                                setLayoutFieldKeys((current) =>
+                                  event.target.checked
+                                    ? [...current, field.key]
+                                    : current.filter(
+                                        (key) => key !== field.key,
+                                      ),
+                                )
+                              }
+                              type="checkbox"
+                            />
+                            {field.label}
+                          </label>
+                        ))}
+                      </fieldset>
+                      <fieldset>
+                        <legend>Colunas visíveis na lista</legend>
+                        {selectedFields.map((field) => (
+                          <label key={`view-${field.id}`}>
+                            <input
+                              checked={viewFieldKeys.includes(field.key)}
+                              onChange={(event) =>
+                                setViewFieldKeys((current) =>
+                                  event.target.checked
+                                    ? [...current, field.key]
+                                    : current.filter(
+                                        (key) => key !== field.key,
+                                      ),
+                                )
+                              }
+                              type="checkbox"
+                            />
+                            {field.label}
+                          </label>
+                        ))}
+                      </fieldset>
+                    </div>
+                    <div className="metadata-rule-heading">
+                      <div>
+                        <strong>Regras de validação</strong>
+                        <small>
+                          Operadores seguros, sem código executável.
+                        </small>
+                      </div>
+                      <Button
+                        onClick={() =>
+                          setValidationRules((current) => [
+                            ...current,
+                            blankRule(
+                              current.length,
+                              selectedFields[0]?.key ?? "",
+                            ),
+                          ])
+                        }
+                        type="button"
+                        variant="ghost"
+                      >
+                        <Plus size={16} /> Adicionar regra
+                      </Button>
+                    </div>
+                    <div className="metadata-rule-stack">
+                      {validationRules.map((rule, index) => (
+                        <div className="metadata-rule-row" key={rule.key}>
+                          <label>
+                            <span>Nome da regra</span>
+                            <input
+                              onChange={(event) =>
+                                setValidationRules((current) =>
+                                  current.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, label: event.target.value }
+                                      : item,
+                                  ),
+                                )
+                              }
+                              required
+                              value={rule.label}
+                            />
+                          </label>
+                          <label>
+                            <span>Campo</span>
+                            <select
+                              onChange={(event) =>
+                                setValidationRules((current) =>
+                                  current.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? {
+                                          ...item,
+                                          field_key: event.target.value,
+                                        }
+                                      : item,
+                                  ),
+                                )
+                              }
+                              value={rule.field_key}
+                            >
+                              {selectedFields.map((field) => (
+                                <option key={field.id} value={field.key}>
+                                  {field.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            <span>Condição</span>
+                            <select
+                              onChange={(event) =>
+                                setValidationRules((current) =>
+                                  current.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? {
+                                          ...item,
+                                          operator: event.target
+                                            .value as MetadataComparisonOperator,
+                                        }
+                                      : item,
+                                  ),
+                                )
+                              }
+                              value={rule.operator}
+                            >
+                              {RULE_OPERATORS.map((operator) => (
+                                <option
+                                  key={operator.value}
+                                  value={operator.value}
+                                >
+                                  {operator.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            <span>Valor de comparação</span>
+                            <input
+                              disabled={rule.operator.startsWith("is_")}
+                              onChange={(event) =>
+                                setValidationRules((current) =>
+                                  current.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? {
+                                          ...item,
+                                          comparison_value: event.target.value,
+                                        }
+                                      : item,
+                                  ),
+                                )
+                              }
+                              value={String(rule.comparison_value ?? "")}
+                            />
+                          </label>
+                          <label className="metadata-rule-message">
+                            <span>Mensagem mostrada ao usuário</span>
+                            <input
+                              onChange={(event) =>
+                                setValidationRules((current) =>
+                                  current.map((item, itemIndex) =>
+                                    itemIndex === index
+                                      ? { ...item, message: event.target.value }
+                                      : item,
+                                  ),
+                                )
+                              }
+                              required
+                              value={rule.message}
+                            />
+                          </label>
+                          <button
+                            aria-label={`Remover regra ${index + 1}`}
+                            className="metadata-remove-field"
+                            onClick={() =>
+                              setValidationRules((current) =>
+                                current.filter(
+                                  (_, itemIndex) => itemIndex !== index,
+                                ),
+                              )
+                            }
+                            type="button"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="metadata-form-actions">
+                      <Button loading={saveDesign.isPending} type="submit">
+                        <FileCheck2 size={16} /> Salvar experiência
+                      </Button>
+                      <Button
+                        onClick={() => setDesignOpen(false)}
+                        type="button"
+                        variant="ghost"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                ) : null}
+              </Card>
+
               {selected.published_version ? (
                 <div className="metadata-record-workspace">
                   <Card className="metadata-record-form-card">
@@ -735,7 +1151,7 @@ export function MetadataStudioPage() {
                         className="metadata-record-form"
                         onSubmit={submitRecord}
                       >
-                        {selectedFields.map((field) => (
+                        {runtimeFields.map((field) => (
                           <label key={field.id}>
                             <span>
                               {field.label}
@@ -852,7 +1268,7 @@ export function MetadataStudioPage() {
                             </small>
                           </div>
                           <dl>
-                            {selectedFields
+                            {visibleFields
                               .filter(
                                 (field) => field.key !== primaryField?.key,
                               )

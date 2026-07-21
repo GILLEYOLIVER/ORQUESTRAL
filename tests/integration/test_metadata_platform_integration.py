@@ -20,6 +20,9 @@ from app.modules.metadata.models import (
     MetadataEntityDefinition,
     MetadataEntityVersion,
     MetadataFieldDefinition,
+    MetadataLayoutDefinition,
+    MetadataValidationRule,
+    MetadataViewDefinition,
 )
 from app.modules.users.models import CompanyUser, User
 
@@ -151,10 +154,37 @@ async def _assert_persistence(settings: Settings, company_id: UUID, definition_i
                 )
                 or 0
             )
+            layouts = int(
+                await database.scalar(
+                    select(func.count())
+                    .select_from(MetadataLayoutDefinition)
+                    .where(MetadataLayoutDefinition.company_id == company_id)
+                )
+                or 0
+            )
+            views = int(
+                await database.scalar(
+                    select(func.count())
+                    .select_from(MetadataViewDefinition)
+                    .where(MetadataViewDefinition.company_id == company_id)
+                )
+                or 0
+            )
+            rules = int(
+                await database.scalar(
+                    select(func.count())
+                    .select_from(MetadataValidationRule)
+                    .where(MetadataValidationRule.company_id == company_id)
+                )
+                or 0
+            )
             assert versions == 2
             assert fields == 4
             assert decisions >= 7
             assert events == 2
+            assert layouts == 2
+            assert views == 2
+            assert rules == 2
     finally:
         await resources.close()
 
@@ -188,6 +218,57 @@ def test_metadata_lifecycle_is_versioned_audited_and_tenant_isolated() -> None:
                 client.get(f"/metadata/entities/{definition_id}", headers=headers_b).status_code
                 == 200
             )
+            assert (
+                client.get(
+                    f"/metadata/entities/{definition_id}/design", headers=headers_a
+                ).status_code
+                == 404
+            )
+            design = {
+                "layouts": [
+                    {
+                        "key": "default_layout",
+                        "label": "Formulario comercial",
+                        "is_default": True,
+                        "sections": [
+                            {
+                                "key": "main_section",
+                                "label": "Dados principais",
+                                "fields": ["name", "amount"],
+                                "columns": 2,
+                            }
+                        ],
+                    }
+                ],
+                "views": [
+                    {
+                        "key": "default_view",
+                        "label": "Lista comercial",
+                        "columns": ["name", "amount"],
+                        "filters": [],
+                        "sorting": [{"field_key": "name", "direction": "asc"}],
+                        "is_default": True,
+                    }
+                ],
+                "validation_rules": [
+                    {
+                        "key": "minimum_amount",
+                        "label": "Valor minimo",
+                        "field_key": "amount",
+                        "operator": "greater_than",
+                        "comparison_value": "10",
+                        "message": "O valor precisa ser maior que 10.",
+                        "active": True,
+                    }
+                ],
+            }
+            configured = client.put(
+                f"/metadata/entities/{definition_id}/design",
+                headers=headers_b,
+                json=design,
+            )
+            assert configured.status_code == 200
+            assert configured.json()["validation_rules"][0]["key"] == "minimum_amount"
 
             validated = client.post(
                 f"/metadata/entities/{definition_id}/validate", headers=headers_b
@@ -199,10 +280,22 @@ def test_metadata_lifecycle_is_versioned_audited_and_tenant_isolated() -> None:
             )
             assert published.status_code == 200
             assert published.json()["published_version"] == 1
+            rejected_record = client.post(
+                f"/metadata/entities/{definition_id}/records",
+                headers=headers_b,
+                json={"values": {"name": "Invalido", "amount": "5.00"}},
+            )
+            assert rejected_record.status_code == 422
+            assert rejected_record.json()["detail"] == "O valor precisa ser maior que 10."
 
             draft = client.post(f"/metadata/entities/{definition_id}/versions", headers=headers_b)
             assert draft.status_code == 201
             assert draft.json()["version"]["version"] == 2
+            copied_design = client.get(
+                f"/metadata/entities/{definition_id}/design", headers=headers_b
+            )
+            assert copied_design.status_code == 200
+            assert copied_design.json()["validation_rules"][0]["key"] == "minimum_amount"
             updated = client.put(
                 f"/metadata/entities/{definition_id}/draft",
                 headers=headers_b,

@@ -4,7 +4,7 @@ Atualizado em: 21 de julho de 2026
 
 ## Fase atual
 
-**Fase 0 - Descoberta e estabilizacao**
+**Fase 2 - Plataforma de metadados (em andamento)**
 
 O primeiro ciclo do Prompt Mestre concluiu os itens imediatos 1 a 3:
 
@@ -12,11 +12,11 @@ O primeiro ciclo do Prompt Mestre concluiu os itens imediatos 1 a 3:
 2. confirmacao da arquitetura real;
 3. execucao e estabilizacao das suites existentes.
 
-Progresso realista da Fase 0: **30%**.
+Progresso realista da Fase 0: **100%**.
 
-Progresso realista do roteiro empresarial completo: **8%**.
+Progresso realista do roteiro empresarial completo: **32%**.
 
-Esses percentuais medem os criterios do novo Prompt Mestre, nao as fases historicas do Documento Mestre anterior.
+Percentuais reavaliados no ciclo 52 conforme codigo, migracoes, testes e matriz de equivalencia; nao representam apenas a quantidade de telas.
 
 ## Estado comprovado
 
@@ -827,3 +827,23 @@ Data: 21 de julho de 2026.
 - Migração reversível `0071 -> 0070 -> 0071` aprovada; banco em `20260721_0071 (head)`; contratos regenerados e probe HMAC do worker aprovado.
 - Segurança comprovada: fusos e janelas inválidos são recusados, a retenção é aplicada por tenant, o canário usa a identidade real sem persistir referência ou erro do provedor e alertas de falha/recuperação são idempotentes.
 - Próximo passo: escalas semanais por plantonista, exportação de SLO e canário com promoção gradual da identidade.
+
+## Ciclo 52 - layouts, visualizacoes e regras por metadados
+
+- Layouts e secoes pertencem a uma versao exata da entidade e controlam a ordem do formulario no Orkestral Studio.
+- Visualizacoes definem colunas, filtros e ordenacao por contrato validado, com uma visualizacao padrao por versao.
+- Regras usam somente operadores deterministas permitidos e sao aplicadas pela API ao criar ou atualizar registros.
+- Configuracoes publicadas sao imutaveis; a nova versao copia o design anterior e exige nova validacao antes da publicacao.
+- Alteracoes geram Policy Decision, auditoria sem valores empresariais e evento transacional por empresa.
+- Migracao: `20260721_0072_metadata_layout_view_rules.py`.
+- Proximo passo: relacionamentos tipados, formulas seguras e tipos de registro com layouts condicionais.
+## Evidências finais do ciclo 52
+
+- Plataforma de metadados validada de ponta a ponta com layouts versionados, visualizações configuráveis e regras determinísticas aplicadas também no back-end.
+- Migrações `20260721_0072` e `20260721_0073` aplicadas; a `0073` teve downgrade e upgrade executados com sucesso e passou a preservar notificações operacionais de severidade crítica.
+- Testes da API: 158 aprovados; testes do worker: 5 aprovados.
+- Testes de integração: 13 aprovados com o worker assíncrono isolado durante a suíte e restaurado ao final.
+- Testes do front-end: lint, tipos, 12 testes e build aprovados.
+- Testes E2E: 7 aprovados e 2 ignorados por contrato do ambiente; nenhum cenário falhou.
+- Segurança: isolamento entre empresas, regras no servidor, alerta crítico, auditoria, análise de segredos e dependências permaneceram aprovados.
+- Próximo recorte exato: relacionamentos tipados, fórmulas seguras e tipos de registro com layouts condicionais.

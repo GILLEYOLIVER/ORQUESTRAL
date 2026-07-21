@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from hmac import compare_digest
 from typing import Annotated, Literal, cast
 from uuid import UUID, uuid4
@@ -300,21 +300,40 @@ async def list_agent_memory_vault_availability(
             .limit(days * 24 * 10)
         )
     )
-    return [
-        AgentMemoryVaultAvailabilityResponse(
-            provider_code=window.provider_code,
-            window_started_at=window.window_started_at,
-            total_checks=window.total_checks,
-            successful_checks=window.successful_checks,
-            failed_checks=window.failed_checks,
-            slo_breaches=window.slo_breaches,
-            availability_percent=round(
-                window.successful_checks / window.total_checks * 100,
-                2,
-            ),
+    provider_windows: dict[str, datetime] = {}
+    providers: dict[str, dict[str, int]] = {}
+    for window in windows:
+        provider_windows.setdefault(window.provider_code, window.window_started_at)
+        summary = providers.setdefault(
+            window.provider_code,
+            {
+                "total_checks": 0,
+                "successful_checks": 0,
+                "failed_checks": 0,
+                "slo_breaches": 0,
+            },
         )
-        for window in windows
-    ]
+        summary["total_checks"] += window.total_checks
+        summary["successful_checks"] += window.successful_checks
+        summary["failed_checks"] += window.failed_checks
+        summary["slo_breaches"] += window.slo_breaches
+
+    responses: list[AgentMemoryVaultAvailabilityResponse] = []
+    for provider_code, summary in providers.items():
+        total_checks = int(summary["total_checks"])
+        successful_checks = int(summary["successful_checks"])
+        responses.append(
+            AgentMemoryVaultAvailabilityResponse(
+                provider_code=provider_code,
+                window_started_at=provider_windows[provider_code],
+                total_checks=total_checks,
+                successful_checks=successful_checks,
+                failed_checks=int(summary["failed_checks"]),
+                slo_breaches=int(summary["slo_breaches"]),
+                availability_percent=round(successful_checks / total_checks * 100, 2),
+            )
+        )
+    return responses
 
 
 async def _notify_memory_incident_reviewers(

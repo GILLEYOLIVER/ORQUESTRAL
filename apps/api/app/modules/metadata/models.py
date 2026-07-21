@@ -141,6 +141,99 @@ class MetadataFieldDefinition(Base):
     )
 
 
+class MetadataLayoutDefinition(Base):
+    __tablename__ = "metadata_layout_definitions"
+    __table_args__ = (
+        UniqueConstraint("company_id", "version_id", "key", name="uq_metadata_layout_key"),
+        Index("ix_metadata_layout_company_version", "company_id", "version_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(80))
+    label: Mapped[str] = mapped_column(String(120))
+    sections: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class MetadataViewDefinition(Base):
+    __tablename__ = "metadata_view_definitions"
+    __table_args__ = (
+        UniqueConstraint("company_id", "version_id", "key", name="uq_metadata_view_key"),
+        Index("ix_metadata_view_company_version", "company_id", "version_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(80))
+    label: Mapped[str] = mapped_column(String(120))
+    columns: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    filters: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    sorting: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class MetadataValidationRule(Base):
+    __tablename__ = "metadata_validation_rules"
+    __table_args__ = (
+        UniqueConstraint("company_id", "version_id", "key", name="uq_metadata_validation_rule_key"),
+        CheckConstraint(
+            "operator IN ('equals', 'not_equals', 'greater_than', 'less_than', "
+            "'contains', 'is_empty', 'is_not_empty')",
+            name="ck_metadata_validation_rule_operator",
+        ),
+        Index("ix_metadata_validation_rule_company_version", "company_id", "version_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(80))
+    label: Mapped[str] = mapped_column(String(120))
+    field_key: Mapped[str] = mapped_column(String(80))
+    operator: Mapped[str] = mapped_column(String(24))
+    comparison_value: Mapped[Any | None] = mapped_column(JSONB)
+    message: Mapped[str] = mapped_column(String(500))
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
 class MetadataRecord(Base):
     __tablename__ = "metadata_records"
     __table_args__ = (

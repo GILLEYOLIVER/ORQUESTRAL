@@ -22,6 +22,8 @@ from app.modules.metadata.record_service import (
     update_custom_record,
 )
 from app.modules.metadata.schemas import (
+    MetadataDesignResponse,
+    MetadataDesignUpdate,
     MetadataEntityCreate,
     MetadataEntityDetail,
     MetadataEntityDraftUpdate,
@@ -32,9 +34,11 @@ from app.modules.metadata.service import (
     MetadataServiceError,
     create_draft_version,
     create_entity,
+    get_design,
     get_entity,
     list_entities,
     publish_entity,
+    update_design,
     update_draft,
     validate_entity,
 )
@@ -192,6 +196,42 @@ async def publish_metadata_entity(
             database,
             get_request_context(principal),
             definition_id,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.get("/entities/{definition_id}/design", response_model=MetadataDesignResponse)
+async def get_metadata_design(
+    definition_id: UUID,
+    request: Request,
+    principal: CanViewMetadata,
+    database: DatabaseSession,
+) -> MetadataDesignResponse:
+    return await _run(
+        get_design(
+            database,
+            get_request_context(principal),
+            definition_id,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.put("/entities/{definition_id}/design", response_model=MetadataDesignResponse)
+async def update_metadata_design(
+    definition_id: UUID,
+    payload: MetadataDesignUpdate,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataDesignResponse:
+    return await _run(
+        update_design(
+            database,
+            get_request_context(principal),
+            definition_id,
+            payload,
             _correlation_id(request),
         )
     )

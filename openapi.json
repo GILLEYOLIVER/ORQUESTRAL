@@ -14031,6 +14031,101 @@
         "title": "MessageResponse",
         "type": "object"
       },
+      "MetadataDesignResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "checksum": {
+            "title": "Checksum",
+            "type": "string"
+          },
+          "layouts": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataLayoutInput"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Layouts",
+            "type": "array"
+          },
+          "validation_rules": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataValidationRuleInput"
+            },
+            "maxItems": 50,
+            "title": "Validation Rules",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "version_status": {
+            "enum": [
+              "draft",
+              "validated",
+              "published",
+              "retired"
+            ],
+            "title": "Version Status",
+            "type": "string"
+          },
+          "views": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataViewInput"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "layouts",
+          "views",
+          "version",
+          "version_status",
+          "checksum"
+        ],
+        "title": "MetadataDesignResponse",
+        "type": "object"
+      },
+      "MetadataDesignUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "layouts": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataLayoutInput"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Layouts",
+            "type": "array"
+          },
+          "validation_rules": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataValidationRuleInput"
+            },
+            "maxItems": 50,
+            "title": "Validation Rules",
+            "type": "array"
+          },
+          "views": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataViewInput"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "layouts",
+          "views"
+        ],
+        "title": "MetadataDesignUpdate",
+        "type": "object"
+      },
       "MetadataEntityCreate": {
         "additionalProperties": false,
         "properties": {
@@ -14534,6 +14629,86 @@
         "title": "MetadataFieldResponse",
         "type": "object"
       },
+      "MetadataLayoutInput": {
+        "additionalProperties": false,
+        "properties": {
+          "is_default": {
+            "default": false,
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataLayoutSectionInput"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "sections"
+        ],
+        "title": "MetadataLayoutInput",
+        "type": "object"
+      },
+      "MetadataLayoutSectionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "default": 2,
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Columns",
+            "type": "integer"
+          },
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "fields"
+        ],
+        "title": "MetadataLayoutSectionInput",
+        "type": "object"
+      },
       "MetadataRecordCreate": {
         "additionalProperties": false,
         "properties": {
@@ -14722,6 +14897,193 @@
           "schema_checksum"
         ],
         "title": "MetadataValidationResponse",
+        "type": "object"
+      },
+      "MetadataValidationRuleInput": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "comparison_value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "field_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Field Key",
+            "type": "string"
+          },
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Message",
+            "type": "string"
+          },
+          "operator": {
+            "enum": [
+              "equals",
+              "not_equals",
+              "greater_than",
+              "less_than",
+              "contains",
+              "is_empty",
+              "is_not_empty"
+            ],
+            "title": "Operator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "field_key",
+          "operator",
+          "message"
+        ],
+        "title": "MetadataValidationRuleInput",
+        "type": "object"
+      },
+      "MetadataViewFilterInput": {
+        "additionalProperties": false,
+        "properties": {
+          "field_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Field Key",
+            "type": "string"
+          },
+          "operator": {
+            "enum": [
+              "equals",
+              "not_equals",
+              "greater_than",
+              "less_than",
+              "contains",
+              "is_empty",
+              "is_not_empty"
+            ],
+            "title": "Operator",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "field_key",
+          "operator"
+        ],
+        "title": "MetadataViewFilterInput",
+        "type": "object"
+      },
+      "MetadataViewInput": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataViewFilterInput"
+            },
+            "maxItems": 20,
+            "title": "Filters",
+            "type": "array"
+          },
+          "is_default": {
+            "default": false,
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "sorting": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataViewSortInput"
+            },
+            "maxItems": 5,
+            "title": "Sorting",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "columns"
+        ],
+        "title": "MetadataViewInput",
+        "type": "object"
+      },
+      "MetadataViewSortInput": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "default": "asc",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "field_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Field Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_key"
+        ],
+        "title": "MetadataViewSortInput",
         "type": "object"
       },
       "MetricPeriod": {
@@ -37214,6 +37576,150 @@
           }
         ],
         "summary": "Get Metadata Entity",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/entities/{definition_id}/design": {
+      "get": {
+        "operationId": "get_metadata_design_metadata_entities__definition_id__design_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataDesignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Metadata Design",
+        "tags": [
+          "metadata"
+        ]
+      },
+      "put": {
+        "operationId": "update_metadata_design_metadata_entities__definition_id__design_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataDesignUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataDesignResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Metadata Design",
         "tags": [
           "metadata"
         ]
