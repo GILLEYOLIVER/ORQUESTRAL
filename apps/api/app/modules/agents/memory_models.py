@@ -266,6 +266,84 @@ class AgentMemoryLegalHold(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class AgentTaskMemoryAccessGrant(Base):
+    __tablename__ = "agent_task_memory_access_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "idempotency_key",
+            name="uq_agent_task_memory_access_idempotency",
+        ),
+        CheckConstraint(
+            "owner_agent_id <> recipient_agent_id",
+            name="ck_agent_task_memory_access_distinct_agents",
+        ),
+        CheckConstraint(
+            "purpose IN ('coordination', 'review', 'handoff')",
+            name="ck_agent_task_memory_access_purpose",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'revoked', 'expired')",
+            name="ck_agent_task_memory_access_status",
+        ),
+        CheckConstraint(
+            "max_entries BETWEEN 1 AND 5",
+            name="ck_agent_task_memory_access_entries",
+        ),
+        CheckConstraint(
+            "max_content_characters BETWEEN 64 AND 2000",
+            name="ck_agent_task_memory_access_characters",
+        ),
+        CheckConstraint(
+            "expires_at > created_at",
+            name="ck_agent_task_memory_access_expiration",
+        ),
+        CheckConstraint(
+            "(status IN ('active', 'expired') AND revoked_by_user_id IS NULL "
+            "AND revoked_at IS NULL AND revocation_reason_fingerprint IS NULL) OR "
+            "(status = 'revoked' AND revoked_by_user_id IS NOT NULL "
+            "AND revoked_at IS NOT NULL AND revocation_reason_fingerprint IS NOT NULL)",
+            name="ck_agent_task_memory_access_revocation",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    task_delegation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_delegations.id", ondelete="CASCADE"), index=True
+    )
+    owner_agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="CASCADE"), index=True
+    )
+    recipient_agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="CASCADE"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(24), index=True)
+    allowed_classifications: Mapped[list[str]] = mapped_column(JSONB)
+    max_entries: Mapped[int] = mapped_column(Integer)
+    max_content_characters: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(
+        String(16), default="active", server_default="active", index=True
+    )
+    idempotency_key: Mapped[UUID] = mapped_column(index=True)
+    granted_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    revoked_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    revocation_reason_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class AgentMemoryConsentRevocation(Base):
     __tablename__ = "agent_memory_consent_revocations"
     __table_args__ = (

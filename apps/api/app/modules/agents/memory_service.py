@@ -21,6 +21,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
+    AgentTaskMemoryAccessGrant,
 )
 from app.modules.agents.models import AgentDataPolicy
 from app.modules.agents.security import (
@@ -40,6 +41,24 @@ class AuthorizedMemoryContext:
     retrieved_fingerprints: tuple[str, ...]
     blocked_fingerprints: tuple[str, ...]
     estimated_tokens: int
+
+
+@dataclass(frozen=True, slots=True)
+class SharedTaskMemoryItem:
+    memory_id: UUID
+    owner_agent_id: UUID
+    classification: str
+    purpose: str
+    content: str
+    truncated: bool
+    created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class SharedTaskMemoryContext:
+    items: tuple[SharedTaskMemoryItem, ...]
+    total_characters: int
+    blocked_items: int
 
 
 def memory_content_fingerprint(
@@ -71,6 +90,13 @@ def memory_legal_reference_fingerprint(
     *, secret: str, company_id: UUID, agent_id: UUID, delegation_id: UUID, reference: str
 ) -> str:
     payload = f"{company_id}:{agent_id}:{delegation_id}:{reference}".encode()
+    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
+def memory_access_revocation_fingerprint(
+    *, secret: str, company_id: UUID, grant_id: UUID, reason: str
+) -> str:
+    payload = f"{company_id}:{grant_id}:{reason}".encode()
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
@@ -236,6 +262,65 @@ async def retrieve_authorized_memories(
         estimated_tokens += content_tokens
     return AuthorizedMemoryContext(
         tuple(contents), tuple(retrieved), tuple(blocked), estimated_tokens
+    )
+
+
+async def retrieve_shared_task_memories(
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    company_id: UUID,
+    grant: AgentTaskMemoryAccessGrant,
+) -> SharedTaskMemoryContext:
+    rows = list(
+        await database.scalars(
+            select(AgentMemoryEntry)
+            .where(
+                AgentMemoryEntry.company_id == company_id,
+                AgentMemoryEntry.agent_id == grant.owner_agent_id,
+                AgentMemoryEntry.scope == "task",
+                AgentMemoryEntry.task_delegation_id == grant.task_delegation_id,
+                AgentMemoryEntry.classification.in_(grant.allowed_classifications),
+                AgentMemoryEntry.expires_at > utc_now(),
+            )
+            .order_by(AgentMemoryEntry.created_at.desc())
+            .limit(grant.max_entries)
+        )
+    )
+    vault = CredentialVault(settings.encryption_key)
+    items: list[SharedTaskMemoryItem] = []
+    remaining_characters = grant.max_content_characters
+    blocked_items = 0
+    for row in rows:
+        try:
+            content = vault.decrypt(row.encrypted_content).get("content")
+        except CredentialVaultError:
+            blocked_items += 1
+            continue
+        if not isinstance(content, str) or scan_prompt_injection(content).detected:
+            blocked_items += 1
+            continue
+        if remaining_characters <= 0:
+            break
+        minimized = content[:remaining_characters]
+        if not minimized:
+            continue
+        items.append(
+            SharedTaskMemoryItem(
+                memory_id=row.id,
+                owner_agent_id=row.agent_id,
+                classification=row.classification,
+                purpose=row.purpose,
+                content=minimized,
+                truncated=len(minimized) < len(content),
+                created_at=row.created_at,
+            )
+        )
+        remaining_characters -= len(minimized)
+    return SharedTaskMemoryContext(
+        items=tuple(items),
+        total_characters=grant.max_content_characters - remaining_characters,
+        blocked_items=blocked_items,
     )
 
 

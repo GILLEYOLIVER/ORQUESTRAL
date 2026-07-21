@@ -18,6 +18,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
+    AgentTaskMemoryAccessGrant,
 )
 from app.modules.agents.memory_schemas import (
     AgentMemoryConsentRevocationResponse,
@@ -34,19 +35,28 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurposePolicyInput,
     AgentMemoryResponse,
     AgentMemoryScopePolicyInput,
+    AgentTaskMemoryAccessGrantCreate,
+    AgentTaskMemoryAccessGrantResponse,
+    AgentTaskMemoryAccessRevoke,
+    AgentTaskMemoryContextItem,
+    AgentTaskMemoryContextRequest,
+    AgentTaskMemoryContextResponse,
     LegalHoldStatus,
     MemoryClassification,
     MemoryPurpose,
     MemoryScope,
     MemorySource,
+    TaskMemoryAccessStatus,
 )
 from app.modules.agents.memory_service import (
     has_active_memory_legal_hold,
+    memory_access_revocation_fingerprint,
     memory_consent_fingerprint,
     memory_content_fingerprint,
     memory_is_expired,
     memory_legal_reference_fingerprint,
     memory_policy_values,
+    retrieve_shared_task_memories,
 )
 from app.modules.agents.models import Agent
 from app.modules.authorization.service import record_authorization_audit
@@ -207,6 +217,28 @@ def _legal_hold_response(hold: AgentMemoryLegalHold) -> AgentMemoryLegalHoldResp
         expires_at=hold.expires_at,
         created_at=hold.created_at,
         decided_at=hold.decided_at,
+    )
+
+
+def _task_memory_access_response(
+    grant: AgentTaskMemoryAccessGrant,
+) -> AgentTaskMemoryAccessGrantResponse:
+    effective_status = "expired" if grant.expires_at <= utc_now() else grant.status
+    return AgentTaskMemoryAccessGrantResponse(
+        id=grant.id,
+        task_delegation_id=grant.task_delegation_id,
+        owner_agent_id=grant.owner_agent_id,
+        recipient_agent_id=grant.recipient_agent_id,
+        purpose=grant.purpose,
+        allowed_classifications=grant.allowed_classifications,
+        max_entries=grant.max_entries,
+        max_content_characters=grant.max_content_characters,
+        status=cast(TaskMemoryAccessStatus, effective_status),
+        granted_by_user_id=grant.granted_by_user_id,
+        revoked_by_user_id=grant.revoked_by_user_id,
+        expires_at=grant.expires_at,
+        created_at=grant.created_at,
+        revoked_at=grant.revoked_at,
     )
 
 
@@ -696,6 +728,319 @@ async def decide_agent_memory_legal_hold(
     await database.commit()
     await database.refresh(hold)
     return _legal_hold_response(hold)
+
+
+@router.get(
+    "/{agent_id}/delegations/{delegation_id}/memory-access-grants",
+    response_model=list[AgentTaskMemoryAccessGrantResponse],
+)
+async def list_agent_task_memory_access_grants(
+    agent_id: UUID,
+    delegation_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentTaskMemoryAccessGrantResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    await _active_task_delegation(
+        database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        delegation_id=delegation_id,
+    )
+    grants = list(
+        await database.scalars(
+            select(AgentTaskMemoryAccessGrant)
+            .where(
+                AgentTaskMemoryAccessGrant.company_id == context.company_id,
+                AgentTaskMemoryAccessGrant.task_delegation_id == delegation_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+            )
+            .order_by(AgentTaskMemoryAccessGrant.created_at.desc())
+        )
+    )
+    return [_task_memory_access_response(grant) for grant in grants]
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/memory-access-grants",
+    response_model=AgentTaskMemoryAccessGrantResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_task_memory_access_grant(
+    agent_id: UUID,
+    delegation_id: UUID,
+    payload: AgentTaskMemoryAccessGrantCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentTaskMemoryAccessGrantResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    await _tenant_agent(
+        database,
+        company_id=context.company_id,
+        agent_id=payload.recipient_agent_id,
+    )
+    delegation = await _active_task_delegation(
+        database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        delegation_id=delegation_id,
+    )
+    participants = {delegation.supervisor_agent_id, delegation.assigned_agent_id}
+    if payload.recipient_agent_id == agent_id or payload.recipient_agent_id not in participants:
+        raise HTTPException(
+            status_code=422,
+            detail="O destinatário deve ser o outro agente participante da tarefa.",
+        )
+    policy = await _memory_policy(database, company_id=context.company_id, agent_id=agent_id)
+    scope_policies = await _memory_scope_policies(
+        database, company_id=context.company_id, agent_id=agent_id
+    )
+    purpose_policies = await _memory_purpose_policies(
+        database, company_id=context.company_id, agent_id=agent_id
+    )
+    policy_values = memory_policy_values(policy, scope_policies, purpose_policies)
+    if not set(payload.allowed_classifications).issubset(
+        set(cast(list[str], policy_values["allowed_classifications"]))
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="O contrato tenta compartilhar classificação não autorizada pela política.",
+        )
+    normalized_classifications = sorted(payload.allowed_classifications)
+    existing = await database.scalar(
+        select(AgentTaskMemoryAccessGrant).where(
+            AgentTaskMemoryAccessGrant.company_id == context.company_id,
+            AgentTaskMemoryAccessGrant.idempotency_key == payload.idempotency_key,
+        )
+    )
+    if existing is not None:
+        same_contract = (
+            existing.task_delegation_id == delegation_id
+            and existing.owner_agent_id == agent_id
+            and existing.recipient_agent_id == payload.recipient_agent_id
+            and existing.purpose == payload.purpose
+            and sorted(existing.allowed_classifications) == normalized_classifications
+            and existing.max_entries == payload.max_entries
+            and existing.max_content_characters == payload.max_content_characters
+        )
+        if not same_contract:
+            raise HTTPException(
+                status_code=409, detail="Chave idempotente usada por outro contrato."
+            )
+        return _task_memory_access_response(existing)
+    now = utc_now()
+    expires_at = min(now + timedelta(minutes=payload.expires_in_minutes), delegation.due_at)
+    if expires_at <= now:
+        raise HTTPException(
+            status_code=409, detail="A tarefa não possui prazo ativo para compartilhar."
+        )
+    grant = AgentTaskMemoryAccessGrant(
+        company_id=context.company_id,
+        task_delegation_id=delegation_id,
+        owner_agent_id=agent_id,
+        recipient_agent_id=payload.recipient_agent_id,
+        purpose=payload.purpose,
+        allowed_classifications=normalized_classifications,
+        max_entries=payload.max_entries,
+        max_content_characters=payload.max_content_characters,
+        idempotency_key=payload.idempotency_key,
+        granted_by_user_id=context.user_id,
+        expires_at=expires_at,
+    )
+    database.add(grant)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.task_memory_access.granted",
+        target_type="agent_task_memory_access_grant",
+        target_id=grant.id,
+        details={
+            "delegation_id": str(delegation_id),
+            "owner_agent_id": str(agent_id),
+            "recipient_agent_id": str(payload.recipient_agent_id),
+            "purpose": grant.purpose,
+            "max_entries": grant.max_entries,
+            "max_content_characters": grant.max_content_characters,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.task_memory_access.granted",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"grant_id": str(grant.id), "delegation_id": str(delegation_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(grant)
+    return _task_memory_access_response(grant)
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/revoke",
+    response_model=AgentTaskMemoryAccessGrantResponse,
+)
+async def revoke_agent_task_memory_access_grant(
+    agent_id: UUID,
+    delegation_id: UUID,
+    grant_id: UUID,
+    payload: AgentTaskMemoryAccessRevoke,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentTaskMemoryAccessGrantResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    grant = await database.scalar(
+        select(AgentTaskMemoryAccessGrant)
+        .where(
+            AgentTaskMemoryAccessGrant.id == grant_id,
+            AgentTaskMemoryAccessGrant.company_id == context.company_id,
+            AgentTaskMemoryAccessGrant.task_delegation_id == delegation_id,
+            AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if grant is None:
+        raise HTTPException(status_code=404, detail="Contrato de memória não encontrado.")
+    if grant.status == "revoked":
+        return _task_memory_access_response(grant)
+    if grant.status == "expired" or grant.expires_at <= utc_now():
+        grant.status = "expired"
+        await database.commit()
+        await database.refresh(grant)
+        return _task_memory_access_response(grant)
+    grant.status = "revoked"
+    grant.revoked_by_user_id = context.user_id
+    grant.revoked_at = utc_now()
+    grant.revocation_reason_fingerprint = memory_access_revocation_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        grant_id=grant.id,
+        reason=payload.reason,
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.task_memory_access.revoked",
+        target_type="agent_task_memory_access_grant",
+        target_id=grant.id,
+        details={
+            "delegation_id": str(delegation_id),
+            "recipient_agent_id": str(grant.recipient_agent_id),
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.task_memory_access.revoked",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"grant_id": str(grant.id), "delegation_id": str(delegation_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(grant)
+    return _task_memory_access_response(grant)
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/shared-memory-context",
+    response_model=AgentTaskMemoryContextResponse,
+)
+async def get_agent_shared_task_memory_context(
+    agent_id: UUID,
+    delegation_id: UUID,
+    payload: AgentTaskMemoryContextRequest,
+    principal: CanExecuteAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentTaskMemoryContextResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    await _active_task_delegation(
+        database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        delegation_id=delegation_id,
+    )
+    grant = await database.scalar(
+        select(AgentTaskMemoryAccessGrant).where(
+            AgentTaskMemoryAccessGrant.id == payload.grant_id,
+            AgentTaskMemoryAccessGrant.company_id == context.company_id,
+            AgentTaskMemoryAccessGrant.task_delegation_id == delegation_id,
+            AgentTaskMemoryAccessGrant.recipient_agent_id == agent_id,
+            AgentTaskMemoryAccessGrant.purpose == payload.purpose,
+            AgentTaskMemoryAccessGrant.status == "active",
+            AgentTaskMemoryAccessGrant.expires_at > utc_now(),
+        )
+    )
+    if grant is None:
+        raise HTTPException(status_code=404, detail="Contexto compartilhado não autorizado.")
+    shared = await retrieve_shared_task_memories(
+        database,
+        settings=settings,
+        company_id=context.company_id,
+        grant=grant,
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.task_memory_access.used",
+        target_type="agent_task_memory_access_grant",
+        target_id=grant.id,
+        details={
+            "delegation_id": str(delegation_id),
+            "recipient_agent_id": str(agent_id),
+            "item_count": len(shared.items),
+            "total_characters": shared.total_characters,
+            "blocked_items": shared.blocked_items,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.task_memory_access.used",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "grant_id": str(grant.id),
+                "delegation_id": str(delegation_id),
+                "item_count": len(shared.items),
+            },
+        ),
+    )
+    await database.commit()
+    return AgentTaskMemoryContextResponse(
+        grant_id=grant.id,
+        task_delegation_id=delegation_id,
+        recipient_agent_id=agent_id,
+        purpose=payload.purpose,
+        items=[
+            AgentTaskMemoryContextItem(
+                memory_id=item.memory_id,
+                owner_agent_id=item.owner_agent_id,
+                classification=cast(MemoryClassification, item.classification),
+                purpose=cast(MemoryPurpose, item.purpose),
+                content=item.content,
+                truncated=item.truncated,
+                created_at=item.created_at,
+            )
+            for item in shared.items
+        ],
+        total_characters=shared.total_characters,
+        blocked_items=shared.blocked_items,
+    )
 
 
 @router.get("/{agent_id}/my-memories", response_model=list[AgentMemoryResponse])

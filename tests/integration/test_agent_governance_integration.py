@@ -850,6 +850,84 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                 },
             )
             assert queued.status_code == 201
+            shared_task_content = (
+                "Contexto mínimo para coordenação entre agentes, sem liberar outras memórias "
+                "ou dados fora da tarefa autorizada."
+            )
+            shared_task_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": shared_task_content,
+                    "scope": "task",
+                    "classification": "internal",
+                    "task_delegation_id": queued.json()["id"],
+                },
+            )
+            assert shared_task_memory.status_code == 201
+            grant_key = str(uuid4())
+            grant_payload = {
+                "recipient_agent_id": worker_id,
+                "purpose": "coordination",
+                "allowed_classifications": ["internal"],
+                "max_entries": 1,
+                "max_content_characters": 64,
+                "expires_in_minutes": 30,
+                "idempotency_key": grant_key,
+            }
+            grant = client.post(
+                f"/agents/{agent_id}/delegations/{queued.json()['id']}/memory-access-grants",
+                headers=headers_b,
+                json=grant_payload,
+            )
+            assert grant.status_code == 201
+            assert grant.json()["recipient_agent_id"] == worker_id
+            assert shared_task_content not in str(grant.json())
+            repeated_grant = client.post(
+                f"/agents/{agent_id}/delegations/{queued.json()['id']}/memory-access-grants",
+                headers=headers_b,
+                json=grant_payload,
+            )
+            assert repeated_grant.status_code == 201
+            assert repeated_grant.json()["id"] == grant.json()["id"]
+            shared_context_path = (
+                f"/agents/{worker_id}/delegations/{queued.json()['id']}/shared-memory-context"
+            )
+            assert (
+                client.post(
+                    shared_context_path,
+                    headers=headers_a,
+                    json={"grant_id": grant.json()["id"], "purpose": "coordination"},
+                ).status_code
+                == 404
+            )
+            minimized_context = client.post(
+                shared_context_path,
+                headers=headers_b,
+                json={"grant_id": grant.json()["id"], "purpose": "coordination"},
+            )
+            assert minimized_context.status_code == 200
+            assert minimized_context.json()["total_characters"] == 64
+            assert len(minimized_context.json()["items"]) == 1
+            assert minimized_context.json()["items"][0]["content"] == shared_task_content[:64]
+            assert minimized_context.json()["items"][0]["truncated"] is True
+            revocation_reason = "Compartilhamento não é mais necessário"
+            revoked_grant = client.post(
+                f"/agents/{agent_id}/delegations/{queued.json()['id']}/memory-access-grants/{grant.json()['id']}/revoke",
+                headers=headers_b,
+                json={"reason": revocation_reason},
+            )
+            assert revoked_grant.status_code == 200
+            assert revoked_grant.json()["status"] == "revoked"
+            assert revocation_reason not in str(revoked_grant.json())
+            assert (
+                client.post(
+                    shared_context_path,
+                    headers=headers_b,
+                    json={"grant_id": grant.json()["id"], "purpose": "coordination"},
+                ).status_code
+                == 404
+            )
             disposable_task_content = "Contexto descartável da tarefa automática"
             disposable_task_memory = client.post(
                 f"/agents/{agent_id}/memories",

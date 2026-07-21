@@ -351,6 +351,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Task Memory Access Grants */
+        get: operations["list_agent_task_memory_access_grants_agents__agent_id__delegations__delegation_id__memory_access_grants_get"];
+        put?: never;
+        /** Create Agent Task Memory Access Grant */
+        post: operations["create_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Agent Task Memory Access Grant */
+        post: operations["revoke_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Legal Holds */
+        get: operations["list_agent_memory_legal_holds_agents__agent_id__delegations__delegation_id__memory_legal_holds_get"];
+        put?: never;
+        /** Request Agent Memory Legal Hold */
+        post: operations["request_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds/{hold_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Legal Hold */
+        post: operations["decide_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds__hold_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/shared-memory-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get Agent Shared Task Memory Context */
+        post: operations["get_agent_shared_task_memory_context_agents__agent_id__delegations__delegation_id__shared_memory_context_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/delegations/{delegation_id}/transition": {
         parameters: {
             query?: never;
@@ -4478,6 +4565,77 @@ export interface components {
             source_type: "manual" | "conversation" | "task" | "tool";
             /** Subject User Id */
             subject_user_id?: string | null;
+            /** Task Delegation Id */
+            task_delegation_id?: string | null;
+        };
+        /** AgentMemoryLegalHoldCreate */
+        AgentMemoryLegalHoldCreate: {
+            /** Legal Reference */
+            legal_reference: string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "legal_claim" | "regulatory_request" | "audit_preservation";
+            /** Retention Days */
+            retention_days: number;
+        };
+        /** AgentMemoryLegalHoldDecision */
+        AgentMemoryLegalHoldDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+        };
+        /** AgentMemoryLegalHoldResponse */
+        AgentMemoryLegalHoldResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "legal_claim" | "regulatory_request" | "audit_preservation";
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /** Retention Days */
+            retention_days: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "expired";
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
         };
         /** AgentMemoryMetadataExport */
         AgentMemoryMetadataExport: {
@@ -4652,6 +4810,8 @@ export interface components {
             source_type: "manual" | "conversation" | "task" | "tool";
             /** Subject User Id */
             subject_user_id: string | null;
+            /** Task Delegation Id */
+            task_delegation_id: string | null;
         };
         /** AgentMemoryScopePolicyInput */
         AgentMemoryScopePolicyInput: {
@@ -4943,6 +5103,178 @@ export interface components {
              * Format: uuid
              */
             worker_agent_id: string;
+        };
+        /** AgentTaskMemoryAccessGrantCreate */
+        AgentTaskMemoryAccessGrantCreate: {
+            /** Allowed Classifications */
+            allowed_classifications?: ("public" | "internal" | "confidential" | "restricted")[];
+            /**
+             * Expires In Minutes
+             * @default 60
+             */
+            expires_in_minutes: number;
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /**
+             * Max Content Characters
+             * @default 512
+             */
+            max_content_characters: number;
+            /**
+             * Max Entries
+             * @default 1
+             */
+            max_entries: number;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+        };
+        /** AgentTaskMemoryAccessGrantResponse */
+        AgentTaskMemoryAccessGrantResponse: {
+            /** Allowed Classifications */
+            allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Granted By User Id
+             * Format: uuid
+             */
+            granted_by_user_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Content Characters */
+            max_content_characters: number;
+            /** Max Entries */
+            max_entries: number;
+            /**
+             * Owner Agent Id
+             * Format: uuid
+             */
+            owner_agent_id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Revoked By User Id */
+            revoked_by_user_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "revoked" | "expired";
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
+        };
+        /** AgentTaskMemoryAccessRevoke */
+        AgentTaskMemoryAccessRevoke: {
+            /** Reason */
+            reason: string;
+        };
+        /** AgentTaskMemoryContextItem */
+        AgentTaskMemoryContextItem: {
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "public" | "internal" | "confidential" | "restricted";
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Memory Id
+             * Format: uuid
+             */
+            memory_id: string;
+            /**
+             * Owner Agent Id
+             * Format: uuid
+             */
+            owner_agent_id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** AgentTaskMemoryContextRequest */
+        AgentTaskMemoryContextRequest: {
+            /**
+             * Grant Id
+             * Format: uuid
+             */
+            grant_id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+        };
+        /** AgentTaskMemoryContextResponse */
+        AgentTaskMemoryContextResponse: {
+            /** Blocked Items */
+            blocked_items: number;
+            /**
+             * Grant Id
+             * Format: uuid
+             */
+            grant_id: string;
+            /** Items */
+            items: components["schemas"]["AgentTaskMemoryContextItem"][];
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
+            /** Total Characters */
+            total_characters: number;
         };
         /** AgentToolCatalogResponse */
         AgentToolCatalogResponse: {
@@ -11252,6 +11584,378 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentHandoffResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_task_memory_access_grants_agents__agent_id__delegations__delegation_id__memory_access_grants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryAccessGrantCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revoke_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryAccessRevoke"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_legal_holds_agents__agent_id__delegations__delegation_id__memory_legal_holds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds__hold_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_shared_task_memory_context_agents__agent_id__delegations__delegation_id__shared_memory_context_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryContextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryContextResponse"];
                 };
             };
             /** @description Solicitação inválida */

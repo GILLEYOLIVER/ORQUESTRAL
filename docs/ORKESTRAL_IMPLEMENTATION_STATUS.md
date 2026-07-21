@@ -543,3 +543,13 @@ Data: 21 de julho de 2026.
 - Memória preservada por obrigação legal deixa de ser recuperável pelo agente depois do encerramento da tarefa.
 - Migração: `20260721_0048`.
 - Próximo passo: memória de tarefa compartilhada entre agentes com contrato de acesso explícito, minimização de contexto e revogação.
+
+## Ciclo 28 - compartilhamento mínimo e revogável de memória de tarefa
+
+- Compartilhamento exige contrato explícito e idempotente, limitado à delegação e aos dois agentes que realmente participam da tarefa.
+- Cada contrato declara finalidade, classificações, quantidade máxima, orçamento total de caracteres e prazo nunca superior ao vencimento da tarefa.
+- A recuperação entrega somente memórias `task` da delegação exata, elimina conteúdo com indício de injeção e não expõe fingerprints ou outras memórias do agente.
+- Revogação produz efeito imediato; a justificativa é preservada somente como HMAC e nunca aparece em respostas, eventos ou auditoria.
+- Eventos e auditorias registram apenas identificadores, limites e contagens, sem conteúdo compartilhado.
+- Migração: `20260721_0049`.
+- Próximo passo: consumir o contrato diretamente no executor da delegação, registrar o uso no trace operacional e testar revogação concorrente durante a execução.

@@ -2101,6 +2101,18 @@
               }
             ],
             "title": "Subject User Id"
+          },
+          "task_delegation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Delegation Id"
           }
         },
         "required": [
@@ -2108,6 +2120,154 @@
           "scope"
         ],
         "title": "AgentMemoryCreate",
+        "type": "object"
+      },
+      "AgentMemoryLegalHoldCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "legal_reference": {
+            "maxLength": 160,
+            "minLength": 8,
+            "title": "Legal Reference",
+            "type": "string"
+          },
+          "reason_code": {
+            "enum": [
+              "legal_claim",
+              "regulatory_request",
+              "audit_preservation"
+            ],
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "retention_days": {
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Retention Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reason_code",
+          "legal_reference",
+          "retention_days"
+        ],
+        "title": "AgentMemoryLegalHoldCreate",
+        "type": "object"
+      },
+      "AgentMemoryLegalHoldDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "AgentMemoryLegalHoldDecision",
+        "type": "object"
+      },
+      "AgentMemoryLegalHoldResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By User Id"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason_code": {
+            "enum": [
+              "legal_claim",
+              "regulatory_request",
+              "audit_preservation"
+            ],
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "requested_by_user_id": {
+            "format": "uuid",
+            "title": "Requested By User Id",
+            "type": "string"
+          },
+          "retention_days": {
+            "title": "Retention Days",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_delegation_id": {
+            "format": "uuid",
+            "title": "Task Delegation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "task_delegation_id",
+          "reason_code",
+          "retention_days",
+          "status",
+          "requested_by_user_id",
+          "decided_by_user_id",
+          "expires_at",
+          "created_at",
+          "decided_at"
+        ],
+        "title": "AgentMemoryLegalHoldResponse",
         "type": "object"
       },
       "AgentMemoryMetadataExport": {
@@ -2515,6 +2675,18 @@
               }
             ],
             "title": "Subject User Id"
+          },
+          "task_delegation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Delegation Id"
           }
         },
         "required": [
@@ -2524,6 +2696,7 @@
           "classification",
           "source_type",
           "source_id",
+          "task_delegation_id",
           "purpose",
           "subject_user_id",
           "consent_recorded",
@@ -3215,6 +3388,350 @@
           "created_at"
         ],
         "title": "AgentTaskContractResponse",
+        "type": "object"
+      },
+      "AgentTaskMemoryAccessGrantCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_classifications": {
+            "items": {
+              "enum": [
+                "public",
+                "internal",
+                "confidential",
+                "restricted"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Allowed Classifications",
+            "type": "array"
+          },
+          "expires_in_minutes": {
+            "default": 60,
+            "maximum": 1440.0,
+            "minimum": 5.0,
+            "title": "Expires In Minutes",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "format": "uuid",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "max_content_characters": {
+            "default": 512,
+            "maximum": 2000.0,
+            "minimum": 64.0,
+            "title": "Max Content Characters",
+            "type": "integer"
+          },
+          "max_entries": {
+            "default": 1,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Max Entries",
+            "type": "integer"
+          },
+          "purpose": {
+            "enum": [
+              "coordination",
+              "review",
+              "handoff"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "recipient_agent_id": {
+            "format": "uuid",
+            "title": "Recipient Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipient_agent_id",
+          "purpose",
+          "idempotency_key"
+        ],
+        "title": "AgentTaskMemoryAccessGrantCreate",
+        "type": "object"
+      },
+      "AgentTaskMemoryAccessGrantResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_classifications": {
+            "items": {
+              "enum": [
+                "public",
+                "internal",
+                "confidential",
+                "restricted"
+              ],
+              "type": "string"
+            },
+            "title": "Allowed Classifications",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "granted_by_user_id": {
+            "format": "uuid",
+            "title": "Granted By User Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "max_content_characters": {
+            "title": "Max Content Characters",
+            "type": "integer"
+          },
+          "max_entries": {
+            "title": "Max Entries",
+            "type": "integer"
+          },
+          "owner_agent_id": {
+            "format": "uuid",
+            "title": "Owner Agent Id",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "coordination",
+              "review",
+              "handoff"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "recipient_agent_id": {
+            "format": "uuid",
+            "title": "Recipient Agent Id",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "revoked_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked By User Id"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "revoked",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_delegation_id": {
+            "format": "uuid",
+            "title": "Task Delegation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "task_delegation_id",
+          "owner_agent_id",
+          "recipient_agent_id",
+          "purpose",
+          "allowed_classifications",
+          "max_entries",
+          "max_content_characters",
+          "status",
+          "granted_by_user_id",
+          "revoked_by_user_id",
+          "expires_at",
+          "created_at",
+          "revoked_at"
+        ],
+        "title": "AgentTaskMemoryAccessGrantResponse",
+        "type": "object"
+      },
+      "AgentTaskMemoryAccessRevoke": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "AgentTaskMemoryAccessRevoke",
+        "type": "object"
+      },
+      "AgentTaskMemoryContextItem": {
+        "additionalProperties": false,
+        "properties": {
+          "classification": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted"
+            ],
+            "title": "Classification",
+            "type": "string"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "memory_id": {
+            "format": "uuid",
+            "title": "Memory Id",
+            "type": "string"
+          },
+          "owner_agent_id": {
+            "format": "uuid",
+            "title": "Owner Agent Id",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "service",
+              "personalization",
+              "operations",
+              "compliance",
+              "analytics"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "memory_id",
+          "owner_agent_id",
+          "classification",
+          "purpose",
+          "content",
+          "truncated",
+          "created_at"
+        ],
+        "title": "AgentTaskMemoryContextItem",
+        "type": "object"
+      },
+      "AgentTaskMemoryContextRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "grant_id": {
+            "format": "uuid",
+            "title": "Grant Id",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "coordination",
+              "review",
+              "handoff"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grant_id",
+          "purpose"
+        ],
+        "title": "AgentTaskMemoryContextRequest",
+        "type": "object"
+      },
+      "AgentTaskMemoryContextResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked_items": {
+            "title": "Blocked Items",
+            "type": "integer"
+          },
+          "grant_id": {
+            "format": "uuid",
+            "title": "Grant Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentTaskMemoryContextItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "purpose": {
+            "enum": [
+              "coordination",
+              "review",
+              "handoff"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "recipient_agent_id": {
+            "format": "uuid",
+            "title": "Recipient Agent Id",
+            "type": "string"
+          },
+          "task_delegation_id": {
+            "format": "uuid",
+            "title": "Task Delegation Id",
+            "type": "string"
+          },
+          "total_characters": {
+            "title": "Total Characters",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grant_id",
+          "task_delegation_id",
+          "recipient_agent_id",
+          "purpose",
+          "items",
+          "total_characters",
+          "blocked_items"
+        ],
+        "title": "AgentTaskMemoryContextResponse",
         "type": "object"
       },
       "AgentToolCatalogResponse": {
@@ -18759,6 +19276,626 @@
           }
         ],
         "summary": "Decide Agent Handoff",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants": {
+      "get": {
+        "operationId": "list_agent_task_memory_access_grants_agents__agent_id__delegations__delegation_id__memory_access_grants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentTaskMemoryAccessGrantResponse"
+                  },
+                  "title": "Response List Agent Task Memory Access Grants Agents  Agent Id  Delegations  Delegation Id  Memory Access Grants Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Task Memory Access Grants",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "operationId": "create_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTaskMemoryAccessGrantCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTaskMemoryAccessGrantResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Agent Task Memory Access Grant",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/revoke": {
+      "post": {
+        "operationId": "revoke_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTaskMemoryAccessRevoke"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTaskMemoryAccessGrantResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Agent Task Memory Access Grant",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds": {
+      "get": {
+        "operationId": "list_agent_memory_legal_holds_agents__agent_id__delegations__delegation_id__memory_legal_holds_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryLegalHoldResponse"
+                  },
+                  "title": "Response List Agent Memory Legal Holds Agents  Agent Id  Delegations  Delegation Id  Memory Legal Holds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Memory Legal Holds",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "operationId": "request_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryLegalHoldCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryLegalHoldResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Agent Memory Legal Hold",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds/{hold_id}/decision": {
+      "post": {
+        "operationId": "decide_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds__hold_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "hold_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Hold Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryLegalHoldDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryLegalHoldResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Agent Memory Legal Hold",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/delegations/{delegation_id}/shared-memory-context": {
+      "post": {
+        "operationId": "get_agent_shared_task_memory_context_agents__agent_id__delegations__delegation_id__shared_memory_context_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTaskMemoryContextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTaskMemoryContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Agent Shared Task Memory Context",
         "tags": [
           "agents"
         ]

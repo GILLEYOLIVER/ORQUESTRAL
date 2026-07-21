@@ -196,3 +196,80 @@ class AgentMemoryLegalHoldResponse(StrictSchema):
     expires_at: datetime
     created_at: datetime
     decided_at: datetime | None
+
+
+TaskMemoryAccessPurpose = Literal["coordination", "review", "handoff"]
+TaskMemoryAccessStatus = Literal["active", "revoked", "expired"]
+
+
+def _default_shared_classifications() -> list[MemoryClassification]:
+    return ["public", "internal"]
+
+
+class AgentTaskMemoryAccessGrantCreate(StrictSchema):
+    recipient_agent_id: UUID
+    purpose: TaskMemoryAccessPurpose
+    allowed_classifications: list[MemoryClassification] = Field(
+        default_factory=_default_shared_classifications, min_length=1, max_length=4
+    )
+    max_entries: int = Field(default=1, ge=1, le=5)
+    max_content_characters: int = Field(default=512, ge=64, le=2000)
+    expires_in_minutes: int = Field(default=60, ge=5, le=1440)
+    idempotency_key: UUID
+
+    @model_validator(mode="after")
+    def validate_classifications(self) -> Self:
+        if len(set(self.allowed_classifications)) != len(self.allowed_classifications):
+            raise ValueError("As classificações compartilhadas não podem ser repetidas.")
+        return self
+
+
+class AgentTaskMemoryAccessGrantResponse(StrictSchema):
+    id: UUID
+    task_delegation_id: UUID
+    owner_agent_id: UUID
+    recipient_agent_id: UUID
+    purpose: TaskMemoryAccessPurpose
+    allowed_classifications: list[MemoryClassification]
+    max_entries: int
+    max_content_characters: int
+    status: TaskMemoryAccessStatus
+    granted_by_user_id: UUID
+    revoked_by_user_id: UUID | None
+    expires_at: datetime
+    created_at: datetime
+    revoked_at: datetime | None
+
+
+class AgentTaskMemoryAccessRevoke(StrictSchema):
+    reason: str = Field(min_length=3, max_length=160)
+
+    @field_validator("reason")
+    @classmethod
+    def trim_reason(cls, value: str) -> str:
+        return value.strip()
+
+
+class AgentTaskMemoryContextRequest(StrictSchema):
+    grant_id: UUID
+    purpose: TaskMemoryAccessPurpose
+
+
+class AgentTaskMemoryContextItem(StrictSchema):
+    memory_id: UUID
+    owner_agent_id: UUID
+    classification: MemoryClassification
+    purpose: MemoryPurpose
+    content: str
+    truncated: bool
+    created_at: datetime
+
+
+class AgentTaskMemoryContextResponse(StrictSchema):
+    grant_id: UUID
+    task_delegation_id: UUID
+    recipient_agent_id: UUID
+    purpose: TaskMemoryAccessPurpose
+    items: list[AgentTaskMemoryContextItem]
+    total_characters: int
+    blocked_items: int
