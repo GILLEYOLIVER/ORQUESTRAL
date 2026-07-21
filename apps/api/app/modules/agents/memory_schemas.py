@@ -300,6 +300,7 @@ class AgentTaskMemoryIncidentRevoke(StrictSchema):
     quarantine_minutes: int = Field(default=60, ge=5, le=1440)
     severity: Literal["low", "medium", "high", "critical"] = "high"
     required_review_quorum: int = Field(default=1, ge=1, le=5)
+    review_sla_minutes: int = Field(default=60, ge=5, le=1440)
     idempotency_key: UUID
 
     @field_validator("incident_reference", "reason")
@@ -325,6 +326,11 @@ class AgentTaskMemoryIncidentResponse(StrictSchema):
     severity: Literal["low", "medium", "high", "critical"]
     required_review_quorum: int
     review_count: int
+    review_sla_minutes: int
+    review_due_at: datetime
+    sla_breached: bool
+    escalation_count: int
+    escalated_at: datetime | None
     triggered_by_user_id: UUID
     reviewed_by_user_id: UUID | None
     reviewed_at: datetime | None
@@ -351,6 +357,7 @@ class AgentMemoryRiskSummary(StrictSchema):
     pending_incident_reviews: int
     quarantined: bool
     quarantine_until: datetime | None
+    overdue_incident_reviews: int
 
 
 class AgentMemoryRiskReportPayload(StrictSchema):
@@ -359,6 +366,7 @@ class AgentMemoryRiskReportPayload(StrictSchema):
     generated_at: datetime
     sequence: int
     previous_signature: str | None
+    signature_key_version: int
     risk_summary: AgentMemoryRiskSummary
     pending_incident_ids: list[UUID]
 
@@ -387,6 +395,40 @@ class AgentMemoryResponseExerciseResponse(StrictSchema):
     checks: dict[str, bool]
     requested_by_user_id: UUID
     created_at: datetime
+
+
+class AgentMemoryIncidentEscalationResponse(StrictSchema):
+    escalated_count: int
+    escalated_at: datetime
+
+
+class AgentMemoryRiskSigningKeyResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    version: int
+    activated_by_user_id: UUID
+    created_at: datetime
+
+
+class AgentMemoryExerciseScheduleUpdate(StrictSchema):
+    enabled: bool
+    cadence_hours: int = Field(default=168, ge=1, le=720)
+
+
+class AgentMemoryExerciseScheduleResponse(StrictSchema):
+    id: UUID | None
+    agent_id: UUID
+    enabled: bool
+    cadence_hours: int
+    next_run_at: datetime | None
+    last_run_at: datetime | None
+    updated_at: datetime | None
+
+
+class AgentMemoryExerciseDueResponse(StrictSchema):
+    executed: bool
+    next_run_at: datetime | None
+    exercise: AgentMemoryResponseExerciseResponse | None
 
 
 class AgentTaskMemoryContextRequest(StrictSchema):

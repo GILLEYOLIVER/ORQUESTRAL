@@ -224,6 +224,7 @@ export interface AgentMemoryRiskSummary {
   incidents_last_30_days: number;
   revoked_grants_last_30_days: number;
   pending_incident_reviews: number;
+  overdue_incident_reviews: number;
   quarantined: boolean;
   quarantine_until: string | null;
 }
@@ -239,6 +240,11 @@ export interface AgentTaskMemoryIncidentResponse {
   severity: "low" | "medium" | "high" | "critical";
   required_review_quorum: number;
   review_count: number;
+  review_sla_minutes: number;
+  review_due_at: string;
+  sla_breached: boolean;
+  escalation_count: number;
+  escalated_at: string | null;
   triggered_by_user_id: string;
   reviewed_by_user_id: string | null;
   reviewed_at: string | null;
@@ -253,6 +259,7 @@ export interface AgentMemoryRiskReport {
     generated_at: string;
     sequence: number;
     previous_signature: string | null;
+    signature_key_version: number;
     risk_summary: AgentMemoryRiskSummary;
     pending_incident_ids: string[];
   };
@@ -269,6 +276,30 @@ export interface AgentMemoryResponseExercise {
   checks: Record<string, boolean>;
   requested_by_user_id: string;
   created_at: string;
+}
+
+export interface AgentMemoryRiskSigningKey {
+  id: string;
+  agent_id: string;
+  version: number;
+  activated_by_user_id: string;
+  created_at: string;
+}
+
+export interface AgentMemoryExerciseSchedule {
+  id: string | null;
+  agent_id: string;
+  enabled: boolean;
+  cadence_hours: number;
+  next_run_at: string | null;
+  last_run_at: string | null;
+  updated_at: string | null;
+}
+
+export interface AgentMemoryExerciseDue {
+  executed: boolean;
+  next_run_at: string | null;
+  exercise: AgentMemoryResponseExercise | null;
 }
 
 export function useAgents(enabled = true) {

@@ -1427,6 +1427,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 "quarantine_minutes": 5,
                 "severity": "high",
                 "required_review_quorum": 1,
+                "review_sla_minutes": 5,
                 "idempotency_key": str(uuid4()),
             }
             invalid_critical_incident = client.post(
@@ -1515,6 +1516,29 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert incident_queue.status_code == 200
             assert incident_queue.json()[0]["review_status"] == "pending"
+            monkeypatch.setattr(
+                memory_routes_module,
+                "utc_now",
+                lambda: current_memory_route_time() + timedelta(minutes=6),
+            )
+            overdue_risk = client.get(
+                f"/agents/{agent_id}/memory-risk-summary", headers=headers_b
+            )
+            assert overdue_risk.status_code == 200
+            assert overdue_risk.json()["overdue_incident_reviews"] >= 1
+            escalated = client.post(
+                f"/agents/{agent_id}/memory-access-incidents/escalate-overdue",
+                headers=headers_b,
+            )
+            assert escalated.status_code == 200
+            assert escalated.json()["escalated_count"] >= 1
+            repeated_escalation = client.post(
+                f"/agents/{agent_id}/memory-access-incidents/escalate-overdue",
+                headers=headers_b,
+            )
+            assert repeated_escalation.status_code == 200
+            assert repeated_escalation.json()["escalated_count"] == 0
+            monkeypatch.setattr(memory_routes_module, "utc_now", current_memory_route_time)
             incident_review_path = (
                 f"/agents/{agent_id}/memory-access-incidents/{incident.json()['id']}/review"
             )
@@ -1543,6 +1567,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             risk_report = client.post(f"/agents/{agent_id}/memory-risk-report", headers=headers_b)
             assert risk_report.status_code == 200
             assert risk_report.json()["signature_algorithm"] == "HMAC-SHA256"
+            assert risk_report.json()["payload"]["signature_key_version"] == 1
             assert len(risk_report.json()["signature"]) == 64
             verified_report = client.post(
                 f"/agents/{agent_id}/memory-risk-report/verify",
@@ -1551,10 +1576,24 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert verified_report.status_code == 200
             assert verified_report.json()["valid"] is True
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-risk-signing-keys/rotate",
+                    headers=headers_a,
+                ).status_code
+                == 404
+            )
+            rotated_key = client.post(
+                f"/agents/{agent_id}/memory-risk-signing-keys/rotate",
+                headers=headers_b,
+            )
+            assert rotated_key.status_code == 201
+            assert rotated_key.json()["version"] == 2
             second_risk_report = client.post(
                 f"/agents/{agent_id}/memory-risk-report", headers=headers_b
             )
             assert second_risk_report.status_code == 200
+            assert second_risk_report.json()["payload"]["signature_key_version"] == 2
             assert (
                 second_risk_report.json()["payload"]["sequence"]
                 == risk_report.json()["payload"]["sequence"] + 1
@@ -1571,6 +1610,13 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 ).json()["valid"]
                 is True
             )
+            historical_report = client.post(
+                f"/agents/{agent_id}/memory-risk-report/verify",
+                headers=headers_b,
+                json=risk_report.json(),
+            )
+            assert historical_report.status_code == 200
+            assert historical_report.json()["valid"] is True
             tampered_report = risk_report.json()
             tampered_report["payload"]["risk_summary"]["active_grants"] += 1
             rejected_report = client.post(
@@ -1594,6 +1640,39 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert listed_exercises.status_code == 200
             assert listed_exercises.json()[0]["id"] == response_exercise.json()["id"]
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/memory-response-exercise-schedule",
+                    headers=headers_a,
+                ).status_code
+                == 404
+            )
+            schedule = client.put(
+                f"/agents/{agent_id}/memory-response-exercise-schedule",
+                headers=headers_b,
+                json={"enabled": True, "cadence_hours": 1},
+            )
+            assert schedule.status_code == 200
+            assert schedule.json()["enabled"] is True
+            not_due = client.post(
+                f"/agents/{agent_id}/memory-response-exercise-schedule/run-due",
+                headers=headers_b,
+            )
+            assert not_due.status_code == 200
+            assert not_due.json()["executed"] is False
+            monkeypatch.setattr(
+                memory_routes_module,
+                "utc_now",
+                lambda: current_memory_route_time() + timedelta(hours=2),
+            )
+            due = client.post(
+                f"/agents/{agent_id}/memory-response-exercise-schedule/run-due",
+                headers=headers_b,
+            )
+            assert due.status_code == 200
+            assert due.json()["executed"] is True
+            assert due.json()["exercise"]["status"] == "passed"
+            monkeypatch.setattr(memory_routes_module, "utc_now", current_memory_route_time)
             for attempt in range(2):
                 blocked_delegation = client.post(
                     f"/agents/{agent_id}/delegations",

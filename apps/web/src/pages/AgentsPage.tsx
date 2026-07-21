@@ -29,6 +29,9 @@ import {
   type AgentMemoryRiskSummary,
   type AgentMemoryRiskReport,
   type AgentMemoryResponseExercise,
+  type AgentMemoryRiskSigningKey,
+  type AgentMemoryExerciseSchedule,
+  type AgentMemoryExerciseDue,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -176,6 +179,12 @@ export function AgentsPage() {
     useState("60");
   const [memoryIncidentSeverity, setMemoryIncidentSeverity] = useState("high");
   const [memoryIncidentQuorum, setMemoryIncidentQuorum] = useState("1");
+  const [memoryIncidentReviewSlaMinutes, setMemoryIncidentReviewSlaMinutes] =
+    useState("60");
+  const [memoryExerciseScheduleEnabled, setMemoryExerciseScheduleEnabled] =
+    useState(false);
+  const [memoryExerciseCadenceHours, setMemoryExerciseCadenceHours] =
+    useState("168");
   const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
     useState(() => crypto.randomUUID());
   const [memoryIncidentFeedback, setMemoryIncidentFeedback] = useState<
@@ -250,6 +259,14 @@ export function AgentsPage() {
     queryFn: () =>
       request<AgentMemoryResponseExercise[]>(
         `/agents/${selectedId}/memory-response-exercises`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryExerciseSchedule = useQuery({
+    queryKey: ["agent-memory-exercise-schedule", selectedId],
+    queryFn: () =>
+      request<AgentMemoryExerciseSchedule>(
+        `/agents/${selectedId}/memory-response-exercise-schedule`,
       ),
     enabled: canConfigure && Boolean(selectedId),
   });
@@ -341,6 +358,13 @@ export function AgentsPage() {
         .map((item) => item.purpose),
     );
   }, [memoryPolicy.data]);
+  useEffect(() => {
+    if (!memoryExerciseSchedule.data) return;
+    setMemoryExerciseScheduleEnabled(memoryExerciseSchedule.data.enabled);
+    setMemoryExerciseCadenceHours(
+      String(memoryExerciseSchedule.data.cadence_hours),
+    );
+  }, [memoryExerciseSchedule.data]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["agents"] });
@@ -372,6 +396,9 @@ export function AgentsPage() {
     });
     void queryClient.invalidateQueries({
       queryKey: ["agent-memory-exercises", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memory-exercise-schedule", selectedId],
     });
   };
   const create = useMutation({
@@ -571,6 +598,7 @@ export function AgentsPage() {
             quarantine_minutes: Number(memoryIncidentQuarantineMinutes),
             severity: memoryIncidentSeverity,
             required_review_quorum: Number(memoryIncidentQuorum),
+            review_sla_minutes: Number(memoryIncidentReviewSlaMinutes),
             idempotency_key: memoryIncidentIdempotencyKey,
           },
         },
@@ -610,6 +638,35 @@ export function AgentsPage() {
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
   });
+  const escalateOverdueMemoryIncidents = useMutation({
+    mutationFn: () =>
+      request<{ escalated_count: number; escalated_at: string }>(
+        `/agents/${selectedId}/memory-access-incidents/escalate-overdue`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.escalated_count
+          ? `${result.escalated_count} revisão(ões) atrasada(s) escalonada(s).`
+          : "Nenhuma revisão atrasada aguardando escalonamento.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const rotateMemoryRiskSigningKey = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryRiskSigningKey>(
+        `/agents/${selectedId}/memory-risk-signing-keys/rotate`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        `Assinatura rotacionada para a versão ${result.version}. Relatórios anteriores continuam verificáveis.`,
+      );
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
   const exportMemoryRiskReport = useMutation({
     mutationFn: () =>
       request<AgentMemoryRiskReport>(
@@ -642,6 +699,44 @@ export function AgentsPage() {
         result.status === "passed"
           ? "Exercício concluído: todos os controles responderam corretamente."
           : "Exercício encontrou um controle que exige revisão.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const saveMemoryExerciseSchedule = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryExerciseSchedule>(
+        `/agents/${selectedId}/memory-response-exercise-schedule`,
+        {
+          method: "PUT",
+          body: {
+            enabled: memoryExerciseScheduleEnabled,
+            cadence_hours: Number(memoryExerciseCadenceHours),
+          },
+        },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.enabled
+          ? `Agenda ativada a cada ${result.cadence_hours} hora(s).`
+          : "Agenda recorrente desativada.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const runDueMemoryExercise = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryExerciseDue>(
+        `/agents/${selectedId}/memory-response-exercise-schedule/run-due`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.executed
+          ? "Exercício agendado executado e registrado."
+          : "A agenda ainda não atingiu o próximo horário de execução.",
       );
       refresh();
     },
@@ -1442,6 +1537,12 @@ export function AgentsPage() {
                     </strong>
                   </article>
                   <article>
+                    <small>Revisões atrasadas</small>
+                    <strong>
+                      {memoryRisk.data?.overdue_incident_reviews ?? 0}
+                    </strong>
+                  </article>
+                  <article>
                     <small>Quarentena</small>
                     <strong>
                       {memoryRisk.data?.quarantined ? "Ativa" : "Livre"}
@@ -1464,6 +1565,22 @@ export function AgentsPage() {
                     variant="secondary"
                   >
                     <ShieldAlert size={16} /> Executar exercício de resposta
+                  </Button>
+                  <Button
+                    loading={escalateOverdueMemoryIncidents.isPending}
+                    onClick={() => escalateOverdueMemoryIncidents.mutate()}
+                    type="button"
+                    variant="secondary"
+                  >
+                    <TimerReset size={16} /> Escalonar revisões atrasadas
+                  </Button>
+                  <Button
+                    loading={rotateMemoryRiskSigningKey.isPending}
+                    onClick={() => rotateMemoryRiskSigningKey.mutate()}
+                    type="button"
+                    variant="secondary"
+                  >
+                    <LockKeyhole size={16} /> Rotacionar assinatura
                   </Button>
                 </div>
                 <form
@@ -1532,6 +1649,17 @@ export function AgentsPage() {
                     type="number"
                     value={memoryIncidentQuorum}
                   />
+                  <TextField
+                    label="Prazo para revisão (minutos)"
+                    max={1440}
+                    min={5}
+                    onChange={(event) =>
+                      setMemoryIncidentReviewSlaMinutes(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryIncidentReviewSlaMinutes}
+                  />
                   <Button
                     loading={revokeMemoryAccessForIncident.isPending}
                     type="submit"
@@ -1558,6 +1686,11 @@ export function AgentsPage() {
                             quarentena{" "}
                             {incident.quarantined ? "ativa" : "encerrada"}
                             {` · severidade ${incident.severity} · votos ${incident.review_count}/${incident.required_review_quorum}`}
+                            {` · prazo ${new Date(incident.review_due_at).toLocaleString("pt-BR")}`}
+                            {incident.sla_breached ? " · SLA vencido" : ""}
+                            {incident.escalation_count
+                              ? ` · escalonado ${incident.escalation_count} vez(es)`
+                              : ""}
                           </small>
                         </div>
                         {incident.review_status === "pending" ? (
@@ -1594,6 +1727,60 @@ export function AgentsPage() {
                     <p>Nenhum incidente de memória registrado.</p>
                   )}
                 </div>
+                <form
+                  className="agent-policy-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    saveMemoryExerciseSchedule.mutate();
+                  }}
+                >
+                  <label className="native-field">
+                    <span>Agenda recorrente de exercícios</span>
+                    <input
+                      checked={memoryExerciseScheduleEnabled}
+                      onChange={(event) =>
+                        setMemoryExerciseScheduleEnabled(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                  </label>
+                  <TextField
+                    label="Intervalo entre exercícios (horas)"
+                    max={720}
+                    min={1}
+                    onChange={(event) =>
+                      setMemoryExerciseCadenceHours(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryExerciseCadenceHours}
+                  />
+                  <div className="form-actions">
+                    <Button
+                      loading={saveMemoryExerciseSchedule.isPending}
+                      type="submit"
+                      variant="secondary"
+                    >
+                      Salvar agenda
+                    </Button>
+                    <Button
+                      loading={runDueMemoryExercise.isPending}
+                      onClick={() => runDueMemoryExercise.mutate()}
+                      type="button"
+                      variant="ghost"
+                    >
+                      Executar se estiver no prazo
+                    </Button>
+                  </div>
+                  <small>
+                    Próxima execução:{" "}
+                    {memoryExerciseSchedule.data?.next_run_at
+                      ? new Date(
+                          memoryExerciseSchedule.data.next_run_at,
+                        ).toLocaleString("pt-BR")
+                      : "não agendada"}
+                  </small>
+                </form>
                 <div className="agent-policy-list">
                   <strong>Exercícios recentes</strong>
                   {memoryExercises.data?.length ? (

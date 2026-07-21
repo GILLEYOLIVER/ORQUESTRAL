@@ -609,3 +609,14 @@ Data: 21 de julho de 2026.
 - A interface permite configurar severidade/quorum, acompanhar votos e executar exercícios com resultado objetivo.
 - Migração: `20260721_0055`.
 - Próximo passo: adicionar SLA e escalonamento da fila, rotação de chaves com verificação histórica e agendamento recorrente de exercícios.
+
+## Ciclo 35 - SLA, rotação de assinatura e agenda de exercícios
+
+- Incidentes possuem SLA configurável de 5 minutos a 24 horas, prazo explícito e indicação objetiva de atraso na API e na interface.
+- Escalonamento em lote processa somente revisões vencidas ainda não escalonadas, com repetição segura, auditoria e evento sem texto sensível.
+- Relatórios usam chaves derivadas por versão; a rotação cria uma nova versão sem persistir material secreto e preserva a verificação histórica enquanto o segredo mestre permanecer disponível.
+- A cadeia de custódia registra a versão usada em cada assinatura e rejeita divergência entre o relatório apresentado e o registro persistido.
+- Exercícios de resposta possuem agenda persistente, intervalo controlado e executor de vencimento que registra a próxima execução sem fingir execução antecipada.
+- A interface permite acompanhar SLAs, escalonar atrasos, rotacionar assinaturas, configurar a agenda e executar exercícios vencidos.
+- Migração: `20260721_0056_agent_memory_sla_key_schedule.py`.
+- Próximo passo: entregar notificações para responsáveis pelo incidente, keyring para rotação segura do segredo mestre e disparo da agenda pelo worker.
