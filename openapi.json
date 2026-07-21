@@ -2321,6 +2321,61 @@
         "title": "AgentMemoryIncidentEscalationResponse",
         "type": "object"
       },
+      "AgentMemoryKeyringStatusResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "last_resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resolved At"
+          },
+          "provider_code": {
+            "title": "Provider Code",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "environment",
+              "managed"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "const": "active",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "provider_code",
+          "status",
+          "activated_at",
+          "last_resolved_at"
+        ],
+        "title": "AgentMemoryKeyringStatusResponse",
+        "type": "object"
+      },
       "AgentMemoryLegalHoldCreate": {
         "additionalProperties": false,
         "properties": {
@@ -12902,6 +12957,62 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "ManagedVaultMetricResponse": {
+        "properties": {
+          "average_duration_ms": {
+            "title": "Average Duration Ms",
+            "type": "integer"
+          },
+          "failed_tests": {
+            "title": "Failed Tests",
+            "type": "integer"
+          },
+          "last_tested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Tested At"
+          },
+          "provider_code": {
+            "title": "Provider Code",
+            "type": "string"
+          },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
+          },
+          "success_rate": {
+            "title": "Success Rate",
+            "type": "number"
+          },
+          "successful_tests": {
+            "title": "Successful Tests",
+            "type": "integer"
+          },
+          "total_tests": {
+            "title": "Total Tests",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider_code",
+          "provider_name",
+          "total_tests",
+          "successful_tests",
+          "failed_tests",
+          "success_rate",
+          "average_duration_ms",
+          "last_tested_at"
+        ],
+        "title": "ManagedVaultMetricResponse",
+        "type": "object"
+      },
       "MarketingSummaryResponse": {
         "additionalProperties": false,
         "properties": {
@@ -22657,6 +22768,74 @@
           }
         ],
         "summary": "Revoke Agent Memory Consent",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-keyring": {
+      "get": {
+        "operationId": "get_agent_memory_keyring_status_agents__agent_id__memory_keyring_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryKeyringStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Agent Memory Keyring Status",
         "tags": [
           "agents"
         ]
@@ -37398,6 +37577,66 @@
           }
         ],
         "summary": "Rotate Company Credentials",
+        "tags": [
+          "plugins"
+        ]
+      }
+    },
+    "/plugins/managed-vault-metrics/summary": {
+      "get": {
+        "operationId": "get_managed_vault_metrics_plugins_managed_vault_metrics_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ManagedVaultMetricResponse"
+                  },
+                  "title": "Response Get Managed Vault Metrics Plugins Managed Vault Metrics Summary Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Managed Vault Metrics",
         "tags": [
           "plugins"
         ]

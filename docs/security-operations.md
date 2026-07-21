@@ -119,3 +119,13 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 - A conexão só é marcada como válida depois de uma leitura remota real. Falhas do provedor são convertidas em mensagem segura sem corpo, token, referência jurídica ou conteúdo secreto.
 - Retenções de jobs de recriptografia geram um único lembrete antes do vencimento para solicitante e revisores autorizados da mesma empresa. O registro `reminder_sent_at` impede duplicidade mesmo com execução periódica do worker.
 - A política de rotação do segredo do monitor é derivada do ambiente: `optional` no local, `warn` em desenvolvimento e `enforce` em produção ou desenvolvimento remoto. Produção e modo remoto continuam exigindo data de rotação válida.
+
+## Ativação de keyring externo para memória de agentes
+
+- Um keyring gerenciado só é ativado para um agente depois que um job de recriptografia termina com sucesso e a referência foi resolvida pela identidade da carga de trabalho.
+- O vínculo é persistido por `company_id` e `agent_id`, aponta para uma credencial ativa da mesma empresa e armazena somente código do provedor e impressão SHA-256 da referência; chave, token e referência em texto não são persistidos no vínculo.
+- Novas memórias usam a chave externa como primária. Durante a migração, a chave de bootstrap e chaves anteriores ficam apenas como fallback em memória para abrir registros ainda não convertidos; o teste de integração comprova que a chave de ambiente isolada não abre uma nova memória externa.
+- A resolução ocorre sob demanda e sem cache persistente. Se a identidade ou o cofre estiver indisponível, novas gravações retornam `503` seguro e recuperações para agentes retornam contexto vazio, nunca dados parcialmente descriptografados.
+- O status do keyring é consultável sem expor IDs de credencial ou referências. Acesso cruzado entre empresas retorna `404`.
+- Métricas de teste dos cofres agregam sucesso, falha, latência e último teste por provedor, sempre com filtro obrigatório de empresa.
+- Não revogar um vínculo externo antes de executar uma recriptografia de retorno ou troca para outro keyring e validar a leitura. A revogação segura será um fluxo controlado posterior.

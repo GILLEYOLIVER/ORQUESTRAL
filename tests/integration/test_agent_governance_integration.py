@@ -45,8 +45,8 @@ from app.modules.companies.models import Company
 from app.modules.events.models import OutboxEvent
 from app.modules.notifications.models import Notification
 from app.modules.notifications.service import represented_approver_user_id
-from app.modules.plugins.crypto import CredentialVault
-from app.modules.plugins.models import IntegrationCredential, Plugin
+from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
+from app.modules.plugins.models import IntegrationCredential, Plugin, PluginConnectionTest
 from app.modules.users.models import CompanyUser, User
 
 
@@ -204,6 +204,56 @@ async def _seed_vault_credentials(
         await resources.close()
 
 
+async def _seed_managed_vault_credential(
+    settings: Settings, identity: AgentGovernanceIdentity
+) -> UUID:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            plugin = await database.scalar(
+                select(Plugin).where(Plugin.code == "google_secret_manager")
+            )
+            assert plugin is not None
+            credential = IntegrationCredential(
+                company_id=identity.company_ids[1],
+                plugin_id=plugin.id,
+                name="Keyring GCP de teste",
+                encrypted_credentials=CredentialVault(settings.encryption_key).encrypt(
+                    {
+                        "key_reference": "gcp-sm://orkestral-test/secrets/active",
+                        "identity_reference": "orkestral-test@example.iam.gserviceaccount.com",
+                    }
+                ),
+                credential_fields=["identity_reference", "key_reference"],
+                status="active",
+            )
+            database.add(credential)
+            await database.flush()
+            database.add_all(
+                [
+                    PluginConnectionTest(
+                        company_id=identity.company_ids[0],
+                        plugin_id=plugin.id,
+                        success=False,
+                        message="Falha sintética da empresa A.",
+                        duration_ms=20,
+                    ),
+                    PluginConnectionTest(
+                        company_id=identity.company_ids[1],
+                        plugin_id=plugin.id,
+                        credential_id=credential.id,
+                        success=True,
+                        message="Sucesso sintético da empresa B.",
+                        duration_ms=10,
+                    ),
+                ]
+            )
+            await database.commit()
+            return credential.id
+    finally:
+        await resources.close()
+
+
 async def _expire_reencryption_job(settings: Settings, *, company_id: UUID, job_id: UUID) -> None:
     resources = create_resources(settings)
     try:
@@ -328,6 +378,25 @@ async def _assert_memory_storage(
             assert memory is not None
             assert secret_text.encode() not in memory.encrypted_content
             assert secret_text not in memory.content_fingerprint
+    finally:
+        await resources.close()
+
+
+async def _assert_memory_requires_external_keyring(
+    settings: Settings, *, company_id: UUID, memory_id: UUID
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            memory = await database.scalar(
+                select(AgentMemoryEntry).where(
+                    AgentMemoryEntry.id == memory_id,
+                    AgentMemoryEntry.company_id == company_id,
+                )
+            )
+            assert memory is not None
+            with pytest.raises(CredentialVaultError):
+                CredentialVault(settings.encryption_key).decrypt(memory.encrypted_content)
     finally:
         await resources.close()
 
@@ -1092,9 +1161,9 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert expiring_notifications >= 2
             assert (
-                asyncio.run(
-                    maintain_agent_memory_reencryption_jobs(settings=settings)
-                )["legal_hold_reminders"]
+                asyncio.run(maintain_agent_memory_reencryption_jobs(settings=settings))[
+                    "legal_hold_reminders"
+                ]
                 == 0
             )
             assert (
@@ -1151,6 +1220,91 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert retained_jobs.status_code == 200
             assert external_rotation.json()["id"] not in {job["id"] for job in retained_jobs.json()}
+
+            managed_credential_id = asyncio.run(_seed_managed_vault_credential(settings, identity))
+            metrics_b = client.get("/plugins/managed-vault-metrics/summary", headers=headers_b)
+            assert metrics_b.status_code == 200
+            assert metrics_b.json()[0]["provider_code"] == "google_secret_manager"
+            assert metrics_b.json()[0]["successful_tests"] == 1
+            assert metrics_b.json()[0]["failed_tests"] == 0
+            metrics_a = client.get("/plugins/managed-vault-metrics/summary", headers=headers_a)
+            assert metrics_a.status_code == 200
+            assert metrics_a.json()[0]["successful_tests"] == 0
+            assert metrics_a.json()[0]["failed_tests"] == 1
+
+            managed_secret = "managed-memory-keyring-secret-material-2026"  # noqa: S105
+
+            async def resolve_test_keyring(
+                self,  # type: ignore[no-untyped-def]
+                references,  # type: ignore[no-untyped-def]
+                *,
+                identity_reference=None,  # type: ignore[no-untyped-def]
+            ) -> tuple[str, ...]:
+                assert str(references[0]).startswith("gcp-sm://")
+                assert identity_reference == "orkestral-test@example.iam.gserviceaccount.com"
+                return tuple(
+                    managed_secret if index == 0 else f"{managed_secret}-previous-{index}"
+                    for index, _reference in enumerate(references)
+                )
+
+            monkeypatch.setattr(
+                memory_service_module.ManagedVaultSecretResolver,
+                "resolve_keyring",
+                resolve_test_keyring,
+            )
+            settings.encryption_key_provider = "external"
+            settings.encryption_key_reference = "gcp-sm://orkestral-test/secrets/active"
+            settings.encryption_previous_key_references = []
+            managed_rotation = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={
+                    "batch_size": 500,
+                    "max_retry_attempts": 1,
+                    "key_credential_id": str(managed_credential_id),
+                },
+            )
+            assert managed_rotation.status_code == 201, managed_rotation.text
+            managed_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert managed_maintenance["completed"] == 1
+            keyring_status = client.get(f"/agents/{agent_id}/memory-keyring", headers=headers_b)
+            assert keyring_status.status_code == 200
+            assert keyring_status.json()["source"] == "managed"
+            assert keyring_status.json()["provider_code"] == "google_secret_manager"
+            assert (
+                client.get(f"/agents/{agent_id}/memory-keyring", headers=headers_a).status_code
+                == 404
+            )
+            managed_memory_content = "Memória cifrada pelo keyring gerenciado."
+            managed_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": managed_memory_content,
+                    "scope": "conversation",
+                    "classification": "internal",
+                    "purpose": "operations",
+                },
+            )
+            assert managed_memory.status_code == 201, managed_memory.text
+            asyncio.run(
+                _assert_memory_requires_external_keyring(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    memory_id=UUID(managed_memory.json()["id"]),
+                )
+            )
+            managed_retrieval = asyncio.run(
+                _retrieve_memory_context(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                    user_id=identity.user_ids[1],
+                )
+            )
+            assert managed_memory_content in managed_retrieval.contents
             settings.encryption_key_provider = "environment"
             settings.encryption_key_reference = "environment://orkestral/local/active"
             settings.encryption_previous_key_references = []
@@ -1868,6 +2022,11 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 process_delegation(UUID(race_delegation.json()["id"]), settings=settings)
             )
             monkeypatch.undo()
+            monkeypatch.setattr(
+                memory_service_module.ManagedVaultSecretResolver,
+                "resolve_keyring",
+                resolve_test_keyring,
+            )
             assert race_result["status"] == "completed"
             race_traces = client.get(
                 f"/agents/{agent_id}/delegations/{race_delegation.json()['id']}/memory-access-traces",
@@ -1888,19 +2047,17 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 },
             )
             assert cost_delegation.status_code == 201
-            assert (
-                client.post(
-                    f"/agents/{agent_id}/memories",
-                    headers=headers_b,
-                    json={
-                        "content": "Contexto com custo controlado pela política.",
-                        "scope": "task",
-                        "classification": "internal",
-                        "task_delegation_id": cost_delegation.json()["id"],
-                    },
-                ).status_code
-                == 201
+            cost_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": "Contexto com custo controlado pela política.",
+                    "scope": "task",
+                    "classification": "internal",
+                    "task_delegation_id": cost_delegation.json()["id"],
+                },
             )
+            assert cost_memory.status_code == 201, cost_memory.text
             cost_grant = client.post(
                 f"/agents/{agent_id}/delegations/{cost_delegation.json()['id']}/memory-access-grants",
                 headers=headers_b,

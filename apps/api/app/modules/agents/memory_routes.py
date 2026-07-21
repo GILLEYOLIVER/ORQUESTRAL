@@ -18,6 +18,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryConsentRevocation,
     AgentMemoryEntry,
     AgentMemoryExerciseSchedule,
+    AgentMemoryKeyringBinding,
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
@@ -41,6 +42,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryExerciseScheduleResponse,
     AgentMemoryExerciseScheduleUpdate,
     AgentMemoryIncidentEscalationResponse,
+    AgentMemoryKeyringStatusResponse,
     AgentMemoryLegalHoldCreate,
     AgentMemoryLegalHoldDecision,
     AgentMemoryLegalHoldResponse,
@@ -89,10 +91,12 @@ from app.modules.agents.memory_schemas import (
     TaskMemoryTraceOutcome,
 )
 from app.modules.agents.memory_service import (
+    agent_memory_credential_vault,
     has_active_memory_legal_hold,
     memory_access_revocation_fingerprint,
     memory_consent_fingerprint,
     memory_content_fingerprint,
+    memory_external_target_key_id,
     memory_incident_value_fingerprint,
     memory_is_expired,
     memory_key_reference_fingerprint,
@@ -109,7 +113,7 @@ from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.notifications.service import company_approver_user_ids, create_notification
 from app.modules.plugins.adapters import managed_vault_provider
-from app.modules.plugins.crypto import CredentialVault
+from app.modules.plugins.managed_vault import ManagedVaultResolutionError
 from app.modules.plugins.models import IntegrationCredential, Plugin
 from app.modules.users.models import CompanyUser
 
@@ -688,15 +692,25 @@ async def create_agent_memory(
     if existing is not None:
         await database.delete(existing)
         await database.flush()
+    try:
+        content_vault = await agent_memory_credential_vault(
+            database,
+            settings=settings,
+            company_id=context.company_id,
+            agent_id=agent_id,
+        )
+    except ManagedVaultResolutionError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="O cofre de memória está temporariamente indisponível.",
+        ) from exc
     memory = AgentMemoryEntry(
         company_id=context.company_id,
         agent_id=agent_id,
         created_by_user_id=context.user_id,
         scope=payload.scope,
         classification=payload.classification,
-        encrypted_content=CredentialVault(settings.encryption_key).encrypt(
-            {"content": payload.content}
-        ),
+        encrypted_content=content_vault.encrypt({"content": payload.content}),
         content_fingerprint=fingerprint,
         source_type="task" if task_delegation is not None else payload.source_type,
         source_id=str(task_delegation.id) if task_delegation is not None else payload.source_id,
@@ -2207,6 +2221,41 @@ def _memory_reencryption_legal_hold_response(
     )
 
 
+@router.get(
+    "/{agent_id}/memory-keyring",
+    response_model=AgentMemoryKeyringStatusResponse,
+)
+async def get_agent_memory_keyring_status(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryKeyringStatusResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    binding = await database.scalar(
+        select(AgentMemoryKeyringBinding).where(
+            AgentMemoryKeyringBinding.company_id == context.company_id,
+            AgentMemoryKeyringBinding.agent_id == agent_id,
+            AgentMemoryKeyringBinding.status == "active",
+        )
+    )
+    if binding is None:
+        return AgentMemoryKeyringStatusResponse(
+            source="environment",
+            provider_code="environment",
+            status="active",
+            activated_at=None,
+            last_resolved_at=None,
+        )
+    return AgentMemoryKeyringStatusResponse(
+        source="managed",
+        provider_code=binding.provider_code,
+        status="active",
+        activated_at=binding.activated_at,
+        last_resolved_at=binding.last_resolved_at,
+    )
+
+
 async def _vault_credential_binding(
     database: DatabaseSession,
     *,
@@ -2258,6 +2307,8 @@ async def _memory_reencryption_recovery_assessment(
         active_key_id,
         *(memory_master_key_id(secret) for secret in settings.encryption_previous_keys),
     }
+    if settings.encryption_key_provider == "external":
+        available_key_ids.add(memory_external_target_key_id(settings.encryption_key_reference))
     available_reference_fingerprints = {
         memory_key_reference_fingerprint(settings.encryption_key_reference),
         *(
@@ -2715,7 +2766,11 @@ async def create_agent_memory_reencryption_job(
         company_id=context.company_id,
         agent_id=agent_id,
         status="pending",
-        target_master_key_id=memory_master_key_id(settings.encryption_key),
+        target_master_key_id=(
+            memory_external_target_key_id(settings.encryption_key_reference)
+            if settings.encryption_key_provider == "external"
+            else memory_master_key_id(settings.encryption_key)
+        ),
         key_provider=settings.encryption_key_provider,
         target_key_reference_fingerprint=memory_key_reference_fingerprint(
             settings.encryption_key_reference
@@ -2996,7 +3051,11 @@ async def retry_agent_memory_reencryption_job(
         raise HTTPException(status_code=409, detail="Já existe outro job em andamento.")
     now = utc_now()
     job.status = "pending"
-    job.target_master_key_id = memory_master_key_id(settings.encryption_key)
+    job.target_master_key_id = (
+        memory_external_target_key_id(settings.encryption_key_reference)
+        if settings.encryption_key_provider == "external"
+        else memory_master_key_id(settings.encryption_key)
+    )
     job.key_provider = settings.encryption_key_provider
     job.target_key_reference_fingerprint = memory_key_reference_fingerprint(
         settings.encryption_key_reference

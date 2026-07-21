@@ -19,6 +19,7 @@ from app.modules.agents.coordination_models import AgentDelegation
 from app.modules.agents.memory_models import (
     AgentMemoryEntry,
     AgentMemoryExerciseSchedule,
+    AgentMemoryKeyringBinding,
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
@@ -40,8 +41,13 @@ from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.notifications.service import company_approver_user_ids, create_notification
+from app.modules.plugins.adapters import managed_vault_provider
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
-from app.modules.plugins.models import IntegrationCredential
+from app.modules.plugins.managed_vault import (
+    ManagedVaultResolutionError,
+    ManagedVaultSecretResolver,
+)
+from app.modules.plugins.models import IntegrationCredential, Plugin
 
 DEFAULT_SCOPES = ["conversation", "task", "operational"]
 DEFAULT_CLASSIFICATIONS = ["public", "internal"]
@@ -136,6 +142,74 @@ def memory_signing_secrets(settings: Settings, master_key_id: str) -> tuple[str,
 
 def memory_credential_vault(settings: Settings) -> CredentialVault:
     return CredentialVault(",".join((settings.encryption_key, *settings.encryption_previous_keys)))
+
+
+def memory_external_target_key_id(reference: str) -> str:
+    return memory_key_reference_fingerprint(reference)[:32]
+
+
+async def agent_memory_credential_vault(
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    company_id: UUID,
+    agent_id: UUID,
+    resolver: ManagedVaultSecretResolver | None = None,
+) -> CredentialVault:
+    binding = await database.scalar(
+        select(AgentMemoryKeyringBinding).where(
+            AgentMemoryKeyringBinding.company_id == company_id,
+            AgentMemoryKeyringBinding.agent_id == agent_id,
+            AgentMemoryKeyringBinding.status == "active",
+        )
+    )
+    if binding is None:
+        return memory_credential_vault(settings)
+    row = (
+        await database.execute(
+            select(IntegrationCredential, Plugin.code)
+            .join(Plugin, Plugin.id == IntegrationCredential.plugin_id)
+            .where(
+                IntegrationCredential.id == binding.credential_id,
+                IntegrationCredential.company_id == company_id,
+                IntegrationCredential.status == "active",
+                or_(
+                    IntegrationCredential.expires_at.is_(None),
+                    IntegrationCredential.expires_at > utc_now(),
+                ),
+            )
+        )
+    ).one_or_none()
+    if row is None:
+        raise ManagedVaultResolutionError("O vínculo do keyring não possui credencial ativa.")
+    credential, plugin_code = row
+    provider = managed_vault_provider(str(plugin_code))
+    if provider is None or str(plugin_code) != binding.provider_code:
+        raise ManagedVaultResolutionError("O provedor do keyring não corresponde ao vínculo.")
+    try:
+        values = memory_credential_vault(settings).decrypt(credential.encrypted_credentials)
+    except CredentialVaultError as exc:
+        raise ManagedVaultResolutionError("A credencial do keyring não pôde ser aberta.") from exc
+    reference = str(values.get("key_reference", ""))
+    if not reference.startswith(provider[1]) or not hmac.compare_digest(
+        binding.key_reference_fingerprint,
+        memory_key_reference_fingerprint(reference),
+    ):
+        raise ManagedVaultResolutionError("A referência do keyring divergiu do vínculo ativo.")
+    external_keys = await (resolver or ManagedVaultSecretResolver()).resolve_keyring(
+        (reference, *settings.encryption_previous_key_references),
+        identity_reference=str(values.get("identity_reference", "")).strip() or None,
+    )
+    binding.last_resolved_at = utc_now()
+    return CredentialVault(
+        ",".join(
+            (
+                *external_keys,
+                settings.encryption_key,
+                *settings.encryption_previous_keys,
+            )
+        )
+    )
 
 
 async def memory_response_exercise_checks(
@@ -425,7 +499,15 @@ async def retrieve_authorized_memories(
             .limit(memory_policy.max_retrieval_entries)
         )
     )
-    vault = memory_credential_vault(settings)
+    try:
+        vault = await agent_memory_credential_vault(
+            database,
+            settings=settings,
+            company_id=company_id,
+            agent_id=agent_id,
+        )
+    except ManagedVaultResolutionError:
+        return AuthorizedMemoryContext((), (), tuple(row.content_fingerprint for row in rows), 0)
     contents: list[str] = []
     retrieved: list[str] = []
     blocked: list[str] = []
@@ -484,7 +566,15 @@ async def retrieve_shared_task_memories(
             .limit(effective_max_entries)
         )
     )
-    vault = memory_credential_vault(settings)
+    try:
+        vault = await agent_memory_credential_vault(
+            database,
+            settings=settings,
+            company_id=company_id,
+            agent_id=grant.owner_agent_id,
+        )
+    except ManagedVaultResolutionError:
+        return SharedTaskMemoryContext((), 0, len(rows))
     items: list[SharedTaskMemoryItem] = []
     remaining_characters = effective_max_characters
     blocked_items = 0
@@ -727,7 +817,11 @@ def maintain_due_agent_memory_response_exercises_sync() -> dict[str, int]:
 
 
 async def process_agent_memory_reencryption_jobs(
-    database: AsyncSession, *, settings: Settings, limit: int = 10
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    limit: int = 10,
+    resolver: ManagedVaultSecretResolver | None = None,
 ) -> dict[str, int]:
     jobs = list(
         await database.scalars(
@@ -739,26 +833,37 @@ async def process_agent_memory_reencryption_jobs(
         )
     )
     completed = failed = rotated = 0
-    vault = memory_credential_vault(settings)
-    active_key_id = memory_master_key_id(settings.encryption_key)
+    environment_vault = memory_credential_vault(settings)
+    environment_active_key_id = memory_master_key_id(settings.encryption_key)
     for job in jobs:
         now = utc_now()
+        vault = environment_vault
+        active_key_id = environment_active_key_id
+        managed_credential: IntegrationCredential | None = None
+        managed_provider_code: str | None = None
+        managed_reference: str | None = None
         if job.key_provider == "external":
-            credential = (
-                await database.scalar(
-                    select(IntegrationCredential).where(
-                        IntegrationCredential.id == job.vault_credential_id,
-                        IntegrationCredential.company_id == job.company_id,
-                        IntegrationCredential.status == "active",
-                        or_(
-                            IntegrationCredential.expires_at.is_(None),
-                            IntegrationCredential.expires_at > now,
-                        ),
+            credential_row = (
+                (
+                    await database.execute(
+                        select(IntegrationCredential, Plugin.code)
+                        .join(Plugin, Plugin.id == IntegrationCredential.plugin_id)
+                        .where(
+                            IntegrationCredential.id == job.vault_credential_id,
+                            IntegrationCredential.company_id == job.company_id,
+                            IntegrationCredential.status == "active",
+                            or_(
+                                IntegrationCredential.expires_at.is_(None),
+                                IntegrationCredential.expires_at > now,
+                            ),
+                        )
                     )
-                )
+                ).one_or_none()
                 if job.vault_credential_id is not None
                 else None
             )
+            credential = credential_row[0] if credential_row is not None else None
+            plugin_code = str(credential_row[1]) if credential_row is not None else ""
             expected_binding = (
                 memory_incident_value_fingerprint(
                     secret=settings.encryption_key,
@@ -787,6 +892,54 @@ async def process_agent_memory_reencryption_jobs(
                 job.recovery_assessed_by_user_id = None
                 failed += 1
                 continue
+            active_key_id = memory_external_target_key_id(settings.encryption_key_reference)
+            provider = managed_vault_provider(plugin_code)
+            if provider is not None:
+                try:
+                    credential_values = environment_vault.decrypt(credential.encrypted_credentials)
+                    managed_reference = str(credential_values.get("key_reference", ""))
+                    if not managed_reference.startswith(provider[1]) or not hmac.compare_digest(
+                        managed_reference,
+                        settings.encryption_key_reference,
+                    ):
+                        raise ManagedVaultResolutionError(
+                            "A referência ativa não corresponde à configuração do keyring."
+                        )
+                    external_keys = await (
+                        resolver or ManagedVaultSecretResolver()
+                    ).resolve_keyring(
+                        (
+                            managed_reference,
+                            *settings.encryption_previous_key_references,
+                        ),
+                        identity_reference=str(
+                            credential_values.get("identity_reference", "")
+                        ).strip()
+                        or None,
+                    )
+                    vault = CredentialVault(
+                        ",".join(
+                            (
+                                *external_keys,
+                                settings.encryption_key,
+                                *settings.encryption_previous_keys,
+                            )
+                        )
+                    )
+                    managed_credential = credential
+                    managed_provider_code = plugin_code
+                except (CredentialVaultError, ManagedVaultResolutionError):
+                    job.status = "failed"
+                    job.error_code = "vault_resolution_failed"
+                    job.completed_at = now
+                    job.purge_after = now + timedelta(
+                        days=settings.agent_memory_reencryption_terminal_retention_days
+                    )
+                    job.recovery_status = "not_assessed"
+                    job.last_recovery_assessment_at = None
+                    job.recovery_assessed_by_user_id = None
+                    failed += 1
+                    continue
         if job.target_master_key_id != active_key_id:
             job.status = "failed"
             job.error_code = "target_key_changed"
@@ -870,6 +1023,43 @@ async def process_agent_memory_reencryption_jobs(
                 days=settings.agent_memory_reencryption_terminal_retention_days
             )
             completed += 1
+            if (
+                managed_credential is not None
+                and managed_provider_code is not None
+                and managed_reference is not None
+            ):
+                binding = await database.scalar(
+                    select(AgentMemoryKeyringBinding)
+                    .where(
+                        AgentMemoryKeyringBinding.company_id == job.company_id,
+                        AgentMemoryKeyringBinding.agent_id == job.agent_id,
+                    )
+                    .with_for_update()
+                )
+                if binding is None:
+                    binding = AgentMemoryKeyringBinding(
+                        company_id=job.company_id,
+                        agent_id=job.agent_id,
+                        credential_id=managed_credential.id,
+                        provider_code=managed_provider_code,
+                        key_reference_fingerprint=memory_key_reference_fingerprint(
+                            managed_reference
+                        ),
+                        activated_by_user_id=job.requested_by_user_id,
+                        activated_at=job.completed_at,
+                        last_resolved_at=job.completed_at,
+                    )
+                    database.add(binding)
+                else:
+                    binding.credential_id = managed_credential.id
+                    binding.provider_code = managed_provider_code
+                    binding.key_reference_fingerprint = memory_key_reference_fingerprint(
+                        managed_reference
+                    )
+                    binding.status = "active"
+                    binding.activated_by_user_id = job.requested_by_user_id
+                    binding.activated_at = job.completed_at
+                    binding.last_resolved_at = job.completed_at
             record_authorization_audit(
                 database,
                 company_id=job.company_id,
@@ -881,6 +1071,7 @@ async def process_agent_memory_reencryption_jobs(
                     "agent_id": str(job.agent_id),
                     "rotated_count": job.rotated_count,
                     "failed_count": job.failed_count,
+                    "managed_keyring_activated": managed_credential is not None,
                 },
             )
             enqueue_domain_event(
@@ -894,6 +1085,7 @@ async def process_agent_memory_reencryption_jobs(
                         "job_id": str(job.id),
                         "agent_id": str(job.agent_id),
                         "rotated_count": job.rotated_count,
+                        "managed_keyring_activated": managed_credential is not None,
                     },
                 ),
             )

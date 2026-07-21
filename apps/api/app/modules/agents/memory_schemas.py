@@ -550,6 +550,14 @@ class AgentMemoryVaultCredentialOption(StrictSchema):
     expires_at: datetime | None
 
 
+class AgentMemoryKeyringStatusResponse(StrictSchema):
+    source: Literal["environment", "managed"]
+    provider_code: str
+    status: Literal["active"]
+    activated_at: datetime | None
+    last_resolved_at: datetime | None
+
+
 class AgentMemoryReencryptionLegalHoldResponse(StrictSchema):
     id: UUID
     job_id: UUID

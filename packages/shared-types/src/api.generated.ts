@@ -626,6 +626,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-keyring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Keyring Status */
+        get: operations["get_agent_memory_keyring_status_agents__agent_id__memory_keyring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-policy": {
         parameters: {
             query?: never;
@@ -3214,6 +3231,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/plugins/managed-vault-metrics/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Managed Vault Metrics */
+        get: operations["get_managed_vault_metrics_plugins_managed_vault_metrics_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plugins/{plugin_code}": {
         parameters: {
             query?: never;
@@ -5023,6 +5057,25 @@ export interface components {
             escalated_at: string;
             /** Escalated Count */
             escalated_count: number;
+        };
+        /** AgentMemoryKeyringStatusResponse */
+        AgentMemoryKeyringStatusResponse: {
+            /** Activated At */
+            activated_at: string | null;
+            /** Last Resolved At */
+            last_resolved_at: string | null;
+            /** Provider Code */
+            provider_code: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "environment" | "managed";
+            /**
+             * Status
+             * @constant
+             */
+            status: "active";
         };
         /** AgentMemoryLegalHoldCreate */
         AgentMemoryLegalHoldCreate: {
@@ -8999,6 +9052,25 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** ManagedVaultMetricResponse */
+        ManagedVaultMetricResponse: {
+            /** Average Duration Ms */
+            average_duration_ms: number;
+            /** Failed Tests */
+            failed_tests: number;
+            /** Last Tested At */
+            last_tested_at: string | null;
+            /** Provider Code */
+            provider_code: string;
+            /** Provider Name */
+            provider_name: string;
+            /** Success Rate */
+            success_rate: number;
+            /** Successful Tests */
+            successful_tests: number;
+            /** Total Tests */
+            total_tests: number;
         };
         /** MarketingSummaryResponse */
         MarketingSummaryResponse: {
@@ -13717,6 +13789,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryConsentRevocationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_keyring_status_agents__agent_id__memory_keyring_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryKeyringStatusResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -23954,6 +24075,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CredentialRotationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_managed_vault_metrics_plugins_managed_vault_metrics_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedVaultMetricResponse"][];
                 };
             };
             /** @description Solicitação inválida */

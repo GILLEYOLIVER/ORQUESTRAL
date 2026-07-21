@@ -63,3 +63,14 @@ class ConnectionTestHistoryResponse(BaseModel):
     message: str
     duration_ms: int
     created_at: datetime
+
+
+class ManagedVaultMetricResponse(BaseModel):
+    provider_code: str
+    provider_name: str
+    total_tests: int
+    successful_tests: int
+    failed_tests: int
+    success_rate: float
+    average_duration_ms: int
+    last_tested_at: datetime | None

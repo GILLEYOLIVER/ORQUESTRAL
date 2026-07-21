@@ -753,3 +753,15 @@ Data: 21 de julho de 2026.
 - Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0065 -> 0064 -> 0065`; `/health`, `/ready`, `/app` e monitor HMAC validados.
 - Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
 - Próximo passo: ativação segura de keyrings externos na criptografia de memória, lembretes renováveis com nova aprovação e métricas operacionais por provedor de cofre.
+
+## Ciclo 45 - keyring externo ativo e métricas de cofres
+
+- Criado vínculo de keyring gerenciado por empresa e agente, ativado somente após recriptografia concluída e protegido por credencial ativa, provedor e impressão da referência.
+- Leituras autorizadas, memória compartilhada e novas gravações resolvem o keyring do agente pela identidade da carga; falhas fecham o acesso e retornam mensagens seguras.
+- A chave externa é primária e as chaves de ambiente permanecem somente como fallback transitório de migração. O teste comprova que a chave de ambiente isolada não descriptografa uma nova memória gerenciada.
+- Adicionada rota de status do keyring sem IDs de credencial nem referências e com ocultação `404` entre empresas.
+- Adicionado resumo operacional por provedor de cofre com total, sucessos, falhas, taxa, latência média e último teste, sempre filtrado por `company_id`.
+- Migração: `20260721_0066_agent_memory_external_keyrings.py`.
+- Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0066 -> 0065 -> 0066`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: renovação de retenções com nova aprovação, recriptografia de saída antes da revogação do keyring e painel visual das métricas por provedor.

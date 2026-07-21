@@ -734,6 +734,54 @@ class AgentMemoryReencryptionJob(Base):
     )
 
 
+class AgentMemoryKeyringBinding(Base):
+    __tablename__ = "agent_memory_keyring_bindings"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "agent_id",
+            name="uq_agent_memory_keyring_binding_tenant_agent",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'revoked')",
+            name="ck_agent_memory_keyring_binding_status",
+        ),
+        CheckConstraint(
+            "char_length(key_reference_fingerprint) = 64",
+            name="ck_agent_memory_keyring_binding_reference",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    credential_id: Mapped[UUID] = mapped_column(
+        ForeignKey("integration_credentials.id", ondelete="RESTRICT"), index=True
+    )
+    provider_code: Mapped[str] = mapped_column(String(64), index=True)
+    key_reference_fingerprint: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(
+        String(16), default="active", server_default="active", index=True
+    )
+    activated_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    activated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    last_resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class AgentMemoryReencryptionLegalHold(Base):
     __tablename__ = "agent_memory_reencryption_legal_holds"
     __table_args__ = (
