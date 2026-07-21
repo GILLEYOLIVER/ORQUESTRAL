@@ -54,6 +54,7 @@ import {
   inputTypeForMetadataField,
 } from "../metadata/valueCoercion";
 import { useSession } from "../session/context";
+import { MetadataPackageLifecycle } from "../metadata/MetadataPackageLifecycle";
 import "../metadata/metadata-studio.css";
 
 const FIELD_TYPES: Array<{ value: MetadataDataType; label: string }> = [
@@ -762,6 +763,15 @@ export function MetadataStudioPage() {
           </div>
         </PermissionGuard>
       </header>
+
+      <PermissionGuard all={["metadata.configure"]}>
+        <MetadataPackageLifecycle
+          canPublish={canPublish}
+          definitionId={selectedId}
+          entityKey={selected?.key ?? null}
+          publishedVersion={selected?.published_version ?? null}
+        />
+      </PermissionGuard>
 
       {entities.isError || selectedQuery.isError || records.isError ? (
         <Alert variant="error">

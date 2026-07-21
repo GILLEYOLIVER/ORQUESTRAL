@@ -425,3 +425,135 @@ class MetadataRecordRevision(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
+
+
+class MetadataPackageCatalog(Base):
+    __tablename__ = "metadata_package_catalogs"
+    __table_args__ = (
+        UniqueConstraint("company_id", "key", name="uq_metadata_package_catalog_key"),
+        Index("ix_metadata_package_catalog_company", "company_id", "key"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(80))
+    name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class MetadataPackageVersion(Base):
+    __tablename__ = "metadata_package_versions"
+    __table_args__ = (
+        UniqueConstraint(
+            "package_catalog_id", "version", name="uq_metadata_package_version_number"
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'validated', 'published', 'retired')",
+            name="ck_metadata_package_version_status",
+        ),
+        CheckConstraint(
+            "source_environment IN ('local', 'testing', 'development', 'staging', 'production')",
+            name="ck_metadata_package_source_environment",
+        ),
+        Index("ix_metadata_package_version_company_status", "company_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    package_catalog_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_package_catalogs.id", ondelete="CASCADE"), index=True
+    )
+    entity_definition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="CASCADE"), index=True
+    )
+    version: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16), default="draft", server_default="draft")
+    source_environment: Mapped[str] = mapped_column(String(16))
+    dependencies: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    artifact: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    checksum: Mapped[str] = mapped_column(String(64))
+    created_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    published_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class MetadataPackageInstallation(Base):
+    __tablename__ = "metadata_package_installations"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "package_key",
+            "package_version",
+            "target_environment",
+            name="uq_metadata_package_installation_release",
+        ),
+        CheckConstraint(
+            "status IN ('installed', 'removed')",
+            name="ck_metadata_package_installation_status",
+        ),
+        CheckConstraint(
+            "target_environment IN ('local', 'testing', 'development', 'staging', 'production')",
+            name="ck_metadata_package_target_environment",
+        ),
+        Index(
+            "ix_metadata_package_installation_company_status",
+            "company_id",
+            "status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    package_key: Mapped[str] = mapped_column(String(80))
+    package_version: Mapped[str] = mapped_column(String(32))
+    source_checksum: Mapped[str] = mapped_column(String(64))
+    target_environment: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(16), default="installed", server_default="installed")
+    installed_definition_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="SET NULL"), index=True
+    )
+    installed_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    installed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )

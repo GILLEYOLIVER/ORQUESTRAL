@@ -8,6 +8,29 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 
 from app.core.dependencies import DatabaseSession
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.metadata.package_lifecycle_schemas import (
+    MetadataPackageInstallationResponse,
+    MetadataPackageInstallPreview,
+    MetadataPackageInstallPreviewRequest,
+    MetadataPackageInstallRequest,
+    MetadataPackagePromotionRequest,
+    MetadataPackagePromotionResponse,
+    MetadataPackageReleaseBundle,
+    MetadataPackageReleaseCreate,
+    MetadataPackageReleaseResponse,
+    MetadataPackageValidationResponse,
+)
+from app.modules.metadata.package_lifecycle_service import (
+    create_package_release,
+    export_release_bundle,
+    get_package_installations,
+    get_package_releases,
+    install_package_release,
+    prepare_package_promotion,
+    preview_package_installation,
+    publish_package_release,
+    validate_package_release,
+)
 from app.modules.metadata.package_schemas import (
     MetadataEntityPackage,
     MetadataPackageImportRequest,
@@ -307,6 +330,145 @@ async def import_metadata_package(
             database,
             get_request_context(principal),
             payload,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.get("/packages/releases", response_model=list[MetadataPackageReleaseResponse])
+async def list_metadata_package_releases(
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+    definition_id: UUID | None = None,
+) -> list[MetadataPackageReleaseResponse]:
+    return await _run(get_package_releases(database, get_request_context(principal), definition_id))
+
+
+@router.post(
+    "/packages/releases",
+    response_model=MetadataPackageReleaseResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_metadata_package_release(
+    payload: MetadataPackageReleaseCreate,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataPackageReleaseResponse:
+    return await _run(
+        create_package_release(
+            database,
+            get_request_context(principal),
+            payload,
+            _correlation_id(request),
+            request.app.state.settings.app_env,
+        )
+    )
+
+
+@router.post(
+    "/packages/releases/{release_id}/validate", response_model=MetadataPackageValidationResponse
+)
+async def validate_metadata_package_release(
+    release_id: UUID,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataPackageValidationResponse:
+    return await _run(
+        validate_package_release(
+            database, get_request_context(principal), release_id, _correlation_id(request)
+        )
+    )
+
+
+@router.post(
+    "/packages/releases/{release_id}/publish", response_model=MetadataPackageReleaseResponse
+)
+async def publish_metadata_package_release(
+    release_id: UUID,
+    request: Request,
+    principal: CanPublishMetadata,
+    database: DatabaseSession,
+) -> MetadataPackageReleaseResponse:
+    return await _run(
+        publish_package_release(
+            database, get_request_context(principal), release_id, _correlation_id(request)
+        )
+    )
+
+
+@router.get("/packages/releases/{release_id}/bundle", response_model=MetadataPackageReleaseBundle)
+async def export_metadata_package_release_bundle(
+    release_id: UUID,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataPackageReleaseBundle:
+    return await _run(export_release_bundle(database, get_request_context(principal), release_id))
+
+
+@router.post("/packages/installations/preview", response_model=MetadataPackageInstallPreview)
+async def preview_metadata_package_installation(
+    payload: MetadataPackageInstallPreviewRequest,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataPackageInstallPreview:
+    return await _run(
+        preview_package_installation(
+            database, get_request_context(principal), payload, request.app.state.settings.app_env
+        )
+    )
+
+
+@router.post(
+    "/packages/installations",
+    response_model=MetadataPackageInstallationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def install_metadata_package_release(
+    payload: MetadataPackageInstallRequest,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataPackageInstallationResponse:
+    return await _run(
+        install_package_release(
+            database,
+            get_request_context(principal),
+            payload,
+            _correlation_id(request),
+            request.app.state.settings.app_env,
+        )
+    )
+
+
+@router.get("/packages/installations", response_model=list[MetadataPackageInstallationResponse])
+async def list_metadata_package_installations(
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> list[MetadataPackageInstallationResponse]:
+    return await _run(get_package_installations(database, get_request_context(principal)))
+
+
+@router.post(
+    "/packages/releases/{release_id}/promotion", response_model=MetadataPackagePromotionResponse
+)
+async def prepare_metadata_package_promotion(
+    release_id: UUID,
+    payload: MetadataPackagePromotionRequest,
+    request: Request,
+    principal: CanPublishMetadata,
+    database: DatabaseSession,
+) -> MetadataPackagePromotionResponse:
+    return await _run(
+        prepare_package_promotion(
+            database,
+            get_request_context(principal),
+            release_id,
+            payload.target_environment,
+            request.app.state.settings.app_env,
             _correlation_id(request),
         )
     )

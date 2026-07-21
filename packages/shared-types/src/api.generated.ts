@@ -3183,6 +3183,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metadata/packages/installations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Metadata Package Installations */
+        get: operations["list_metadata_package_installations_metadata_packages_installations_get"];
+        put?: never;
+        /** Install Metadata Package Release */
+        post: operations["install_metadata_package_release_metadata_packages_installations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/packages/installations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Metadata Package Installation */
+        post: operations["preview_metadata_package_installation_metadata_packages_installations_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/packages/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Metadata Package Releases */
+        get: operations["list_metadata_package_releases_metadata_packages_releases_get"];
+        put?: never;
+        /** Create Metadata Package Release */
+        post: operations["create_metadata_package_release_metadata_packages_releases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/packages/releases/{release_id}/bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Metadata Package Release Bundle */
+        get: operations["export_metadata_package_release_bundle_metadata_packages_releases__release_id__bundle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/packages/releases/{release_id}/promotion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prepare Metadata Package Promotion */
+        post: operations["prepare_metadata_package_promotion_metadata_packages_releases__release_id__promotion_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/packages/releases/{release_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Metadata Package Release */
+        post: operations["publish_metadata_package_release_metadata_packages_releases__release_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/packages/releases/{release_id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Metadata Package Release */
+        post: operations["validate_metadata_package_release_metadata_packages_releases__release_id__validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics/aggregate": {
         parameters: {
             query?: never;
@@ -10136,6 +10257,18 @@ export interface components {
             /** Plural Label */
             plural_label: string;
         };
+        /** MetadataPackageDependency */
+        MetadataPackageDependency: {
+            /**
+             * Optional
+             * @default false
+             */
+            optional: boolean;
+            /** Package Key */
+            package_key: string;
+            /** Version */
+            version: string;
+        };
         /** MetadataPackageImportRequest */
         MetadataPackageImportRequest: {
             /** Key Override */
@@ -10145,6 +10278,224 @@ export interface components {
             package: components["schemas"]["MetadataEntityPackage"];
             /** Plural Label Override */
             plural_label_override?: string | null;
+        };
+        /** MetadataPackageInstallPreview */
+        MetadataPackageInstallPreview: {
+            /** Actions */
+            actions: string[];
+            /** Blockers */
+            blockers: string[];
+            /** Can Install */
+            can_install: boolean;
+            /** Package Key */
+            package_key: string;
+            /** Plan Checksum */
+            plan_checksum: string;
+            /** Resolved Dependencies */
+            resolved_dependencies: string[];
+            /**
+             * Target Environment
+             * @enum {string}
+             */
+            target_environment: "local" | "testing" | "development" | "staging" | "production";
+            /** Version */
+            version: string;
+            /** Warnings */
+            warnings: string[];
+        };
+        /** MetadataPackageInstallPreviewRequest */
+        MetadataPackageInstallPreviewRequest: {
+            bundle: components["schemas"]["MetadataPackageReleaseBundle"];
+            /** Key Override */
+            key_override?: string | null;
+            /**
+             * Target Environment
+             * @enum {string}
+             */
+            target_environment: "local" | "testing" | "development" | "staging" | "production";
+        };
+        /** MetadataPackageInstallRequest */
+        MetadataPackageInstallRequest: {
+            bundle: components["schemas"]["MetadataPackageReleaseBundle"];
+            /** Key Override */
+            key_override?: string | null;
+            /** Plan Checksum */
+            plan_checksum: string;
+            /**
+             * Target Environment
+             * @enum {string}
+             */
+            target_environment: "local" | "testing" | "development" | "staging" | "production";
+        };
+        /** MetadataPackageInstallationResponse */
+        MetadataPackageInstallationResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Installed At
+             * Format: date-time
+             */
+            installed_at: string;
+            /** Installed Definition Id */
+            installed_definition_id: string | null;
+            /** Package Key */
+            package_key: string;
+            /** Package Version */
+            package_version: string;
+            /** Source Checksum */
+            source_checksum: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "installed" | "removed";
+            /**
+             * Target Environment
+             * @enum {string}
+             */
+            target_environment: "local" | "testing" | "development" | "staging" | "production";
+        };
+        /** MetadataPackageManifest */
+        MetadataPackageManifest: {
+            /** Dependencies */
+            dependencies?: components["schemas"]["MetadataPackageDependency"][];
+            /** Description */
+            description?: string | null;
+            /** Display Name */
+            display_name: string;
+            /** Package Key */
+            package_key: string;
+            /**
+             * Source Environment
+             * @enum {string}
+             */
+            source_environment: "local" | "testing" | "development" | "staging" | "production";
+            /** Version */
+            version: string;
+        };
+        /** MetadataPackagePromotionRequest */
+        MetadataPackagePromotionRequest: {
+            /**
+             * Target Environment
+             * @enum {string}
+             */
+            target_environment: "local" | "testing" | "development" | "staging" | "production";
+        };
+        /** MetadataPackagePromotionResponse */
+        MetadataPackagePromotionResponse: {
+            /** Allowed */
+            allowed: boolean;
+            /** Blockers */
+            blockers: string[];
+            bundle: components["schemas"]["MetadataPackageReleaseBundle"] | null;
+            /** Instructions */
+            instructions: string;
+            /**
+             * Source Environment
+             * @enum {string}
+             */
+            source_environment: "local" | "testing" | "development" | "staging" | "production";
+            /**
+             * Target Environment
+             * @enum {string}
+             */
+            target_environment: "local" | "testing" | "development" | "staging" | "production";
+        };
+        /** MetadataPackageReleaseBundle */
+        MetadataPackageReleaseBundle: {
+            artifact: components["schemas"]["MetadataEntityPackage"];
+            /** Checksum */
+            checksum: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Format Version
+             * @default 2.0
+             * @constant
+             */
+            format_version: "2.0";
+            manifest: components["schemas"]["MetadataPackageManifest"];
+        };
+        /** MetadataPackageReleaseCreate */
+        MetadataPackageReleaseCreate: {
+            /**
+             * Definition Id
+             * Format: uuid
+             */
+            definition_id: string;
+            /** Dependencies */
+            dependencies?: components["schemas"]["MetadataPackageDependency"][];
+            /** Description */
+            description?: string | null;
+            /** Display Name */
+            display_name?: string | null;
+            /** Package Key */
+            package_key?: string | null;
+            /** Version */
+            version: string;
+        };
+        /** MetadataPackageReleaseResponse */
+        MetadataPackageReleaseResponse: {
+            /** Checksum */
+            checksum: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dependencies */
+            dependencies: components["schemas"]["MetadataPackageDependency"][];
+            /** Description */
+            description: string | null;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Entity Definition Id
+             * Format: uuid
+             */
+            entity_definition_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Package Catalog Id
+             * Format: uuid
+             */
+            package_catalog_id: string;
+            /** Package Key */
+            package_key: string;
+            /** Published At */
+            published_at: string | null;
+            /**
+             * Source Environment
+             * @enum {string}
+             */
+            source_environment: "local" | "testing" | "development" | "staging" | "production";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "validated" | "published" | "retired";
+            /** Version */
+            version: string;
+        };
+        /** MetadataPackageValidationResponse */
+        MetadataPackageValidationResponse: {
+            /** Errors */
+            errors: string[];
+            release: components["schemas"]["MetadataPackageReleaseResponse"];
+            /** Valid */
+            valid: boolean;
+            /** Warnings */
+            warnings: string[];
         };
         /** MetadataPortableDesign */
         MetadataPortableDesign: {
@@ -25121,6 +25472,455 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_metadata_package_installations_metadata_packages_installations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageInstallationResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    install_metadata_package_release_metadata_packages_installations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataPackageInstallRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageInstallationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    preview_metadata_package_installation_metadata_packages_installations_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataPackageInstallPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageInstallPreview"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_metadata_package_releases_metadata_packages_releases_get: {
+        parameters: {
+            query?: {
+                definition_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageReleaseResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_metadata_package_release_metadata_packages_releases_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataPackageReleaseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageReleaseResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    export_metadata_package_release_bundle_metadata_packages_releases__release_id__bundle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageReleaseBundle"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    prepare_metadata_package_promotion_metadata_packages_releases__release_id__promotion_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataPackagePromotionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackagePromotionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_metadata_package_release_metadata_packages_releases__release_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageReleaseResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    validate_metadata_package_release_metadata_packages_releases__release_id__validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataPackageValidationResponse"];
                 };
             };
             /** @description Solicitação inválida */

@@ -877,3 +877,14 @@ Data: 21 de julho de 2026.
 
 Proximo recorte: versionamento formal de pacotes, dependencias, dry-run de instalacao e promocao
 controlada de metadados entre ambientes.
+
+## Ciclo 56 - ciclo de vida de pacotes de metadados
+
+- catalogo multiempresa de pacotes e versoes SemVer;
+- snapshots imutaveis com checksum do manifesto e artefato;
+- dependencias exatas obrigatorias ou opcionais;
+- previa vinculante antes de qualquer instalacao;
+- registro de instalacoes por empresa e ambiente;
+- promocao controlada com bundle verificavel entre ambientes adjacentes;
+- painel de releases e instalacao no Orkestral Studio;
+- proximo recorte: permissoes de entidade, campo e acao para metadados e compartilhamento de registros.

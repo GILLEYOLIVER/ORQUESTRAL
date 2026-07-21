@@ -14989,6 +14989,36 @@
         "title": "MetadataPackageDefinition",
         "type": "object"
       },
+      "MetadataPackageDependency": {
+        "additionalProperties": false,
+        "properties": {
+          "optional": {
+            "default": false,
+            "title": "Optional",
+            "type": "boolean"
+          },
+          "package_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Package Key",
+            "type": "string"
+          },
+          "version": {
+            "maxLength": 32,
+            "minLength": 5,
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "package_key",
+          "version"
+        ],
+        "title": "MetadataPackageDependency",
+        "type": "object"
+      },
       "MetadataPackageImportRequest": {
         "additionalProperties": false,
         "properties": {
@@ -15040,6 +15070,635 @@
           "package"
         ],
         "title": "MetadataPackageImportRequest",
+        "type": "object"
+      },
+      "MetadataPackageInstallPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "can_install": {
+            "title": "Can Install",
+            "type": "boolean"
+          },
+          "package_key": {
+            "title": "Package Key",
+            "type": "string"
+          },
+          "plan_checksum": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Plan Checksum",
+            "type": "string"
+          },
+          "resolved_dependencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Resolved Dependencies",
+            "type": "array"
+          },
+          "target_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Target Environment",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "can_install",
+          "package_key",
+          "version",
+          "target_environment",
+          "actions",
+          "blockers",
+          "warnings",
+          "resolved_dependencies",
+          "plan_checksum"
+        ],
+        "title": "MetadataPackageInstallPreview",
+        "type": "object"
+      },
+      "MetadataPackageInstallPreviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "bundle": {
+            "$ref": "#/components/schemas/MetadataPackageReleaseBundle"
+          },
+          "key_override": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "pattern": "^[a-z][a-z0-9_]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Override"
+          },
+          "target_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Target Environment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bundle",
+          "target_environment"
+        ],
+        "title": "MetadataPackageInstallPreviewRequest",
+        "type": "object"
+      },
+      "MetadataPackageInstallRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "bundle": {
+            "$ref": "#/components/schemas/MetadataPackageReleaseBundle"
+          },
+          "key_override": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "pattern": "^[a-z][a-z0-9_]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Override"
+          },
+          "plan_checksum": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Plan Checksum",
+            "type": "string"
+          },
+          "target_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Target Environment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bundle",
+          "target_environment",
+          "plan_checksum"
+        ],
+        "title": "MetadataPackageInstallRequest",
+        "type": "object"
+      },
+      "MetadataPackageInstallationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "installed_at": {
+            "format": "date-time",
+            "title": "Installed At",
+            "type": "string"
+          },
+          "installed_definition_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Definition Id"
+          },
+          "package_key": {
+            "title": "Package Key",
+            "type": "string"
+          },
+          "package_version": {
+            "title": "Package Version",
+            "type": "string"
+          },
+          "source_checksum": {
+            "title": "Source Checksum",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "installed",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Target Environment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "package_key",
+          "package_version",
+          "source_checksum",
+          "target_environment",
+          "status",
+          "installed_definition_id",
+          "installed_at"
+        ],
+        "title": "MetadataPackageInstallationResponse",
+        "type": "object"
+      },
+      "MetadataPackageManifest": {
+        "additionalProperties": false,
+        "properties": {
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataPackageDependency"
+            },
+            "maxItems": 30,
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "display_name": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "package_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Package Key",
+            "type": "string"
+          },
+          "source_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Source Environment",
+            "type": "string"
+          },
+          "version": {
+            "maxLength": 32,
+            "minLength": 5,
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "package_key",
+          "display_name",
+          "version",
+          "source_environment"
+        ],
+        "title": "MetadataPackageManifest",
+        "type": "object"
+      },
+      "MetadataPackagePromotionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "target_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Target Environment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_environment"
+        ],
+        "title": "MetadataPackagePromotionRequest",
+        "type": "object"
+      },
+      "MetadataPackagePromotionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "blockers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blockers",
+            "type": "array"
+          },
+          "bundle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetadataPackageReleaseBundle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "instructions": {
+            "title": "Instructions",
+            "type": "string"
+          },
+          "source_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Source Environment",
+            "type": "string"
+          },
+          "target_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Target Environment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowed",
+          "source_environment",
+          "target_environment",
+          "blockers",
+          "instructions",
+          "bundle"
+        ],
+        "title": "MetadataPackagePromotionResponse",
+        "type": "object"
+      },
+      "MetadataPackageReleaseBundle": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/MetadataEntityPackage"
+          },
+          "checksum": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Checksum",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "format_version": {
+            "const": "2.0",
+            "default": "2.0",
+            "title": "Format Version",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/MetadataPackageManifest"
+          }
+        },
+        "required": [
+          "created_at",
+          "manifest",
+          "artifact",
+          "checksum"
+        ],
+        "title": "MetadataPackageReleaseBundle",
+        "type": "object"
+      },
+      "MetadataPackageReleaseCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "definition_id": {
+            "format": "uuid",
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataPackageDependency"
+            },
+            "maxItems": 30,
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "package_key": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "pattern": "^[a-z][a-z0-9_]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Key"
+          },
+          "version": {
+            "maxLength": 32,
+            "minLength": 5,
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?$",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_id",
+          "version"
+        ],
+        "title": "MetadataPackageReleaseCreate",
+        "type": "object"
+      },
+      "MetadataPackageReleaseResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "checksum": {
+            "title": "Checksum",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataPackageDependency"
+            },
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "entity_definition_id": {
+            "format": "uuid",
+            "title": "Entity Definition Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "package_catalog_id": {
+            "format": "uuid",
+            "title": "Package Catalog Id",
+            "type": "string"
+          },
+          "package_key": {
+            "title": "Package Key",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "source_environment": {
+            "enum": [
+              "local",
+              "testing",
+              "development",
+              "staging",
+              "production"
+            ],
+            "title": "Source Environment",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "validated",
+              "published",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "package_catalog_id",
+          "entity_definition_id",
+          "package_key",
+          "display_name",
+          "description",
+          "version",
+          "status",
+          "source_environment",
+          "dependencies",
+          "checksum",
+          "created_at",
+          "published_at"
+        ],
+        "title": "MetadataPackageReleaseResponse",
+        "type": "object"
+      },
+      "MetadataPackageValidationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "release": {
+            "$ref": "#/components/schemas/MetadataPackageReleaseResponse"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "release",
+          "valid",
+          "errors",
+          "warnings"
+        ],
+        "title": "MetadataPackageValidationResponse",
         "type": "object"
       },
       "MetadataPortableDesign": {
@@ -39510,6 +40169,621 @@
           }
         ],
         "summary": "Import Metadata Package",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/installations": {
+      "get": {
+        "operationId": "list_metadata_package_installations_metadata_packages_installations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MetadataPackageInstallationResponse"
+                  },
+                  "title": "Response List Metadata Package Installations Metadata Packages Installations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Metadata Package Installations",
+        "tags": [
+          "metadata"
+        ]
+      },
+      "post": {
+        "operationId": "install_metadata_package_release_metadata_packages_installations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataPackageInstallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataPackageInstallationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Install Metadata Package Release",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/installations/preview": {
+      "post": {
+        "operationId": "preview_metadata_package_installation_metadata_packages_installations_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataPackageInstallPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataPackageInstallPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Metadata Package Installation",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/releases": {
+      "get": {
+        "operationId": "list_metadata_package_releases_metadata_packages_releases_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "definition_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Definition Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MetadataPackageReleaseResponse"
+                  },
+                  "title": "Response List Metadata Package Releases Metadata Packages Releases Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Metadata Package Releases",
+        "tags": [
+          "metadata"
+        ]
+      },
+      "post": {
+        "operationId": "create_metadata_package_release_metadata_packages_releases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataPackageReleaseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataPackageReleaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Metadata Package Release",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/releases/{release_id}/bundle": {
+      "get": {
+        "operationId": "export_metadata_package_release_bundle_metadata_packages_releases__release_id__bundle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Release Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataPackageReleaseBundle"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Metadata Package Release Bundle",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/releases/{release_id}/promotion": {
+      "post": {
+        "operationId": "prepare_metadata_package_promotion_metadata_packages_releases__release_id__promotion_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Release Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataPackagePromotionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataPackagePromotionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Prepare Metadata Package Promotion",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/releases/{release_id}/publish": {
+      "post": {
+        "operationId": "publish_metadata_package_release_metadata_packages_releases__release_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Release Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataPackageReleaseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Metadata Package Release",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/releases/{release_id}/validate": {
+      "post": {
+        "operationId": "validate_metadata_package_release_metadata_packages_releases__release_id__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Release Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataPackageValidationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Validate Metadata Package Release",
         "tags": [
           "metadata"
         ]
