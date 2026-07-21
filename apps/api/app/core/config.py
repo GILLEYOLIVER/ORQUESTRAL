@@ -107,6 +107,8 @@ class Settings(BaseSettings):
     jwt_previous_secrets: list[str] = Field(default_factory=list)
     access_token_minutes: int = Field(default=15, ge=5, le=60)
     refresh_token_days: int = Field(default=30, ge=1, le=90)
+    read_only_link_authorization_minutes: int = Field(default=5, ge=2, le=15)
+    read_only_link_max_days: int = Field(default=30, ge=1, le=90)
     password_reset_minutes: int = Field(default=30, ge=5, le=120)
     invitation_days: int = Field(default=7, ge=1, le=30)
     auth_cookie_name: str = "orkestral_refresh"

@@ -1542,6 +1542,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/read-only-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Read Only Link */
+        post: operations["create_read_only_link_auth_read_only_links_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/read-only-links/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize Read Only Link */
+        post: operations["authorize_read_only_link_auth_read_only_links_authorize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/read-only-links/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange Read Only Link */
+        post: operations["exchange_read_only_link_auth_read_only_links_exchange_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/refresh": {
         parameters: {
             query?: never;
@@ -7485,6 +7536,12 @@ export interface components {
         /** AuthSessionResponse */
         AuthSessionResponse: {
             /**
+             * Access Mode
+             * @default standard
+             * @enum {string}
+             */
+            access_mode: "standard" | "read_only";
+            /**
              * Created At
              * Format: date-time
              */
@@ -9610,6 +9667,14 @@ export interface components {
         };
         /** MeResponse */
         MeResponse: {
+            /**
+             * Access Mode
+             * @default standard
+             * @enum {string}
+             */
+            access_mode: "standard" | "read_only";
+            /** Access Profile */
+            access_profile?: string | null;
             current_company: components["schemas"]["CompanySummary"] | null;
             /** Memberships */
             memberships: components["schemas"]["MembershipResponse"][];
@@ -10428,7 +10493,7 @@ export interface components {
              * Severity
              * @enum {string}
              */
-            severity: "info" | "success" | "warning" | "error";
+            severity: "info" | "success" | "warning" | "error" | "critical";
             /** Title */
             title: string;
         };
@@ -11095,6 +11160,85 @@ export interface components {
             purged: number;
             /** Retention Days */
             retention_days: number;
+        };
+        /** ReadOnlyLinkAuthorizationRequest */
+        ReadOnlyLinkAuthorizationRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** ReadOnlyLinkAuthorizationResponse */
+        ReadOnlyLinkAuthorizationResponse: {
+            /** Authorization Token */
+            authorization_token: string;
+            /** Candidates */
+            candidates: components["schemas"]["ReadOnlyLinkCandidateResponse"][];
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** ReadOnlyLinkCandidateResponse */
+        ReadOnlyLinkCandidateResponse: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Company Name */
+            company_name: string;
+            /**
+             * User Email
+             * Format: email
+             */
+            user_email: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** User Name */
+            user_name: string;
+        };
+        /** ReadOnlyLinkCreateRequest */
+        ReadOnlyLinkCreateRequest: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Expiration Minutes */
+            expiration_minutes: number;
+            /**
+             * Target User Id
+             * Format: uuid
+             */
+            target_user_id: string;
+        };
+        /** ReadOnlyLinkCreateResponse */
+        ReadOnlyLinkCreateResponse: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Token */
+            token: string;
+        };
+        /** ReadOnlyLinkExchangeRequest */
+        ReadOnlyLinkExchangeRequest: {
+            /** Token */
+            token: string;
         };
         /** ReadinessResponse */
         ReadinessResponse: {
@@ -17887,6 +18031,161 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_read_only_link_auth_read_only_links_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Read-Only-Link-Authorization": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadOnlyLinkCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadOnlyLinkCreateResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    authorize_read_only_link_auth_read_only_links_authorize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadOnlyLinkAuthorizationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadOnlyLinkAuthorizationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    exchange_read_only_link_auth_read_only_links_exchange_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadOnlyLinkExchangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessTokenResponse"];
                 };
             };
             /** @description Solicitação inválida */

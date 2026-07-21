@@ -837,6 +837,7 @@ Data: 21 de julho de 2026.
 - Alteracoes geram Policy Decision, auditoria sem valores empresariais e evento transacional por empresa.
 - Migracao: `20260721_0072_metadata_layout_view_rules.py`.
 - Proximo passo: relacionamentos tipados, formulas seguras e tipos de registro com layouts condicionais.
+
 ## Evidências finais do ciclo 52
 
 - Plataforma de metadados validada de ponta a ponta com layouts versionados, visualizações configuráveis e regras determinísticas aplicadas também no back-end.
@@ -847,3 +848,12 @@ Data: 21 de julho de 2026.
 - Testes E2E: 7 aprovados e 2 ignorados por contrato do ambiente; nenhum cenário falhou.
 - Segurança: isolamento entre empresas, regras no servidor, alerta crítico, auditoria, análise de segredos e dependências permaneceram aprovados.
 - Próximo recorte exato: relacionamentos tipados, fórmulas seguras e tipos de registro com layouts condicionais.
+
+## Ciclo 53 - acesso seguro de sócios somente leitura
+
+- Link temporário com token aleatório armazenado somente como hash.
+- Autenticação administrativa obrigatória, limitada e com autorização curta de uso único.
+- Seleção restrita a usuários das empresas administradas e expiração configurável.
+- Sessão `Administrador Somente Leitura` com empresa fixa, interface administrativa e bloqueio universal de escrita no backend.
+- Auditoria de criação, uso e tentativas mutáveis bloqueadas.
+- Migração `20260721_0074`, integração de ponta a ponta e documentação operacional.

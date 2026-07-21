@@ -109,6 +109,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           throw error;
         }
       },
+      loginWithReadOnlyLink: async (token) => {
+        setStatus("loading");
+        try {
+          const tokens = await request<AccessTokenResponse>(
+            "/auth/read-only-links/exchange",
+            {
+              method: "POST",
+              authenticated: false,
+              allowAuthRefresh: false,
+              body: { token },
+            },
+          );
+          setAccessToken(tokens.access_token);
+          return await loadProfile();
+        } catch (error) {
+          clearAccessToken();
+          setMe(null);
+          setStatus("anonymous");
+          throw error;
+        }
+      },
       logout: async () => {
         try {
           await request<void>("/auth/logout", {

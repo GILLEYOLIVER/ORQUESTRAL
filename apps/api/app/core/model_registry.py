@@ -20,6 +20,7 @@ from app.modules.authentication.models import (
     AuthSession,
     CompanyInvitation,
     PasswordResetToken,
+    ReadOnlyAccessLink,
 )
 from app.modules.authorization.models import (
     AuthorizationAuditEvent,
@@ -161,6 +162,7 @@ __all__ = [
     "ProjectRisk",
     "ProjectTask",
     "ProjectTaskDependency",
+    "ReadOnlyAccessLink",
     "Role",
     "RolePermission",
     "Subscription",

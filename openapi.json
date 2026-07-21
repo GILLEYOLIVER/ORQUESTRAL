@@ -7745,6 +7745,15 @@
       "AuthSessionResponse": {
         "additionalProperties": false,
         "properties": {
+          "access_mode": {
+            "default": "standard",
+            "enum": [
+              "standard",
+              "read_only"
+            ],
+            "title": "Access Mode",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -13806,6 +13815,26 @@
       "MeResponse": {
         "additionalProperties": false,
         "properties": {
+          "access_mode": {
+            "default": "standard",
+            "enum": [
+              "standard",
+              "read_only"
+            ],
+            "title": "Access Mode",
+            "type": "string"
+          },
+          "access_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Profile"
+          },
           "current_company": {
             "anyOf": [
               {
@@ -15687,7 +15716,8 @@
               "info",
               "success",
               "warning",
-              "error"
+              "error",
+              "critical"
             ],
             "title": "Severity",
             "type": "string"
@@ -17614,6 +17644,163 @@
           "retention_days"
         ],
         "title": "PurgeAuditEventsResponse",
+        "type": "object"
+      },
+      "ReadOnlyLinkAuthorizationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "ReadOnlyLinkAuthorizationRequest",
+        "type": "object"
+      },
+      "ReadOnlyLinkAuthorizationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_token": {
+            "title": "Authorization Token",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ReadOnlyLinkCandidateResponse"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorization_token",
+          "expires_at",
+          "candidates"
+        ],
+        "title": "ReadOnlyLinkAuthorizationResponse",
+        "type": "object"
+      },
+      "ReadOnlyLinkCandidateResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "user_email": {
+            "format": "email",
+            "title": "User Email",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "user_name": {
+            "title": "User Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "company_name",
+          "user_id",
+          "user_name",
+          "user_email"
+        ],
+        "title": "ReadOnlyLinkCandidateResponse",
+        "type": "object"
+      },
+      "ReadOnlyLinkCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "company_id": {
+            "format": "uuid",
+            "title": "Company Id",
+            "type": "string"
+          },
+          "expiration_minutes": {
+            "maximum": 43200.0,
+            "minimum": 15.0,
+            "title": "Expiration Minutes",
+            "type": "integer"
+          },
+          "target_user_id": {
+            "format": "uuid",
+            "title": "Target User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "company_id",
+          "target_user_id",
+          "expiration_minutes"
+        ],
+        "title": "ReadOnlyLinkCreateRequest",
+        "type": "object"
+      },
+      "ReadOnlyLinkCreateResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "expires_at"
+        ],
+        "title": "ReadOnlyLinkCreateResponse",
+        "type": "object"
+      },
+      "ReadOnlyLinkExchangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "maxLength": 256,
+            "minLength": 32,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ReadOnlyLinkExchangeRequest",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -29061,6 +29248,202 @@
           }
         ],
         "summary": "Me",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/read-only-links": {
+      "post": {
+        "operationId": "create_read_only_link_auth_read_only_links_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Read-Only-Link-Authorization",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "minLength": 32,
+              "title": "X-Read-Only-Link-Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadOnlyLinkCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadOnlyLinkCreateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "summary": "Create Read Only Link",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/read-only-links/authorize": {
+      "post": {
+        "operationId": "authorize_read_only_link_auth_read_only_links_authorize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadOnlyLinkAuthorizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadOnlyLinkAuthorizationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "summary": "Authorize Read Only Link",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/read-only-links/exchange": {
+      "post": {
+        "operationId": "exchange_read_only_link_auth_read_only_links_exchange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadOnlyLinkExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "summary": "Exchange Read Only Link",
         "tags": [
           "authentication"
         ]

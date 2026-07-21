@@ -9,6 +9,7 @@ function renderGuard(permissions: string[]) {
     developmentLogin: vi.fn(),
     getAccessToken: () => "token-em-memoria",
     login: vi.fn(),
+    loginWithReadOnlyLink: vi.fn(),
     logout: vi.fn(),
     me: { permissions } as MeResponse,
     refreshProfile: vi.fn(),

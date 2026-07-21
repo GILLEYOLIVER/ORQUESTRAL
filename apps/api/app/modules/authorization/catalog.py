@@ -31,6 +31,12 @@ PERMISSION_CATALOG = (
     PermissionDefinition("users.create", "users", "create", "Convidar usuários para a empresa"),
     PermissionDefinition("users.update", "users", "update", "Alterar usuários da empresa"),
     PermissionDefinition("users.delete", "users", "delete", "Remover usuários da empresa"),
+    PermissionDefinition(
+        "access_links.manage",
+        "users",
+        "access_links.manage",
+        "Gerar links seguros de acesso somente leitura",
+    ),
     PermissionDefinition("roles.view", "roles", "view", "Visualizar papéis e permissões"),
     PermissionDefinition("roles.create", "roles", "create", "Criar papéis personalizados"),
     PermissionDefinition("roles.update", "roles", "update", "Alterar papéis personalizados"),

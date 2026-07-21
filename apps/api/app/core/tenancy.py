@@ -71,6 +71,7 @@ async def get_current_principal(
         or session.revoked_at is not None
         or session.expires_at <= now
         or session.selected_company_id != claims.company_id
+        or session.access_mode != claims.access_mode
     ):
         raise HTTPException(status_code=401, detail="Sessão inválida ou expirada.")
 
@@ -98,7 +99,9 @@ async def get_current_principal(
                 raise HTTPException(status_code=403, detail="Acesso à empresa não autorizado.")
         else:
             membership, company = row
-            if membership.is_owner:
+            if session.access_mode == "read_only":
+                permissions.update(TENANT_PERMISSION_CODES)
+            elif membership.is_owner:
                 permissions.update(TENANT_PERMISSION_CODES)
             elif membership.role_id is not None:
                 permissions.update(

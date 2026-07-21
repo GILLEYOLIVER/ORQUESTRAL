@@ -31,6 +31,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ProjectsPage } from "./pages/ProjectsPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { ReadOnlyAccessPage } from "./pages/ReadOnlyAccessPage";
 import { RolesPage } from "./pages/RolesPage";
 import { SupportPage } from "./pages/SupportPage";
 import { useSession } from "./session/context";
@@ -129,6 +130,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <LandingPage /> },
       { path: "login", element: <LoginPage /> },
+      { path: "acesso-socio", element: <ReadOnlyAccessPage /> },
       { path: "esqueci-minha-senha", element: <ForgotPasswordPage /> },
       { path: "redefinir-senha", element: <ResetPasswordPage /> },
       { path: "aceitar-convite", element: <AcceptInvitationPage /> },

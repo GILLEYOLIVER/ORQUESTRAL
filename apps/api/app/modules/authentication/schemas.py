@@ -51,6 +51,7 @@ class AuthSessionResponse(StrictSchema):
     last_used_at: datetime
     created_at: datetime
     current: bool
+    access_mode: Literal["standard", "read_only"] = "standard"
 
 
 class MessageResponse(StrictSchema):
@@ -94,3 +95,39 @@ class MeResponse(StrictSchema):
     memberships: list[MembershipResponse]
     permissions: list[str]
     requires_company_selection: bool
+    access_mode: Literal["standard", "read_only"] = "standard"
+    access_profile: str | None = None
+
+
+class ReadOnlyLinkAuthorizationRequest(LoginRequest):
+    pass
+
+
+class ReadOnlyLinkCandidateResponse(StrictSchema):
+    company_id: UUID
+    company_name: str
+    user_id: UUID
+    user_name: str
+    user_email: EmailStr
+
+
+class ReadOnlyLinkAuthorizationResponse(StrictSchema):
+    authorization_token: str
+    expires_at: datetime
+    candidates: list[ReadOnlyLinkCandidateResponse]
+
+
+class ReadOnlyLinkCreateRequest(StrictSchema):
+    company_id: UUID
+    target_user_id: UUID
+    expiration_minutes: int = Field(ge=15, le=43_200)
+
+
+class ReadOnlyLinkCreateResponse(StrictSchema):
+    id: UUID
+    token: str
+    expires_at: datetime
+
+
+class ReadOnlyLinkExchangeRequest(StrictSchema):
+    token: str = Field(min_length=32, max_length=256)

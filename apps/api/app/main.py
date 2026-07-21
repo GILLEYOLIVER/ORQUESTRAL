@@ -64,7 +64,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=resolved_settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-Read-Only-Link-Authorization",
+            "X-Request-ID",
+        ],
     )
     application.add_middleware(SecurityMiddleware)
     application.add_middleware(ObservabilityMiddleware)
@@ -106,7 +111,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             application.add_api_route(
                 "/robots.txt", robots, methods=["GET"], include_in_schema=False
             )
-            for route in ("/", "/login", "/selecionar-empresa", "/app"):
+            for route in ("/", "/login", "/acesso-socio", "/selecionar-empresa", "/app"):
                 application.add_api_route(route, spa, methods=["GET"], include_in_schema=False)
             application.add_api_route(
                 "/app/{path:path}", spa, methods=["GET"], include_in_schema=False

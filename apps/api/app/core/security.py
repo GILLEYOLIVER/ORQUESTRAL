@@ -37,6 +37,7 @@ class AccessTokenClaims:
     user_id: UUID
     session_id: UUID
     company_id: UUID | None
+    access_mode: str
     expires_at: datetime
 
 
@@ -76,6 +77,7 @@ def create_access_token(
     user_id: UUID,
     session_id: UUID,
     company_id: UUID | None,
+    access_mode: str = "standard",
 ) -> tuple[str, datetime]:
     issued_at = utc_now()
     expires_at = issued_at + timedelta(minutes=settings.access_token_minutes)
@@ -85,6 +87,7 @@ def create_access_token(
         "sub": str(user_id),
         "sid": str(session_id),
         "type": "access",
+        "access_mode": access_mode,
         "jti": str(uuid4()),
         "iat": issued_at,
         "exp": expires_at,
@@ -119,6 +122,11 @@ def decode_access_token(settings: Settings, token: str) -> AccessTokenClaims:
             user_id=UUID(str(payload["sub"])),
             session_id=UUID(str(payload["sid"])),
             company_id=UUID(str(company_value)) if company_value else None,
+            access_mode=(
+                str(payload.get("access_mode", "standard"))
+                if str(payload.get("access_mode", "standard")) in {"standard", "read_only"}
+                else "standard"
+            ),
             expires_at=datetime.fromtimestamp(float(payload["exp"]), tz=UTC),
         )
     except (KeyError, TypeError, ValueError) as exc:
