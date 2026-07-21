@@ -30,5 +30,23 @@ celery_app.conf.update(
             "task": "orkestral.notifications.maintain",
             "schedule": 60.0,
         },
+        "maintain-agent-delegations-every-minute": {
+            "task": "orkestral.agents.maintain_delegations",
+            "schedule": 60.0,
+        },
+        "purge-expired-agent-memories-every-five-minutes": {
+            "task": "orkestral.agents.purge_expired_memories",
+            "schedule": 300.0,
+        },
+        "run-agent-memory-response-exercises-every-five-minutes": {
+            "task": "orkestral.agents.run_due_memory_response_exercises",
+            "schedule": 300.0,
+        },
+        "maintain-agent-memory-reencryption-every-minute": {
+            "task": "orkestral.agents.maintain_memory_reencryption",
+            "schedule": 60.0,
+        },
     },
 )
+
+from worker import event_tasks as _event_tasks  # noqa: E402, F401

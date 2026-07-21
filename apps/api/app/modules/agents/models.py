@@ -60,11 +60,258 @@ class Agent(Base):
     status: Mapped[str] = mapped_column(
         String(20), default="active", server_default="active", index=True
     )
+    active_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AgentVersion(Base):
+    __tablename__ = "agent_versions"
+    __table_args__ = (
+        UniqueConstraint("agent_id", "version", name="uq_agent_versions_agent_version"),
+        CheckConstraint(
+            "status IN ('draft', 'published', 'retired')", name="ck_agent_versions_status"
+        ),
+        CheckConstraint("autonomy_level >= 0 AND autonomy_level <= 4", name="ck_agent_autonomy"),
+        CheckConstraint("max_steps > 0 AND max_steps <= 100", name="ck_agent_version_steps"),
+        CheckConstraint(
+            "max_runtime_seconds > 0 AND max_runtime_seconds <= 3600",
+            name="ck_agent_version_runtime",
+        ),
+        CheckConstraint("max_cost_per_run_microunits >= 0", name="ck_agent_version_run_cost"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(
+        String(20), default="draft", server_default="draft", index=True
+    )
+    instructions: Mapped[str] = mapped_column(Text)
+    provider: Mapped[str] = mapped_column(String(40))
+    model: Mapped[str] = mapped_column(String(120))
+    temperature: Mapped[float] = mapped_column(Float)
+    max_input_tokens: Mapped[int] = mapped_column(Integer)
+    max_output_tokens: Mapped[int] = mapped_column(Integer)
+    memory_enabled: Mapped[bool] = mapped_column(Boolean)
+    knowledge_base_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("knowledge_bases.id", ondelete="SET NULL"), nullable=True
+    )
+    autonomy_level: Mapped[int] = mapped_column(Integer, default=2, server_default="2")
+    max_steps: Mapped[int] = mapped_column(Integer, default=12, server_default="12")
+    max_runtime_seconds: Mapped[int] = mapped_column(Integer, default=120, server_default="120")
+    max_cost_per_run_microunits: Mapped[int] = mapped_column(
+        Integer, default=1_000_000, server_default="1000000"
+    )
+    checksum: Mapped[str] = mapped_column(String(64))
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    published_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentBudget(Base):
+    __tablename__ = "agent_budgets"
+    __table_args__ = (
+        UniqueConstraint("agent_id", name="uq_agent_budgets_agent"),
+        CheckConstraint(
+            "limit_microunits >= 0 AND reserved_microunits >= 0 AND consumed_microunits >= 0",
+            name="ck_agent_budget_amounts",
+        ),
+        CheckConstraint("cycle_ends_at > cycle_started_at", name="ck_agent_budget_cycle"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    currency: Mapped[str] = mapped_column(String(3), default="USD", server_default="USD")
+    limit_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    reserved_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    consumed_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    hard_limit: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    cycle_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    cycle_ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AgentDataPolicy(Base):
+    __tablename__ = "agent_data_policies"
+    __table_args__ = (
+        UniqueConstraint("agent_id", name="uq_agent_data_policies_agent"),
+        CheckConstraint(
+            "max_data_classification IN ('public', 'internal', 'confidential', 'restricted')",
+            name="ck_agent_data_policy_classification",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    allowed_provider_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[\"local\"]'::jsonb")
+    )
+    external_processing_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    allow_message_egress: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    allow_knowledge_egress: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    allow_memory_egress: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    redact_sensitive_data: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
+    require_evaluation_for_publish: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
+    max_data_classification: Mapped[str] = mapped_column(
+        String(20), default="confidential", server_default="confidential"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class AgentRun(Base):
+    __tablename__ = "agent_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "execution_mode IN ('live', 'shadow', 'simulation')",
+            name="ck_agent_runs_execution_mode",
+        ),
+        CheckConstraint(
+            "status IN ('running', 'completed', 'failed', 'timed_out', 'awaiting_approval', 'simulated')",
+            name="ck_agent_runs_status",
+        ),
+        CheckConstraint(
+            "step_count >= 0 AND total_tokens >= 0 AND cost_microunits >= 0 AND duration_ms >= 0",
+            name="ck_agent_runs_metrics",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    agent_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_versions.id", ondelete="RESTRICT"), index=True
+    )
+    conversation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_conversations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    requested_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    execution_mode: Mapped[str] = mapped_column(
+        String(16), default="live", server_default="live", index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(24), default="running", server_default="running", index=True
+    )
+    request_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    planned_tool_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    completed_tool_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    denied_tool_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    step_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    cost_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_steps: Mapped[int] = mapped_column(Integer)
+    max_runtime_seconds: Mapped[int] = mapped_column(Integer)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentSecurityEvent(Base):
+    __tablename__ = "agent_security_events"
+    __table_args__ = (
+        CheckConstraint(
+            "category IN ('prompt_injection', 'data_egress', 'sensitive_data', 'memory_access')",
+            name="ck_agent_security_event_category",
+        ),
+        CheckConstraint(
+            "source IN ('user', 'knowledge', 'memory', 'provider', 'system')",
+            name="ck_agent_security_event_source",
+        ),
+        CheckConstraint(
+            "severity IN ('low', 'medium', 'high', 'critical')",
+            name="ck_agent_security_event_severity",
+        ),
+        CheckConstraint(
+            "action IN ('blocked', 'redacted', 'reported')",
+            name="ck_agent_security_event_action",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    category: Mapped[str] = mapped_column(String(32), index=True)
+    source: Mapped[str] = mapped_column(String(20), index=True)
+    severity: Mapped[str] = mapped_column(String(16), index=True)
+    action: Mapped[str] = mapped_column(String(16), index=True)
+    content_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    indicators: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
 
 
@@ -86,6 +333,7 @@ class AgentTool(Base):
         JSONB, default=dict, server_default=text("'{}'::jsonb")
     )
     required_permission: Mapped[str | None] = mapped_column(String(120))
+    risk_level: Mapped[str] = mapped_column(String(16), default="low", server_default="low")
     is_sensitive: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", index=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -100,6 +348,11 @@ class AgentConversation(Base):
     __tablename__ = "agent_conversations"
     __table_args__ = (
         CheckConstraint("status IN ('open', 'closed')", name="ck_agent_conversations_status"),
+        CheckConstraint(
+            "(status = 'open' AND closed_at IS NULL) OR "
+            "(status = 'closed' AND closed_at IS NOT NULL)",
+            name="ck_agent_conversations_closed_at",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -120,6 +373,7 @@ class AgentConversation(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
     )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
 
 
 class AgentMessage(Base):
@@ -181,6 +435,12 @@ class AgentToolRun(Base):
         ForeignKey("companies.id", ondelete="CASCADE"), index=True
     )
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    agent_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     conversation_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("agent_conversations.id", ondelete="SET NULL"), index=True
     )
@@ -245,6 +505,12 @@ class AgentUsageRecord(Base):
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    agent_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     conversation_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("agent_conversations.id", ondelete="SET NULL"), index=True
     )

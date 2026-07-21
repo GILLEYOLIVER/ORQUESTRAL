@@ -35,9 +35,7 @@ class PluginRegistry:
         try:
             return self._plugins[code]
         except KeyError as exc:
-            raise PluginNotFoundError(
-                f"O plugin {code} não possui runtime de conexão."
-            ) from exc
+            raise PluginNotFoundError(f"O plugin {code} não possui runtime de conexão.") from exc
 
     def installed(self) -> tuple[Plugin, ...]:
         return tuple(self._plugins.values())

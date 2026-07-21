@@ -7,6 +7,7 @@ import {
   ChartColumnBig,
   ContactRound,
   CreditCard,
+  Database,
   FolderKanban,
   LayoutDashboard,
   Landmark,
@@ -108,6 +109,12 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/modulos">
               <PackageOpen size={18} />
               Módulos
+            </NavLink>
+          ) : null}
+          {!preview && session.me?.permissions.includes("metadata.view") ? (
+            <NavLink className="sidebar__link" to="/app/studio">
+              <Database size={18} />
+              Orkestral Studio
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("billing.view") ? (

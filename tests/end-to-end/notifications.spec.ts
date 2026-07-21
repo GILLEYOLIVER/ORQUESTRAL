@@ -29,5 +29,9 @@ test("administrador acompanha notificações, aprovações e preferências", asy
   await expect(
     page.getByRole("heading", { name: "Como você quer ser avisado" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Cobertura por ausência" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Aprovador substituto")).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/Fase\s+\d+/i);
 });

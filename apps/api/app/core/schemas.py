@@ -16,6 +16,16 @@ class HealthResponse(StrictSchema):
     request_id: str
 
 
+class WorkerHealthResponse(StrictSchema):
+    status: Literal["ok", "degraded"]
+    component: Literal["agent-memory-worker"]
+    state: Literal["idle", "healthy", "overdue"]
+    monitor_secret_rotation_state: Literal["not_configured", "healthy", "due_soon"]
+    monitor_secret_rotation_days_remaining: int | None
+    monitor_secret_rotation_policy: Literal["optional", "warn", "enforce"]
+    request_id: str
+
+
 class CheckResult(StrictSchema):
     status: Literal["ok", "error"]
     latency_ms: float

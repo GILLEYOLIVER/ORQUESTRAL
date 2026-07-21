@@ -14,7 +14,7 @@ from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
-from app.modules.plugins.adapters import get_plugin_runtime
+from app.modules.plugins.adapters import MANAGED_VAULT_PROVIDERS, get_plugin_runtime
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError, mask_credential_fields
 from app.modules.plugins.models import (
     CompanyPlugin,
@@ -29,6 +29,7 @@ from app.modules.plugins.schemas import (
     CredentialCreate,
     CredentialResponse,
     CredentialRotationResponse,
+    ManagedVaultMetricResponse,
     PluginResponse,
 )
 
@@ -399,3 +400,46 @@ async def rotate_company_credentials(
     )
     await database.commit()
     return CredentialRotationResponse(rotated=rotated, failed=failed)
+
+
+@router.get(
+    "/managed-vault-metrics/summary",
+    response_model=list[ManagedVaultMetricResponse],
+)
+async def get_managed_vault_metrics(
+    principal: CanManagePlugins,
+    database: DatabaseSession,
+) -> list[ManagedVaultMetricResponse]:
+    context = get_request_context(principal)
+    rows = (
+        await database.execute(
+            select(PluginConnectionTest, Plugin.code)
+            .join(Plugin, Plugin.id == PluginConnectionTest.plugin_id)
+            .where(
+                PluginConnectionTest.company_id == context.company_id,
+                Plugin.code.in_(tuple(MANAGED_VAULT_PROVIDERS)),
+            )
+            .order_by(PluginConnectionTest.created_at.desc())
+            .limit(5_000)
+        )
+    ).all()
+    grouped: dict[str, list[PluginConnectionTest]] = {}
+    for attempt, plugin_code in rows:
+        grouped.setdefault(str(plugin_code), []).append(attempt)
+    metrics: list[ManagedVaultMetricResponse] = []
+    for provider_code, attempts in sorted(grouped.items()):
+        successes = sum(1 for attempt in attempts if attempt.success)
+        total = len(attempts)
+        metrics.append(
+            ManagedVaultMetricResponse(
+                provider_code=provider_code,
+                provider_name=MANAGED_VAULT_PROVIDERS[provider_code][0],
+                total_tests=total,
+                successful_tests=successes,
+                failed_tests=total - successes,
+                success_rate=round(successes / total, 4),
+                average_duration_ms=round(sum(attempt.duration_ms for attempt in attempts) / total),
+                last_tested_at=attempts[0].created_at,
+            )
+        )
+    return metrics

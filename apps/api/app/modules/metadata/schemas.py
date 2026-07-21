@@ -1,0 +1,122 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
+from pydantic import Field, JsonValue, field_validator, model_validator
+
+from app.core.schemas import StrictSchema
+
+MetadataDataType = Literal[
+    "text",
+    "long_text",
+    "integer",
+    "decimal",
+    "boolean",
+    "date",
+    "datetime",
+    "email",
+    "phone",
+    "url",
+    "uuid",
+    "json",
+]
+MetadataEntityStatus = Literal["draft", "published", "archived"]
+MetadataVersionStatus = Literal["draft", "validated", "published", "retired"]
+
+
+class MetadataFieldInput(StrictSchema):
+    key: str = Field(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_]*$")
+    label: str = Field(min_length=2, max_length=120)
+    data_type: MetadataDataType
+    required: bool = False
+    unique_values: bool = False
+    searchable: bool = False
+    default_value: JsonValue | None = None
+    settings: dict[str, JsonValue] = Field(default_factory=dict)
+    position: int = Field(default=0, ge=0, le=10_000)
+
+    @field_validator("key", "label")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        return value.strip()
+
+
+class MetadataEntityCreate(StrictSchema):
+    key: str = Field(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_]*$")
+    label: str = Field(min_length=2, max_length=120)
+    plural_label: str = Field(min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=2_000)
+    fields: list[MetadataFieldInput] = Field(min_length=1, max_length=100)
+
+    @field_validator("key", "label", "plural_label")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        return value.strip()
+
+    @model_validator(mode="after")
+    def reject_duplicate_fields(self) -> MetadataEntityCreate:
+        keys = [field.key for field in self.fields]
+        if len(keys) != len(set(keys)):
+            raise ValueError("As chaves dos campos devem ser unicas.")
+        return self
+
+
+class MetadataEntityDraftUpdate(StrictSchema):
+    label: str | None = Field(default=None, min_length=2, max_length=120)
+    plural_label: str | None = Field(default=None, min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=2_000)
+    fields: list[MetadataFieldInput] = Field(min_length=1, max_length=100)
+
+    @field_validator("label", "plural_label")
+    @classmethod
+    def strip_optional_text(cls, value: str | None) -> str | None:
+        return value.strip() if value is not None else None
+
+    @model_validator(mode="after")
+    def reject_duplicate_fields(self) -> MetadataEntityDraftUpdate:
+        keys = [field.key for field in self.fields]
+        if len(keys) != len(set(keys)):
+            raise ValueError("As chaves dos campos devem ser unicas.")
+        return self
+
+
+class MetadataFieldResponse(MetadataFieldInput):
+    id: UUID
+
+
+class MetadataEntityVersionResponse(StrictSchema):
+    id: UUID
+    version: int
+    status: MetadataVersionStatus
+    schema_checksum: str
+    fields: list[MetadataFieldResponse]
+    published_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MetadataEntitySummary(StrictSchema):
+    id: UUID
+    key: str
+    label: str
+    plural_label: str
+    status: MetadataEntityStatus
+    current_version: int
+    published_version: int | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MetadataEntityDetail(MetadataEntitySummary):
+    description: str | None
+    version: MetadataEntityVersionResponse
+
+
+class MetadataValidationResponse(StrictSchema):
+    entity_id: UUID
+    version: int
+    valid: bool
+    errors: list[str]
+    schema_checksum: str

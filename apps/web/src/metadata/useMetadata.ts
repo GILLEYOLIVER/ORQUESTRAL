@@ -1,0 +1,129 @@
+import { useQuery } from "@tanstack/react-query";
+import { request } from "../lib/http";
+import { useSession } from "../session/context";
+
+export type MetadataDataType =
+  | "text"
+  | "long_text"
+  | "integer"
+  | "decimal"
+  | "boolean"
+  | "date"
+  | "datetime"
+  | "email"
+  | "phone"
+  | "url"
+  | "uuid"
+  | "json";
+
+export type MetadataValue =
+  | string
+  | number
+  | boolean
+  | null
+  | MetadataValue[]
+  | { [key: string]: MetadataValue };
+
+export interface MetadataFieldInput {
+  key: string;
+  label: string;
+  data_type: MetadataDataType;
+  required: boolean;
+  unique_values: boolean;
+  searchable: boolean;
+  default_value: MetadataValue;
+  settings: Record<string, MetadataValue>;
+  position: number;
+}
+
+export interface MetadataFieldResponse extends MetadataFieldInput {
+  id: string;
+}
+
+export interface MetadataEntitySummary {
+  id: string;
+  key: string;
+  label: string;
+  plural_label: string;
+  status: "draft" | "published" | "archived";
+  current_version: number;
+  published_version: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MetadataEntityDetail extends MetadataEntitySummary {
+  description: string | null;
+  version: {
+    id: string;
+    version: number;
+    status: "draft" | "validated" | "published" | "retired";
+    schema_checksum: string;
+    fields: MetadataFieldResponse[];
+    published_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+export interface MetadataValidationResponse {
+  entity_id: string;
+  version: number;
+  valid: boolean;
+  errors: string[];
+  schema_checksum: string;
+}
+
+export interface MetadataRecordResponse {
+  id: string;
+  definition_id: string;
+  schema_version: number;
+  values: Record<string, MetadataValue>;
+  masked_fields: string[];
+  record_version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MetadataRecordPage {
+  items: MetadataRecordResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export function useMetadataEntities() {
+  const { me, status } = useSession();
+  return useQuery({
+    queryKey: ["metadata-entities", me?.current_company?.id],
+    queryFn: () => request<MetadataEntitySummary[]>("/metadata/entities"),
+    enabled:
+      status === "authenticated" &&
+      Boolean(me?.current_company) &&
+      (me?.permissions.includes("metadata.view") ?? false),
+  });
+}
+
+export function useMetadataEntity(definitionId: string | null) {
+  return useQuery({
+    queryKey: ["metadata-entity", definitionId],
+    queryFn: () =>
+      request<MetadataEntityDetail>(`/metadata/entities/${definitionId}`),
+    enabled: Boolean(definitionId),
+  });
+}
+
+export function useMetadataRecords(
+  definitionId: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["metadata-records", definitionId],
+    queryFn: () =>
+      request<MetadataRecordPage>(
+        `/metadata/entities/${definitionId}/records?page=1&page_size=100`,
+      ),
+    enabled: Boolean(definitionId) && enabled,
+  });
+}

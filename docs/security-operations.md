@@ -28,9 +28,30 @@ devem preservar o SHA completo e registrar a versão legível em comentário.
 2. Troque `JWT_SECRET` pelo valor novo e mantenha o anterior em `JWT_PREVIOUS_SECRETS`.
 3. Reinicie a API e aguarde o maior prazo de token de acesso.
 4. Remova o segredo anterior e reinicie novamente.
-5. Para credenciais de integrações, configure `ENCRYPTION_KEY` como `nova,anterior` durante a
-   janela de rotação. O cofre sempre grava com a primeira chave e lê pelas chaves seguintes.
-6. Nunca registre valores de segredo em tickets, logs, PRs ou comandos versionados.
+5. Configure a chave nova em `ENCRYPTION_KEY` e mantenha as anteriores temporariamente em
+   `ENCRYPTION_PREVIOUS_KEYS`. Novos dados usam somente a chave ativa; memórias, campos e
+   relatórios históricos procuram a chave anterior pelo keyring protegido.
+6. Execute os exercícios de resposta e verifique relatórios antigos antes de remover uma chave.
+7. Para cada agente, inicie um job em `POST /agents/{agent_id}/memory-reencryption-jobs` e
+   acompanhe `GET /agents/{agent_id}/memory-reencryption-jobs`. O worker processa lotes com
+   checkpoint, isolamento por empresa e bloqueio contra execução duplicada.
+8. Aguarde todos os jobs alcançarem `completed`, confirme `failed_count = 0` e execute uma leitura
+   controlada sem a chave antiga antes de retirá-la do gerenciador de segredos.
+9. Não remova a chave anterior enquanto existir job `pending`, `running` ou `failed`; corrija a
+   causa e preserve o keyring para impedir perda definitiva de dados criptografados.
+   Jobs falhos podem ser retomados por `POST /agents/{agent_id}/memory-reencryption-jobs/{job_id}/retry`;
+   a justificativa é armazenada somente como fingerprint e o processamento continua do checkpoint.
+10. Remova chaves anteriores somente depois da recriptografia e da janela de retenção aprovada.
+11. Nunca registre valores de segredo em tickets, logs, PRs ou comandos versionados.
+
+## SLO do scheduler de memória
+
+- Cada agenda registra o último heartbeat do worker, o SLO configurado e a quantidade de violações.
+- O endpoint de métricas diferencia `waiting`, `healthy`, `overdue` e `disabled`.
+- Quando o worker retorna depois de superar o SLO, o responsável recebe alerta crítico e um evento
+  interno sem conteúdo de memória.
+- Um monitor externo deve consultar as métricas em produção, porque o próprio worker não consegue
+  emitir alertas enquanto estiver completamente indisponível.
 
 ## Backup
 
@@ -70,3 +91,83 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 3. Isole integrações e workflows envolvidos sem apagar evidências.
 4. Recupere em ambiente separado e compare checksums.
 5. Documente causa, alcance, correção e prevenção antes de reabrir o serviço.
+
+# Monitor externo e recuperação assistida da memória
+
+- Monitore `GET /health/agent-memory-scheduler` fora do worker. A resposta é genérica e nunca revela empresa, agente, horários ou quantidade de agendas, mas exige uma assinatura HMAC válida por no máximo cinco minutos.
+- Guarde `AGENT_MEMORY_MONITOR_SECRET` e `ORKESTRAL_MONITOR_SECRET` em cofres separados da aplicação e do monitor. Execute `ORKESTRAL_BASE_URL=https://seu-ambiente ORKESTRAL_MONITOR_SECRET=... bash scripts/monitor-agent-memory-worker.sh`; código diferente de zero exige investigação do worker e do Celery Beat.
+- Para rotacionar sem indisponibilidade, mova temporariamente o segredo antigo para `AGENT_MEMORY_MONITOR_PREVIOUS_SECRETS`, publique o segredo novo, atualize o monitor e remova o anterior após cinco minutos. Valores repetidos ou inseguros são rejeitados na inicialização.
+- Registre a rotação em `AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT`; ambientes remotos recusam inicialização quando a data estiver ausente ou exceder `AGENT_MEMORY_MONITOR_SECRET_MAX_AGE_DAYS`.
+- Configure `AGENT_MEMORY_MONITOR_SECRET_ROTATION_WARNING_DAYS` abaixo da idade máxima. O probe autenticado retorna `due_soon` e o script externo emite um aviso antes do vencimento, sem revelar o segredo ou a data exata de rotação.
+- Em produção, configure `ENCRYPTION_KEY_PROVIDER=external`, uma referência exclusiva em `ENCRYPTION_KEY_REFERENCE` e uma referência correspondente para cada item de `ENCRYPTION_PREVIOUS_KEYS`. O banco registra somente a impressão digital da referência, nunca sua URI nem o material da chave.
+- Cada job externo exige uma credencial ativa da mesma empresa com o campo `key_reference`. O vínculo fica protegido por HMAC e a API informa apenas sua existência; revogação, expiração ou tentativa de usar credencial de outro tenant bloqueia a operação.
+- Cada job de recriptografia recebe um limite imutável de retomadas entre 1 e 10. O banco impede que a contagem ultrapasse esse orçamento.
+- Antes de uma retomada, execute o diagnóstico assistido na interface. Ele verifica estado falho, keyring histórico, identificação da chave, snapshot, exclusividade e orçamento sem retornar material secreto.
+- Quando a recuperação for impossível ou o orçamento acabar, encerre o job pela interface. Código técnico, autor e horário permanecem auditáveis; a justificativa é preservada somente como HMAC e o job encerrado não pode ser retomado.
+- Jobs concluídos, falhos ou encerrados recebem `purge_after` conforme `AGENT_MEMORY_REENCRYPTION_TERMINAL_RETENTION_DAYS`. O worker elimina o registro operacional vencido e mantém somente auditoria e evento agregados, sem ID do job ou material criptográfico.
+- Uma retenção legal pendente ou aprovada suspende o expurgo do job. A referência jurídica é protegida por HMAC, a decisão exige outro usuário autorizado e o isolamento por empresa é aplicado em todas as operações.
+- Solicitações notificam apenas revisores autorizados da mesma empresa; decisões notificam o solicitante sem incluir a referência jurídica.
+- Para cofres gerenciados, prefira os conectores AWS Secrets Manager, Azure Key Vault, Google Secret Manager ou HashiCorp Vault. Use identidade gerenciada e referências sem token, query string ou credencial embutida; o teste local nunca declara acesso remoto que não executou.
+- Um diagnóstico aprovado expira em 15 minutos. Mudanças no keyring ou em jobs concorrentes bloqueiam a retomada e exigem nova avaliação.
+- Nunca cole chaves no motivo, na interface, em logs ou em tickets. Restaure-as exclusivamente no gerenciador de segredos do ambiente.
+
+## Cofres gerenciados, identidade da carga e retenções
+
+- Os conectores AWS Secrets Manager, Azure Key Vault, Google Secret Manager e HashiCorp Vault resolvem referências somente por identidades temporárias da carga de trabalho; tokens e material secreto não são retornados, persistidos ou incluídos nos erros.
+- Endpoints de metadados são fixos ou restritos a endereços link-local conhecidos, redirecionamentos ficam desativados, respostas são limitadas a 64 KiB e referências bloqueiam query, fragmento, credenciais embutidas e travessia de caminho.
+- AWS usa credenciais temporárias ECS/EC2 IMDSv2 e assinatura SigV4; Azure e GCP usam tokens dos respectivos serviços de metadados; HashiCorp Vault exige HTTPS e autenticação Kubernetes com token montado na carga.
+- A conexão só é marcada como válida depois de uma leitura remota real. Falhas do provedor são convertidas em mensagem segura sem corpo, token, referência jurídica ou conteúdo secreto.
+- Retenções de jobs de recriptografia geram um único lembrete antes do vencimento para solicitante e revisores autorizados da mesma empresa. O registro `reminder_sent_at` impede duplicidade mesmo com execução periódica do worker.
+- A política de rotação do segredo do monitor é derivada do ambiente: `optional` no local, `warn` em desenvolvimento e `enforce` em produção ou desenvolvimento remoto. Produção e modo remoto continuam exigindo data de rotação válida.
+
+## Ativação de keyring externo para memória de agentes
+
+- Um keyring gerenciado só é ativado para um agente depois que um job de recriptografia termina com sucesso e a referência foi resolvida pela identidade da carga de trabalho.
+- O vínculo é persistido por `company_id` e `agent_id`, aponta para uma credencial ativa da mesma empresa e armazena somente código do provedor e impressão SHA-256 da referência; chave, token e referência em texto não são persistidos no vínculo.
+- Novas memórias usam a chave externa como primária. Durante a migração, a chave de bootstrap e chaves anteriores ficam apenas como fallback em memória para abrir registros ainda não convertidos; o teste de integração comprova que a chave de ambiente isolada não abre uma nova memória externa.
+- A resolução ocorre sob demanda e sem cache persistente. Se a identidade ou o cofre estiver indisponível, novas gravações retornam `503` seguro e recuperações para agentes retornam contexto vazio, nunca dados parcialmente descriptografados.
+- O status do keyring é consultável sem expor IDs de credencial ou referências. Acesso cruzado entre empresas retorna `404`.
+- Métricas de teste dos cofres agregam sucesso, falha, latência e último teste por provedor, sempre com filtro obrigatório de empresa.
+- Não revogar um vínculo externo antes de executar uma recriptografia de retorno ou troca para outro keyring e validar a leitura. A revogação segura será um fluxo controlado posterior.
+
+## Renovação de retenção e saída de keyring
+
+- Cada renovação de retenção legal possui registro próprio, impressão protegida da nova referência, extensão proposta, solicitante, decisor e timestamps. A referência não aparece em respostas, notificações, eventos ou auditorias.
+- Uma renovação só pode ser criada para retenção aprovada e ativa, respeita o limite acumulado de dez anos e exige decisão de outra pessoa autorizada da mesma empresa.
+- A aprovação estende o vencimento, preserva o histórico e redefine o lembrete para o novo prazo. Rejeições não alteram a retenção original.
+- Para sair de um keyring externo, o job de ambiente monta temporariamente a chave de ambiente como primária e as chaves externas apenas para leitura. O vínculo só muda para `revoked` após todos os registros do snapshot serem recriptografados com sucesso.
+- Falha ao resolver o cofre interrompe a saída com `vault_resolution_failed`; o vínculo continua ativo e nenhuma remoção prematura ocorre.
+- O painel mostra apenas origem, provedor, última resolução, taxa de sucesso, quantidade de testes e latência. IDs de credenciais, referências e material secreto não são enviados ao navegador.
+
+## Ciclo de vida dos keyrings gerenciados
+
+- A interface permite solicitar a saída do cofre sem alterar a configuração global. O vínculo permanece ativo até a recriptografia para a chave do ambiente terminar.
+- O worker verifica cofres ativos, abre um único incidente por vínculo, alerta após o limiar configurado e registra a recuperação sem armazenar mensagens do provedor, referências ou segredos.
+- Credenciais com vencimento iniciam saída automática dentro da janela configurada. Uma credencial vencida só é revogada quando nenhum keyring ativo depende dela.
+- Renovações de retenção legal estão disponíveis na interface e continuam exigindo uma decisão de outro usuário autorizado.
+
+## Política, renovação e SLO dos cofres gerenciados
+
+- Cada empresa pode definir sua própria janela de aviso, lote de saída, limiar de falhas e SLO de indisponibilidade. Sem configuração, os padrões seguros do ambiente continuam valendo.
+- A saída automática pode ser desativada por política empresarial, mas credenciais vencidas nunca são tratadas como válidas e a revogação continua condicionada à ausência de vínculos ativos.
+- Uma credencial vinculada e ainda válida pode receber solicitação de extensão. A justificativa é persistida apenas como impressão HMAC e não aparece em respostas, eventos ou notificações.
+- O solicitante não pode aprovar a própria renovação. Aprovação após vencimento ou após início da saída segura é bloqueada.
+- O primeiro rompimento do SLO por incidente gera alerta, auditoria e evento uma única vez; recuperações encerram o incidente sem apagar seu histórico.
+- A interface mostra a política, o estado do SLO, solicitações de renovação e decisões, sem revelar credencial, referência de chave ou material criptográfico.
+
+## Plantão, disponibilidade e identidade da carga
+
+- A empresa escolhe até 20 usuários ativos para o plantão do cofre. IDs de outra empresa, usuários inativos e duplicidades são recusados no back-end.
+- Alertas de indisponibilidade e violações do SLO incluem o plantão ativo, os aprovadores e o responsável pelo vínculo, sem copiar mensagens do provedor.
+- Cada verificação alimenta uma janela horária agregada por empresa e provedor, com sucessos, falhas, violações e percentual de disponibilidade. Não são armazenadas referências, identidades ou segredos nesse histórico.
+- A identidade proposta para um cofre fica cifrada até a decisão. A justificativa e as identidades recebem impressões HMAC separadas para auditoria sem recuperação do texto.
+- O solicitante não decide a própria rotação. Antes da aprovação, o Orkestral exige uma leitura real da chave pela nova identidade; falha, vencimento, saída segura ou troca de tenant bloqueiam a ativação.
+- A credencial existente é atualizada atomicamente somente após a validação, preservando os demais campos cifrados e mantendo a identidade anterior em uso quando a solicitação é rejeitada.
+
+## Retenção, janela de plantão e canário preventivo
+
+- A retenção das janelas de disponibilidade é configurável entre 7 e 365 dias por empresa. A manutenção remove somente agregados anteriores ao prazo do respectivo tenant.
+- O plantão possui fuso IANA e janela diária com início e fim explícitos. Fora desse horário, os usuários continuam cadastrados, mas não entram nos novos alertas operacionais.
+- Credenciais com vencimento dentro da antecedência configurada executam um canário periódico por identidade da carga antes da saída automática.
+- O canário realiza leitura real da chave, registra apenas `healthy` ou `unavailable` e alerta somente na transição para falha. A recuperação também gera notificação, auditoria e evento.
+- O status do agente mostra resultado e horário do último canário, nunca a identidade usada, a referência da chave ou a resposta do provedor.

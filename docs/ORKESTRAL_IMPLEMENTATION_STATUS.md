@@ -135,3 +135,695 @@ Iniciar o ciclo 2 com os itens imediatos 4 a 6:
 3. executar auditoria sistematica de multiempresa e permissoes, incluindo testes negativos entre empresas.
 
 Depois dos tres itens, publicar e mesclar o segundo PR somente com os checks obrigatorios aprovados.
+
+## Ciclo empresarial 2 - contratos multiempresa e governanca
+
+Data: 21 de julho de 2026.
+
+- Fase atual: Fase 1 - Fundacao empresarial.
+- Concluido neste recorte: contrato automatico de tabelas por tenant, contrato de seguranca das rotas, validacao rota versus catalogo de permissoes, inventario funcional e auditoria de multiempresa.
+- Teste negativo adicionado: Empresa A nao consegue consultar nem excluir oportunidade, campanha, projeto ou agente da Empresa B.
+- Migracoes: nenhuma; o ciclo protege o schema atual sem alterar dados.
+- Risco externo: GitHub Actions nao inicia por restricao de pagamento/limite da conta e branch protection nao esta disponivel para este repositorio privado no plano atual.
+- Regra de integracao: manter PR aberto ate os checks remotos aprovarem; nunca tornar o repositorio publico.
+- Proximo passo exato: executar a bateria local do ciclo, publicar o PR e iniciar a auditoria de agentes, automacoes, integracoes e plugins.
+
+### Evidencia de validacao do ciclo 2
+
+- Ruff: 226 arquivos formatados e lint aprovado.
+- MyPy: 165 arquivos de producao aprovados.
+- Backend: 95 testes unitarios e 6 testes de integracao aprovados.
+- Frontend: 9 testes, lint, tipos e build de producao aprovados.
+- E2E: 5 aprovados e 2 ignorados por contrato de ambiente.
+- Seguranca: auditoria concluida sem bloqueios.
+- Runtime: 8 containers saudaveis; `/health`, `/ready` e `/app` aprovados.
+- Banco: Alembic `20260720_0027 (head)` confirmado.
+
+## Ciclo empresarial 3 - auditoria de runtime e pesquisa oficial
+
+Data: 21 de julho de 2026.
+
+- Agentes: Nivel 2; 2 provedores, 3 ferramentas tipadas, aprovacao e consumo presentes.
+- Conhecimento: `pgvector` com vetores de 384 dimensoes confirmado.
+- Automacoes: Nivel 3; 16 blocos e definicao canonica com versoes e rollback.
+- Motor externo: n8n saudavel como container, mas API informa indisponivel e nao configurado.
+- Plugins: 7 conectores catalogados com credenciais cifradas e ativacao por empresa.
+- Pesquisa: fontes oficiais Salesforce Architects, Salesforce Developers e MuleSoft registradas com data.
+- Maior lacuna: eventos transacionais, politicas versionadas de agentes, avaliacao, DLQ e governanca de APIs.
+- Migracoes: nenhuma neste ciclo de diagnostico.
+- Proximo passo exato: criar matriz de equivalencia detalhada, arquitetura-alvo e roadmap por dependencia.
+
+## Ciclo empresarial 4 - matriz, arquitetura-alvo e roadmap
+
+Data: 21 de julho de 2026.
+
+- Matriz: 40 capacidades avaliadas com nivel, lacuna, solucao, fase e contrato de entrega.
+- Arquitetura: monolito modular orientado por metadata, eventos e agentes controlados.
+- Roadmap: Fases 0 a 12 ordenadas por dependencias e criterios de saida.
+- Decisao imediata: concluir fundacao empresarial, eventos transacionais e base de metadata antes de ampliar autonomia.
+- Migracoes: nenhuma neste ciclo de arquitetura.
+- Proximo passo exato: implementar o primeiro recorte vertical de Fase 1 com Tenant Context, policy e auditoria/evento.
+
+## Ciclo empresarial 5 - primeiro recorte fundamental de eventos
+
+Data: 21 de julho de 2026.
+
+- Banco: outbox transacional e ledger de consumo idempotente.
+- Contrato: envelope versionado, classificado, limitado e sem chaves sensiveis.
+- Producao real: acoes autorizadas geram evento na mesma transacao da auditoria.
+- Entrega: task Celery publica lotes em Redis Stream por interface substituivel.
+- Resiliencia: lock recuperavel, retry com backoff e dead-letter apos limite.
+- Testes: schema, payload, publicacao e duplicidade de consumo.
+- Migracao: `20260721_0028`.
+- Proximo passo exato: validar migracao e suites; depois iniciar Tenant Context e Policy Engine.
+
+### Evidencia de validacao do ciclo 5
+
+- Ruff: 235 arquivos formatados e lint aprovado.
+- MyPy: 171 arquivos aprovados.
+- Backend: 100 testes unitarios aprovados.
+- Integracao: 7 testes aprovados.
+- Seguranca: auditoria concluida sem bloqueios.
+- Migracao: `0028 -> 0027 -> 0028` aprovada; banco em `20260721_0028 (head)`.
+- Worker: task registrada e execucao real aprovada com lote vazio.
+
+## Ciclo empresarial 6 - contexto e Policy Engine
+
+Data: 21 de julho de 2026.
+
+- Contexto: empresa, ator e correlacao propagaveis para jobs sem snapshot de permissao.
+- Policy: tenant, permissao, campos, risco e escopo de plataforma avaliados deterministicamente.
+- Auditoria: ledger versionado de decisoes e evento transacional sem identificador cross-tenant.
+- Integracao inicial: dispatcher de outbox vincula contexto por evento.
+- Migracao: `20260721_0029`.
+- Adocao: contrato criado; migracao das rotas sera incremental e mensurada.
+- Proximo passo exato: validar o ciclo e aplicar Policy Engine ao primeiro dominio empresarial.
+
+### Evidencia de validacao do ciclo 6
+
+- Ruff: 231 arquivos formatados e lint aprovado.
+- MyPy: 166 arquivos aprovados.
+- Backend: 105 testes unitarios aprovados.
+- Integracao: 8 testes aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Migracao: `0029 -> 0028 -> 0029` aprovada; banco em `20260721_0029 (head)`.
+- Proximo passo exato: aplicar a fundacao empresarial ao primeiro dominio e iniciar a plataforma de metadados.
+
+## Ciclo empresarial 7 - fundacao da plataforma de metadados
+
+Data: 21 de julho de 2026.
+
+- Definicoes: entidades e campos normalizados, tipados e isolados por empresa.
+- Versoes: rascunho, validacao, publicacao, retirada e checksum deterministico.
+- API: listar, criar, consultar, editar rascunho, versionar, validar e publicar.
+- Seguranca: permissoes dedicadas e Policy Engine aplicado ao primeiro dominio real.
+- Rastreabilidade: auditoria e eventos transacionais para todas as alteracoes.
+- Migracao: `20260721_0030`.
+- Testes: contratos puros e ciclo completo entre duas empresas.
+- Proximo passo exato: validar o ciclo e criar registros personalizados seguros sobre schemas publicados.
+
+### Evidencia de validacao do ciclo 7
+
+- Ruff: 240 arquivos formatados e lint aprovado.
+- MyPy: 172 arquivos aprovados.
+- Backend: 109 testes unitarios aprovados.
+- Integracao: 9 testes aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Migracao: `0030 -> 0029 -> 0030` aprovada; banco em `20260721_0030 (head)`.
+- Isolamento: entidade de uma empresa retorna `404` para outra empresa.
+- Eventos: auditoria e eventos de dominio possuem contratos distintos, sem duplicidade semantica.
+
+## Ciclo empresarial 8 - registros personalizados seguros
+
+Data: 21 de julho de 2026.
+
+- Runtime: registros vinculados ao schema publicado e a sua versao exata.
+- Validacao: tipos, obrigatoriedade, padroes, campos desconhecidos e unicidade.
+- Confiabilidade: idempotencia de criacao e concorrencia otimista de atualizacao.
+- Seguranca: permissoes por operacao e mascaramento/bloqueio por campo no backend.
+- Privacidade: eventos sem valores e exclusao fisica de registro e revisoes.
+- Rastreabilidade: revisoes imutaveis enquanto o registro existe, auditoria e outbox.
+- Migracao: `20260721_0031`.
+- Proximo passo exato: validar o ciclo e criar layouts e visualizacoes para o Metadata Studio.
+
+### Evidencia de validacao do ciclo 8
+
+- Ruff: 246 arquivos formatados e lint aprovado.
+- MyPy: 175 arquivos aprovados.
+- Backend: 112 testes unitarios aprovados.
+- Integracao: 10 testes aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Migracao: `0031 -> 0030 -> 0031` aprovada; banco em `20260721_0031 (head)`.
+- Privacidade: exclusao remove registro e revisoes; eventos nao contem valores empresariais.
+- Confiabilidade: repeticao idempotente e atualizacao com versao obsoleta validadas.
+
+## Ciclo empresarial 9 - Orkestral Metadata Studio
+
+Data: 21 de julho de 2026.
+
+- Navegacao: Studio permissionado e acessivel pelo menu lateral.
+- Construtor: entidades e campos configuraveis sem editar codigo.
+- Publicacao: validacao, publicacao e criacao de nova versao na interface.
+- Runtime visual: formulario e lista gerados pelos tipos do schema publicado.
+- Operacao: criacao, edicao e exclusao de registros com versao otimista.
+- Experiencia: interface responsiva, em portugues e sem exposicao de JSON interno.
+- Proximo passo exato: validar frontend e integrar layouts e visualizacoes salvas ao backend.
+
+### Evidencia de validacao do ciclo 9
+
+- ESLint: aprovado sem avisos.
+- TypeScript: typecheck aprovado.
+- Frontend: 12 testes aprovados em 5 arquivos.
+- Build: artefato de producao gerado com `VITE_AUTH_PREVIEW_ENABLED=false`.
+- E2E: 6 cenarios aprovados e 2 cenarios extensos ignorados pela configuracao local.
+- Studio E2E: login, schema, validacao, publicacao, registro e exclusao aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Divida tecnica: bundle principal possui aviso de 853 kB; aplicar code splitting em ciclo futuro.
+
+## Ciclo 10 - Governança de agentes
+
+- Versões de agentes com rascunho, publicação, aposentadoria, checksum e migração de agentes existentes.
+- Níveis de autonomia 0 a 4 aplicados no back-end conforme o risco de cada ferramenta.
+- Orçamento mensal por agente com reserva preventiva, limite rígido e consumo rastreável.
+- Eventos e auditoria sem instruções, prompts ou credenciais.
+- Testes unitários de política/checksum e integração multiempresa adicionados.
+- Validação concluída: Ruff e MyPy aprovados; 119 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0032_agent_governance.py`.
+- Próximo passo: ciclo 11, trace de execuções, limites de passos/tempo e modo sombra.
+
+## Ciclo 11 - Observabilidade e modo sombra de agentes
+
+- Trace seguro por execução, sem persistir prompt ou raciocínio interno.
+- Limites de passos e tempo aplicados no back-end.
+- Modos `live`, `shadow` e `simulation`, com ações externas bloqueadas fora do modo real.
+- Endpoints de histórico de execuções isolados por empresa.
+- Validação concluída: Ruff e MyPy aprovados; 121 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0033_agent_run_observability.py`.
+- Próximo passo: ciclo 12, políticas de dados por provedor e defesa contra prompt injection.
+
+## Ciclo 12 - Segurança de dados dos agentes
+
+- Política de saída de dados por agente e provedor, aplicada no back-end.
+- Mascaramento de PII e credenciais antes de processamento externo.
+- Defesa contra prompt injection em mensagens e conhecimento recuperado.
+- Incidentes auditáveis sem armazenamento do conteúdo original.
+- Validação concluída: Ruff e MyPy aprovados; 123 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0034_agent_data_security.py`.
+- Próximo passo: ciclo 13, suites de avaliação, casos adversariais e bloqueio de publicação.
+
+## Ciclo 13 - Avaliação e gate de publicação de agentes
+
+- Suítes e casos adversariais vinculados à versão do agente.
+- Avaliação determinística de prompt injection e contratos de ferramentas.
+- Resultados e pontuação auditáveis, sem chamada a provedor pago.
+- Publicação bloqueada até aprovação quando a política exigir.
+- Validação concluída: Ruff e MyPy aprovados; 124 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0035_agent_evaluation_gate.py`.
+- Próximo passo: ciclo 14, contratos de tarefa e coordenação multiagente.
+
+## Ciclo 14 - Coordenação multiagente
+
+- Contratos entre supervisor e especialista com propagação de ferramentas, passos e custo.
+- Delegações idempotentes com profundidade, prazo e máquina de estados controlada.
+- Handoffs aprováveis que revalidam o agente de destino sem ampliar privilégios.
+- Objetivos e resultados persistidos somente como fingerprints por empresa.
+- Validação concluída: Ruff e MyPy aprovados; 126 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0036_multiagent_coordination.py`.
+- Próximo passo: ciclo 15, fila assíncrona de delegações e execução coordenada.
+
+## Ciclo 15 - Worker seguro de delegações
+
+- Payload temporário protegido por AES-256-GCM e vinculado a empresa/delegação.
+- Mensagens Redis contêm somente o identificador da delegação.
+- Claim transacional, lease, retry, recuperação e expiração automática.
+- Execução coordenada valida versão, política, autonomia, ferramentas, passos e custo.
+- Destruição do ciphertext em qualquer estado terminal.
+- Validação concluída: Ruff e MyPy aprovados; 127 testes unitários da API, 11 testes de integração e 2 testes do worker aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0037_delegation_worker_payloads.py`.
+- Próximo passo: ciclo 16, aprovação humana assíncrona em delegações de alto risco.
+
+## Ciclo 16 - Aprovação assíncrona de delegações
+
+- Pausa antes de ferramentas que exigem aprovação humana.
+- Argumentos protegidos por AES-256-GCM e ausentes de notificações/eventos.
+- Integração com a central de aprovações e retomada pela fila após commit.
+- Revalidação completa antes de executar a chamada aprovada.
+- Destruição de objetivo e argumentos em rejeição, expiração ou falha.
+- Migração: `20260721_0038_delegation_approvals.py`.
+- Contratos OpenAPI e tipos TypeScript regenerados para os ciclos empresariais acumulados.
+- Validação local: Ruff e MyPy aprovados; 128 testes da API, 11 integrações,
+  2 testes do worker e 12 testes do front-end aprovados; E2E com 6 aprovados e
+  2 cenários explicitamente ignorados; build, migração reversível, auditoria de
+  dependências e varredura de segredos aprovados.
+- Próximo passo: ciclo 17, políticas de aprovação por valor e contexto.
+
+## Ciclo 17 - Políticas empresariais de aprovação
+
+- Regras por empresa e agente, com chave estável, versões imutáveis e publicação controlada.
+- Efeitos `allow`, `require_approval` e `deny`, prioridade determinística e bloqueio seguro.
+- Condições por ferramenta, faixa de valor em microunidades, moeda e contexto aninhado.
+- Aprovador e prazo configuráveis, sem exposição dos argumentos em notificações ou eventos.
+- Reavaliação da política imediatamente antes da execução aprovada.
+- API administrativa com isolamento multiempresa, auditoria e evento transacional.
+- Migração: `20260721_0039_agent_approval_policies.py`.
+- Validação local: Ruff, MyPy e Prettier aprovados; 130 testes da API, 11
+  integrações, 2 testes do worker e 12 testes do front-end aprovados; build,
+  contratos gerados, migração reversível e auditoria de segurança aprovados.
+- Próximo passo: ciclo 18, testes de isolamento da política e experiência administrativa.
+
+## Ciclo 18 - Estúdio de políticas e validação operacional
+
+- Painel em português dentro do agente para criar, revisar e publicar políticas.
+- Configuração guiada de efeito, prioridade, ferramenta, valor, moeda e contexto.
+- Simulador de decisão antes da publicação e da execução real.
+- Estados visuais claros para rascunho, publicada e substituída.
+- Layout responsivo e protegido pela permissão `agents.configure`.
+- Defesa em profundidade descarta políticas de outra empresa ou agente mesmo
+  diante de uma coleção de dados misturada.
+- E2E cobrindo criação de agente, política, publicação, simulação e limpeza.
+- Validação local: 131 testes da API, 11 integrações, 2 testes do worker, 12
+  testes do front-end e E2E com 7 aprovados e 2 cenários explicitamente
+  ignorados; MyPy, lint, Prettier, build e auditoria de segurança aprovados.
+- Próximo passo: ciclo 19, aprovação por alçada e escalonamento.
+
+## Ciclo 19 - Alçadas e escalonamento de aprovações
+
+- Alçadas configuráveis pela prioridade, ferramenta, contexto e faixa de valor já versionadas.
+- Aprovador principal e substituto validados como membros ativos com `approvals.decide`.
+- Escalonamento automático antes da expiração, com reatribuição idempotente pelo worker.
+- Revogação de acesso revalidada no momento do escalonamento, sem ampliar privilégios.
+- Notificação dedicada, ação de auditoria e evento transacional sem argumentos empresariais.
+- Interface em português para prazo, aprovador principal, substituto e simulação da decisão.
+- Migração: `20260721_0040_agent_approval_escalation.py`.
+- Validação local: Ruff, MyPy, ESLint, TypeScript e Prettier aprovados; 133 testes da
+  API, 11 integrações, 2 testes do worker e 12 testes do front-end aprovados;
+  build, migração reversível, auditoria de segurança e E2E com 7 aprovados e 2
+  cenários explicitamente ignorados concluídos sem bloqueios.
+- Próximo passo: ciclo 20, cadeias com múltiplos estágios e quórum de aprovação.
+
+## Ciclo 20 - Cadeias de aprovação e quórum
+
+- Estágios versionados e relacionais, com ordem, participantes e quórum próprios.
+- Separação de funções: uma pessoa não pode ocupar mais de uma etapa da mesma cadeia.
+- Votos únicos por solicitação, etapa e usuário, protegidos também por restrição no banco.
+- Revalidação de empresa e approvals.decide em cada voto, inclusive após revogação.
+- Aprovação parcial mantém a operação bloqueada; rejeição encerra e destrói payloads sensíveis.
+- Avanço automático para a próxima etapa com notificação apenas aos novos participantes.
+- Progresso de etapa e quórum visível na Central de Atenção, sem expor argumentos.
+- Migração: 20260721_0041_agent_approval_quorum.py.
+- Validação local: Ruff, MyPy, ESLint, TypeScript e Prettier aprovados; 133 testes da
+  API, 11 integrações, 2 testes do worker e 12 testes do front-end aprovados;
+  build, migração reversível, auditoria de segurança e E2E com 7 aprovados e 2
+  cenários explicitamente ignorados concluídos sem bloqueios.
+- Próximo passo: ciclo 21, políticas temporais, delegação formal e substituição por ausência.
+
+## Ciclo 21 - Vigência e cobertura segura de aprovações
+
+- Políticas versionadas agora possuem início e fim opcionais de vigência e são ignoradas fora da janela publicada.
+- Cobertura formal por ausência limitada a 90 dias, restrita a aprovadores ativos da mesma empresa.
+- Prevenção de autodelegação, sobreposição, ciclos e delegação em cascata no mesmo período.
+- Lista de candidatos dedicada por privilégio mínimo, sem exigir acesso amplo ao cadastro de usuários.
+- Voto registra o ator real e a vaga representada; titular e substituto não conseguem votar duas vezes na mesma etapa.
+- Revogação é exclusiva do titular, auditada e interrompe imediatamente novas decisões representadas.
+- Central de Atenção permite programar, acompanhar e revogar coberturas; Estúdio de Agentes permite configurar a vigência da política.
+- Migração: `20260721_0042_approval_delegations.py`.
+- Validação local: Ruff e MyPy aprovados em 189 arquivos; ESLint, TypeScript e Prettier aprovados; 135 testes da API, 12 integrações, 2 testes do worker e 12 testes do front-end aprovados; build, migração `0042 -> 0041 -> 0042`, auditoria de segurança e E2E com 7 aprovados e 2 cenários explicitamente ignorados concluídos sem bloqueios.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; banco em `20260721_0042 (head)`.
+- Risco conhecido: o bundle web permanece acima de 500 kB e o `TestClient` emite aviso de depreciação do `httpx`.
+- Próximo passo: ciclo 22, memória de agentes com classificação, retenção, expiração e eliminação segura por empresa.
+
+## Ciclo 22 - Governança e eliminação de memória de agentes
+
+- Política individual por agente com retenção padrão e máxima, escopos, classificações e consentimento obrigatório para memória pessoal.
+- Conteúdo cifrado antes da persistência; respostas, eventos e auditorias contêm apenas metadados operacionais.
+- Fingerprint HMAC contextualizado por empresa e agente, impedindo comparação direta entre tenants e criação duplicada.
+- Memórias expiradas são excluídas das consultas ativas e podem ser eliminadas fisicamente em lote.
+- Exclusão individual remove o ciphertext do banco ativo e mantém somente auditoria sem conteúdo empresarial.
+- Interface em português no perfil do agente para configurar retenção, consentimento, expurgo e exclusão.
+- Migração: `20260721_0043_agent_memory_governance.py`.
+- Validação local: Ruff e MyPy aprovados em 193 arquivos; ESLint, TypeScript e Prettier aprovados; 136 testes da API, 12 integrações, 2 testes do worker e 12 testes do front-end aprovados; build, migração `0043 -> 0042 -> 0043`, auditoria de segurança e E2E com 7 aprovados e 2 cenários explicitamente ignorados concluídos sem bloqueios.
+- Segurança comprovada: teste real confirma isolamento multiempresa, exigência de consentimento, idempotência, ausência do segredo na API e no armazenamento em texto simples, e remoção física do registro.
+- Limite consciente: memórias ainda não são enviadas ao modelo; a recuperação será ligada somente após aplicar política de egress e filtragem de classificação.
+- Próximo passo: ciclo 23, recuperação autorizada de memória, expurgo automático e proteção de egress por provedor.
+
+## Ciclo 23 - Recuperação segura e expurgo automático de memória
+
+- Recuperação de memória desativada por padrão e limitada por agente, empresa, classificação, expiração e quantidade máxima por consulta.
+- Conteúdo só é decifrado depois da autorização; memórias não autorizadas nunca entram no contexto do modelo.
+- Memórias com indícios de prompt injection são bloqueadas e geram evento de segurança contendo somente fingerprint e metadados.
+- Envio de memória a provedor externo exige autorização independente `allow_memory_egress`; permitir egress geral não libera memória implicitamente.
+- Dados sensíveis autorizados seguem mascaramento antes de sair para um provedor externo.
+- Worker elimina periodicamente ciphertexts expirados em lotes bloqueados por transação, evitando concorrência entre consumidores.
+- Migração: `20260721_0044_agent_memory_runtime.py`, incluindo a origem auditável `memory` no contrato de eventos de segurança.
+- Validação local: formato e Ruff aprovados nos arquivos do ciclo; MyPy aprovado em 196 arquivos; 137 testes da API, 3 testes do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança concluídos sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0044 -> 0043 -> 0044` aprovada; banco em `20260721_0044 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; PostgreSQL e Redis prontos.
+- Dívida técnica preexistente: o lint global ainda alcança 28 migrações históricas com ordenação antiga de imports; nenhuma foi alterada neste ciclo para preservar o histórico Alembic.
+- Riscos conhecidos: bundle web acima de 500 kB e aviso de depreciação do `TestClient`/`httpx` permanecem sem regressão.
+- Próximo passo: ciclo 24, memória por usuário, revogação de consentimento e rastreabilidade de recuperação por execução.
+
+## Ciclo 24 - Titularidade, revogação e rastreabilidade da memória
+
+- Memórias pessoais exigem titular explícito e associação ativa à mesma empresa; memórias de outro usuário não entram no contexto do modelo.
+- Banco mantém FKs independentes para usuário e associação empresarial, com exclusão em cascata quando a pessoa deixa a empresa, sem enfraquecer o contrato de `company_id`.
+- Referências de consentimento deixaram de ser persistidas ou retornadas em texto; somente HMAC contextualizado por empresa, agente e titular é armazenado.
+- Migração expira memórias pessoais legadas antes de remover a coluna textual, permitindo eliminação automática segura.
+- Revogação é idempotente, elimina fisicamente todos os ciphertexts vinculados e bloqueia reutilização posterior da mesma autorização.
+- Auditoria e evento de revogação não contêm titular, referência de consentimento nem conteúdo da memória.
+- Cada memória recuperada gera `memory_access` vinculado à execução usando apenas fingerprint e metadados operacionais.
+- Interface administrativa permite selecionar o titular, revogar a referência e acompanhar a quantidade eliminada sem exibir o conteúdo protegido.
+- Migração: `20260721_0045_agent_memory_consent.py`.
+- Validação local: Ruff e MyPy aprovados em 196 arquivos de produção; 137 testes da API, 3 do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança concluídos sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0045 -> 0044 -> 0045` aprovada; banco em `20260721_0045 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`.
+- Segurança comprovada: teste real impede recuperação por outro usuário da mesma empresa, remove memória ao revogar, torna a revogação repetível e bloqueia recriação com consentimento revogado.
+- Próximo passo: ciclo 25, políticas de memória por escopo, limites de contexto por tokens e expiração de memória de conversa ao encerrar a sessão.
+
+## Ciclo 25 - Políticas por escopo e ciclo de vida da conversa
+
+- Política relacional por escopo define retenção e permissão de recuperação sem depender de JSON não validado.
+- Configurações antigas permanecem compatíveis por meio de padrões seguros derivados da política principal.
+- Contexto de memória possui orçamento entre 128 e 16 mil tokens estimados; conteúdos que excedem o saldo não são enviados ao modelo.
+- Recuperação continua limitada por quantidade, classificação, empresa, agente, titular, expiração, escopo e política de egress.
+- Conversas possuem fechamento formal e idempotente com `closed_at`; novas mensagens em conversa encerrada retornam conflito.
+- Fechamento elimina fisicamente todas as memórias cujo `source_type` e `source_id` apontam para a conversa.
+- Auditoria e evento de fechamento registram somente IDs operacionais e quantidade eliminada, sem conteúdo ou autoria persistente adicional.
+- Interface permite configurar retenção e recuperação de cada escopo, orçamento do contexto e encerrar a conversa com retorno compreensível.
+- Migração: `20260721_0046_agent_memory_lifecycle.py`.
+- Validação local: Ruff e MyPy aprovados em 196 arquivos de produção; ESLint e TypeScript aprovados; 137 testes da API, 3 do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0046 -> 0045 -> 0046` aprovada; banco em `20260721_0046 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`.
+- Risco conhecido: estimativa de tokens usa aproximação determinística e conservadora; tokenizador específico poderá ser conectado por provedor sem alterar a política.
+- Próximo passo: ciclo 26, revisão e eliminação de memória pelo próprio titular, exportação segura de metadados e retenção por finalidade.
+
+## Ciclo 26 - Direitos do titular e finalidade da memória
+
+- Usuário com acesso ao agente pode revisar somente os metadados das próprias memórias pessoais, sem permissão administrativa.
+- Eliminação self-service aplica filtros simultâneos de empresa, agente, escopo e titular e remove fisicamente o ciphertext.
+- Exportação JSON contém somente metadados autorizados; conteúdo, HMAC e referência de consentimento nunca são incluídos.
+- Acesso de outra empresa retorna `404` e outro usuário da mesma empresa recebe lista vazia, comprovando isolamento horizontal.
+- Finalidades `service`, `personalization`, `operations`, `compliance` e `analytics` possuem políticas relacionais de habilitação e retenção.
+- Retenção efetiva usa o menor valor entre política global, escopo, finalidade e solicitação, impedindo ampliação por cliente.
+- Fingerprint do conteúdo passou a incluir a finalidade, evitando deduplicação indevida entre bases legais distintas.
+- Interface permite configurar finalidades e oferece ao titular exportação e exclusão das próprias memórias.
+- Correção visual: retorno de encerramento da conversa voltou ao card de conversa, em vez do card de ferramentas.
+- Migração: `20260721_0047_agent_memory_subject_rights.py`.
+- Validação local: Ruff e MyPy aprovados em 196 arquivos de produção; ESLint, TypeScript e Prettier aprovados; 137 testes da API, 3 do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0047 -> 0046 -> 0047` aprovada; banco em `20260721_0047 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`.
+- Segurança comprovada: exportação não contém segredo, fingerprint ou consentimento; finalidade desabilitada é rejeitada; titular remove a própria memória sem alcançar dados alheios.
+- Próximo passo: ciclo 27, memória de tarefa vinculada, conclusão com eliminação e política de retenção legal para exceções aprovadas.
+
+## Ciclo 27 - memória de tarefa e retenção legal aprovada
+
+- Memórias de escopo `task` agora exigem vínculo relacional com uma delegação ativa da mesma empresa e do agente supervisor ou executor.
+- Encerramentos manuais, automáticos, por falha e por expiração eliminam a memória operacional da tarefa.
+- Retenção excepcional exige solicitação registrada e aprovação de uma segunda pessoa; autoaprovação e acesso entre empresas são bloqueados.
+- Referências jurídicas são armazenadas somente como HMAC, sem texto original em respostas, eventos ou auditoria.
+- Memória preservada por obrigação legal deixa de ser recuperável pelo agente depois do encerramento da tarefa.
+- Migração: `20260721_0048`.
+- Próximo passo: memória de tarefa compartilhada entre agentes com contrato de acesso explícito, minimização de contexto e revogação.
+
+## Ciclo 28 - compartilhamento mínimo e revogável de memória de tarefa
+
+- Compartilhamento exige contrato explícito e idempotente, limitado à delegação e aos dois agentes que realmente participam da tarefa.
+- Cada contrato declara finalidade, classificações, quantidade máxima, orçamento total de caracteres e prazo nunca superior ao vencimento da tarefa.
+- A recuperação entrega somente memórias `task` da delegação exata, elimina conteúdo com indício de injeção e não expõe fingerprints ou outras memórias do agente.
+- Revogação produz efeito imediato; a justificativa é preservada somente como HMAC e nunca aparece em respostas, eventos ou auditoria.
+- Eventos e auditorias registram apenas identificadores, limites e contagens, sem conteúdo compartilhado.
+- Migração: `20260721_0049`.
+- Próximo passo: consumir o contrato diretamente no executor da delegação, registrar o uso no trace operacional e testar revogação concorrente durante a execução.
+
+## Ciclo 29 - consumo seguro e trace de memória na delegação
+
+- O executor usa automaticamente apenas o contrato ativo de finalidade `coordination` destinado ao agente responsável pela delegação.
+- O conteúdo minimizado é protegido pela política do provedor e enviado como dados de apoio, com instrução explícita para nunca tratar o trecho como comando.
+- Um checkpoint final relê o contrato depois da recuperação; revogação ou expiração durante o preparo remove todo o contexto antes da chamada ao modelo.
+- Cada tentativa gera trace sem conteúdo com contrato, delegação, execução, desfecho, quantidade de itens, caracteres e bloqueios.
+- Auditoria e evento operacional registram somente identificadores e contadores seguros.
+- Migração: `20260721_0050`.
+- Próximo passo: adicionar políticas de compartilhamento por ferramenta, limites agregados por delegação e alertas para tentativas repetidas de contexto bloqueado.
+
+## Ciclo 30 - política por ferramenta, orçamento agregado e alertas
+
+- Cada contrato de memória declara ferramentas autorizadas e a API rejeita chaves fora do contrato canônico da tarefa.
+- A política do agente supervisor define orçamento agregado de itens e caracteres para toda a delegação, independentemente da quantidade de grants ativos.
+- O executor produz trace `tool_policy_denied` ou `aggregate_limit_denied` sem recuperar conteúdo quando uma política ou limite impede o uso.
+- Contextos bloqueados por injeção são contados em janela de 24 horas; ao atingir o limiar configurado, o solicitante recebe alerta seguro sem conteúdo suspeito.
+- A tela de governança permite configurar os três novos limites sem expor controles internos do executor.
+- Migração: `20260721_0051`.
+- Próximo passo: criar política de compartilhamento por classificação de dados, aprovação humana para contexto restrito e orçamento de custo por contrato.
+
+## Ciclo 31 - classificação, aprovação restrita e orçamento de custo
+
+- Grants declaram teto de classificação e a API rejeita qualquer classe acima desse limite.
+- Contexto `restricted` exige decisão de outra pessoa; autoaprovação é bloqueada e o executor ignora contratos pendentes ou rejeitados.
+- Cada grant possui orçamento em microunidades; o executor estima o custo antes da chamada ao modelo e produz `cost_limit_denied` quando o teto seria excedido.
+- Decisões, custos e desfechos são auditados sem conteúdo sensível.
+- Migração: `20260721_0052`.
+- Próximo passo: expiração automática de aprovações, revogação em lote por incidente e painel consolidado de riscos de memória.
+
+## Ciclo 32 - expiração de aprovação, incidente e risco consolidado
+
+- Aprovações para contexto restrito possuem janela de 5 a 240 minutos; após o prazo, API e executor deixam de autorizar o contexto sem depender de tarefa agendada.
+- Incidentes revogam atomicamente todos os grants ativos de um agente, com idempotência, isolamento multiempresa, auditoria e evento de domínio.
+- Referência e motivo do incidente são persistidos somente como fingerprints HMAC; textos operacionais não entram em banco, evento ou resposta.
+- O painel do agente consolida acessos ativos, aprovações, bloqueios, incidentes e revogações em linguagem clara.
+- Migração: `20260721_0053`.
+- Próximo passo: criar fila de revisão de incidentes, política de quarentena temporária e exportação assinada do relatório de risco.
+
+## Ciclo 33 - revisão independente, quarentena e relatório assinado
+
+- Cada incidente entra em fila e somente outra pessoa da mesma empresa pode confirmá-lo ou descartá-lo; decisões cruzadas entre empresas e autorrevisão são bloqueadas.
+- A abertura ativa quarentena de 5 minutos a 24 horas, impede novos grants e só é liberada pelo prazo ou por descarte independente.
+- O relatório de risco é serializado de forma canônica, assinado por HMAC-SHA256 e pode ser verificado pela API; conteúdo e texto do incidente não são exportados.
+- A interface exibe quarentena, revisões pendentes, fila de incidentes e download do relatório assinado.
+- Migração: `20260721_0054`.
+- Próximo passo: exigir quorum configurável para incidentes críticos, adicionar cadeia de custódia dos relatórios e criar exercícios automatizados de resposta.
+
+## Ciclo 34 - quorum, cadeia de custódia e exercícios de resposta
+
+- Revisões são votos únicos por pessoa; incidentes críticos exigem pelo menos duas pessoas e só mudam de estado quando uma decisão alcança o quorum configurado.
+- Cada relatório recebe sequência e assinatura anterior, e a API valida HMAC, registro persistido e continuidade da cadeia antes de aceitá-lo como íntegro.
+- Exercícios de resposta verificam quarentena, quorum crítico, isolamento multiempresa e cadeia de relatórios sem ler conteúdo protegido ou alterar dados operacionais.
+- A interface permite configurar severidade/quorum, acompanhar votos e executar exercícios com resultado objetivo.
+- Migração: `20260721_0055`.
+- Próximo passo: adicionar SLA e escalonamento da fila, rotação de chaves com verificação histórica e agendamento recorrente de exercícios.
+
+## Ciclo 35 - SLA, rotação de assinatura e agenda de exercícios
+
+- Incidentes possuem SLA configurável de 5 minutos a 24 horas, prazo explícito e indicação objetiva de atraso na API e na interface.
+- Escalonamento em lote processa somente revisões vencidas ainda não escalonadas, com repetição segura, auditoria e evento sem texto sensível.
+- Relatórios usam chaves derivadas por versão; a rotação cria uma nova versão sem persistir material secreto e preserva a verificação histórica enquanto o segredo mestre permanecer disponível.
+- A cadeia de custódia registra a versão usada em cada assinatura e rejeita divergência entre o relatório apresentado e o registro persistido.
+- Exercícios de resposta possuem agenda persistente, intervalo controlado e executor de vencimento que registra a próxima execução sem fingir execução antecipada.
+- A interface permite acompanhar SLAs, escalonar atrasos, rotacionar assinaturas, configurar a agenda e executar exercícios vencidos.
+- Migração: `20260721_0056_agent_memory_sla_key_schedule.py`.
+- Próximo passo: entregar notificações para responsáveis pelo incidente, keyring para rotação segura do segredo mestre e disparo da agenda pelo worker.
+
+## Ciclo 36 - alertas, keyring mestre e execução recorrente
+
+- Incidentes novos notificam revisores independentes autorizados; SLA vencido produz alerta crítico separado e idempotente, sem referência ou motivo sensível.
+- Memórias antigas passam a ser lidas pelo keyring `ENCRYPTION_PREVIOUS_KEYS`, enquanto toda nova gravação continua usando exclusivamente `ENCRYPTION_KEY`.
+- Versões de assinatura registram somente um identificador não secreto da chave mestre e selecionam a chave histórica correta durante a verificação.
+- Troca da chave ativa cria nova versão automaticamente; ausência da chave histórica falha de forma segura e compreensível.
+- Celery Beat busca agendas vencidas a cada cinco minutos; bloqueio `SKIP LOCKED` impede processamento duplicado entre workers concorrentes.
+- Exercícios agendados usam o mesmo avaliador dos exercícios manuais, geram auditoria/evento e notificam o responsável quando algum controle falha.
+- Migração: `20260721_0057_agent_memory_keyring.py`.
+- Próximo passo: recriptografia controlada de memórias com checkpoint, destinatários responsáveis explícitos por incidente e métricas operacionais do scheduler.
+
+## Ciclo 37 - recriptografia, responsáveis e métricas do scheduler
+
+- Incidentes passam a registrar responsáveis independentes em tabela relacional, com validação de empresa, autorização e separação entre abertura e revisão.
+- Notificações novas e atrasadas são enviadas somente aos responsáveis explícitos; incidentes legados mantêm fallback para a fila autorizada.
+- Revisões por pessoas não atribuídas são bloqueadas no back-end, sem depender de ocultação de botões na interface.
+- A rotação do segredo mestre possui job persistente por agente, lote configurável, checkpoint ordenado, progresso, falha segura e exclusão mútua por empresa/agente.
+- O worker recriptografa somente com o keyring ativo, nunca persiste material secreto e interrompe o job se a chave-alvo mudar ou um ciphertext não puder ser aberto.
+- Conclusões produzem auditoria, evento e notificação sem conteúdo de memória; a chave anterior só pode ser removida depois da verificação operacional documentada.
+- Exercícios registram origem e duração; a API consolida aprovações, falhas, média de duração, última execução e atraso do scheduler.
+- A interface permite selecionar responsáveis, acompanhar telemetria do worker e iniciar/monitorar a recriptografia em linguagem clara.
+- Migração: `20260721_0058_agent_memory_reencryption_ownership_metrics.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos de produção; ESLint, TypeScript e Prettier aprovados; 142 testes da API/worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança sem bloqueios.
+- Migração reversível `0058 -> 0057 -> 0058` aprovada; banco em `20260721_0058 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; E2E com 7 cenários aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: outra empresa recebe `404`, responsável não atribuído é bloqueado, ciphertext permanece legível somente com a chave ativa depois da recriptografia e nenhum segredo é exposto por API, auditoria ou evento.
+- Próximo passo: retomada operacional de jobs falhos, reatribuição auditada de responsáveis e alerta automático de heartbeat/SLO do scheduler.
+
+## Ciclo 38 - retomada, reatribuição e SLO operacional
+
+- Jobs de recriptografia registram o último item existente no momento da solicitação; memórias novas, já protegidas pela chave ativa, ficam fora do snapshot e não alteram o total durante a execução.
+- Um job falho pode ser retomado somente por pessoa autorizada, com keyring histórico disponível, justificativa protegida por HMAC e continuidade no checkpoint confirmado.
+- A retomada zera somente a tentativa falha, preserva a quantidade já recriptografada e atualiza a chave-alvo sem persistir material secreto.
+- Incidentes pendentes permitem reatribuição explícita para revisores autorizados da mesma empresa; autorrevisão e usuários externos continuam bloqueados.
+- Pessoas que já votaram não podem ser removidas da cadeia de custódia, e a justificativa da mudança nunca é armazenada em texto puro.
+- O contrato idempotente do incidente mantém uma impressão digital HMAC imutável da solicitação original, permitindo replay seguro mesmo depois da reatribuição sem aceitar colisões de payload.
+- A agenda registra heartbeat do worker, SLO de 5 minutos a 24 horas, último alerta e quantidade de violações.
+- Ao retornar depois de uma indisponibilidade acima do SLO, o worker emite notificação crítica e evento seguro; a API diferencia heartbeat aguardando, saudável, vencido ou desativado.
+- A interface oferece retomada do checkpoint, reatribuição com justificativa e leitura operacional do heartbeat.
+- Migração: `20260721_0059_agent_memory_recovery_ownership_slo.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos de produção; ESLint, TypeScript e Prettier aprovados; 142 testes da API/worker, 13 integrações e 12 testes do front-end aprovados; build e auditoria de segurança concluídos sem vulnerabilidades conhecidas.
+- Migração reversível `0059 -> 0058 -> 0059` aprovada; banco em `20260721_0059 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; worker saudável; E2E com 7 cenários aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: falhas de recriptografia respeitam os invariantes do banco, retomadas preservam o checkpoint, reatribuições continuam isoladas por empresa e justificativas são persistidas somente por HMAC.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno retorna `503`; investigar separadamente sem enfraquecer o readiness obrigatório da API.
+- Próximo passo: monitor externo do heartbeat, política de tentativas máximas e runbook assistido de recuperação de chave.
+
+## Ciclo 39 - monitor externo, orçamento de retry e recuperação assistida
+
+- Probe público `GET /health/agent-memory-scheduler` permite que um monitor independente detecte heartbeat vencido por HTTP `503` sem revelar tenant, agente ou métricas internas.
+- Script portátil consulta o probe com timeout e código de saída próprio para integração com qualquer monitor, sem acoplamento a provedor.
+- Jobs definem de uma a dez retomadas; API, interface e restrição do banco impedem ultrapassar o orçamento persistido.
+- Toda retomada exige diagnóstico recente que verifica keyring, identificação da chave, snapshot, concorrência e orçamento sem expor segredos.
+- Avaliações geram auditoria e evento de domínio; aprovação expira em 15 minutos e é consumida pela retomada.
+- Interface apresenta diagnóstico e instruções operacionais antes de liberar o botão de checkpoint.
+- Migração: `20260721_0060_agent_memory_monitor_retry_recovery.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos; 143 testes da API/worker, 13 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria de segurança sem bloqueios.
+- Migração reversível `0060 -> 0059 -> 0060` aprovada; banco em `20260721_0060 (head)`.
+- Runtime local: Nginx validado e recarregado; `/health`, `/ready`, `/app` e o probe externo responderam `200`; worker saudável; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: probe sem dados de tenant, acesso cruzado ao diagnóstico retorna `404`, retry sem avaliação ou acima do orçamento retorna `409` e nenhum segredo aparece na resposta assistida.
+- Próximo passo: monitoramento autenticado por ambiente, cofre externo com rotação coordenada e política de encerramento definitivo de jobs irrecuperáveis.
+
+## Ciclo 40 - autenticação do monitor, cofre externo e encerramento terminal
+
+- O probe do scheduler exige assinatura HMAC-SHA256 com timestamp de curta duração; segredos ausentes, assinaturas inválidas e replay fora da janela falham de forma fechada.
+- O script de monitoramento calcula a assinatura a partir do ambiente do processo, sem enviar o segredo em argumento de linha de comando.
+- Produção exige provedor de chaves externo; referências ativas e históricas são coordenadas com o keyring e persistidas nos jobs somente por impressão digital SHA-256.
+- O diagnóstico de recuperação verifica também provedor e referência antes de liberar uma retomada.
+- Jobs bloqueados ou sem orçamento podem ser encerrados definitivamente com código técnico, usuário, horário, auditoria, evento e notificação; a justificativa nunca é armazenada nem retornada em texto.
+- Jobs encerrados não podem ser retomados e continuam isolados por empresa.
+- Migração: `20260721_0061_agent_memory_monitor_auth_vault_terminal.py`.
+- Validação local: Ruff e MyPy aprovados em 198 arquivos; 139 testes da API, 5 do worker, 12 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria sem vulnerabilidades conhecidas.
+- Migração reversível `0061 -> 0060 -> 0061` aprovada; banco em `20260721_0061 (head)`.
+- Runtime local: `/health`, `/ready`, `/app` e monitor HMAC responderam `200`; API, worker e gateway saudáveis; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: acesso sem assinatura ou com timestamp expirado retorna `401`, fechamento cruzado retorna `404`, job encerrado não pode ser retomado e justificativas não aparecem nas respostas.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
+- Próximo passo: gestão de referências de cofre por credencial vinculada, rotação automatizada do segredo do monitor e política de retenção dos registros terminais.
+
+## Ciclo 41 - credencial de cofre, rotação do monitor e retenção terminal
+
+- Jobs com provedor externo exigem credencial criptografada ativa da mesma empresa contendo `key_reference`; a API nunca retorna seu ID, URI ou conteúdo.
+- O diagnóstico bloqueia credenciais revogadas, expiradas, externas ao tenant ou diferentes do vínculo HMAC original.
+- O monitor aceita o segredo ativo e uma lista temporária de segredos anteriores únicos, permitindo rotação sem indisponibilidade e remoção após a janela antirreplay.
+- Jobs terminais recebem prazo configurável entre 7 e 3.650 dias; o worker remove registros vencidos e preserva auditoria agregada sem identificadores operacionais.
+- A interface informa apenas se há credencial vinculada e a data limite de retenção.
+- Migração: `20260721_0062_agent_memory_vault_monitor_retention.py`.
+- Validação local: Ruff e MyPy aprovados em 198 arquivos; 140 testes da API, 5 do worker, 12 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria sem vulnerabilidades conhecidas.
+- Migração reversível `0062 -> 0061 -> 0062` aprovada; banco em `20260721_0062 (head)`.
+- Runtime local: `/health`, `/ready`, `/app` e monitor HMAC responderam `200`; API, worker e gateway saudáveis; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: credencial ausente retorna `409`, vínculo de outro tenant retorna `404`, vínculo válido não expõe ID e registro terminal vencido é removido com auditoria agregada.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
+- Próximo passo: seleção guiada de credenciais por catálogo, rotação programada do segredo do monitor e legal hold específico para jobs de recriptografia.
+
+## Ciclo 42 - catálogo de cofre, prazo de rotação e legal hold
+
+- A API lista somente credenciais ativas da empresa atual que declaram `key_reference`; a interface substitui o UUID manual por seleção guiada com nome e plugin.
+- Ambientes remotos exigem data de rotação do segredo do monitor e recusam inicialização quando a idade máxima configurada é excedida.
+- Jobs terminais aceitam retenção legal com referência protegida por HMAC, motivo tipado, prazo e separação obrigatória entre solicitante e decisor.
+- Holds pendentes ou aprovados bloqueiam o expurgo; após expirar, a política normal de retenção volta a remover o registro operacional.
+- Catálogo, criação, decisão e expurgo permanecem filtrados por empresa, sem revelar credenciais nem referências jurídicas de outro tenant.
+- Migração: `20260721_0063_agent_memory_vault_catalog_hold.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos de produção; 142 testes da API, 5 do worker, 13 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria sem vulnerabilidades conhecidas.
+- Migração reversível `0063 -> 0062 -> 0063` aprovada; banco em `20260721_0063 (head)`.
+- Runtime local: ambiente iniciado pelo script oficial; `/health`, `/ready`, `/app` e monitor HMAC responderam `200`; API, worker e gateway saudáveis; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: catálogo não lista credenciais de outro tenant, autoaprovação retorna `409`, decisão cruzada retorna `404`, referência jurídica não aparece na resposta e hold ativo bloqueia o expurgo.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
+- Próximo passo: alertas prévios de vencimento de segredo, notificações do legal hold e conectores nativos para cofres gerenciados.
+
+## Ciclo 43 - alertas de rotação, notificações e cofres gerenciados
+
+- O probe HMAC informa estado de rotação `healthy`, `due_soon` ou `not_configured`; o script externo emite aviso antes do prazo configurado sem expor datas ou segredos.
+- Solicitações de retenção legal notificam revisores independentes autorizados da empresa e decisões notificam o solicitante, sem transportar a referência jurídica.
+- O catálogo reconhece credenciais gerenciadas e apresenta o provedor na interface, preservando compatibilidade com conectores personalizados.
+- AWS Secrets Manager, Azure Key Vault, Google Secret Manager e HashiCorp Vault possuem contratos nativos, referências com esquema próprio e bloqueio de segredo embutido na URI.
+- Testes de conexão desses cofres não simulam sucesso: validam o contrato local e informam claramente quando a leitura remota não foi executada.
+- Migração: `20260721_0064_managed_vault_connectors.py`.
+- Validação local concluída: Ruff nos 232 arquivos não históricos e na migração nova; MyPy em 193 arquivos; API `148 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0064 -> 0063 -> 0064`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: resolução real por identidade gerenciada, lembretes de hold próximos do vencimento e política de rotação por ambiente.
+
+## Ciclo 44 - identidade gerenciada, lembretes e rotação por ambiente
+
+- Implementada resolução real de segredos via identidade da carga de trabalho para AWS Secrets Manager, Azure Key Vault, Google Secret Manager e HashiCorp Vault, sem credenciais estáticas nos conectores e sem exposição do material resolvido.
+- As referências são analisadas por contrato estrito; metadados, redirecionamentos, tamanho de resposta, travessia de caminho e mensagens de erro possuem limites defensivos.
+- O teste de conexão de cofre agora somente retorna sucesso após leitura remota válida; falhas do provedor são sanitizadas.
+- Retenções legais de jobs de recriptografia recebem lembrete idempotente antes do vencimento, com auditoria, evento de domínio e notificações limitadas à empresa e sem referência jurídica.
+- A API informa se o lembrete já foi enviado, e o worker executa a manutenção junto ao ciclo de recriptografia.
+- A política de rotação do monitor é específica por ambiente: `optional` local, `warn` desenvolvimento e `enforce` produção/desenvolvimento remoto.
+- Migração: `20260721_0065_reencryption_hold_reminders.py`.
+- Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0065 -> 0064 -> 0065`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: ativação segura de keyrings externos na criptografia de memória, lembretes renováveis com nova aprovação e métricas operacionais por provedor de cofre.
+
+## Ciclo 45 - keyring externo ativo e métricas de cofres
+
+- Criado vínculo de keyring gerenciado por empresa e agente, ativado somente após recriptografia concluída e protegido por credencial ativa, provedor e impressão da referência.
+- Leituras autorizadas, memória compartilhada e novas gravações resolvem o keyring do agente pela identidade da carga; falhas fecham o acesso e retornam mensagens seguras.
+- A chave externa é primária e as chaves de ambiente permanecem somente como fallback transitório de migração. O teste comprova que a chave de ambiente isolada não descriptografa uma nova memória gerenciada.
+- Adicionada rota de status do keyring sem IDs de credencial nem referências e com ocultação `404` entre empresas.
+- Adicionado resumo operacional por provedor de cofre com total, sucessos, falhas, taxa, latência média e último teste, sempre filtrado por `company_id`.
+- Migração: `20260721_0066_agent_memory_external_keyrings.py`.
+- Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0066 -> 0065 -> 0066`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: renovação de retenções com nova aprovação, recriptografia de saída antes da revogação do keyring e painel visual das métricas por provedor.
+
+## Ciclo 46 - renovação legal, saída segura e painel de cofres
+
+- Criado histórico de renovações de retenção legal com extensão limitada, nova referência protegida e decisão independente por solicitação.
+- Aprovações ampliam a retenção e rearmam o lembrete; rejeições preservam o prazo anterior. Toda decisão gera auditoria, evento e notificação sem referência jurídica.
+- Implementada recriptografia de saída: a chave de ambiente volta a ser primária, o keyring externo é usado apenas para leitura transitória e o vínculo só é revogado após conclusão.
+- O teste comprova ida para chave externa, impossibilidade de abertura pela chave de ambiente isolada, retorno para ambiente e leitura posterior pela chave local.
+- A tela de agentes exibe status do keyring e métricas por provedor com atualização periódica, linguagem operacional e sem credenciais.
+- Migração: `20260721_0067_reencryption_hold_renewals.py`.
+- Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0067 -> 0066 -> 0067`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: renovação e saída disponíveis na interface, alertas de indisponibilidade do cofre e política de expiração/revogação automática de credenciais vinculadas.
+
+## Ciclo 47 - interface de governança e ciclo de vida do cofre
+
+- A tela de agentes permite solicitar renovação de retenção legal, decidir extensões pendentes e iniciar a saída segura de um keyring gerenciado sem alterar a configuração global do ambiente.
+- O worker monitora cada vínculo ativo por identidade da carga, abre incidentes idempotentes, alerta responsáveis após o limiar e registra a recuperação sem persistir a mensagem do provedor.
+- Credenciais próximas do vencimento iniciam automaticamente a recriptografia para a chave do ambiente; a revogação ocorre somente depois que nenhum vínculo ativo depende delas.
+- Status e incidentes são filtrados por `company_id`, e a API não retorna IDs de credencial, referências de chave ou material resolvido.
+- Migração: `20260721_0068_memory_vault_lifecycle.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0068 -> 0067 -> 0068`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- O teste de integração foi isolado do worker contínuo para impedir consumo concorrente das delegações sintéticas; o worker foi religado e permaneceu saudável.
+- Próximo passo: políticas configuráveis por empresa, renovação de credenciais antes da saída e SLO operacional dos cofres gerenciados.
+
+## Ciclo 48 - política empresarial, renovação de credencial e SLO
+
+- Política de keyring configurável por empresa define aviso de vencimento, saída automática, lote, limiar de falhas e SLO sem alterar padrões de outros tenants.
+- Credenciais vinculadas e ainda válidas recebem renovação governada por aprovação independente; justificativas são reduzidas a HMAC e não retornam pela API.
+- Saída segura iniciada, credencial vencida, autoaprovação, decisão repetida e acesso entre empresas são bloqueados no back-end.
+- Incidentes rompendo o SLO geram escalonamento idempotente com notificação, auditoria e evento; status e histórico aparecem na interface sem segredos.
+- Migração: `20260721_0069_memory_vault_policy_renewal_slo.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados.
+- Migração reversível `0069 -> 0068 -> 0069` aprovada; banco em `20260721_0069 (head)`; `/health`, `/ready`, `/app` e o probe HMAC do worker responderam corretamente com API, worker e gateway saudáveis.
+- A dependência transitiva vulnerável `js-yaml 4.2.0` foi substituída por `4.3.0` via override central do workspace; as auditorias Node e Python não encontraram vulnerabilidades conhecidas.
+- Risco operacional anterior não alterado: o health check interno do n8n permanece em `unhealthy`, embora o contrato E2E de disponibilidade continue aprovado.
+- Próximo passo: escalonamento por plantão, histórico de disponibilidade e rotação coordenada da identidade da carga.
+
+## Ciclo 49 - plantão, disponibilidade e rotação da identidade
+
+- A política do cofre aceita plantonistas ativos da própria empresa e inclui essa equipe nos alertas operacionais, sem permitir IDs duplicados ou de outro tenant.
+- O monitor mantém janelas horárias agregadas por empresa e provedor com sucessos, falhas, violações de SLO e disponibilidade percentual por sete a noventa dias de consulta.
+- A identidade da carga possui rotação cifrada e governada: solicitação, aprovação independente, teste real de acesso ao cofre, ativação atômica, auditoria, evento e notificação.
+- Identidade atual, identidade proposta e justificativa nunca são retornadas; autoaprovação, acesso cruzado, credencial inválida e rotação durante saída segura são bloqueados.
+- A tela de agentes permite escolher o plantão, acompanhar disponibilidade e solicitar/decidir rotações sem revelar dados do cofre.
+- Migração: `20260721_0070_vault_oncall_availability_identity.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados.
+- Migração reversível `0070 -> 0069 -> 0070` aprovada; banco em `20260721_0070 (head)`; contratos idempotentes e `/health`, `/ready`, `/app` e probe HMAC do worker aprovados.
+- Segurança comprovada: plantonista de outro tenant retorna `422`, autoaprovação retorna `409`, decisão cruzada retorna `404`, a identidade proposta é validada no cofre e nenhum texto de identidade ou justificativa aparece na API.
+- Risco operacional anterior não alterado: o health check interno do n8n permanece em `unhealthy`, embora o contrato E2E de disponibilidade continue aprovado.
+- Próximo passo: retenção do histórico, escala de plantão com horários e teste canário automatizado da identidade antes do vencimento.
+
+## Ciclo 50 - retenção, janela de plantão e canário preventivo
+
+- A política empresarial controla retenção de disponibilidade, fuso e janela diária do plantão, antecedência do canário e intervalo entre verificações.
+- A manutenção remove agregados vencidos por tenant e mantém janelas atuais, sem tocar em incidentes, auditoria ou dados criptográficos.
+- O canário testa a identidade real antes do vencimento da credencial, alerta de forma idempotente na falha e registra a recuperação sem armazenar erro ou referência do provedor.
+- A interface mostra política, janela e estado do último canário; fusos inválidos e horários incoerentes são recusados pelo contrato da API.
+- Migração: `20260721_0071_vault_retention_oncall_canary.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `174 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados.
+- Migração reversível `0071 -> 0070 -> 0071` aprovada; banco em `20260721_0071 (head)`; contratos regenerados e probe HMAC do worker aprovado.
+- Segurança comprovada: fusos e janelas inválidos são recusados, a retenção é aplicada por tenant, o canário usa a identidade real sem persistir referência ou erro do provedor e alertas de falha/recuperação são idempotentes.
+- Próximo passo: escalas semanais por plantonista, exportação de SLO e canário com promoção gradual da identidade.

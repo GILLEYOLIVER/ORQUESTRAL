@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
+from math import ceil
 from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, RedisDsn, field_validator, model_validator
@@ -42,6 +44,22 @@ class Settings(BaseSettings):
     celery_result_backend: RedisDsn = RedisDsn("redis://localhost:6379/2")
     jwt_secret: str = "development-only-change-me-jwt-secret-32-chars"  # noqa: S105
     encryption_key: str = "development-only-change-me-encryption-key-32"
+    encryption_key_provider: Literal["environment", "external"] = "environment"
+    encryption_key_reference: str = "environment://orkestral/local/active"
+    encryption_previous_key_references: list[str] = Field(default_factory=list)
+    agent_memory_monitor_secret: str = "development-only-change-me-agent-memory-monitor-secret-32"  # noqa: S105
+    agent_memory_monitor_previous_secrets: list[str] = Field(default_factory=list)
+    agent_memory_monitor_secret_rotated_at: datetime | None = None
+    agent_memory_monitor_secret_max_age_days: int = Field(default=90, ge=7, le=365)
+    agent_memory_monitor_secret_rotation_warning_days: int = Field(default=14, ge=1, le=90)
+    agent_memory_monitor_secret_rotation_policy: Literal["optional", "warn", "enforce"] | None = (
+        None
+    )
+    agent_memory_reencryption_terminal_retention_days: int = Field(default=90, ge=7, le=3_650)
+    agent_memory_reencryption_legal_hold_reminder_days: int = Field(default=7, ge=1, le=90)
+    agent_memory_vault_failure_alert_threshold: int = Field(default=2, ge=1, le=10)
+    agent_memory_keyring_expiry_warning_days: int = Field(default=14, ge=1, le=90)
+    agent_memory_keyring_automatic_exit_batch_size: int = Field(default=100, ge=1, le=500)
     n8n_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:5678")
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
     n8n_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
@@ -110,14 +128,72 @@ class Settings(BaseSettings):
             raise ValueError("KNOWLEDGE_EMBEDDING_DIMENSIONS must be 384")
         return value
 
+    @field_validator("agent_memory_monitor_secret_rotated_at", mode="before")
+    @classmethod
+    def normalize_optional_monitor_rotation(cls, value: object) -> object:
+        if value == "":
+            return None
+        return value
+
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
+        monitor_secrets = (
+            self.agent_memory_monitor_secret,
+            *self.agent_memory_monitor_previous_secrets,
+        )
+        if len(set(monitor_secrets)) != len(monitor_secrets):
+            raise ValueError("Segredos ativos e anteriores do monitor devem ser únicos")
+        if (
+            self.agent_memory_monitor_secret_rotation_warning_days
+            >= self.agent_memory_monitor_secret_max_age_days
+        ):
+            raise ValueError("O alerta de rotação deve ocorrer antes da idade máxima do segredo")
+        rotation_policy = self.agent_memory_monitor_effective_rotation_policy
+        if self.app_env == "production" and rotation_policy != "enforce":
+            raise ValueError("Produção exige política enforce para rotação do segredo do monitor")
+        if self.app_env == "development" and rotation_policy == "optional":
+            raise ValueError("Desenvolvimento remoto não aceita política optional de rotação")
+        if (
+            rotation_policy == "enforce"
+            and self.app_env != "production"
+            and self.agent_memory_monitor_secret_rotated_at is None
+        ):
+            raise ValueError("Política enforce exige AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT")
+        if self.agent_memory_monitor_secret_rotated_at is not None:
+            rotated_at = self.agent_memory_monitor_secret_rotated_at
+            if rotated_at.tzinfo is None:
+                rotated_at = rotated_at.replace(tzinfo=UTC)
+            now = datetime.now(UTC)
+            if rotated_at > now + timedelta(minutes=5):
+                raise ValueError("AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT está no futuro")
+            if now - rotated_at > timedelta(days=self.agent_memory_monitor_secret_max_age_days):
+                raise ValueError("O segredo do monitor excedeu a idade máxima permitida")
+        if self.encryption_key_provider == "external":
+            references = (
+                self.encryption_key_reference,
+                *self.encryption_previous_key_references,
+            )
+            if (
+                not self.encryption_key_reference.strip()
+                or any(
+                    marker in value.lower()
+                    for value in references
+                    for marker in _PLACEHOLDER_MARKERS
+                )
+                or len(set(references)) != len(references)
+                or len(self.encryption_previous_key_references)
+                != len(self.encryption_previous_keys)
+            ):
+                raise ValueError(
+                    "Referências do cofre externo devem ser únicas, seguras e corresponder ao keyring"
+                )
         if self.remote_development_enabled:
             if self.app_env != "development":
                 raise ValueError("REMOTE_DEVELOPMENT_ENABLED exige APP_ENV=development")
             remote_secrets = {
                 "JWT_SECRET": self.jwt_secret,
                 "ENCRYPTION_KEY": self.encryption_key,
+                "AGENT_MEMORY_MONITOR_SECRET": self.agent_memory_monitor_secret,
             }
             unsafe_remote_secrets = [
                 name
@@ -125,10 +201,19 @@ class Settings(BaseSettings):
                 if len(value) < 32
                 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
             ]
+            if any(
+                len(value) < 32 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
+                for value in self.agent_memory_monitor_previous_secrets
+            ):
+                unsafe_remote_secrets.append("AGENT_MEMORY_MONITOR_PREVIOUS_SECRETS")
             if unsafe_remote_secrets:
                 raise ValueError(
                     "Segredos inseguros no desenvolvimento remoto: "
                     + ", ".join(unsafe_remote_secrets)
+                )
+            if self.agent_memory_monitor_secret_rotated_at is None:
+                raise ValueError(
+                    "Desenvolvimento remoto exige AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT"
                 )
             remote_connections = {
                 "DATABASE_URL": self.database_url,
@@ -162,10 +247,10 @@ class Settings(BaseSettings):
                 )
         if self.app_env not in {"staging", "production"}:
             return self
-
         secrets = {
             "JWT_SECRET": self.jwt_secret,
             "ENCRYPTION_KEY": self.encryption_key,
+            "AGENT_MEMORY_MONITOR_SECRET": self.agent_memory_monitor_secret,
             "N8N_API_KEY": self.n8n_api_key,
             "STORAGE_ACCESS_KEY": self.storage_access_key,
             "STORAGE_SECRET_KEY": self.storage_secret_key,
@@ -175,9 +260,18 @@ class Settings(BaseSettings):
             for name, value in secrets.items()
             if len(value) < 32 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
         ]
+        if any(
+            len(value) < 32 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
+            for value in self.agent_memory_monitor_previous_secrets
+        ):
+            unsafe.append("AGENT_MEMORY_MONITOR_PREVIOUS_SECRETS")
         if unsafe:
             joined = ", ".join(sorted(unsafe))
             raise ValueError(f"Valores inseguros para produção: {joined}")
+        if self.agent_memory_monitor_secret_rotated_at is None:
+            raise ValueError("Produção exige AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT")
+        if self.encryption_key_provider != "external":
+            raise ValueError("ENCRYPTION_KEY_PROVIDER deve utilizar cofre external em produção")
 
         configurations = {
             "DATABASE_URL": self.database_url,
@@ -265,6 +359,39 @@ class Settings(BaseSettings):
     @property
     def jwt_verification_secrets(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys((self.jwt_secret, *self.jwt_previous_secrets)))
+
+    @property
+    def agent_memory_monitor_effective_rotation_policy(
+        self,
+    ) -> Literal["optional", "warn", "enforce"]:
+        if self.agent_memory_monitor_secret_rotation_policy is not None:
+            return self.agent_memory_monitor_secret_rotation_policy
+        if self.app_env == "production" or self.remote_development_enabled:
+            return "enforce"
+        if self.app_env == "development":
+            return "warn"
+        return "optional"
+
+    def agent_memory_monitor_rotation_status(
+        self, *, now: datetime | None = None
+    ) -> tuple[Literal["not_configured", "healthy", "due_soon"], int | None]:
+        if self.agent_memory_monitor_secret_rotated_at is None:
+            return "not_configured", None
+        rotated_at = self.agent_memory_monitor_secret_rotated_at
+        if rotated_at.tzinfo is None:
+            rotated_at = rotated_at.replace(tzinfo=UTC)
+        remaining_seconds = (
+            rotated_at
+            + timedelta(days=self.agent_memory_monitor_secret_max_age_days)
+            - (now or datetime.now(UTC))
+        ).total_seconds()
+        remaining_days = max(0, ceil(remaining_seconds / 86_400))
+        state: Literal["healthy", "due_soon"] = (
+            "due_soon"
+            if remaining_days <= self.agent_memory_monitor_secret_rotation_warning_days
+            else "healthy"
+        )
+        return state, remaining_days
 
     def readiness_is_configured(self) -> bool:
         required = [bool(self.database_url), bool(self.redis_url)]

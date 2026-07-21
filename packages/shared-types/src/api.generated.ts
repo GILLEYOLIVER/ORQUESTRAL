@@ -56,6 +56,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/memory-keyring/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Vault Availability */
+        get: operations["list_agent_memory_vault_availability_agents_memory_keyring_availability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/memory-keyring/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Keyring Policy */
+        get: operations["get_agent_memory_keyring_policy_agents_memory_keyring_policy_get"];
+        /** Update Agent Memory Keyring Policy */
+        put: operations["update_agent_memory_keyring_policy_agents_memory_keyring_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/providers/status": {
         parameters: {
             query?: never;
@@ -126,6 +161,76 @@ export interface paths {
         patch: operations["update_agent_agents__agent_id__patch"];
         trace?: never;
     };
+    "/agents/{agent_id}/approval-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Approval Policies */
+        get: operations["list_agent_approval_policies_agents__agent_id__approval_policies_get"];
+        put?: never;
+        /** Create Agent Approval Policy */
+        post: operations["create_agent_approval_policy_agents__agent_id__approval_policies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/approval-policies/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Evaluate Agent Approval Policy Endpoint */
+        post: operations["evaluate_agent_approval_policy_endpoint_agents__agent_id__approval_policies_evaluate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/approval-policies/{policy_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Agent Approval Policy */
+        post: operations["publish_agent_approval_policy_agents__agent_id__approval_policies__policy_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Budget */
+        get: operations["get_agent_budget_agents__agent_id__budget_get"];
+        /** Update Agent Budget */
+        put: operations["update_agent_budget_agents__agent_id__budget_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/chat": {
         parameters: {
             query?: never;
@@ -161,6 +266,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/conversations/{conversation_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Conversation */
+        post: operations["close_conversation_agents__agent_id__conversations__conversation_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/conversations/{conversation_id}/messages": {
         parameters: {
             query?: never;
@@ -172,6 +294,937 @@ export interface paths {
         get: operations["list_messages_agents__agent_id__conversations__conversation_id__messages_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/data-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Data Policy */
+        get: operations["get_agent_data_policy_agents__agent_id__data_policy_get"];
+        /** Update Agent Data Policy */
+        put: operations["update_agent_data_policy_agents__agent_id__data_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Agent Delegation */
+        post: operations["create_agent_delegation_agents__agent_id__delegations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Delegation */
+        get: operations["get_agent_delegation_agents__agent_id__delegations__delegation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Agent Handoff */
+        post: operations["create_agent_handoff_agents__agent_id__delegations__delegation_id__handoffs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/handoffs/{handoff_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Handoff */
+        post: operations["decide_agent_handoff_agents__agent_id__delegations__delegation_id__handoffs__handoff_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Task Memory Access Grants */
+        get: operations["list_agent_task_memory_access_grants_agents__agent_id__delegations__delegation_id__memory_access_grants_get"];
+        put?: never;
+        /** Create Agent Task Memory Access Grant */
+        post: operations["create_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Task Memory Access Grant */
+        post: operations["decide_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Agent Task Memory Access Grant */
+        post: operations["revoke_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-traces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Task Memory Access Traces */
+        get: operations["list_agent_task_memory_access_traces_agents__agent_id__delegations__delegation_id__memory_access_traces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Legal Holds */
+        get: operations["list_agent_memory_legal_holds_agents__agent_id__delegations__delegation_id__memory_legal_holds_get"];
+        put?: never;
+        /** Request Agent Memory Legal Hold */
+        post: operations["request_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds/{hold_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Legal Hold */
+        post: operations["decide_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds__hold_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/shared-memory-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get Agent Shared Task Memory Context */
+        post: operations["get_agent_shared_task_memory_context_agents__agent_id__delegations__delegation_id__shared_memory_context_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/delegations/{delegation_id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transition Agent Delegation */
+        post: operations["transition_agent_delegation_agents__agent_id__delegations__delegation_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memories */
+        get: operations["list_agent_memories_agents__agent_id__memories_get"];
+        put?: never;
+        /** Create Agent Memory */
+        post: operations["create_agent_memory_agents__agent_id__memories_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memories/{memory_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Agent Memory */
+        delete: operations["delete_agent_memory_agents__agent_id__memories__memory_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-access-incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Task Memory Access Incidents */
+        get: operations["list_agent_task_memory_access_incidents_agents__agent_id__memory_access_incidents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-access-incidents/escalate-overdue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Escalate Overdue Agent Memory Incidents */
+        post: operations["escalate_overdue_agent_memory_incidents_agents__agent_id__memory_access_incidents_escalate_overdue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-access-incidents/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Agent Task Memory Access For Incident */
+        post: operations["revoke_agent_task_memory_access_for_incident_agents__agent_id__memory_access_incidents_revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-access-incidents/{incident_id}/responsibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Agent Task Memory Incident Responsibles */
+        put: operations["update_agent_task_memory_incident_responsibles_agents__agent_id__memory_access_incidents__incident_id__responsibles_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-access-incidents/{incident_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Agent Task Memory Access Incident */
+        post: operations["review_agent_task_memory_access_incident_agents__agent_id__memory_access_incidents__incident_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-consent-revocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Agent Memory Consent */
+        post: operations["revoke_agent_memory_consent_agents__agent_id__memory_consent_revocations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Keyring Status */
+        get: operations["get_agent_memory_keyring_status_agents__agent_id__memory_keyring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/credential-renewals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Credential Renewals */
+        get: operations["list_agent_memory_credential_renewals_agents__agent_id__memory_keyring_credential_renewals_get"];
+        put?: never;
+        /** Request Agent Memory Credential Renewal */
+        post: operations["request_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/credential-renewals/{renewal_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Credential Renewal */
+        post: operations["decide_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals__renewal_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/exit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Agent Memory Keyring Exit */
+        post: operations["request_agent_memory_keyring_exit_agents__agent_id__memory_keyring_exit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/identity-rotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Workload Identity Rotations */
+        get: operations["list_agent_memory_workload_identity_rotations_agents__agent_id__memory_keyring_identity_rotations_get"];
+        put?: never;
+        /** Request Agent Memory Workload Identity Rotation */
+        post: operations["request_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/identity-rotations/{rotation_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Workload Identity Rotation */
+        post: operations["decide_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations__rotation_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Policy */
+        get: operations["get_agent_memory_policy_agents__agent_id__memory_policy_get"];
+        /** Update Agent Memory Policy */
+        put: operations["update_agent_memory_policy_agents__agent_id__memory_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Purge Agent Memories */
+        post: operations["purge_agent_memories_agents__agent_id__memory_purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Reencryption Jobs */
+        get: operations["list_agent_memory_reencryption_jobs_agents__agent_id__memory_reencryption_jobs_get"];
+        put?: never;
+        /** Create Agent Memory Reencryption Job */
+        post: operations["create_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Agent Memory Reencryption Job */
+        post: operations["close_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Reencryption Legal Holds */
+        get: operations["list_agent_memory_reencryption_legal_holds_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_get"];
+        put?: never;
+        /** Request Agent Memory Reencryption Legal Hold */
+        post: operations["request_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Reencryption Legal Hold */
+        post: operations["decide_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/renewals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Reencryption Legal Hold Renewals */
+        get: operations["list_agent_memory_reencryption_legal_hold_renewals_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_get"];
+        put?: never;
+        /** Request Agent Memory Reencryption Legal Hold Renewal */
+        post: operations["request_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/renewals/{renewal_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Reencryption Legal Hold Renewal */
+        post: operations["decide_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals__renewal_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/recovery-assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assess Agent Memory Reencryption Recovery */
+        post: operations["assess_agent_memory_reencryption_recovery_agents__agent_id__memory_reencryption_jobs__job_id__recovery_assessment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Agent Memory Reencryption Job */
+        post: operations["retry_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-response-exercise-schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Exercise Schedule */
+        get: operations["get_agent_memory_exercise_schedule_agents__agent_id__memory_response_exercise_schedule_get"];
+        /** Update Agent Memory Exercise Schedule */
+        put: operations["update_agent_memory_exercise_schedule_agents__agent_id__memory_response_exercise_schedule_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-response-exercise-schedule/run-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Due Agent Memory Exercise */
+        post: operations["run_due_agent_memory_exercise_agents__agent_id__memory_response_exercise_schedule_run_due_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-response-exercise-scheduler-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Scheduler Metrics */
+        get: operations["get_agent_memory_scheduler_metrics_agents__agent_id__memory_response_exercise_scheduler_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-response-exercises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Response Exercises */
+        get: operations["list_agent_memory_response_exercises_agents__agent_id__memory_response_exercises_get"];
+        put?: never;
+        /** Run Agent Memory Response Exercise */
+        post: operations["run_agent_memory_response_exercise_agents__agent_id__memory_response_exercises_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-risk-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Export Agent Memory Risk Report */
+        post: operations["export_agent_memory_risk_report_agents__agent_id__memory_risk_report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-risk-report/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Agent Memory Risk Report */
+        post: operations["verify_agent_memory_risk_report_agents__agent_id__memory_risk_report_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-risk-signing-keys/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate Agent Memory Risk Signing Key */
+        post: operations["rotate_agent_memory_risk_signing_key_agents__agent_id__memory_risk_signing_keys_rotate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-risk-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Risk Summary */
+        get: operations["get_agent_memory_risk_summary_agents__agent_id__memory_risk_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-vault-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Vault Credentials */
+        get: operations["list_agent_memory_vault_credentials_agents__agent_id__memory_vault_credentials_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-vault-incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Vault Incidents */
+        get: operations["list_agent_memory_vault_incidents_agents__agent_id__memory_vault_incidents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/my-memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Agent Memories */
+        get: operations["list_my_agent_memories_agents__agent_id__my_memories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/my-memories/{memory_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete My Agent Memory */
+        delete: operations["delete_my_agent_memory_agents__agent_id__my_memories__memory_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/my-memory-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export My Agent Memory Metadata */
+        get: operations["export_my_agent_memory_metadata_agents__agent_id__my_memory_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Runs */
+        get: operations["list_agent_runs_agents__agent_id__runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Run */
+        get: operations["get_agent_run_agents__agent_id__runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/security-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Security Events */
+        get: operations["list_agent_security_events_agents__agent_id__security_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/task-contracts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Task Contracts */
+        get: operations["list_agent_task_contracts_agents__agent_id__task_contracts_get"];
+        put?: never;
+        /** Create Agent Task Contract */
+        post: operations["create_agent_task_contract_agents__agent_id__task_contracts_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -190,6 +1243,75 @@ export interface paths {
         /** Configure Agent Tools */
         put: operations["configure_agent_tools_agents__agent_id__tools_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Versions */
+        get: operations["list_agent_versions_agents__agent_id__versions_get"];
+        put?: never;
+        /** Create Agent Version */
+        post: operations["create_agent_version_agents__agent_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/versions/{version_id}/evaluation-suites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Agent Evaluation Suite */
+        post: operations["create_agent_evaluation_suite_agents__agent_id__versions__version_id__evaluation_suites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/versions/{version_id}/evaluation-suites/{suite_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Agent Evaluation Suite */
+        post: operations["run_agent_evaluation_suite_agents__agent_id__versions__version_id__evaluation_suites__suite_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/versions/{version_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Agent Version */
+        post: operations["publish_agent_version_agents__agent_id__versions__version_id__publish_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1150,6 +2272,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/agent-memory-scheduler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Agent Memory Scheduler Health */
+        get: operations["agent_memory_scheduler_health_health_agent_memory_scheduler_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hr/departments": {
         parameters: {
             query?: never;
@@ -1801,6 +2940,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metadata/entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Metadata Entities */
+        get: operations["list_metadata_entities_metadata_entities_get"];
+        put?: never;
+        /** Create Metadata Entity */
+        post: operations["create_metadata_entity_metadata_entities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Metadata Entity */
+        get: operations["get_metadata_entity_metadata_entities__definition_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Metadata Draft */
+        put: operations["update_metadata_draft_metadata_entities__definition_id__draft_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Metadata Entity */
+        post: operations["publish_metadata_entity_metadata_entities__definition_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Metadata Records */
+        get: operations["list_metadata_records_metadata_entities__definition_id__records_get"];
+        put?: never;
+        /** Create Metadata Record */
+        post: operations["create_metadata_record_metadata_entities__definition_id__records_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/records/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Metadata Record */
+        get: operations["get_metadata_record_metadata_entities__definition_id__records__record_id__get"];
+        /** Update Metadata Record */
+        put: operations["update_metadata_record_metadata_entities__definition_id__records__record_id__put"];
+        post?: never;
+        /** Delete Metadata Record */
+        delete: operations["delete_metadata_record_metadata_entities__definition_id__records__record_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Metadata Entity */
+        post: operations["validate_metadata_entity_metadata_entities__definition_id__validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Metadata Draft Version */
+        post: operations["create_metadata_draft_version_metadata_entities__definition_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics/aggregate": {
         parameters: {
             query?: never;
@@ -1898,6 +3177,58 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/approval-delegations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Approval Delegations */
+        get: operations["list_approval_delegations_notifications_approval_delegations_get"];
+        put?: never;
+        /** Create Approval Delegation */
+        post: operations["create_approval_delegation_notifications_approval_delegations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/approval-delegations/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Approval Delegate Candidates */
+        get: operations["list_approval_delegate_candidates_notifications_approval_delegations_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/approval-delegations/{delegation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Approval Delegation */
+        delete: operations["revoke_approval_delegation_notifications_approval_delegations__delegation_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2068,6 +3399,23 @@ export interface paths {
         put?: never;
         /** Rotate Company Credentials */
         post: operations["rotate_company_credentials_plugins_credentials_rotate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugins/managed-vault-metrics/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Managed Vault Metrics */
+        get: operations["get_managed_vault_metrics_plugins_managed_vault_metrics_summary_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3081,10 +4429,236 @@ export interface components {
             /** Opening Balance */
             opening_balance?: number | string | null;
         };
+        /** AgentApprovalPolicyCreate */
+        AgentApprovalPolicyCreate: {
+            /** Amount Field */
+            amount_field?: string | null;
+            /** Approval Stages */
+            approval_stages?: components["schemas"]["AgentApprovalPolicyStageCreate"][];
+            /**
+             * Approval Ttl Minutes
+             * @default 30
+             */
+            approval_ttl_minutes: number;
+            /** Assigned User Id */
+            assigned_user_id?: string | null;
+            /** Context Conditions */
+            context_conditions?: {
+                [key: string]: string | number | boolean | null;
+            };
+            /** Currency */
+            currency?: string | null;
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "allow" | "require_approval" | "deny";
+            /** Effective From */
+            effective_from?: string | null;
+            /** Effective Until */
+            effective_until?: string | null;
+            /** Escalation After Minutes */
+            escalation_after_minutes?: number | null;
+            /** Escalation User Id */
+            escalation_user_id?: string | null;
+            /** Max Amount Microunits */
+            max_amount_microunits?: number | null;
+            /** Min Amount Microunits */
+            min_amount_microunits?: number | null;
+            /** Name */
+            name: string;
+            /** Policy Key */
+            policy_key: string;
+            /**
+             * Priority
+             * @default 100
+             */
+            priority: number;
+            /** Tool Key */
+            tool_key?: string | null;
+        };
+        /** AgentApprovalPolicyEvaluationRequest */
+        AgentApprovalPolicyEvaluationRequest: {
+            /** Arguments */
+            arguments?: {
+                [key: string]: unknown;
+            };
+            /** Tool Key */
+            tool_key: string;
+        };
+        /** AgentApprovalPolicyEvaluationResponse */
+        AgentApprovalPolicyEvaluationResponse: {
+            /** Allowed */
+            allowed: boolean;
+            /** Approval Ttl Minutes */
+            approval_ttl_minutes: number;
+            /** Assigned User Id */
+            assigned_user_id: string | null;
+            /** Escalation After Minutes */
+            escalation_after_minutes: number | null;
+            /** Escalation User Id */
+            escalation_user_id: string | null;
+            /** Policy Key */
+            policy_key: string | null;
+            /** Policy Version Id */
+            policy_version_id: string | null;
+            /** Reason */
+            reason: string;
+            /** Requires Approval */
+            requires_approval: boolean;
+        };
+        /** AgentApprovalPolicyResponse */
+        AgentApprovalPolicyResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Amount Field */
+            amount_field: string | null;
+            /** Approval Stages */
+            approval_stages?: components["schemas"]["AgentApprovalPolicyStageResponse"][];
+            /** Approval Ttl Minutes */
+            approval_ttl_minutes: number;
+            /** Assigned User Id */
+            assigned_user_id: string | null;
+            /** Context Conditions */
+            context_conditions: {
+                [key: string]: string | number | boolean | null;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string | null;
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "allow" | "require_approval" | "deny";
+            /** Effective From */
+            effective_from: string | null;
+            /** Effective Until */
+            effective_until: string | null;
+            /** Escalation After Minutes */
+            escalation_after_minutes: number | null;
+            /** Escalation User Id */
+            escalation_user_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Amount Microunits */
+            max_amount_microunits: number | null;
+            /** Min Amount Microunits */
+            min_amount_microunits: number | null;
+            /** Name */
+            name: string;
+            /** Policy Key */
+            policy_key: string;
+            /** Priority */
+            priority: number;
+            /** Published At */
+            published_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "retired";
+            /** Tool Key */
+            tool_key: string | null;
+            /** Version */
+            version: number;
+        };
+        /** AgentApprovalPolicyStageCreate */
+        AgentApprovalPolicyStageCreate: {
+            /** Approver User Ids */
+            approver_user_ids: string[];
+            /** Name */
+            name: string;
+            /**
+             * Quorum
+             * @default 1
+             */
+            quorum: number;
+        };
+        /** AgentApprovalPolicyStageResponse */
+        AgentApprovalPolicyStageResponse: {
+            /** Approver User Ids */
+            approver_user_ids: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Quorum */
+            quorum: number;
+            /** Stage Order */
+            stage_order: number;
+        };
+        /** AgentBudgetResponse */
+        AgentBudgetResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Consumed Microunits */
+            consumed_microunits: number;
+            /** Currency */
+            currency: string;
+            /**
+             * Cycle Ends At
+             * Format: date-time
+             */
+            cycle_ends_at: string;
+            /**
+             * Cycle Started At
+             * Format: date-time
+             */
+            cycle_started_at: string;
+            /** Hard Limit */
+            hard_limit: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Limit Microunits */
+            limit_microunits: number;
+            /** Reserved Microunits */
+            reserved_microunits: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AgentBudgetUpdate */
+        AgentBudgetUpdate: {
+            /**
+             * Hard Limit
+             * @default true
+             */
+            hard_limit: boolean;
+            /** Limit Microunits */
+            limit_microunits: number;
+        };
         /** AgentChatRequest */
         AgentChatRequest: {
             /** Conversation Id */
             conversation_id?: string | null;
+            /**
+             * Execution Mode
+             * @default live
+             * @enum {string}
+             */
+            execution_mode: "live" | "shadow" | "simulation";
             /** Message */
             message: string;
         };
@@ -3094,7 +4668,14 @@ export interface components {
             conversation: components["schemas"]["AgentConversationResponse"];
             /** Pending Actions */
             pending_actions: components["schemas"]["AgentToolRunResponse"][];
+            run: components["schemas"]["AgentRunResponse"];
             user_message: components["schemas"]["AgentMessageResponse"];
+        };
+        /** AgentConversationCloseResponse */
+        AgentConversationCloseResponse: {
+            conversation: components["schemas"]["AgentConversationResponse"];
+            /** Deleted Memories */
+            deleted_memories: number;
         };
         /** AgentConversationCreate */
         AgentConversationCreate: {
@@ -3108,6 +4689,8 @@ export interface components {
              * Format: uuid
              */
             agent_id: string;
+            /** Closed At */
+            closed_at: string | null;
             /**
              * Created At
              * Format: date-time
@@ -3171,6 +4754,1529 @@ export interface components {
              */
             temperature: number;
         };
+        /** AgentDataPolicyResponse */
+        AgentDataPolicyResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Allow Knowledge Egress */
+            allow_knowledge_egress: boolean;
+            /** Allow Memory Egress */
+            allow_memory_egress: boolean;
+            /** Allow Message Egress */
+            allow_message_egress: boolean;
+            /** Allowed Provider Keys */
+            allowed_provider_keys: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** External Processing Enabled */
+            external_processing_enabled: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Max Data Classification
+             * @enum {string}
+             */
+            max_data_classification: "public" | "internal" | "confidential" | "restricted";
+            /** Redact Sensitive Data */
+            redact_sensitive_data: boolean;
+            /** Require Evaluation For Publish */
+            require_evaluation_for_publish: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AgentDataPolicyUpdate */
+        AgentDataPolicyUpdate: {
+            /**
+             * Allow Knowledge Egress
+             * @default false
+             */
+            allow_knowledge_egress: boolean;
+            /**
+             * Allow Memory Egress
+             * @default false
+             */
+            allow_memory_egress: boolean;
+            /**
+             * Allow Message Egress
+             * @default false
+             */
+            allow_message_egress: boolean;
+            /** Allowed Provider Keys */
+            allowed_provider_keys: string[];
+            /**
+             * External Processing Enabled
+             * @default false
+             */
+            external_processing_enabled: boolean;
+            /**
+             * Max Data Classification
+             * @default confidential
+             * @enum {string}
+             */
+            max_data_classification: "public" | "internal" | "confidential" | "restricted";
+            /**
+             * Redact Sensitive Data
+             * @default true
+             */
+            redact_sensitive_data: boolean;
+            /**
+             * Require Evaluation For Publish
+             * @default true
+             */
+            require_evaluation_for_publish: boolean;
+        };
+        /** AgentDelegationCreate */
+        AgentDelegationCreate: {
+            /** Context Keys */
+            context_keys?: string[];
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /** Objective */
+            objective: string;
+            /** Parent Delegation Id */
+            parent_delegation_id?: string | null;
+        };
+        /** AgentDelegationResponse */
+        AgentDelegationResponse: {
+            /**
+             * Assigned Agent Id
+             * Format: uuid
+             */
+            assigned_agent_id: string;
+            /** Attempt Count */
+            attempt_count: number;
+            /** Claimed By */
+            claimed_by: string | null;
+            /** Consumed Cost Microunits */
+            consumed_cost_microunits: number;
+            /** Context Keys */
+            context_keys: string[];
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Depth */
+            depth: number;
+            /**
+             * Due At
+             * Format: date-time
+             */
+            due_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /** Last Error Code */
+            last_error_code: string | null;
+            /** Lease Expires At */
+            lease_expires_at: string | null;
+            /** Objective Fingerprint */
+            objective_fingerprint: string;
+            /** Parent Delegation Id */
+            parent_delegation_id: string | null;
+            /** Reserved Cost Microunits */
+            reserved_cost_microunits: number;
+            /** Result Fingerprint */
+            result_fingerprint: string | null;
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "in_progress" | "awaiting_approval" | "completed" | "failed" | "cancelled";
+            /**
+             * Supervisor Agent Id
+             * Format: uuid
+             */
+            supervisor_agent_id: string;
+        };
+        /** AgentDelegationTransition */
+        AgentDelegationTransition: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "start" | "complete" | "fail" | "cancel";
+            /**
+             * Consumed Cost Microunits
+             * @default 0
+             */
+            consumed_cost_microunits: number;
+            /** Result */
+            result?: string | null;
+        };
+        /** AgentEvaluationCaseCreate */
+        AgentEvaluationCaseCreate: {
+            /**
+             * Expected Blocked
+             * @default false
+             */
+            expected_blocked: boolean;
+            /** Expected Tool Keys */
+            expected_tool_keys?: string[];
+            /** Forbidden Tool Keys */
+            forbidden_tool_keys?: string[];
+            /** Input Text */
+            input_text: string;
+            /** Name */
+            name: string;
+        };
+        /** AgentEvaluationCaseResponse */
+        AgentEvaluationCaseResponse: {
+            /** Expected Blocked */
+            expected_blocked: boolean;
+            /** Expected Tool Keys */
+            expected_tool_keys: string[];
+            /** Forbidden Tool Keys */
+            forbidden_tool_keys: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Input Text */
+            input_text: string;
+            /** Name */
+            name: string;
+        };
+        /** AgentEvaluationRunResponse */
+        AgentEvaluationRunResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Agent Version Id
+             * Format: uuid
+             */
+            agent_version_id: string;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Passed Cases */
+            passed_cases: number;
+            /** Score */
+            score: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "passed" | "failed";
+            /**
+             * Suite Id
+             * Format: uuid
+             */
+            suite_id: string;
+            /** Total Cases */
+            total_cases: number;
+        };
+        /** AgentEvaluationSuiteCreate */
+        AgentEvaluationSuiteCreate: {
+            /** Cases */
+            cases: components["schemas"]["AgentEvaluationCaseCreate"][];
+            /**
+             * Minimum Score
+             * @default 100
+             */
+            minimum_score: number;
+            /** Name */
+            name: string;
+        };
+        /** AgentEvaluationSuiteResponse */
+        AgentEvaluationSuiteResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Agent Version Id
+             * Format: uuid
+             */
+            agent_version_id: string;
+            /** Cases */
+            cases: components["schemas"]["AgentEvaluationCaseResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Minimum Score */
+            minimum_score: number;
+            /** Name */
+            name: string;
+        };
+        /** AgentHandoffCreate */
+        AgentHandoffCreate: {
+            /** Reason Code */
+            reason_code: string;
+            /**
+             * To Agent Id
+             * Format: uuid
+             */
+            to_agent_id: string;
+        };
+        /** AgentHandoffDecision */
+        AgentHandoffDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accepted" | "rejected";
+        };
+        /** AgentHandoffResponse */
+        AgentHandoffResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /**
+             * Delegation Id
+             * Format: uuid
+             */
+            delegation_id: string;
+            /**
+             * From Agent Id
+             * Format: uuid
+             */
+            from_agent_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason Code */
+            reason_code: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "requested" | "accepted" | "rejected";
+            /**
+             * To Agent Id
+             * Format: uuid
+             */
+            to_agent_id: string;
+        };
+        /** AgentMemoryConsentRevocationResponse */
+        AgentMemoryConsentRevocationResponse: {
+            /** Already Revoked */
+            already_revoked: boolean;
+            /** Deleted Count */
+            deleted_count: number;
+            /**
+             * Revocation Id
+             * Format: uuid
+             */
+            revocation_id: string;
+        };
+        /** AgentMemoryConsentRevoke */
+        AgentMemoryConsentRevoke: {
+            /** Consent Reference */
+            consent_reference: string;
+            /**
+             * Subject User Id
+             * Format: uuid
+             */
+            subject_user_id: string;
+        };
+        /** AgentMemoryCreate */
+        AgentMemoryCreate: {
+            /**
+             * Classification
+             * @default internal
+             * @enum {string}
+             */
+            classification: "public" | "internal" | "confidential" | "restricted";
+            /** Consent Reference */
+            consent_reference?: string | null;
+            /** Content */
+            content: string;
+            /**
+             * Purpose
+             * @default operations
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
+            /** Retention Days */
+            retention_days?: number | null;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "conversation" | "task" | "user" | "company" | "operational";
+            /** Source Id */
+            source_id?: string | null;
+            /**
+             * Source Type
+             * @default manual
+             * @enum {string}
+             */
+            source_type: "manual" | "conversation" | "task" | "tool";
+            /** Subject User Id */
+            subject_user_id?: string | null;
+            /** Task Delegation Id */
+            task_delegation_id?: string | null;
+        };
+        /** AgentMemoryCredentialRenewalCreate */
+        AgentMemoryCredentialRenewalCreate: {
+            /** Extension Days */
+            extension_days: number;
+            /** Reason */
+            reason: string;
+        };
+        /** AgentMemoryCredentialRenewalResponse */
+        AgentMemoryCredentialRenewalResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /** Extension Days */
+            extension_days: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Proposed Expires At
+             * Format: date-time
+             */
+            proposed_expires_at: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+        };
+        /** AgentMemoryExerciseDueResponse */
+        AgentMemoryExerciseDueResponse: {
+            /** Executed */
+            executed: boolean;
+            exercise: components["schemas"]["AgentMemoryResponseExerciseResponse"] | null;
+            /** Next Run At */
+            next_run_at: string | null;
+        };
+        /** AgentMemoryExerciseScheduleResponse */
+        AgentMemoryExerciseScheduleResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Cadence Hours */
+            cadence_hours: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Heartbeat Slo Minutes */
+            heartbeat_slo_minutes: number;
+            /** Id */
+            id: string | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Last Slo Alert At */
+            last_slo_alert_at: string | null;
+            /** Last Worker Heartbeat At */
+            last_worker_heartbeat_at: string | null;
+            /** Next Run At */
+            next_run_at: string | null;
+            /** Slo Breach Count */
+            slo_breach_count: number;
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /** AgentMemoryExerciseScheduleUpdate */
+        AgentMemoryExerciseScheduleUpdate: {
+            /**
+             * Cadence Hours
+             * @default 168
+             */
+            cadence_hours: number;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Heartbeat Slo Minutes
+             * @default 15
+             */
+            heartbeat_slo_minutes: number;
+        };
+        /** AgentMemoryIncidentEscalationResponse */
+        AgentMemoryIncidentEscalationResponse: {
+            /**
+             * Escalated At
+             * Format: date-time
+             */
+            escalated_at: string;
+            /** Escalated Count */
+            escalated_count: number;
+        };
+        /** AgentMemoryKeyringExitCreate */
+        AgentMemoryKeyringExitCreate: {
+            /**
+             * Batch Size
+             * @default 100
+             */
+            batch_size: number;
+            /**
+             * Max Retry Attempts
+             * @default 3
+             */
+            max_retry_attempts: number;
+        };
+        /** AgentMemoryKeyringPolicyResponse */
+        AgentMemoryKeyringPolicyResponse: {
+            /** Automatic Exit Batch Size */
+            automatic_exit_batch_size: number;
+            /**
+             * Automatic Exit Enabled
+             * @default true
+             */
+            automatic_exit_enabled: boolean;
+            /**
+             * Availability Retention Days
+             * @default 30
+             */
+            availability_retention_days: number;
+            /** Configured */
+            configured: boolean;
+            /** Expiry Warning Days */
+            expiry_warning_days: number;
+            /**
+             * Identity Canary Days
+             * @default 14
+             */
+            identity_canary_days: number;
+            /**
+             * Identity Canary Interval Hours
+             * @default 24
+             */
+            identity_canary_interval_hours: number;
+            /**
+             * On Call End Hour
+             * @default 24
+             */
+            on_call_end_hour: number;
+            /**
+             * On Call Start Hour
+             * @default 0
+             */
+            on_call_start_hour: number;
+            /**
+             * On Call Timezone
+             * @default UTC
+             */
+            on_call_timezone: string;
+            /** On Call User Ids */
+            on_call_user_ids?: string[];
+            /** Updated At */
+            updated_at: string | null;
+            /** Vault Failure Alert Threshold */
+            vault_failure_alert_threshold: number;
+            /** Vault Slo Minutes */
+            vault_slo_minutes: number;
+        };
+        /** AgentMemoryKeyringPolicyUpdate */
+        AgentMemoryKeyringPolicyUpdate: {
+            /** Automatic Exit Batch Size */
+            automatic_exit_batch_size: number;
+            /**
+             * Automatic Exit Enabled
+             * @default true
+             */
+            automatic_exit_enabled: boolean;
+            /**
+             * Availability Retention Days
+             * @default 30
+             */
+            availability_retention_days: number;
+            /** Expiry Warning Days */
+            expiry_warning_days: number;
+            /**
+             * Identity Canary Days
+             * @default 14
+             */
+            identity_canary_days: number;
+            /**
+             * Identity Canary Interval Hours
+             * @default 24
+             */
+            identity_canary_interval_hours: number;
+            /**
+             * On Call End Hour
+             * @default 24
+             */
+            on_call_end_hour: number;
+            /**
+             * On Call Start Hour
+             * @default 0
+             */
+            on_call_start_hour: number;
+            /**
+             * On Call Timezone
+             * @default UTC
+             */
+            on_call_timezone: string;
+            /** On Call User Ids */
+            on_call_user_ids?: string[];
+            /** Vault Failure Alert Threshold */
+            vault_failure_alert_threshold: number;
+            /** Vault Slo Minutes */
+            vault_slo_minutes: number;
+        };
+        /** AgentMemoryKeyringStatusResponse */
+        AgentMemoryKeyringStatusResponse: {
+            /** Activated At */
+            activated_at: string | null;
+            /** Automatic Exit Job Id */
+            automatic_exit_job_id: string | null;
+            /** Automatic Exit Status */
+            automatic_exit_status: ("pending" | "running" | "completed" | "failed" | "closed") | null;
+            /** Credential Expires At */
+            credential_expires_at: string | null;
+            /** Expiry Warning Sent */
+            expiry_warning_sent: boolean;
+            /**
+             * Health Status
+             * @enum {string}
+             */
+            health_status: "not_applicable" | "unknown" | "healthy" | "unavailable";
+            /**
+             * Identity Canary Status
+             * @enum {string}
+             */
+            identity_canary_status: "not_applicable" | "unknown" | "healthy" | "unavailable";
+            /** Last Health Checked At */
+            last_health_checked_at: string | null;
+            /** Last Identity Canary At */
+            last_identity_canary_at: string | null;
+            /** Last Resolved At */
+            last_resolved_at: string | null;
+            /** Provider Code */
+            provider_code: string;
+            /**
+             * Slo Status
+             * @enum {string}
+             */
+            slo_status: "not_applicable" | "within_slo" | "breached";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "environment" | "managed";
+            /**
+             * Status
+             * @constant
+             */
+            status: "active";
+        };
+        /** AgentMemoryLegalHoldCreate */
+        AgentMemoryLegalHoldCreate: {
+            /** Legal Reference */
+            legal_reference: string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "legal_claim" | "regulatory_request" | "audit_preservation";
+            /** Retention Days */
+            retention_days: number;
+        };
+        /** AgentMemoryLegalHoldDecision */
+        AgentMemoryLegalHoldDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+        };
+        /** AgentMemoryLegalHoldRenewalCreate */
+        AgentMemoryLegalHoldRenewalCreate: {
+            /** Extension Days */
+            extension_days: number;
+            /** Legal Reference */
+            legal_reference: string;
+        };
+        /** AgentMemoryLegalHoldRenewalResponse */
+        AgentMemoryLegalHoldRenewalResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /** Extension Days */
+            extension_days: number;
+            /**
+             * Hold Id
+             * Format: uuid
+             */
+            hold_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /**
+             * Proposed Expires At
+             * Format: date-time
+             */
+            proposed_expires_at: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+        };
+        /** AgentMemoryLegalHoldResponse */
+        AgentMemoryLegalHoldResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "legal_claim" | "regulatory_request" | "audit_preservation";
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /** Retention Days */
+            retention_days: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "expired";
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
+        };
+        /** AgentMemoryMetadataExport */
+        AgentMemoryMetadataExport: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Memories */
+            memories: components["schemas"]["AgentMemoryResponse"][];
+            /** Total */
+            total: number;
+        };
+        /** AgentMemoryPolicyResponse */
+        AgentMemoryPolicyResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Allowed Classifications */
+            allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
+            /** Allowed Scopes */
+            allowed_scopes: ("conversation" | "task" | "user" | "company" | "operational")[];
+            /** Blocked Context Alert Threshold */
+            blocked_context_alert_threshold: number;
+            /** Default Retention Days */
+            default_retention_days: number;
+            /** Id */
+            id: string | null;
+            /** Max Context Tokens */
+            max_context_tokens: number;
+            /** Max Retention Days */
+            max_retention_days: number;
+            /** Max Retrieval Entries */
+            max_retrieval_entries: number;
+            /** Max Shared Context Characters */
+            max_shared_context_characters: number;
+            /** Max Shared Context Entries */
+            max_shared_context_entries: number;
+            /** Purpose Policies */
+            purpose_policies: components["schemas"]["AgentMemoryPurposePolicyInput"][];
+            /** Require Consent For User Scope */
+            require_consent_for_user_scope: boolean;
+            /** Retrieval Enabled */
+            retrieval_enabled: boolean;
+            /** Scope Policies */
+            scope_policies: components["schemas"]["AgentMemoryScopePolicyInput"][];
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /** AgentMemoryPolicyUpdate */
+        AgentMemoryPolicyUpdate: {
+            /** Allowed Classifications */
+            allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
+            /** Allowed Scopes */
+            allowed_scopes: ("conversation" | "task" | "user" | "company" | "operational")[];
+            /**
+             * Blocked Context Alert Threshold
+             * @default 3
+             */
+            blocked_context_alert_threshold: number;
+            /**
+             * Default Retention Days
+             * @default 30
+             */
+            default_retention_days: number;
+            /**
+             * Max Context Tokens
+             * @default 1000
+             */
+            max_context_tokens: number;
+            /**
+             * Max Retention Days
+             * @default 365
+             */
+            max_retention_days: number;
+            /**
+             * Max Retrieval Entries
+             * @default 5
+             */
+            max_retrieval_entries: number;
+            /**
+             * Max Shared Context Characters
+             * @default 2000
+             */
+            max_shared_context_characters: number;
+            /**
+             * Max Shared Context Entries
+             * @default 5
+             */
+            max_shared_context_entries: number;
+            /** Purpose Policies */
+            purpose_policies?: components["schemas"]["AgentMemoryPurposePolicyInput"][];
+            /**
+             * Require Consent For User Scope
+             * @default true
+             */
+            require_consent_for_user_scope: boolean;
+            /**
+             * Retrieval Enabled
+             * @default false
+             */
+            retrieval_enabled: boolean;
+            /** Scope Policies */
+            scope_policies?: components["schemas"]["AgentMemoryScopePolicyInput"][];
+        };
+        /** AgentMemoryPurgeRequest */
+        AgentMemoryPurgeRequest: {
+            /**
+             * Confirm All
+             * @default false
+             */
+            confirm_all: boolean;
+            /**
+             * Expired Only
+             * @default true
+             */
+            expired_only: boolean;
+        };
+        /** AgentMemoryPurgeResponse */
+        AgentMemoryPurgeResponse: {
+            /** Deleted Count */
+            deleted_count: number;
+        };
+        /** AgentMemoryPurposePolicyInput */
+        AgentMemoryPurposePolicyInput: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
+            /** Retention Days */
+            retention_days: number;
+        };
+        /** AgentMemoryReencryptionJobClose */
+        AgentMemoryReencryptionJobClose: {
+            /**
+             * Closure Code
+             * @enum {string}
+             */
+            closure_code: "missing_key" | "corrupted_material" | "budget_exhausted" | "other";
+            /** Reason */
+            reason: string;
+        };
+        /** AgentMemoryReencryptionJobCreate */
+        AgentMemoryReencryptionJobCreate: {
+            /**
+             * Batch Size
+             * @default 100
+             */
+            batch_size: number;
+            /** Key Credential Id */
+            key_credential_id?: string | null;
+            /**
+             * Max Retry Attempts
+             * @default 3
+             */
+            max_retry_attempts: number;
+        };
+        /** AgentMemoryReencryptionJobResponse */
+        AgentMemoryReencryptionJobResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Batch Size */
+            batch_size: number;
+            /** Closed At */
+            closed_at: string | null;
+            /** Closed By User Id */
+            closed_by_user_id: string | null;
+            /** Closure Code */
+            closure_code: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code: string | null;
+            /** Failed Count */
+            failed_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Key Provider
+             * @enum {string}
+             */
+            key_provider: "environment" | "external";
+            /** Last Recovery Assessment At */
+            last_recovery_assessment_at: string | null;
+            /** Last Retry At */
+            last_retry_at: string | null;
+            /** Max Retry Attempts */
+            max_retry_attempts: number;
+            /** Purge After */
+            purge_after: string | null;
+            /** Recovery Assessed By User Id */
+            recovery_assessed_by_user_id: string | null;
+            /**
+             * Recovery Status
+             * @enum {string}
+             */
+            recovery_status: "not_assessed" | "ready" | "blocked";
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /** Retry Attempts Remaining */
+            retry_attempts_remaining: number;
+            /** Retry Count */
+            retry_count: number;
+            /** Rotated Count */
+            rotated_count: number;
+            /** Scanned Count */
+            scanned_count: number;
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "completed" | "failed" | "closed";
+            /** Target Master Key Id */
+            target_master_key_id: string;
+            /** Total Count */
+            total_count: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Vault Credential Bound */
+            vault_credential_bound: boolean;
+        };
+        /** AgentMemoryReencryptionJobRetry */
+        AgentMemoryReencryptionJobRetry: {
+            /** Reason */
+            reason: string;
+        };
+        /** AgentMemoryReencryptionLegalHoldResponse */
+        AgentMemoryReencryptionLegalHoldResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /** Expiration Reminder Sent */
+            expiration_reminder_sent: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "legal_claim" | "regulatory_request" | "audit_preservation";
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /** Retention Days */
+            retention_days: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "expired";
+        };
+        /** AgentMemoryReencryptionRecoveryAssessmentResponse */
+        AgentMemoryReencryptionRecoveryAssessmentResponse: {
+            /**
+             * Assessed At
+             * Format: date-time
+             */
+            assessed_at: string;
+            /** Checks */
+            checks: {
+                [key: string]: boolean;
+            };
+            /** Instructions */
+            instructions: string[];
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Retry Attempts Remaining */
+            retry_attempts_remaining: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "blocked";
+        };
+        /** AgentMemoryResponse */
+        AgentMemoryResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "public" | "internal" | "confidential" | "restricted";
+            /** Consent Recorded */
+            consent_recorded: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expired */
+            expired: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "conversation" | "task" | "user" | "company" | "operational";
+            /** Source Id */
+            source_id: string | null;
+            /**
+             * Source Type
+             * @enum {string}
+             */
+            source_type: "manual" | "conversation" | "task" | "tool";
+            /** Subject User Id */
+            subject_user_id: string | null;
+            /** Task Delegation Id */
+            task_delegation_id: string | null;
+        };
+        /** AgentMemoryResponseExerciseCreate */
+        AgentMemoryResponseExerciseCreate: {
+            /**
+             * Scenario
+             * @default full
+             * @constant
+             */
+            scenario: "full";
+        };
+        /** AgentMemoryResponseExerciseResponse */
+        AgentMemoryResponseExerciseResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Checks */
+            checks: {
+                [key: string]: boolean;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /**
+             * Scenario
+             * @constant
+             */
+            scenario: "full";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "manual" | "manual_schedule" | "worker_schedule";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "passed" | "failed";
+        };
+        /** AgentMemoryRiskReport */
+        AgentMemoryRiskReport: {
+            payload: components["schemas"]["AgentMemoryRiskReportPayload"];
+            /** Signature */
+            signature: string;
+            /**
+             * Signature Algorithm
+             * @default HMAC-SHA256
+             * @constant
+             */
+            signature_algorithm: "HMAC-SHA256";
+            /**
+             * Signature Key Id
+             * @default orkestral-memory-risk-v1
+             * @constant
+             */
+            signature_key_id: "orkestral-memory-risk-v1";
+        };
+        /** AgentMemoryRiskReportPayload */
+        AgentMemoryRiskReportPayload: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Pending Incident Ids */
+            pending_incident_ids: string[];
+            /** Previous Signature */
+            previous_signature: string | null;
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            risk_summary: components["schemas"]["AgentMemoryRiskSummary"];
+            /** Sequence */
+            sequence: number;
+            /** Signature Key Version */
+            signature_key_version: number;
+        };
+        /** AgentMemoryRiskReportVerification */
+        AgentMemoryRiskReportVerification: {
+            /** Reason */
+            reason: string;
+            /** Valid */
+            valid: boolean;
+        };
+        /** AgentMemoryRiskSigningKeyResponse */
+        AgentMemoryRiskSigningKeyResponse: {
+            /**
+             * Activated By User Id
+             * Format: uuid
+             */
+            activated_by_user_id: string;
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+        };
+        /** AgentMemoryRiskSummary */
+        AgentMemoryRiskSummary: {
+            /** Active Grants */
+            active_grants: number;
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Blocked Events Last 24H */
+            blocked_events_last_24h: number;
+            /** Cost Denials Last 24H */
+            cost_denials_last_24h: number;
+            /** Expired Approvals */
+            expired_approvals: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Incidents Last 30 Days */
+            incidents_last_30_days: number;
+            /** Overdue Incident Reviews */
+            overdue_incident_reviews: number;
+            /** Pending Approvals */
+            pending_approvals: number;
+            /** Pending Incident Reviews */
+            pending_incident_reviews: number;
+            /** Quarantine Until */
+            quarantine_until: string | null;
+            /** Quarantined */
+            quarantined: boolean;
+            /** Restricted Active Grants */
+            restricted_active_grants: number;
+            /** Revoked Grants Last 30 Days */
+            revoked_grants_last_30_days: number;
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "elevated" | "high" | "critical";
+        };
+        /** AgentMemorySchedulerMetricsResponse */
+        AgentMemorySchedulerMetricsResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Average Duration Ms */
+            average_duration_ms: number;
+            /** Heartbeat Slo Minutes */
+            heartbeat_slo_minutes: number;
+            /**
+             * Heartbeat Status
+             * @enum {string}
+             */
+            heartbeat_status: "disabled" | "waiting" | "healthy" | "overdue";
+            /** Last Slo Alert At */
+            last_slo_alert_at: string | null;
+            /** Last Worker Heartbeat At */
+            last_worker_heartbeat_at: string | null;
+            /** Last Worker Run At */
+            last_worker_run_at: string | null;
+            /** Next Run At */
+            next_run_at: string | null;
+            /** Overdue Seconds */
+            overdue_seconds: number;
+            /** Schedule Enabled */
+            schedule_enabled: boolean;
+            /** Slo Breach Count */
+            slo_breach_count: number;
+            /** Worker Exercises */
+            worker_exercises: number;
+            /** Worker Failed */
+            worker_failed: number;
+            /** Worker Passed */
+            worker_passed: number;
+        };
+        /** AgentMemoryScopePolicyInput */
+        AgentMemoryScopePolicyInput: {
+            /** Retention Days */
+            retention_days: number;
+            /**
+             * Retrieval Enabled
+             * @default true
+             */
+            retrieval_enabled: boolean;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "conversation" | "task" | "user" | "company" | "operational";
+        };
+        /** AgentMemoryVaultAvailabilityResponse */
+        AgentMemoryVaultAvailabilityResponse: {
+            /** Availability Percent */
+            availability_percent: number;
+            /** Failed Checks */
+            failed_checks: number;
+            /** Provider Code */
+            provider_code: string;
+            /** Slo Breaches */
+            slo_breaches: number;
+            /** Successful Checks */
+            successful_checks: number;
+            /** Total Checks */
+            total_checks: number;
+            /**
+             * Window Started At
+             * Format: date-time
+             */
+            window_started_at: string;
+        };
+        /** AgentMemoryVaultCredentialOption */
+        AgentMemoryVaultCredentialOption: {
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Managed Provider */
+            managed_provider: boolean;
+            /** Name */
+            name: string;
+            /** Plugin Code */
+            plugin_code: string;
+            /** Provider Name */
+            provider_name: string;
+        };
+        /** AgentMemoryVaultIncidentResponse */
+        AgentMemoryVaultIncidentResponse: {
+            /** Alerted */
+            alerted: boolean;
+            /** Failure Count */
+            failure_count: number;
+            /**
+             * First Detected At
+             * Format: date-time
+             */
+            first_detected_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Detected At
+             * Format: date-time
+             */
+            last_detected_at: string;
+            /** Provider Code */
+            provider_code: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Slo Breached */
+            slo_breached: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "resolved";
+        };
+        /** AgentMemoryWorkloadIdentityRotationCreate */
+        AgentMemoryWorkloadIdentityRotationCreate: {
+            /** Identity Reference */
+            identity_reference: string;
+            /** Reason */
+            reason: string;
+        };
+        /** AgentMemoryWorkloadIdentityRotationResponse */
+        AgentMemoryWorkloadIdentityRotationResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Provider Code */
+            provider_code: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+            /** Verified */
+            verified: boolean;
+        };
         /** AgentMessageResponse */
         AgentMessageResponse: {
             /** Content */
@@ -3228,6 +6334,8 @@ export interface components {
         };
         /** AgentResponse */
         AgentResponse: {
+            /** Active Version Id */
+            active_version_id: string | null;
             /**
              * Created At
              * Format: date-time
@@ -3271,6 +6379,568 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** AgentRunResponse */
+        AgentRunResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Agent Version Id
+             * Format: uuid
+             */
+            agent_version_id: string;
+            /** Completed Tool Keys */
+            completed_tool_keys: string[];
+            /** Conversation Id */
+            conversation_id: string | null;
+            /** Cost Microunits */
+            cost_microunits: number;
+            /** Denied Tool Keys */
+            denied_tool_keys: string[];
+            /** Duration Ms */
+            duration_ms: number;
+            /** Error Code */
+            error_code: string | null;
+            /**
+             * Execution Mode
+             * @enum {string}
+             */
+            execution_mode: "live" | "shadow" | "simulation";
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Runtime Seconds */
+            max_runtime_seconds: number;
+            /** Max Steps */
+            max_steps: number;
+            /** Planned Tool Keys */
+            planned_tool_keys: string[];
+            /** Request Fingerprint */
+            request_fingerprint: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "completed" | "failed" | "timed_out" | "awaiting_approval" | "simulated";
+            /** Step Count */
+            step_count: number;
+            /** Total Tokens */
+            total_tokens: number;
+        };
+        /** AgentSecurityEventResponse */
+        AgentSecurityEventResponse: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "blocked" | "redacted" | "reported";
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Agent Run Id */
+            agent_run_id: string | null;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "prompt_injection" | "data_egress" | "sensitive_data" | "memory_access";
+            /** Content Fingerprint */
+            content_fingerprint: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Indicators */
+            indicators: string[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high" | "critical";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "user" | "knowledge" | "memory" | "provider" | "system";
+        };
+        /** AgentTaskContractCreate */
+        AgentTaskContractCreate: {
+            /** Allowed Tool Keys */
+            allowed_tool_keys?: string[];
+            /**
+             * Deadline Seconds
+             * @default 300
+             */
+            deadline_seconds: number;
+            /** Max Cost Microunits */
+            max_cost_microunits: number;
+            /**
+             * Max Delegation Depth
+             * @default 1
+             */
+            max_delegation_depth: number;
+            /** Max Steps */
+            max_steps: number;
+            /** Name */
+            name: string;
+            /** Required Context Keys */
+            required_context_keys?: string[];
+            /**
+             * Worker Agent Id
+             * Format: uuid
+             */
+            worker_agent_id: string;
+        };
+        /** AgentTaskContractResponse */
+        AgentTaskContractResponse: {
+            /** Allowed Tool Keys */
+            allowed_tool_keys: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deadline Seconds */
+            deadline_seconds: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Cost Microunits */
+            max_cost_microunits: number;
+            /** Max Delegation Depth */
+            max_delegation_depth: number;
+            /** Max Steps */
+            max_steps: number;
+            /** Name */
+            name: string;
+            /** Required Context Keys */
+            required_context_keys: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "inactive";
+            /**
+             * Supervisor Agent Id
+             * Format: uuid
+             */
+            supervisor_agent_id: string;
+            /**
+             * Worker Agent Id
+             * Format: uuid
+             */
+            worker_agent_id: string;
+        };
+        /** AgentTaskMemoryAccessDecision */
+        AgentTaskMemoryAccessDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+        };
+        /** AgentTaskMemoryAccessGrantCreate */
+        AgentTaskMemoryAccessGrantCreate: {
+            /** Allowed Classifications */
+            allowed_classifications?: ("public" | "internal" | "confidential" | "restricted")[];
+            /** Allowed Tool Keys */
+            allowed_tool_keys: string[];
+            /**
+             * Approval Expires In Minutes
+             * @default 30
+             */
+            approval_expires_in_minutes: number;
+            /**
+             * Expires In Minutes
+             * @default 60
+             */
+            expires_in_minutes: number;
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /**
+             * Max Classification
+             * @default internal
+             * @enum {string}
+             */
+            max_classification: "public" | "internal" | "confidential" | "restricted";
+            /**
+             * Max Content Characters
+             * @default 512
+             */
+            max_content_characters: number;
+            /**
+             * Max Cost Microunits
+             * @default 1000
+             */
+            max_cost_microunits: number;
+            /**
+             * Max Entries
+             * @default 1
+             */
+            max_entries: number;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+        };
+        /** AgentTaskMemoryAccessGrantResponse */
+        AgentTaskMemoryAccessGrantResponse: {
+            /** Allowed Classifications */
+            allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
+            /** Allowed Tool Keys */
+            allowed_tool_keys: string[];
+            /** Approval Decided At */
+            approval_decided_at: string | null;
+            /** Approval Expires At */
+            approval_expires_at: string | null;
+            /**
+             * Approval Status
+             * @enum {string}
+             */
+            approval_status: "not_required" | "pending" | "approved" | "rejected" | "expired";
+            /** Approval Ttl Minutes */
+            approval_ttl_minutes: number | null;
+            /** Approved By User Id */
+            approved_by_user_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Granted By User Id
+             * Format: uuid
+             */
+            granted_by_user_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Max Classification
+             * @enum {string}
+             */
+            max_classification: "public" | "internal" | "confidential" | "restricted";
+            /** Max Content Characters */
+            max_content_characters: number;
+            /** Max Cost Microunits */
+            max_cost_microunits: number;
+            /** Max Entries */
+            max_entries: number;
+            /**
+             * Owner Agent Id
+             * Format: uuid
+             */
+            owner_agent_id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+            /** Requires Human Approval */
+            requires_human_approval: boolean;
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Revoked By User Id */
+            revoked_by_user_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "revoked" | "expired";
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
+        };
+        /** AgentTaskMemoryAccessRevoke */
+        AgentTaskMemoryAccessRevoke: {
+            /** Reason */
+            reason: string;
+        };
+        /** AgentTaskMemoryAccessTraceResponse */
+        AgentTaskMemoryAccessTraceResponse: {
+            /** Agent Run Id */
+            agent_run_id: string | null;
+            /** Blocked Items */
+            blocked_items: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Estimated Cost Microunits */
+            estimated_cost_microunits: number;
+            /**
+             * Grant Id
+             * Format: uuid
+             */
+            grant_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Item Count */
+            item_count: number;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "consumed" | "blocked" | "empty" | "revoked_before_use" | "expired_before_use" | "tool_policy_denied" | "aggregate_limit_denied" | "cost_limit_denied";
+            /**
+             * Owner Agent Id
+             * Format: uuid
+             */
+            owner_agent_id: string;
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
+            /** Total Characters */
+            total_characters: number;
+        };
+        /** AgentTaskMemoryContextItem */
+        AgentTaskMemoryContextItem: {
+            /**
+             * Classification
+             * @enum {string}
+             */
+            classification: "public" | "internal" | "confidential" | "restricted";
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Memory Id
+             * Format: uuid
+             */
+            memory_id: string;
+            /**
+             * Owner Agent Id
+             * Format: uuid
+             */
+            owner_agent_id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** AgentTaskMemoryContextRequest */
+        AgentTaskMemoryContextRequest: {
+            /**
+             * Grant Id
+             * Format: uuid
+             */
+            grant_id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+        };
+        /** AgentTaskMemoryContextResponse */
+        AgentTaskMemoryContextResponse: {
+            /** Blocked Items */
+            blocked_items: number;
+            /**
+             * Grant Id
+             * Format: uuid
+             */
+            grant_id: string;
+            /** Items */
+            items: components["schemas"]["AgentTaskMemoryContextItem"][];
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "coordination" | "review" | "handoff";
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
+            /** Total Characters */
+            total_characters: number;
+        };
+        /** AgentTaskMemoryIncidentAssigneesUpdate */
+        AgentTaskMemoryIncidentAssigneesUpdate: {
+            /** Reason */
+            reason: string;
+            /** Responsible User Ids */
+            responsible_user_ids: string[];
+        };
+        /** AgentTaskMemoryIncidentResponse */
+        AgentTaskMemoryIncidentResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Already Processed */
+            already_processed: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Escalated At */
+            escalated_at: string | null;
+            /** Escalation Count */
+            escalation_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Quarantine Minutes */
+            quarantine_minutes: number;
+            /**
+             * Quarantine Until
+             * Format: date-time
+             */
+            quarantine_until: string;
+            /** Quarantined */
+            quarantined: boolean;
+            /** Required Review Quorum */
+            required_review_quorum: number;
+            /** Responsible User Ids */
+            responsible_user_ids: string[];
+            /** Review Count */
+            review_count: number;
+            /**
+             * Review Due At
+             * Format: date-time
+             */
+            review_due_at: string;
+            /** Review Sla Minutes */
+            review_sla_minutes: number;
+            /**
+             * Review Status
+             * @enum {string}
+             */
+            review_status: "pending" | "confirmed" | "dismissed";
+            /** Reviewed At */
+            reviewed_at: string | null;
+            /** Reviewed By User Id */
+            reviewed_by_user_id: string | null;
+            /** Revoked Grants */
+            revoked_grants: number;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high" | "critical";
+            /** Sla Breached */
+            sla_breached: boolean;
+            /**
+             * Triggered By User Id
+             * Format: uuid
+             */
+            triggered_by_user_id: string;
+        };
+        /** AgentTaskMemoryIncidentReview */
+        AgentTaskMemoryIncidentReview: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "confirmed" | "dismissed";
+        };
+        /** AgentTaskMemoryIncidentRevoke */
+        AgentTaskMemoryIncidentRevoke: {
+            /**
+             * Idempotency Key
+             * Format: uuid
+             */
+            idempotency_key: string;
+            /** Incident Reference */
+            incident_reference: string;
+            /**
+             * Quarantine Minutes
+             * @default 60
+             */
+            quarantine_minutes: number;
+            /** Reason */
+            reason: string;
+            /**
+             * Required Review Quorum
+             * @default 1
+             */
+            required_review_quorum: number;
+            /** Responsible User Ids */
+            responsible_user_ids: string[];
+            /**
+             * Review Sla Minutes
+             * @default 60
+             */
+            review_sla_minutes: number;
+            /**
+             * Severity
+             * @default high
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high" | "critical";
         };
         /** AgentToolCatalogResponse */
         AgentToolCatalogResponse: {
@@ -3318,6 +6988,11 @@ export interface components {
             name: string;
             /** Required Permission */
             required_permission: string | null;
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "medium" | "high" | "critical";
             /** Tool Key */
             tool_key: string;
         };
@@ -3400,6 +7075,8 @@ export interface components {
              * Format: uuid
              */
             agent_id: string;
+            /** Agent Version Id */
+            agent_version_id: string | null;
             /** Conversation Id */
             conversation_id: string | null;
             /** Cost Microunits */
@@ -3430,6 +7107,89 @@ export interface components {
             tool_key: string | null;
             /** Total Tokens */
             total_tokens: number;
+        };
+        /** AgentVersionCreate */
+        AgentVersionCreate: {
+            /** Autonomy Level */
+            autonomy_level?: number | null;
+            /** Instructions */
+            instructions?: string | null;
+            /** Knowledge Base Id */
+            knowledge_base_id?: string | null;
+            /** Max Cost Per Run Microunits */
+            max_cost_per_run_microunits?: number | null;
+            /** Max Input Tokens */
+            max_input_tokens?: number | null;
+            /** Max Output Tokens */
+            max_output_tokens?: number | null;
+            /** Max Runtime Seconds */
+            max_runtime_seconds?: number | null;
+            /** Max Steps */
+            max_steps?: number | null;
+            /** Memory Enabled */
+            memory_enabled?: boolean | null;
+            /** Model */
+            model?: string | null;
+            /** Provider */
+            provider?: ("local" | "openai_compatible") | null;
+            /** Temperature */
+            temperature?: number | null;
+        };
+        /** AgentVersionResponse */
+        AgentVersionResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Autonomy Level */
+            autonomy_level: number;
+            /** Checksum */
+            checksum: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Instructions */
+            instructions: string;
+            /** Knowledge Base Id */
+            knowledge_base_id: string | null;
+            /** Max Cost Per Run Microunits */
+            max_cost_per_run_microunits: number;
+            /** Max Input Tokens */
+            max_input_tokens: number;
+            /** Max Output Tokens */
+            max_output_tokens: number;
+            /** Max Runtime Seconds */
+            max_runtime_seconds: number;
+            /** Max Steps */
+            max_steps: number;
+            /** Memory Enabled */
+            memory_enabled: boolean;
+            /** Model */
+            model: string;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "local" | "openai_compatible";
+            /** Published At */
+            published_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "retired";
+            /** Temperature */
+            temperature: number;
+            /** Version */
+            version: number;
         };
         /** AnalyticsOverviewResponse */
         AnalyticsOverviewResponse: {
@@ -3498,6 +7258,82 @@ export interface components {
              * @enum {string}
              */
             decision: "approved" | "rejected";
+        };
+        /** ApprovalDelegateCandidateResponse */
+        ApprovalDelegateCandidateResponse: {
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** ApprovalDelegationCreate */
+        ApprovalDelegationCreate: {
+            /**
+             * Delegate User Id
+             * Format: uuid
+             */
+            delegate_user_id: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+        };
+        /** ApprovalDelegationResponse */
+        ApprovalDelegationResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Delegate User Id
+             * Format: uuid
+             */
+            delegate_user_id: string;
+            /**
+             * Delegator User Id
+             * Format: uuid
+             */
+            delegator_user_id: string;
+            /** Effective */
+            effective: boolean;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason: string;
+            /** Revoked At */
+            revoked_at: string | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "revoked";
         };
         /** ApprovalRequestResponse */
         ApprovalRequestResponse: {
@@ -5559,6 +9395,7 @@ export interface components {
             /** Trigger Type */
             trigger_type?: ("manual" | "contact_created" | "contact_tagged" | "scheduled") | null;
         };
+        JsonValue: unknown;
         /** LeaveDecision */
         LeaveDecision: {
             /**
@@ -5723,6 +9560,25 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** ManagedVaultMetricResponse */
+        ManagedVaultMetricResponse: {
+            /** Average Duration Ms */
+            average_duration_ms: number;
+            /** Failed Tests */
+            failed_tests: number;
+            /** Last Tested At */
+            last_tested_at: string | null;
+            /** Provider Code */
+            provider_code: string;
+            /** Provider Name */
+            provider_name: string;
+            /** Success Rate */
+            success_rate: number;
+            /** Successful Tests */
+            successful_tests: number;
+            /** Total Tests */
+            total_tests: number;
+        };
         /** MarketingSummaryResponse */
         MarketingSummaryResponse: {
             /** Audience Total */
@@ -5825,6 +9681,289 @@ export interface components {
             development_token?: string | null;
             /** Message */
             message: string;
+        };
+        /** MetadataEntityCreate */
+        MetadataEntityCreate: {
+            /** Description */
+            description?: string | null;
+            /** Fields */
+            fields: components["schemas"]["MetadataFieldInput"][];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Plural Label */
+            plural_label: string;
+        };
+        /** MetadataEntityDetail */
+        MetadataEntityDetail: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Current Version */
+            current_version: number;
+            /** Description */
+            description: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Plural Label */
+            plural_label: string;
+            /** Published Version */
+            published_version: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "archived";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            version: components["schemas"]["MetadataEntityVersionResponse"];
+        };
+        /** MetadataEntityDraftUpdate */
+        MetadataEntityDraftUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Fields */
+            fields: components["schemas"]["MetadataFieldInput"][];
+            /** Label */
+            label?: string | null;
+            /** Plural Label */
+            plural_label?: string | null;
+        };
+        /** MetadataEntitySummary */
+        MetadataEntitySummary: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Current Version */
+            current_version: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Plural Label */
+            plural_label: string;
+            /** Published Version */
+            published_version: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "archived";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** MetadataEntityVersionResponse */
+        MetadataEntityVersionResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Fields */
+            fields: components["schemas"]["MetadataFieldResponse"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Published At */
+            published_at: string | null;
+            /** Schema Checksum */
+            schema_checksum: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "validated" | "published" | "retired";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /** MetadataFieldInput */
+        MetadataFieldInput: {
+            /**
+             * Data Type
+             * @enum {string}
+             */
+            data_type: "text" | "long_text" | "integer" | "decimal" | "boolean" | "date" | "datetime" | "email" | "phone" | "url" | "uuid" | "json";
+            default_value?: components["schemas"]["JsonValue"] | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Position
+             * @default 0
+             */
+            position: number;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Searchable
+             * @default false
+             */
+            searchable: boolean;
+            /** Settings */
+            settings?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /**
+             * Unique Values
+             * @default false
+             */
+            unique_values: boolean;
+        };
+        /** MetadataFieldResponse */
+        MetadataFieldResponse: {
+            /**
+             * Data Type
+             * @enum {string}
+             */
+            data_type: "text" | "long_text" | "integer" | "decimal" | "boolean" | "date" | "datetime" | "email" | "phone" | "url" | "uuid" | "json";
+            default_value?: components["schemas"]["JsonValue"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Position
+             * @default 0
+             */
+            position: number;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Searchable
+             * @default false
+             */
+            searchable: boolean;
+            /** Settings */
+            settings?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /**
+             * Unique Values
+             * @default false
+             */
+            unique_values: boolean;
+        };
+        /** MetadataRecordCreate */
+        MetadataRecordCreate: {
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+            /** Values */
+            values: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+        };
+        /** MetadataRecordPage */
+        MetadataRecordPage: {
+            /** Items */
+            items: components["schemas"]["MetadataRecordResponse"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Pages */
+            pages: number;
+            /** Total */
+            total: number;
+        };
+        /** MetadataRecordResponse */
+        MetadataRecordResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Definition Id
+             * Format: uuid
+             */
+            definition_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Masked Fields */
+            masked_fields: string[];
+            /** Record Version */
+            record_version: number;
+            /** Schema Version */
+            schema_version: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Values */
+            values: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+        };
+        /** MetadataRecordUpdate */
+        MetadataRecordUpdate: {
+            /** Expected Version */
+            expected_version: number;
+            /** Values */
+            values: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+        };
+        /** MetadataValidationResponse */
+        MetadataValidationResponse: {
+            /**
+             * Entity Id
+             * Format: uuid
+             */
+            entity_id: string;
+            /** Errors */
+            errors: string[];
+            /** Schema Checksum */
+            schema_checksum: string;
+            /** Valid */
+            valid: boolean;
+            /** Version */
+            version: number;
         };
         /** MetricPeriod */
         MetricPeriod: {
@@ -7383,6 +11522,38 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** WorkerHealthResponse */
+        WorkerHealthResponse: {
+            /**
+             * Component
+             * @constant
+             */
+            component: "agent-memory-worker";
+            /** Monitor Secret Rotation Days Remaining */
+            monitor_secret_rotation_days_remaining: number | null;
+            /**
+             * Monitor Secret Rotation Policy
+             * @enum {string}
+             */
+            monitor_secret_rotation_policy: "optional" | "warn" | "enforce";
+            /**
+             * Monitor Secret Rotation State
+             * @enum {string}
+             */
+            monitor_secret_rotation_state: "not_configured" | "healthy" | "due_soon";
+            /** Request Id */
+            request_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "idle" | "healthy" | "overdue";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "degraded";
+        };
         /** WorkflowComparisonResponse */
         WorkflowComparisonResponse: {
             /** Added Nodes */
@@ -7995,6 +12166,153 @@ export interface operations {
             };
         };
     };
+    list_agent_memory_vault_availability_agents_memory_keyring_availability_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryVaultAvailabilityResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_keyring_policy_agents_memory_keyring_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryKeyringPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_agent_memory_keyring_policy_agents_memory_keyring_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryKeyringPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryKeyringPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     provider_status_agents_providers_status_get: {
         parameters: {
             query?: never;
@@ -8285,6 +12603,313 @@ export interface operations {
             };
         };
     };
+    list_agent_approval_policies_agents__agent_id__approval_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_approval_policy_agents__agent_id__approval_policies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentApprovalPolicyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    evaluate_agent_approval_policy_endpoint_agents__agent_id__approval_policies_evaluate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentApprovalPolicyEvaluationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyEvaluationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_agent_approval_policy_agents__agent_id__approval_policies__policy_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_budget_agents__agent_id__budget_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentBudgetResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_agent_budget_agents__agent_id__budget_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentBudgetUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentBudgetResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     chat_with_agent_agents__agent_id__chat_post: {
         parameters: {
             query?: never;
@@ -8440,6 +13065,56 @@ export interface operations {
             };
         };
     };
+    close_conversation_agents__agent_id__conversations__conversation_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentConversationCloseResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     list_messages_agents__agent_id__conversations__conversation_id__messages_get: {
         parameters: {
             query?: never;
@@ -8459,6 +13134,3465 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMessageResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_data_policy_agents__agent_id__data_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDataPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_agent_data_policy_agents__agent_id__data_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentDataPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDataPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_delegation_agents__agent_id__delegations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentDelegationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDelegationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_delegation_agents__agent_id__delegations__delegation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDelegationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_handoff_agents__agent_id__delegations__delegation_id__handoffs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentHandoffCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentHandoffResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_handoff_agents__agent_id__delegations__delegation_id__handoffs__handoff_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+                handoff_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentHandoffDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentHandoffResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_task_memory_access_grants_agents__agent_id__delegations__delegation_id__memory_access_grants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryAccessGrantCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryAccessDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revoke_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryAccessRevoke"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_task_memory_access_traces_agents__agent_id__delegations__delegation_id__memory_access_traces_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessTraceResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_legal_holds_agents__agent_id__delegations__delegation_id__memory_legal_holds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_legal_hold_agents__agent_id__delegations__delegation_id__memory_legal_holds__hold_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_shared_task_memory_context_agents__agent_id__delegations__delegation_id__shared_memory_context_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryContextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryContextResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    transition_agent_delegation_agents__agent_id__delegations__delegation_id__transition_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentDelegationTransition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDelegationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memories_agents__agent_id__memories_get: {
+        parameters: {
+            query?: {
+                include_expired?: boolean;
+            };
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_memory_agents__agent_id__memories_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    delete_agent_memory_agents__agent_id__memories__memory_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_task_memory_access_incidents_agents__agent_id__memory_access_incidents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryIncidentResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    escalate_overdue_agent_memory_incidents_agents__agent_id__memory_access_incidents_escalate_overdue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryIncidentEscalationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revoke_agent_task_memory_access_for_incident_agents__agent_id__memory_access_incidents_revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryIncidentRevoke"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryIncidentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_agent_task_memory_incident_responsibles_agents__agent_id__memory_access_incidents__incident_id__responsibles_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryIncidentAssigneesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryIncidentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    review_agent_task_memory_access_incident_agents__agent_id__memory_access_incidents__incident_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryIncidentReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryIncidentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revoke_agent_memory_consent_agents__agent_id__memory_consent_revocations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryConsentRevoke"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryConsentRevocationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_keyring_status_agents__agent_id__memory_keyring_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryKeyringStatusResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_credential_renewals_agents__agent_id__memory_keyring_credential_renewals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryCredentialRenewalResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryCredentialRenewalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryCredentialRenewalResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals__renewal_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                renewal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryCredentialRenewalResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_keyring_exit_agents__agent_id__memory_keyring_exit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryKeyringExitCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_workload_identity_rotations_agents__agent_id__memory_keyring_identity_rotations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations__rotation_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                rotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_policy_agents__agent_id__memory_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_agent_memory_policy_agents__agent_id__memory_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    purge_agent_memories_agents__agent_id__memory_purge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryPurgeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryPurgeResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_reencryption_jobs_agents__agent_id__memory_reencryption_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryReencryptionJobCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    close_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryReencryptionJobClose"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_reencryption_legal_holds_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionLegalHoldResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_reencryption_legal_hold_renewals_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals__renewal_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+                renewal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    assess_agent_memory_reencryption_recovery_agents__agent_id__memory_reencryption_jobs__job_id__recovery_assessment_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionRecoveryAssessmentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    retry_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryReencryptionJobRetry"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_exercise_schedule_agents__agent_id__memory_response_exercise_schedule_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryExerciseScheduleResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_agent_memory_exercise_schedule_agents__agent_id__memory_response_exercise_schedule_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryExerciseScheduleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryExerciseScheduleResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    run_due_agent_memory_exercise_agents__agent_id__memory_response_exercise_schedule_run_due_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryExerciseDueResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_scheduler_metrics_agents__agent_id__memory_response_exercise_scheduler_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemorySchedulerMetricsResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_response_exercises_agents__agent_id__memory_response_exercises_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryResponseExerciseResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    run_agent_memory_response_exercise_agents__agent_id__memory_response_exercises_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryResponseExerciseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryResponseExerciseResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    export_agent_memory_risk_report_agents__agent_id__memory_risk_report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryRiskReport"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    verify_agent_memory_risk_report_agents__agent_id__memory_risk_report_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryRiskReport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryRiskReportVerification"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    rotate_agent_memory_risk_signing_key_agents__agent_id__memory_risk_signing_keys_rotate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryRiskSigningKeyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_risk_summary_agents__agent_id__memory_risk_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryRiskSummary"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_vault_credentials_agents__agent_id__memory_vault_credentials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryVaultCredentialOption"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_vault_incidents_agents__agent_id__memory_vault_incidents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryVaultIncidentResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_my_agent_memories_agents__agent_id__my_memories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    delete_my_agent_memory_agents__agent_id__my_memories__memory_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    export_my_agent_memory_metadata_agents__agent_id__my_memory_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryMetadataExport"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_runs_agents__agent_id__runs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRunResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_run_agents__agent_id__runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRunResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_security_events_agents__agent_id__security_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSecurityEventResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_task_contracts_agents__agent_id__task_contracts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskContractResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_task_contract_agents__agent_id__task_contracts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskContractCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskContractResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -8561,6 +16695,263 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentToolResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_versions_agents__agent_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentVersionResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_version_agents__agent_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentVersionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentVersionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_evaluation_suite_agents__agent_id__versions__version_id__evaluation_suites_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentEvaluationSuiteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentEvaluationSuiteResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    run_agent_evaluation_suite_agents__agent_id__versions__version_id__evaluation_suites__suite_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                version_id: string;
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentEvaluationRunResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_agent_version_agents__agent_id__versions__version_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentVersionResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -12288,6 +20679,62 @@ export interface operations {
             };
         };
     };
+    agent_memory_scheduler_health_health_agent_memory_scheduler_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkerHealthResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkerHealthResponse"];
+                };
+            };
+        };
+    };
     list_departments_hr_departments_get: {
         parameters: {
             query?: never;
@@ -15248,6 +23695,612 @@ export interface operations {
             };
         };
     };
+    list_metadata_entities_metadata_entities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntitySummary"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_metadata_entity_metadata_entities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataEntityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_metadata_entity_metadata_entities__definition_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_metadata_draft_metadata_entities__definition_id__draft_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataEntityDraftUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_metadata_entity_metadata_entities__definition_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_metadata_records_metadata_entities__definition_id__records_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataRecordPage"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_metadata_record_metadata_entities__definition_id__records_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataRecordCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataRecordResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_metadata_record_metadata_entities__definition_id__records__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataRecordResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_metadata_record_metadata_entities__definition_id__records__record_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataRecordUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataRecordResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    delete_metadata_record_metadata_entities__definition_id__records__record_id__delete: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: never;
+            path: {
+                definition_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    validate_metadata_entity_metadata_entities__definition_id__validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataValidationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_metadata_draft_version_metadata_entities__definition_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     aggregate_now_metrics_aggregate_post: {
         parameters: {
             query?: never;
@@ -15523,6 +24576,200 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_approval_delegations_notifications_approval_delegations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalDelegationResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_approval_delegation_notifications_approval_delegations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalDelegationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalDelegationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_approval_delegate_candidates_notifications_approval_delegations_candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalDelegateCandidateResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revoke_approval_delegation_notifications_approval_delegations__delegation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalDelegationResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -16058,6 +25305,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CredentialRotationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_managed_vault_metrics_plugins_managed_vault_metrics_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedVaultMetricResponse"][];
                 };
             };
             /** @description Solicitação inválida */

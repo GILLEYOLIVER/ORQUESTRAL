@@ -2,11 +2,16 @@
 
 from app.modules.agents.models import (
     Agent,
+    AgentBudget,
     AgentConversation,
+    AgentDataPolicy,
     AgentMessage,
+    AgentRun,
+    AgentSecurityEvent,
     AgentTool,
     AgentToolRun,
     AgentUsageRecord,
+    AgentVersion,
 )
 from app.modules.analytics.models import AnalyticsIndicator, AnalyticsMeasurement
 from app.modules.audit.models import AuditEvent
@@ -87,11 +92,16 @@ from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVe
 
 __all__ = [
     "Agent",
+    "AgentBudget",
     "AgentConversation",
+    "AgentDataPolicy",
     "AgentMessage",
+    "AgentRun",
+    "AgentSecurityEvent",
     "AgentTool",
     "AgentToolRun",
     "AgentUsageRecord",
+    "AgentVersion",
     "AnalyticsIndicator",
     "AnalyticsMeasurement",
     "ApprovalAction",
@@ -165,3 +175,11 @@ __all__ = [
     "WorkflowExecution",
     "WorkflowVersion",
 ]
+
+from app.modules.agents import approval_policy_models as _agent_approval_policy_models  # noqa: F401
+from app.modules.agents import coordination_models as _agent_coordination_models  # noqa: F401
+from app.modules.agents import evaluation_models as _agent_evaluation_models  # noqa: F401
+from app.modules.agents import memory_models as _agent_memory_models  # noqa: F401
+from app.modules.authorization import policy_models as _policy_models  # noqa: F401
+from app.modules.events import models as _event_models  # noqa: F401
+from app.modules.metadata import models as _metadata_models  # noqa: F401

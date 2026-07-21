@@ -175,7 +175,8 @@ class ApprovalAction(Base):
     __tablename__ = "approval_actions"
     __table_args__ = (
         CheckConstraint(
-            "action IN ('approved', 'rejected', 'commented', 'reminded', 'expired')",
+            "action IN ('approved', 'rejected', 'commented', 'reminded', 'escalated', "
+            "'vote_approved', 'expired')",
             name="ck_approval_actions_action",
         ),
     )
@@ -200,3 +201,41 @@ class ApprovalAction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
+
+
+class ApprovalDelegation(Base):
+    __tablename__ = "approval_delegations"
+    __table_args__ = (
+        CheckConstraint(
+            "delegator_user_id <> delegate_user_id",
+            name="ck_approval_delegation_distinct_users",
+        ),
+        CheckConstraint("ends_at > starts_at", name="ck_approval_delegation_time_range"),
+        CheckConstraint(
+            "status IN ('active', 'revoked')",
+            name="ck_approval_delegation_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    delegator_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    delegate_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    reason: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(
+        String(16), default="active", server_default="active", index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

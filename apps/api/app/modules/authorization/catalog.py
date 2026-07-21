@@ -37,6 +37,25 @@ PERMISSION_CATALOG = (
     PermissionDefinition("roles.delete", "roles", "delete", "Excluir papéis personalizados"),
     PermissionDefinition("modules.view", "modules", "view", "Visualizar módulos da empresa"),
     PermissionDefinition("modules.manage", "modules", "manage", "Ativar módulos da empresa"),
+    PermissionDefinition("metadata.view", "metadata", "view", "Visualizar definicoes de metadados"),
+    PermissionDefinition(
+        "metadata.configure", "metadata", "configure", "Configurar definicoes de metadados"
+    ),
+    PermissionDefinition(
+        "metadata.publish", "metadata", "publish", "Publicar definicoes de metadados"
+    ),
+    PermissionDefinition(
+        "metadata.records.view", "metadata", "records.view", "Visualizar registros personalizados"
+    ),
+    PermissionDefinition(
+        "metadata.records.create", "metadata", "records.create", "Criar registros personalizados"
+    ),
+    PermissionDefinition(
+        "metadata.records.update", "metadata", "records.update", "Alterar registros personalizados"
+    ),
+    PermissionDefinition(
+        "metadata.records.delete", "metadata", "records.delete", "Excluir registros personalizados"
+    ),
     PermissionDefinition("crm.contacts.view", "crm", "contacts.view", "Visualizar contatos do CRM"),
     PermissionDefinition("crm.contacts.create", "crm", "contacts.create", "Criar contatos no CRM"),
     PermissionDefinition(

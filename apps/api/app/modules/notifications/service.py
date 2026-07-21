@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from collections.abc import Sequence
+from datetime import datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from app.core.security import utc_now
 from app.modules.authorization.models import Permission, RolePermission
 from app.modules.notifications.models import (
     ApprovalAction,
+    ApprovalDelegation,
     ApprovalRequest,
     Notification,
     NotificationPreference,
@@ -108,7 +110,7 @@ async def create_notification(
     return notification
 
 
-async def _approver_user_ids(database: AsyncSession, company_id: UUID) -> list[UUID]:
+async def company_approver_user_ids(database: AsyncSession, company_id: UUID) -> list[UUID]:
     owner_ids = set(
         await database.scalars(
             select(CompanyUser.user_id).where(
@@ -138,6 +140,39 @@ async def _approver_user_ids(database: AsyncSession, company_id: UUID) -> list[U
     return sorted(owner_ids, key=str)
 
 
+async def is_company_approver(database: AsyncSession, *, company_id: UUID, user_id: UUID) -> bool:
+    return user_id in await company_approver_user_ids(database, company_id)
+
+
+async def represented_approver_user_id(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    actor_user_id: UUID,
+    allowed_user_ids: Sequence[UUID],
+    at: datetime | None = None,
+) -> UUID | None:
+    allowed = set(allowed_user_ids)
+    if not allowed or not await is_company_approver(
+        database, company_id=company_id, user_id=actor_user_id
+    ):
+        return None
+    if actor_user_id in allowed:
+        return actor_user_id
+    reference_time = at or utc_now()
+    represented_user_id: UUID | None = await database.scalar(
+        select(ApprovalDelegation.delegator_user_id).where(
+            ApprovalDelegation.company_id == company_id,
+            ApprovalDelegation.delegate_user_id == actor_user_id,
+            ApprovalDelegation.delegator_user_id.in_(allowed),
+            ApprovalDelegation.status == "active",
+            ApprovalDelegation.starts_at <= reference_time,
+            ApprovalDelegation.ends_at > reference_time,
+        )
+    )
+    return represented_user_id
+
+
 async def create_approval_request(
     database: AsyncSession,
     *,
@@ -148,6 +183,7 @@ async def create_approval_request(
     description: str,
     context: dict[str, Any] | None = None,
     assigned_user_id: UUID | None = None,
+    recipient_user_ids: Sequence[UUID] | None = None,
     required_permission: str = "approvals.decide",
     workflow_id: UUID | None = None,
     workflow_execution_id: UUID | None = None,
@@ -175,7 +211,11 @@ async def create_approval_request(
     database.add(approval)
     await database.flush()
     recipients = (
-        [assigned_user_id] if assigned_user_id else await _approver_user_ids(database, company_id)
+        list(recipient_user_ids)
+        if recipient_user_ids is not None
+        else [assigned_user_id]
+        if assigned_user_id
+        else await company_approver_user_ids(database, company_id)
     )
     if not recipients and requested_by_user_id is not None:
         recipients = [requested_by_user_id]
@@ -292,7 +332,7 @@ async def process_due_reminders(database: AsyncSession, *, reminder_minutes: int
         recipients = (
             [approval.assigned_user_id]
             if approval.assigned_user_id
-            else await _approver_user_ids(database, approval.company_id)
+            else await company_approver_user_ids(database, approval.company_id)
         )
         for recipient_id in recipients:
             preference = await get_notification_preference(

@@ -59,6 +59,19 @@ export interface ApprovalRequest {
   actions: ApprovalAction[];
 }
 
+export interface ApprovalDelegation {
+  id: string;
+  delegator_user_id: string;
+  delegate_user_id: string;
+  starts_at: string;
+  ends_at: string;
+  reason: string;
+  status: "active" | "revoked";
+  effective: boolean;
+  created_at: string;
+  revoked_at: string | null;
+}
+
 function useNotificationAccess(enabled = true) {
   const { me, status } = useSession();
   return (
@@ -101,6 +114,16 @@ export function useApprovals(enabled: boolean) {
     queryKey: ["approvals"],
     queryFn: () =>
       request<ApprovalRequest[]>("/notifications/approvals?status=pending"),
+    enabled: canLoad,
+  });
+}
+
+export function useApprovalDelegations(enabled: boolean) {
+  const canLoad = useNotificationAccess(enabled);
+  return useQuery({
+    queryKey: ["approval-delegations"],
+    queryFn: () =>
+      request<ApprovalDelegation[]>("/notifications/approval-delegations"),
     enabled: canLoad,
   });
 }
