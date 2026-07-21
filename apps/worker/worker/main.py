@@ -32,3 +32,5 @@ celery_app.conf.update(
         },
     },
 )
+
+from worker import event_tasks as _event_tasks  # noqa: E402, F401

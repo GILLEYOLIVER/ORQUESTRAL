@@ -165,3 +165,5 @@ __all__ = [
     "WorkflowExecution",
     "WorkflowVersion",
 ]
+
+from app.modules.events import models as _event_models  # noqa: F401

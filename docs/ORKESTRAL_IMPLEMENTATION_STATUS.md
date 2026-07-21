@@ -183,3 +183,26 @@ Data: 21 de julho de 2026.
 - Decisao imediata: concluir fundacao empresarial, eventos transacionais e base de metadata antes de ampliar autonomia.
 - Migracoes: nenhuma neste ciclo de arquitetura.
 - Proximo passo exato: implementar o primeiro recorte vertical de Fase 1 com Tenant Context, policy e auditoria/evento.
+
+## Ciclo empresarial 5 - primeiro recorte fundamental de eventos
+
+Data: 21 de julho de 2026.
+
+- Banco: outbox transacional e ledger de consumo idempotente.
+- Contrato: envelope versionado, classificado, limitado e sem chaves sensiveis.
+- Producao real: acoes autorizadas geram evento na mesma transacao da auditoria.
+- Entrega: task Celery publica lotes em Redis Stream por interface substituivel.
+- Resiliencia: lock recuperavel, retry com backoff e dead-letter apos limite.
+- Testes: schema, payload, publicacao e duplicidade de consumo.
+- Migracao: `20260721_0028`.
+- Proximo passo exato: validar migracao e suites; depois iniciar Tenant Context e Policy Engine.
+
+### Evidencia de validacao do ciclo 5
+
+- Ruff: 235 arquivos formatados e lint aprovado.
+- MyPy: 171 arquivos aprovados.
+- Backend: 100 testes unitarios aprovados.
+- Integracao: 7 testes aprovados.
+- Seguranca: auditoria concluida sem bloqueios.
+- Migracao: `0028 -> 0027 -> 0028` aprovada; banco em `20260721_0028 (head)`.
+- Worker: task registrada e execucao real aprovada com lote vazio.
