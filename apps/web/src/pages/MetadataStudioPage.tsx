@@ -55,6 +55,7 @@ import {
 } from "../metadata/valueCoercion";
 import { useSession } from "../session/context";
 import { MetadataPackageLifecycle } from "../metadata/MetadataPackageLifecycle";
+import { MetadataSecurityPanel } from "../metadata/MetadataSecurityPanel";
 import "../metadata/metadata-studio.css";
 
 const FIELD_TYPES: Array<{ value: MetadataDataType; label: string }> = [
@@ -1117,6 +1118,13 @@ export function MetadataStudioPage() {
                   ) : null}
                 </div>
               </Card>
+
+              {canConfigure ? (
+                <MetadataSecurityPanel
+                  definitionId={selected.id}
+                  fields={selected.version.fields}
+                />
+              ) : null}
 
               <Card className="metadata-design-card">
                 <div className="metadata-card-heading">

@@ -98,3 +98,13 @@ Limites conscientes deste ciclo:
 - Preparar promocao gera bundle verificavel; nao existe falsa indicacao de deploy remoto.
 - Releases, validacoes, publicacoes, instalacoes e promocoes geram auditoria e eventos.
 - O pacote legado 1.0 permanece compativel para migracao gradual.
+
+## Ciclo 57 - seguranca de entidade, campo e registro
+
+- Regras por usuario ou papel controlam leitura, criacao, edicao, exclusao e exportacao.
+- O escopo de registros pode ser `all`, `owned` ou `owned_shared`.
+- Regras de usuario prevalecem sobre regras de papel; ausencia de destinatario em uma entidade configurada nega acesso.
+- Campos podem herdar a entidade ou declarar leitura e edicao separadamente; o backend mascara leitura e retorna `403` para gravacao proibida.
+- Todo registro possui proprietario e pode ser compartilhado com usuario ou papel para leitura ou edicao.
+- Proprietarios da empresa e administradores de plataforma preservam acesso de recuperacao, sem enfraquecer o isolamento por `company_id`.
+- Configuracao, compartilhamento e revogacao produzem auditoria e eventos sem incluir dados do registro.

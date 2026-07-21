@@ -3132,6 +3132,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metadata/entities/{definition_id}/records/{record_id}/shares": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Metadata Record Shares */
+        get: operations["get_metadata_record_shares_metadata_entities__definition_id__records__record_id__shares_get"];
+        put?: never;
+        /** Create Metadata Record Share */
+        post: operations["create_metadata_record_share_metadata_entities__definition_id__records__record_id__shares_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/records/{record_id}/shares/{share_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Metadata Record Share */
+        delete: operations["revoke_metadata_record_share_metadata_entities__definition_id__records__record_id__shares__share_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/entities/{definition_id}/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Metadata Security Configuration */
+        get: operations["get_metadata_security_configuration_metadata_entities__definition_id__security_get"];
+        /** Update Metadata Security Configuration */
+        put: operations["update_metadata_security_configuration_metadata_entities__definition_id__security_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metadata/entities/{definition_id}/validate": {
         parameters: {
             query?: never;
@@ -9959,6 +10012,99 @@ export interface components {
             /** Views */
             views: components["schemas"]["MetadataViewInput"][];
         };
+        /** MetadataEntityAccessRuleInput */
+        MetadataEntityAccessRuleInput: {
+            /**
+             * Can Create
+             * @default false
+             */
+            can_create: boolean;
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
+            /**
+             * Can Export
+             * @default false
+             */
+            can_export: boolean;
+            /**
+             * Can Update
+             * @default false
+             */
+            can_update: boolean;
+            /**
+             * Can View
+             * @default true
+             */
+            can_view: boolean;
+            /**
+             * Record Scope
+             * @default owned
+             * @enum {string}
+             */
+            record_scope: "all" | "owned" | "owned_shared";
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Type
+             * @enum {string}
+             */
+            subject_type: "user" | "role";
+        };
+        /** MetadataEntityAccessRuleResponse */
+        MetadataEntityAccessRuleResponse: {
+            /**
+             * Can Create
+             * @default false
+             */
+            can_create: boolean;
+            /**
+             * Can Delete
+             * @default false
+             */
+            can_delete: boolean;
+            /**
+             * Can Export
+             * @default false
+             */
+            can_export: boolean;
+            /**
+             * Can Update
+             * @default false
+             */
+            can_update: boolean;
+            /**
+             * Can View
+             * @default true
+             */
+            can_view: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Record Scope
+             * @default owned
+             * @enum {string}
+             */
+            record_scope: "all" | "owned" | "owned_shared";
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Type
+             * @enum {string}
+             */
+            subject_type: "user" | "role";
+        };
         /** MetadataEntityCreate */
         MetadataEntityCreate: {
             /** Description */
@@ -10099,6 +10245,61 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
+        };
+        /** MetadataFieldAccessRuleInput */
+        MetadataFieldAccessRuleInput: {
+            /**
+             * Can Edit
+             * @default false
+             */
+            can_edit: boolean;
+            /**
+             * Can View
+             * @default true
+             */
+            can_view: boolean;
+            /** Field Key */
+            field_key: string;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Type
+             * @enum {string}
+             */
+            subject_type: "user" | "role";
+        };
+        /** MetadataFieldAccessRuleResponse */
+        MetadataFieldAccessRuleResponse: {
+            /**
+             * Can Edit
+             * @default false
+             */
+            can_edit: boolean;
+            /**
+             * Can View
+             * @default true
+             */
+            can_view: boolean;
+            /** Field Key */
+            field_key: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Type
+             * @enum {string}
+             */
+            subject_type: "user" | "role";
         };
         /** MetadataFieldInput */
         MetadataFieldInput: {
@@ -10578,6 +10779,8 @@ export interface components {
             id: string;
             /** Masked Fields */
             masked_fields: string[];
+            /** Owner User Id */
+            owner_user_id: string | null;
             /** Record Type Key */
             record_type_key: string | null;
             /** Record Version */
@@ -10593,6 +10796,72 @@ export interface components {
             values: {
                 [key: string]: components["schemas"]["JsonValue"];
             };
+        };
+        /** MetadataRecordShareCreate */
+        MetadataRecordShareCreate: {
+            /**
+             * Can Edit
+             * @default false
+             */
+            can_edit: boolean;
+            /**
+             * Can View
+             * @default true
+             */
+            can_view: boolean;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Type
+             * @enum {string}
+             */
+            subject_type: "user" | "role";
+        };
+        /** MetadataRecordShareResponse */
+        MetadataRecordShareResponse: {
+            /**
+             * Can Edit
+             * @default false
+             */
+            can_edit: boolean;
+            /**
+             * Can View
+             * @default true
+             */
+            can_view: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /**
+             * Subject Id
+             * Format: uuid
+             */
+            subject_id: string;
+            /**
+             * Subject Type
+             * @enum {string}
+             */
+            subject_type: "user" | "role";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** MetadataRecordTypeInput */
         MetadataRecordTypeInput: {
@@ -10651,6 +10920,27 @@ export interface components {
              * Format: uuid
              */
             target_definition_id: string;
+        };
+        /** MetadataSecurityConfigurationResponse */
+        MetadataSecurityConfigurationResponse: {
+            /** Configured */
+            configured: boolean;
+            /**
+             * Definition Id
+             * Format: uuid
+             */
+            definition_id: string;
+            /** Entity Rules */
+            entity_rules: components["schemas"]["MetadataEntityAccessRuleResponse"][];
+            /** Field Rules */
+            field_rules: components["schemas"]["MetadataFieldAccessRuleResponse"][];
+        };
+        /** MetadataSecurityConfigurationUpdate */
+        MetadataSecurityConfigurationUpdate: {
+            /** Entity Rules */
+            entity_rules?: components["schemas"]["MetadataEntityAccessRuleInput"][];
+            /** Field Rules */
+            field_rules?: components["schemas"]["MetadataFieldAccessRuleInput"][];
         };
         /** MetadataValidationResponse */
         MetadataValidationResponse: {
@@ -25324,6 +25614,261 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_metadata_record_shares_metadata_entities__definition_id__records__record_id__shares_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataRecordShareResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_metadata_record_share_metadata_entities__definition_id__records__record_id__shares_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataRecordShareCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataRecordShareResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revoke_metadata_record_share_metadata_entities__definition_id__records__record_id__shares__share_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+                record_id: string;
+                share_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_metadata_security_configuration_metadata_entities__definition_id__security_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataSecurityConfigurationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_metadata_security_configuration_metadata_entities__definition_id__security_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataSecurityConfigurationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataSecurityConfigurationResponse"];
+                };
             };
             /** @description Solicitação inválida */
             400: {

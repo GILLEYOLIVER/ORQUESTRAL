@@ -14203,6 +14203,130 @@
         "title": "MetadataDesignUpdate",
         "type": "object"
       },
+      "MetadataEntityAccessRuleInput": {
+        "additionalProperties": false,
+        "properties": {
+          "can_create": {
+            "default": false,
+            "title": "Can Create",
+            "type": "boolean"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "can_export": {
+            "default": false,
+            "title": "Can Export",
+            "type": "boolean"
+          },
+          "can_update": {
+            "default": false,
+            "title": "Can Update",
+            "type": "boolean"
+          },
+          "can_view": {
+            "default": true,
+            "title": "Can View",
+            "type": "boolean"
+          },
+          "record_scope": {
+            "default": "owned",
+            "enum": [
+              "all",
+              "owned",
+              "owned_shared"
+            ],
+            "title": "Record Scope",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "user",
+              "role"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_type",
+          "subject_id"
+        ],
+        "title": "MetadataEntityAccessRuleInput",
+        "type": "object"
+      },
+      "MetadataEntityAccessRuleResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "can_create": {
+            "default": false,
+            "title": "Can Create",
+            "type": "boolean"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "can_export": {
+            "default": false,
+            "title": "Can Export",
+            "type": "boolean"
+          },
+          "can_update": {
+            "default": false,
+            "title": "Can Update",
+            "type": "boolean"
+          },
+          "can_view": {
+            "default": true,
+            "title": "Can View",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "record_scope": {
+            "default": "owned",
+            "enum": [
+              "all",
+              "owned",
+              "owned_shared"
+            ],
+            "title": "Record Scope",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "user",
+              "role"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_type",
+          "subject_id",
+          "id"
+        ],
+        "title": "MetadataEntityAccessRuleResponse",
+        "type": "object"
+      },
       "MetadataEntityCreate": {
         "additionalProperties": false,
         "properties": {
@@ -14567,6 +14691,96 @@
           "updated_at"
         ],
         "title": "MetadataEntityVersionResponse",
+        "type": "object"
+      },
+      "MetadataFieldAccessRuleInput": {
+        "additionalProperties": false,
+        "properties": {
+          "can_edit": {
+            "default": false,
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_view": {
+            "default": true,
+            "title": "Can View",
+            "type": "boolean"
+          },
+          "field_key": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Field Key",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "user",
+              "role"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_key",
+          "subject_type",
+          "subject_id"
+        ],
+        "title": "MetadataFieldAccessRuleInput",
+        "type": "object"
+      },
+      "MetadataFieldAccessRuleResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "can_edit": {
+            "default": false,
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_view": {
+            "default": true,
+            "title": "Can View",
+            "type": "boolean"
+          },
+          "field_key": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Field Key",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "user",
+              "role"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_key",
+          "subject_type",
+          "subject_id",
+          "id"
+        ],
+        "title": "MetadataFieldAccessRuleResponse",
         "type": "object"
       },
       "MetadataFieldInput": {
@@ -15922,6 +16136,18 @@
             "title": "Masked Fields",
             "type": "array"
           },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
           "record_type_key": {
             "anyOf": [
               {
@@ -15957,6 +16183,7 @@
         "required": [
           "id",
           "definition_id",
+          "owner_user_id",
           "schema_version",
           "record_type_key",
           "values",
@@ -15966,6 +16193,98 @@
           "updated_at"
         ],
         "title": "MetadataRecordResponse",
+        "type": "object"
+      },
+      "MetadataRecordShareCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "can_edit": {
+            "default": false,
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_view": {
+            "default": true,
+            "title": "Can View",
+            "type": "boolean"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "user",
+              "role"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_type",
+          "subject_id"
+        ],
+        "title": "MetadataRecordShareCreate",
+        "type": "object"
+      },
+      "MetadataRecordShareResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "can_edit": {
+            "default": false,
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_view": {
+            "default": true,
+            "title": "Can View",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "title": "Record Id",
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_type": {
+            "enum": [
+              "user",
+              "role"
+            ],
+            "title": "Subject Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_type",
+          "subject_id",
+          "id",
+          "record_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MetadataRecordShareResponse",
         "type": "object"
       },
       "MetadataRecordTypeInput": {
@@ -16109,6 +16428,65 @@
           "target_definition_id"
         ],
         "title": "MetadataRelationshipInput",
+        "type": "object"
+      },
+      "MetadataSecurityConfigurationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "definition_id": {
+            "format": "uuid",
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "entity_rules": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataEntityAccessRuleResponse"
+            },
+            "title": "Entity Rules",
+            "type": "array"
+          },
+          "field_rules": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataFieldAccessRuleResponse"
+            },
+            "title": "Field Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "definition_id",
+          "configured",
+          "entity_rules",
+          "field_rules"
+        ],
+        "title": "MetadataSecurityConfigurationResponse",
+        "type": "object"
+      },
+      "MetadataSecurityConfigurationUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_rules": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataEntityAccessRuleInput"
+            },
+            "maxItems": 500,
+            "title": "Entity Rules",
+            "type": "array"
+          },
+          "field_rules": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataFieldAccessRuleInput"
+            },
+            "maxItems": 5000,
+            "title": "Field Rules",
+            "type": "array"
+          }
+        },
+        "title": "MetadataSecurityConfigurationUpdate",
         "type": "object"
       },
       "MetadataValidationResponse": {
@@ -39967,6 +40345,399 @@
           }
         ],
         "summary": "Update Metadata Record",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/entities/{definition_id}/records/{record_id}/shares": {
+      "get": {
+        "operationId": "get_metadata_record_shares_metadata_entities__definition_id__records__record_id__shares_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MetadataRecordShareResponse"
+                  },
+                  "title": "Response Get Metadata Record Shares Metadata Entities  Definition Id  Records  Record Id  Shares Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Metadata Record Shares",
+        "tags": [
+          "metadata"
+        ]
+      },
+      "post": {
+        "operationId": "create_metadata_record_share_metadata_entities__definition_id__records__record_id__shares_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataRecordShareCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataRecordShareResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Metadata Record Share",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/entities/{definition_id}/records/{record_id}/shares/{share_id}": {
+      "delete": {
+        "operationId": "revoke_metadata_record_share_metadata_entities__definition_id__records__record_id__shares__share_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Metadata Record Share",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/entities/{definition_id}/security": {
+      "get": {
+        "operationId": "get_metadata_security_configuration_metadata_entities__definition_id__security_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataSecurityConfigurationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Metadata Security Configuration",
+        "tags": [
+          "metadata"
+        ]
+      },
+      "put": {
+        "operationId": "update_metadata_security_configuration_metadata_entities__definition_id__security_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataSecurityConfigurationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataSecurityConfigurationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Metadata Security Configuration",
         "tags": [
           "metadata"
         ]

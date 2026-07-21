@@ -6,10 +6,10 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Date, DateTime, Integer, Numeric, and_, cast, func, or_, select
+from sqlalchemy import Date, DateTime, Integer, Numeric, and_, cast, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.metadata.models import MetadataRecord
+from app.modules.metadata.models import MetadataRecord, MetadataRecordShare
 from app.modules.metadata.view_engine import (
     MetadataRecordFilterSpec,
     MetadataRecordSortSpec,
@@ -77,12 +77,43 @@ async def list_records(
     page_size: int,
     view_filters: Sequence[MetadataRecordFilterSpec] = (),
     view_sorting: Sequence[MetadataRecordSortSpec] = (),
+    access_scope: str = "all",
+    actor_user_id: UUID | None = None,
+    role_ids: Sequence[UUID] = (),
 ) -> tuple[list[MetadataRecord], int]:
     filters: list[Any] = [
         MetadataRecord.company_id == company_id,
         MetadataRecord.definition_id == definition_id,
         MetadataRecord.deleted_at.is_(None),
     ]
+    if access_scope != "all" and actor_user_id is not None:
+        owner_filter = MetadataRecord.owner_user_id == actor_user_id
+        if access_scope == "owned_shared":
+            subject_filters = [
+                and_(
+                    MetadataRecordShare.subject_type == "user",
+                    MetadataRecordShare.subject_id == actor_user_id,
+                )
+            ]
+            if role_ids:
+                subject_filters.append(
+                    and_(
+                        MetadataRecordShare.subject_type == "role",
+                        MetadataRecordShare.subject_id.in_(role_ids),
+                    )
+                )
+            shared_filter = exists(
+                select(MetadataRecordShare.id).where(
+                    MetadataRecordShare.company_id == company_id,
+                    MetadataRecordShare.definition_id == definition_id,
+                    MetadataRecordShare.record_id == MetadataRecord.id,
+                    MetadataRecordShare.can_view.is_(True),
+                    or_(*subject_filters),
+                )
+            )
+            filters.append(or_(owner_filter, shared_filter))
+        else:
+            filters.append(owner_filter)
     filters.extend(_filter_expression(item) for item in view_filters)
     total = int(
         await database.scalar(select(func.count()).select_from(MetadataRecord).where(*filters)) or 0
