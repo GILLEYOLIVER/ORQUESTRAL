@@ -75,12 +75,18 @@ export interface AgentChatResponse {
     agent_id: string;
     title: string;
     status: string;
+    closed_at: string | null;
     created_at: string;
     updated_at: string;
   };
   user_message: AgentMessageResponse;
   assistant_message: AgentMessageResponse;
   pending_actions: AgentToolRunResponse[];
+}
+
+export interface AgentConversationCloseResponse {
+  conversation: AgentChatResponse["conversation"];
+  deleted_memories: number;
 }
 
 export interface AgentUsageResponse {
@@ -157,6 +163,12 @@ export interface AgentMemoryPolicyResponse {
   require_consent_for_user_scope: boolean;
   retrieval_enabled: boolean;
   max_retrieval_entries: number;
+  max_context_tokens: number;
+  scope_policies: Array<{
+    scope: "conversation" | "task" | "user" | "company" | "operational";
+    retention_days: number;
+    retrieval_enabled: boolean;
+  }>;
   updated_at: string | null;
 }
 

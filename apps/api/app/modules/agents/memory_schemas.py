@@ -13,6 +13,12 @@ MemoryClassification = Literal["public", "internal", "confidential", "restricted
 MemorySource = Literal["manual", "conversation", "task", "tool"]
 
 
+class AgentMemoryScopePolicyInput(StrictSchema):
+    scope: MemoryScope
+    retention_days: int = Field(ge=1, le=3650)
+    retrieval_enabled: bool = True
+
+
 class AgentMemoryPolicyUpdate(StrictSchema):
     default_retention_days: int = Field(default=30, ge=1, le=3650)
     max_retention_days: int = Field(default=365, ge=1, le=3650)
@@ -21,6 +27,8 @@ class AgentMemoryPolicyUpdate(StrictSchema):
     require_consent_for_user_scope: bool = True
     retrieval_enabled: bool = False
     max_retrieval_entries: int = Field(default=5, ge=1, le=20)
+    max_context_tokens: int = Field(default=1000, ge=128, le=16_000)
+    scope_policies: list[AgentMemoryScopePolicyInput] = Field(default_factory=list, max_length=5)
 
     @model_validator(mode="after")
     def validate_policy(self) -> Self:
@@ -30,6 +38,13 @@ class AgentMemoryPolicyUpdate(StrictSchema):
             raise ValueError("Os escopos não podem ser repetidos.")
         if len(set(self.allowed_classifications)) != len(self.allowed_classifications):
             raise ValueError("As classificações não podem ser repetidas.")
+        policy_scopes = [item.scope for item in self.scope_policies]
+        if len(set(policy_scopes)) != len(policy_scopes):
+            raise ValueError("Cada escopo pode possuir somente uma política.")
+        if any(scope not in self.allowed_scopes for scope in policy_scopes):
+            raise ValueError("Políticas por escopo exigem que o escopo esteja permitido.")
+        if any(item.retention_days > self.max_retention_days for item in self.scope_policies):
+            raise ValueError("A retenção do escopo supera o limite máximo da política.")
         return self
 
 
@@ -43,6 +58,8 @@ class AgentMemoryPolicyResponse(StrictSchema):
     require_consent_for_user_scope: bool
     retrieval_enabled: bool
     max_retrieval_entries: int
+    max_context_tokens: int
+    scope_policies: list[AgentMemoryScopePolicyInput]
     updated_at: datetime | None
 
 

@@ -231,6 +231,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/conversations/{conversation_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Conversation */
+        post: operations["close_conversation_agents__agent_id__conversations__conversation_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/conversations/{conversation_id}/messages": {
         parameters: {
             query?: never;
@@ -3913,6 +3930,12 @@ export interface components {
             run: components["schemas"]["AgentRunResponse"];
             user_message: components["schemas"]["AgentMessageResponse"];
         };
+        /** AgentConversationCloseResponse */
+        AgentConversationCloseResponse: {
+            conversation: components["schemas"]["AgentConversationResponse"];
+            /** Deleted Memories */
+            deleted_memories: number;
+        };
         /** AgentConversationCreate */
         AgentConversationCreate: {
             /** Title */
@@ -3925,6 +3948,8 @@ export interface components {
              * Format: uuid
              */
             agent_id: string;
+            /** Closed At */
+            closed_at: string | null;
             /**
              * Created At
              * Format: date-time
@@ -4412,6 +4437,8 @@ export interface components {
             default_retention_days: number;
             /** Id */
             id: string | null;
+            /** Max Context Tokens */
+            max_context_tokens: number;
             /** Max Retention Days */
             max_retention_days: number;
             /** Max Retrieval Entries */
@@ -4420,6 +4447,8 @@ export interface components {
             require_consent_for_user_scope: boolean;
             /** Retrieval Enabled */
             retrieval_enabled: boolean;
+            /** Scope Policies */
+            scope_policies: components["schemas"]["AgentMemoryScopePolicyInput"][];
             /** Updated At */
             updated_at: string | null;
         };
@@ -4434,6 +4463,11 @@ export interface components {
              * @default 30
              */
             default_retention_days: number;
+            /**
+             * Max Context Tokens
+             * @default 1000
+             */
+            max_context_tokens: number;
             /**
              * Max Retention Days
              * @default 365
@@ -4454,6 +4488,8 @@ export interface components {
              * @default false
              */
             retrieval_enabled: boolean;
+            /** Scope Policies */
+            scope_policies?: components["schemas"]["AgentMemoryScopePolicyInput"][];
         };
         /** AgentMemoryPurgeRequest */
         AgentMemoryPurgeRequest: {
@@ -4518,6 +4554,21 @@ export interface components {
             source_type: "manual" | "conversation" | "task" | "tool";
             /** Subject User Id */
             subject_user_id: string | null;
+        };
+        /** AgentMemoryScopePolicyInput */
+        AgentMemoryScopePolicyInput: {
+            /** Retention Days */
+            retention_days: number;
+            /**
+             * Retrieval Enabled
+             * @default true
+             */
+            retrieval_enabled: boolean;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "conversation" | "task" | "user" | "company" | "operational";
         };
         /** AgentMessageResponse */
         AgentMessageResponse: {
@@ -10689,6 +10740,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentConversationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    close_conversation_agents__agent_id__conversations__conversation_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentConversationCloseResponse"];
                 };
             };
             /** @description Solicitação inválida */

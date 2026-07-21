@@ -348,6 +348,11 @@ class AgentConversation(Base):
     __tablename__ = "agent_conversations"
     __table_args__ = (
         CheckConstraint("status IN ('open', 'closed')", name="ck_agent_conversations_status"),
+        CheckConstraint(
+            "(status = 'open' AND closed_at IS NULL) OR "
+            "(status = 'closed' AND closed_at IS NOT NULL)",
+            name="ck_agent_conversations_closed_at",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -368,6 +373,7 @@ class AgentConversation(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
     )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
 
 
 class AgentMessage(Base):

@@ -17,6 +17,7 @@ import {
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
 import {
   type AgentChatResponse,
+  type AgentConversationCloseResponse,
   type AgentApprovalPolicyEvaluationResponse,
   type AgentApprovalPolicyResponse,
   type AgentMessageResponse,
@@ -141,10 +142,20 @@ export function AgentsPage() {
   const [memoryConsentRequired, setMemoryConsentRequired] = useState(true);
   const [memoryRetrievalEnabled, setMemoryRetrievalEnabled] = useState(false);
   const [memoryRetrievalLimit, setMemoryRetrievalLimit] = useState("5");
+  const [memoryMaxContextTokens, setMemoryMaxContextTokens] = useState("1000");
+  const [memoryScopeRetention, setMemoryScopeRetention] = useState<
+    Record<string, string>
+  >({});
+  const [memoryRetrievalScopes, setMemoryRetrievalScopes] = useState<string[]>(
+    [],
+  );
   const [memoryConsentSubjectUserId, setMemoryConsentSubjectUserId] =
     useState("");
   const [memoryConsentReference, setMemoryConsentReference] = useState("");
   const [memoryFeedback, setMemoryFeedback] = useState<string | null>(null);
+  const [conversationFeedback, setConversationFeedback] = useState<
+    string | null
+  >(null);
   const selected = agents.data?.find((agent) => agent.id === selectedId);
 
   useEffect(() => {
@@ -158,6 +169,7 @@ export function AgentsPage() {
   }, [agents.data, selectedId]);
   useEffect(() => {
     setConversationId(null);
+    setConversationFeedback(null);
   }, [selectedId]);
   const catalog = useQuery({
     queryKey: ["agent-tools-catalog"],
@@ -234,6 +246,20 @@ export function AgentsPage() {
     setMemoryConsentRequired(memoryPolicy.data.require_consent_for_user_scope);
     setMemoryRetrievalEnabled(memoryPolicy.data.retrieval_enabled);
     setMemoryRetrievalLimit(String(memoryPolicy.data.max_retrieval_entries));
+    setMemoryMaxContextTokens(String(memoryPolicy.data.max_context_tokens));
+    setMemoryScopeRetention(
+      Object.fromEntries(
+        memoryPolicy.data.scope_policies.map((item) => [
+          item.scope,
+          String(item.retention_days),
+        ]),
+      ),
+    );
+    setMemoryRetrievalScopes(
+      memoryPolicy.data.scope_policies
+        .filter((item) => item.retrieval_enabled)
+        .map((item) => item.scope),
+    );
   }, [memoryPolicy.data]);
 
   const refresh = () => {
@@ -305,9 +331,27 @@ export function AgentsPage() {
       }),
     onSuccess: (response) => {
       setConversationId(response.conversation.id);
+      setConversationFeedback(null);
       setMessage("");
       refresh();
     },
+  });
+  const closeConversation = useMutation({
+    mutationFn: () =>
+      request<AgentConversationCloseResponse>(
+        `/agents/${selectedId}/conversations/${conversationId}/close`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      setConversationId(null);
+      setConversationFeedback(
+        result.deleted_memories
+          ? `Conversa encerrada e ${result.deleted_memories} memória(s) eliminada(s).`
+          : "Conversa encerrada sem memória temporária armazenada.",
+      );
+      refresh();
+    },
+    onError: (caught) => setConversationFeedback(errorMessage(caught)),
   });
   const decide = useMutation({
     mutationFn: ({
@@ -372,6 +416,14 @@ export function AgentsPage() {
             require_consent_for_user_scope: memoryConsentRequired,
             retrieval_enabled: memoryRetrievalEnabled,
             max_retrieval_entries: Number(memoryRetrievalLimit),
+            max_context_tokens: Number(memoryMaxContextTokens),
+            scope_policies: memoryScopes.map((scope) => ({
+              scope,
+              retention_days: Number(
+                memoryScopeRetention[scope] ?? memoryDefaultRetention,
+              ),
+              retrieval_enabled: memoryRetrievalScopes.includes(scope),
+            })),
           },
         },
       ),
@@ -850,6 +902,55 @@ export function AgentsPage() {
                     type="number"
                     value={memoryRetrievalLimit}
                   />
+                  <TextField
+                    label="Orçamento do contexto (tokens estimados)"
+                    max={16000}
+                    min={128}
+                    onChange={(event) =>
+                      setMemoryMaxContextTokens(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryMaxContextTokens}
+                  />
+                  <fieldset className="agent-memory-options">
+                    <legend>Retenção e recuperação por escopo</legend>
+                    {memoryScopes.map((scope) => (
+                      <div key={scope}>
+                        <TextField
+                          label={`${scope} · retenção (dias)`}
+                          max={Number(memoryMaxRetention)}
+                          min={1}
+                          onChange={(event) =>
+                            setMemoryScopeRetention((current) => ({
+                              ...current,
+                              [scope]: event.target.value,
+                            }))
+                          }
+                          required
+                          type="number"
+                          value={
+                            memoryScopeRetention[scope] ??
+                            memoryDefaultRetention
+                          }
+                        />
+                        <label>
+                          <input
+                            checked={memoryRetrievalScopes.includes(scope)}
+                            onChange={(event) =>
+                              setMemoryRetrievalScopes((current) =>
+                                event.target.checked
+                                  ? [...new Set([...current, scope])]
+                                  : current.filter((item) => item !== scope),
+                              )
+                            }
+                            type="checkbox"
+                          />
+                          Recuperar este escopo
+                        </label>
+                      </div>
+                    ))}
+                  </fieldset>
                   <div className="form-actions">
                     <Button loading={saveMemoryPolicy.isPending} type="submit">
                       <BrainCircuit size={16} /> Salvar política
@@ -962,6 +1063,9 @@ export function AgentsPage() {
                 eyebrow="Princípio do menor privilégio"
                 title="Ferramentas autorizadas"
               >
+                {conversationFeedback ? (
+                  <Alert>{conversationFeedback}</Alert>
+                ) : null}
                 <div className="agent-tool-grid">
                   {catalog.data?.map((tool) => (
                     <label
@@ -1532,6 +1636,16 @@ export function AgentsPage() {
                   <Button loading={chat.isPending} type="submit">
                     <Send size={17} /> Enviar
                   </Button>
+                  {conversationId ? (
+                    <Button
+                      loading={closeConversation.isPending}
+                      onClick={() => closeConversation.mutate()}
+                      type="button"
+                      variant="secondary"
+                    >
+                      <X size={17} /> Encerrar conversa
+                    </Button>
+                  ) : null}
                 </form>
               </Card>
             </PermissionGuard>

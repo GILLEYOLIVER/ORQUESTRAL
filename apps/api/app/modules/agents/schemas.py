@@ -101,8 +101,14 @@ class AgentConversationResponse(StrictSchema):
     agent_id: UUID
     title: str
     status: Literal["open", "closed"]
+    closed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class AgentConversationCloseResponse(StrictSchema):
+    conversation: AgentConversationResponse
+    deleted_memories: int
 
 
 class AgentMessageResponse(StrictSchema):

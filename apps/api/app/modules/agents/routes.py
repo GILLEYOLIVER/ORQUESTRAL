@@ -47,7 +47,11 @@ from app.modules.agents.governance import (
     settle_agent_budget,
     version_checksum,
 )
-from app.modules.agents.memory_models import AgentMemoryPolicy
+from app.modules.agents.memory_models import (
+    AgentMemoryEntry,
+    AgentMemoryPolicy,
+    AgentMemoryScopePolicy,
+)
 from app.modules.agents.memory_routes import router as memory_router
 from app.modules.agents.memory_service import retrieve_authorized_memories
 from app.modules.agents.models import (
@@ -74,6 +78,7 @@ from app.modules.agents.schemas import (
     AgentBudgetUpdate,
     AgentChatRequest,
     AgentChatResponse,
+    AgentConversationCloseResponse,
     AgentConversationCreate,
     AgentConversationResponse,
     AgentCreate,
@@ -1721,6 +1726,75 @@ async def create_conversation(
     return _conversation_response(conversation)
 
 
+@router.post(
+    "/{agent_id}/conversations/{conversation_id}/close",
+    response_model=AgentConversationCloseResponse,
+)
+async def close_conversation(
+    agent_id: UUID,
+    conversation_id: UUID,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentConversationCloseResponse:
+    context = get_request_context(principal)
+    conversation = await _conversation(
+        database,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+        company_id=context.company_id,
+    )
+    if conversation.status == "closed":
+        return AgentConversationCloseResponse(
+            conversation=_conversation_response(conversation), deleted_memories=0
+        )
+    memories = list(
+        await database.scalars(
+            select(AgentMemoryEntry)
+            .where(
+                AgentMemoryEntry.company_id == context.company_id,
+                AgentMemoryEntry.agent_id == agent_id,
+                AgentMemoryEntry.source_type == "conversation",
+                AgentMemoryEntry.source_id == str(conversation_id),
+            )
+            .with_for_update()
+        )
+    )
+    for memory in memories:
+        await database.delete(memory)
+    conversation.status = "closed"
+    conversation.closed_at = utc_now()
+    conversation.updated_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.conversation.closed",
+        target_type="agent_conversation",
+        target_id=conversation.id,
+        details={"deleted_memories": len(memories)},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.conversation.closed",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={
+                "agent_id": str(agent_id),
+                "conversation_id": str(conversation.id),
+                "deleted_memories": len(memories),
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(conversation)
+    return AgentConversationCloseResponse(
+        conversation=_conversation_response(conversation),
+        deleted_memories=len(memories),
+    )
+
+
 @router.get(
     "/{agent_id}/conversations/{conversation_id}/messages",
     response_model=list[AgentMessageResponse],
@@ -1765,6 +1839,14 @@ async def chat_with_agent(
         select(AgentMemoryPolicy).where(
             AgentMemoryPolicy.company_id == context.company_id,
             AgentMemoryPolicy.agent_id == agent.id,
+        )
+    )
+    memory_scope_policies = list(
+        await database.scalars(
+            select(AgentMemoryScopePolicy).where(
+                AgentMemoryScopePolicy.company_id == context.company_id,
+                AgentMemoryScopePolicy.agent_id == agent.id,
+            )
         )
     )
     includes_memory = bool(
@@ -1848,6 +1930,9 @@ async def chat_with_agent(
             agent_id=agent.id,
             company_id=context.company_id,
         )
+        if conversation.status != "open":
+            await database.rollback()
+            raise HTTPException(status_code=409, detail="Esta conversa já foi encerrada.")
     else:
         conversation = AgentConversation(
             company_id=context.company_id,
@@ -1974,6 +2059,7 @@ async def chat_with_agent(
         user_id=context.user_id,
         provider=version.provider,
         memory_policy=memory_policy,
+        scope_policies=memory_scope_policies,
         data_policy=data_policy,
     )
     for fingerprint in memory_context.blocked_fingerprints:

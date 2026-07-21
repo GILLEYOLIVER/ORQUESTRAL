@@ -14,6 +14,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryConsentRevocation,
     AgentMemoryEntry,
     AgentMemoryPolicy,
+    AgentMemoryScopePolicy,
 )
 from app.modules.agents.memory_schemas import (
     AgentMemoryConsentRevocationResponse,
@@ -24,6 +25,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurgeRequest,
     AgentMemoryPurgeResponse,
     AgentMemoryResponse,
+    AgentMemoryScopePolicyInput,
     MemoryClassification,
     MemoryScope,
     MemorySource,
@@ -66,6 +68,19 @@ async def _memory_policy(
     return policy
 
 
+async def _memory_scope_policies(
+    database: DatabaseSession, *, company_id: UUID, agent_id: UUID
+) -> list[AgentMemoryScopePolicy]:
+    return list(
+        await database.scalars(
+            select(AgentMemoryScopePolicy).where(
+                AgentMemoryScopePolicy.company_id == company_id,
+                AgentMemoryScopePolicy.agent_id == agent_id,
+            )
+        )
+    )
+
+
 async def _active_company_user(
     database: DatabaseSession, *, company_id: UUID, user_id: UUID
 ) -> CompanyUser:
@@ -81,8 +96,12 @@ async def _active_company_user(
     return membership
 
 
-def _policy_response(agent_id: UUID, policy: AgentMemoryPolicy | None) -> AgentMemoryPolicyResponse:
-    values = memory_policy_values(policy)
+def _policy_response(
+    agent_id: UUID,
+    policy: AgentMemoryPolicy | None,
+    scope_policies: list[AgentMemoryScopePolicy],
+) -> AgentMemoryPolicyResponse:
+    values = memory_policy_values(policy, scope_policies)
     return AgentMemoryPolicyResponse(
         id=policy.id if policy else None,
         agent_id=agent_id,
@@ -93,6 +112,11 @@ def _policy_response(agent_id: UUID, policy: AgentMemoryPolicy | None) -> AgentM
         require_consent_for_user_scope=cast(bool, values["require_consent_for_user_scope"]),
         retrieval_enabled=cast(bool, values["retrieval_enabled"]),
         max_retrieval_entries=cast(int, values["max_retrieval_entries"]),
+        max_context_tokens=cast(int, values["max_context_tokens"]),
+        scope_policies=[
+            AgentMemoryScopePolicyInput.model_validate(item)
+            for item in cast(list[dict[str, object]], values["scope_policies"])
+        ],
         updated_at=policy.updated_at if policy else None,
     )
 
@@ -121,10 +145,11 @@ async def get_agent_memory_policy(
 ) -> AgentMemoryPolicyResponse:
     context = get_request_context(principal)
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
-    return _policy_response(
-        agent_id,
-        await _memory_policy(database, company_id=context.company_id, agent_id=agent_id),
+    policy = await _memory_policy(database, company_id=context.company_id, agent_id=agent_id)
+    scope_policies = await _memory_scope_policies(
+        database, company_id=context.company_id, agent_id=agent_id
     )
+    return _policy_response(agent_id, policy, scope_policies)
 
 
 @router.put("/{agent_id}/memory-policy", response_model=AgentMemoryPolicyResponse)
@@ -144,8 +169,32 @@ async def update_agent_memory_policy(
             updated_by_user_id=context.user_id,
         )
         database.add(policy)
-    for field, value in payload.model_dump().items():
+    for field, value in payload.model_dump(exclude={"scope_policies"}).items():
         setattr(policy, field, value)
+    existing_scope_policies = await _memory_scope_policies(
+        database, company_id=context.company_id, agent_id=agent_id
+    )
+    existing_by_scope = {item.scope: item for item in existing_scope_policies}
+    requested_scopes = {item.scope for item in payload.scope_policies}
+    for existing in existing_scope_policies:
+        if existing.scope not in requested_scopes:
+            await database.delete(existing)
+    saved_scope_policies: list[AgentMemoryScopePolicy] = []
+    for item in payload.scope_policies:
+        scope_policy = existing_by_scope.get(item.scope)
+        if scope_policy is None:
+            scope_policy = AgentMemoryScopePolicy(
+                company_id=context.company_id,
+                agent_id=agent_id,
+                scope=item.scope,
+                retention_days=item.retention_days,
+                retrieval_enabled=item.retrieval_enabled,
+            )
+            database.add(scope_policy)
+        else:
+            scope_policy.retention_days = item.retention_days
+            scope_policy.retrieval_enabled = item.retrieval_enabled
+        saved_scope_policies.append(scope_policy)
     policy.updated_by_user_id = context.user_id
     record_authorization_audit(
         database,
@@ -159,11 +208,13 @@ async def update_agent_memory_policy(
             "max_retention_days": payload.max_retention_days,
             "allowed_scopes": payload.allowed_scopes,
             "allowed_classifications": payload.allowed_classifications,
+            "max_context_tokens": payload.max_context_tokens,
+            "scope_policy_count": len(payload.scope_policies),
         },
     )
     await database.commit()
     await database.refresh(policy)
-    return _policy_response(agent_id, policy)
+    return _policy_response(agent_id, policy, saved_scope_policies)
 
 
 @router.get("/{agent_id}/memories", response_model=list[AgentMemoryResponse])
@@ -204,7 +255,10 @@ async def create_agent_memory(
     if not agent.memory_enabled:
         raise HTTPException(status_code=409, detail="A memória deste agente está desativada.")
     policy = await _memory_policy(database, company_id=context.company_id, agent_id=agent_id)
-    values = memory_policy_values(policy)
+    scope_policies = await _memory_scope_policies(
+        database, company_id=context.company_id, agent_id=agent_id
+    )
+    values = memory_policy_values(policy, scope_policies)
     if payload.scope not in cast(list[str], values["allowed_scopes"]):
         raise HTTPException(status_code=422, detail="Este escopo não é permitido pela política.")
     if payload.classification not in cast(list[str], values["allowed_classifications"]):
@@ -231,7 +285,20 @@ async def create_agent_memory(
             status_code=422,
             detail="Memórias pessoais exigem uma referência de consentimento.",
         )
-    retention_days = payload.retention_days or cast(int, values["default_retention_days"])
+    effective_scope = next(
+        (
+            item
+            for item in cast(list[dict[str, object]], values["scope_policies"])
+            if item["scope"] == payload.scope
+        ),
+        None,
+    )
+    retention_days = payload.retention_days or cast(
+        int,
+        effective_scope["retention_days"]
+        if effective_scope is not None
+        else values["default_retention_days"],
+    )
     if retention_days > cast(int, values["max_retention_days"]):
         raise HTTPException(status_code=422, detail="A retenção supera o limite da política.")
     fingerprint = memory_content_fingerprint(

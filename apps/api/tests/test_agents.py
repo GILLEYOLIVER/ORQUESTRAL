@@ -35,8 +35,12 @@ from app.modules.agents.governance import (
     evaluate_tool_autonomy,
     version_checksum,
 )
-from app.modules.agents.memory_schemas import AgentMemoryPolicyUpdate, AgentMemoryPurgeRequest
-from app.modules.agents.memory_service import memory_content_fingerprint
+from app.modules.agents.memory_schemas import (
+    AgentMemoryPolicyUpdate,
+    AgentMemoryPurgeRequest,
+    AgentMemoryScopePolicyInput,
+)
+from app.modules.agents.memory_service import estimate_memory_tokens, memory_content_fingerprint
 from app.modules.agents.models import AgentDataPolicy, AgentTool
 from app.modules.agents.providers.base import ModelMessage, ToolDefinition
 from app.modules.agents.providers.local import LocalLanguageModelProvider
@@ -319,6 +323,8 @@ def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
     assert first == repeated
     assert first != other_tenant
     assert "dado" not in first
+    assert estimate_memory_tokens("1234") == 1
+    assert estimate_memory_tokens("12345") == 2
     with pytest.raises(ValueError, match="superar"):
         AgentMemoryPolicyUpdate(
             default_retention_days=31,
@@ -328,6 +334,19 @@ def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
         )
     with pytest.raises(ValueError, match="Confirme"):
         AgentMemoryPurgeRequest(expired_only=False)
+    with pytest.raises(ValueError, match="somente uma política"):
+        AgentMemoryPolicyUpdate(
+            allowed_scopes=["conversation"],
+            allowed_classifications=["internal"],
+            scope_policies=[
+                AgentMemoryScopePolicyInput(
+                    scope="conversation", retention_days=7, retrieval_enabled=True
+                ),
+                AgentMemoryScopePolicyInput(
+                    scope="conversation", retention_days=30, retrieval_enabled=False
+                ),
+            ],
+        )
 
 
 def test_external_memory_egress_requires_explicit_authorization() -> None:

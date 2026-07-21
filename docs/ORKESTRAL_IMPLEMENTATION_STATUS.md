@@ -498,3 +498,20 @@ Data: 21 de julho de 2026.
 - Runtime local: `/health`, `/ready` e `/app` responderam `200`.
 - Segurança comprovada: teste real impede recuperação por outro usuário da mesma empresa, remove memória ao revogar, torna a revogação repetível e bloqueia recriação com consentimento revogado.
 - Próximo passo: ciclo 25, políticas de memória por escopo, limites de contexto por tokens e expiração de memória de conversa ao encerrar a sessão.
+
+## Ciclo 25 - Políticas por escopo e ciclo de vida da conversa
+
+- Política relacional por escopo define retenção e permissão de recuperação sem depender de JSON não validado.
+- Configurações antigas permanecem compatíveis por meio de padrões seguros derivados da política principal.
+- Contexto de memória possui orçamento entre 128 e 16 mil tokens estimados; conteúdos que excedem o saldo não são enviados ao modelo.
+- Recuperação continua limitada por quantidade, classificação, empresa, agente, titular, expiração, escopo e política de egress.
+- Conversas possuem fechamento formal e idempotente com `closed_at`; novas mensagens em conversa encerrada retornam conflito.
+- Fechamento elimina fisicamente todas as memórias cujo `source_type` e `source_id` apontam para a conversa.
+- Auditoria e evento de fechamento registram somente IDs operacionais e quantidade eliminada, sem conteúdo ou autoria persistente adicional.
+- Interface permite configurar retenção e recuperação de cada escopo, orçamento do contexto e encerrar a conversa com retorno compreensível.
+- Migração: `20260721_0046_agent_memory_lifecycle.py`.
+- Validação local: Ruff e MyPy aprovados em 196 arquivos de produção; ESLint e TypeScript aprovados; 137 testes da API, 3 do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0046 -> 0045 -> 0046` aprovada; banco em `20260721_0046 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`.
+- Risco conhecido: estimativa de tokens usa aproximação determinística e conservadora; tokenizador específico poderá ser conectado por provedor sem alterar a política.
+- Próximo passo: ciclo 26, revisão e eliminação de memória pelo próprio titular, exportação segura de metadados e retenção por finalidade.

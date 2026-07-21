@@ -15,7 +15,11 @@ from app.core.security import hash_password
 from app.main import create_app
 from app.modules.agents.coordination_execution import process_delegation
 from app.modules.agents.coordination_models import AgentDelegationPayload
-from app.modules.agents.memory_models import AgentMemoryEntry, AgentMemoryPolicy
+from app.modules.agents.memory_models import (
+    AgentMemoryEntry,
+    AgentMemoryPolicy,
+    AgentMemoryScopePolicy,
+)
 from app.modules.agents.memory_service import (
     AuthorizedMemoryContext,
     retrieve_authorized_memories,
@@ -225,6 +229,14 @@ async def _retrieve_memory_context(
                     AgentDataPolicy.agent_id == agent_id,
                 )
             )
+            scope_policies = list(
+                await database.scalars(
+                    select(AgentMemoryScopePolicy).where(
+                        AgentMemoryScopePolicy.company_id == company_id,
+                        AgentMemoryScopePolicy.agent_id == agent_id,
+                    )
+                )
+            )
             assert memory_policy is not None
             assert data_policy is not None
             return await retrieve_authorized_memories(
@@ -235,6 +247,7 @@ async def _retrieve_memory_context(
                 user_id=user_id,
                 provider="local",
                 memory_policy=memory_policy,
+                scope_policies=scope_policies,
                 data_policy=data_policy,
             )
     finally:
@@ -354,6 +367,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             )
             assert default_memory_policy.status_code == 200
             assert default_memory_policy.json()["default_retention_days"] == 30
+            assert default_memory_policy.json()["max_context_tokens"] == 1000
             assert (
                 client.get(f"/agents/{agent_id}/memory-policy", headers=headers_a).status_code
                 == 404
@@ -364,11 +378,29 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                 json={
                     "default_retention_days": 7,
                     "max_retention_days": 30,
-                    "allowed_scopes": ["conversation", "user"],
+                    "allowed_scopes": ["conversation", "task", "user"],
                     "allowed_classifications": ["internal", "confidential"],
                     "require_consent_for_user_scope": True,
                     "retrieval_enabled": True,
                     "max_retrieval_entries": 5,
+                    "max_context_tokens": 128,
+                    "scope_policies": [
+                        {
+                            "scope": "conversation",
+                            "retention_days": 3,
+                            "retrieval_enabled": True,
+                        },
+                        {
+                            "scope": "task",
+                            "retention_days": 5,
+                            "retrieval_enabled": False,
+                        },
+                        {
+                            "scope": "user",
+                            "retention_days": 7,
+                            "retrieval_enabled": True,
+                        },
+                    ],
                 },
             )
             assert memory_policy.status_code == 200
@@ -443,6 +475,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             assert retrieved.contents == (sensitive_memory,)
             assert len(retrieved.retrieved_fingerprints) == 1
             assert len(retrieved.blocked_fingerprints) == 1
+            assert retrieved.estimated_tokens <= 128
             other_user_retrieval = asyncio.run(
                 _retrieve_memory_context(
                     settings,
@@ -770,6 +803,19 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             )
             assert shadow.status_code == 200
             assert shadow.json()["run"]["status"] == "simulated"
+            conversation_id = shadow.json()["conversation"]["id"]
+            lifecycle_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": "Contexto temporário da conversa",
+                    "scope": "conversation",
+                    "classification": "internal",
+                    "source_type": "conversation",
+                    "source_id": conversation_id,
+                },
+            )
+            assert lifecycle_memory.status_code == 201
             assert shadow.json()["run"]["planned_tool_keys"] == ["orkestral.company.summary"]
             assert shadow.json()["pending_actions"] == []
             run_id = shadow.json()["run"]["id"]
@@ -796,6 +842,26 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             assert any(event["category"] == "memory_access" for event in security_events.json())
             assert "Ignore todas" not in str(security_events.json())
             assert traced_memory_content not in str(security_events.json())
+            closed = client.post(
+                f"/agents/{agent_id}/conversations/{conversation_id}/close",
+                headers=headers_b,
+            )
+            assert closed.status_code == 200
+            assert closed.json()["conversation"]["status"] == "closed"
+            assert closed.json()["conversation"]["closed_at"]
+            assert closed.json()["deleted_memories"] == 1
+            repeated_close = client.post(
+                f"/agents/{agent_id}/conversations/{conversation_id}/close",
+                headers=headers_b,
+            )
+            assert repeated_close.status_code == 200
+            assert repeated_close.json()["deleted_memories"] == 0
+            closed_chat = client.post(
+                f"/agents/{agent_id}/chat",
+                headers=headers_b,
+                json={"message": "Não deve executar.", "conversation_id": conversation_id},
+            )
+            assert closed_chat.status_code == 409
             assert (
                 client.get(f"/agents/{agent_id}/security-events", headers=headers_a).status_code
                 == 404

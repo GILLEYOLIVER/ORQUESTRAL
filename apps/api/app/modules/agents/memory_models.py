@@ -37,6 +37,10 @@ class AgentMemoryPolicy(Base):
             "max_retrieval_entries BETWEEN 1 AND 20",
             name="ck_agent_memory_policy_retrieval_limit",
         ),
+        CheckConstraint(
+            "max_context_tokens BETWEEN 128 AND 16000",
+            name="ck_agent_memory_policy_context_tokens",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -63,6 +67,7 @@ class AgentMemoryPolicy(Base):
     )
     retrieval_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     max_retrieval_entries: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+    max_context_tokens: Mapped[int] = mapped_column(Integer, default=1000, server_default="1000")
     updated_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -72,6 +77,32 @@ class AgentMemoryPolicy(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
     )
+
+
+class AgentMemoryScopePolicy(Base):
+    __tablename__ = "agent_memory_scope_policies"
+    __table_args__ = (
+        UniqueConstraint("agent_id", "scope", name="uq_agent_memory_scope_policy"),
+        CheckConstraint(
+            "scope IN ('conversation', 'task', 'user', 'company', 'operational')",
+            name="ck_agent_memory_scope_policy_scope",
+        ),
+        CheckConstraint(
+            "retention_days BETWEEN 1 AND 3650",
+            name="ck_agent_memory_scope_policy_retention",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    scope: Mapped[str] = mapped_column(String(24), index=True)
+    retention_days: Mapped[int] = mapped_column(Integer)
+    retrieval_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
 
 class AgentMemoryEntry(Base):

@@ -1005,6 +1005,24 @@
         "title": "AgentChatResponse",
         "type": "object"
       },
+      "AgentConversationCloseResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation": {
+            "$ref": "#/components/schemas/AgentConversationResponse"
+          },
+          "deleted_memories": {
+            "title": "Deleted Memories",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "conversation",
+          "deleted_memories"
+        ],
+        "title": "AgentConversationCloseResponse",
+        "type": "object"
+      },
       "AgentConversationCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1031,6 +1049,18 @@
             "format": "uuid",
             "title": "Agent Id",
             "type": "string"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
           },
           "created_at": {
             "format": "date-time",
@@ -1065,6 +1095,7 @@
           "agent_id",
           "title",
           "status",
+          "closed_at",
           "created_at",
           "updated_at"
         ],
@@ -2118,6 +2149,10 @@
             ],
             "title": "Id"
           },
+          "max_context_tokens": {
+            "title": "Max Context Tokens",
+            "type": "integer"
+          },
           "max_retention_days": {
             "title": "Max Retention Days",
             "type": "integer"
@@ -2133,6 +2168,13 @@
           "retrieval_enabled": {
             "title": "Retrieval Enabled",
             "type": "boolean"
+          },
+          "scope_policies": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMemoryScopePolicyInput"
+            },
+            "title": "Scope Policies",
+            "type": "array"
           },
           "updated_at": {
             "anyOf": [
@@ -2157,6 +2199,8 @@
           "require_consent_for_user_scope",
           "retrieval_enabled",
           "max_retrieval_entries",
+          "max_context_tokens",
+          "scope_policies",
           "updated_at"
         ],
         "title": "AgentMemoryPolicyResponse",
@@ -2203,6 +2247,13 @@
             "title": "Default Retention Days",
             "type": "integer"
           },
+          "max_context_tokens": {
+            "default": 1000,
+            "maximum": 16000.0,
+            "minimum": 128.0,
+            "title": "Max Context Tokens",
+            "type": "integer"
+          },
           "max_retention_days": {
             "default": 365,
             "maximum": 3650.0,
@@ -2226,6 +2277,14 @@
             "default": false,
             "title": "Retrieval Enabled",
             "type": "boolean"
+          },
+          "scope_policies": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMemoryScopePolicyInput"
+            },
+            "maxItems": 5,
+            "title": "Scope Policies",
+            "type": "array"
           }
         },
         "required": [
@@ -2366,6 +2425,39 @@
           "created_at"
         ],
         "title": "AgentMemoryResponse",
+        "type": "object"
+      },
+      "AgentMemoryScopePolicyInput": {
+        "additionalProperties": false,
+        "properties": {
+          "retention_days": {
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Retention Days",
+            "type": "integer"
+          },
+          "retrieval_enabled": {
+            "default": true,
+            "title": "Retrieval Enabled",
+            "type": "boolean"
+          },
+          "scope": {
+            "enum": [
+              "conversation",
+              "task",
+              "user",
+              "company",
+              "operational"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "retention_days"
+        ],
+        "title": "AgentMemoryScopePolicyInput",
         "type": "object"
       },
       "AgentMessageResponse": {
@@ -17914,6 +18006,84 @@
           }
         ],
         "summary": "Create Conversation",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/conversations/{conversation_id}/close": {
+      "post": {
+        "operationId": "close_conversation_agents__agent_id__conversations__conversation_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentConversationCloseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Conversation",
         "tags": [
           "agents"
         ]
