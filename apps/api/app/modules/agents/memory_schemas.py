@@ -219,6 +219,8 @@ class AgentTaskMemoryAccessGrantCreate(StrictSchema):
         default_factory=_default_shared_classifications, min_length=1, max_length=4
     )
     allowed_tool_keys: list[str] = Field(min_length=1, max_length=50)
+    max_classification: MemoryClassification = "internal"
+    max_cost_microunits: int = Field(default=1000, ge=0, le=2_000_000_000)
     max_entries: int = Field(default=1, ge=1, le=5)
     max_content_characters: int = Field(default=512, ge=64, le=2000)
     expires_in_minutes: int = Field(default=60, ge=5, le=1440)
@@ -237,6 +239,17 @@ class AgentTaskMemoryAccessGrantCreate(StrictSchema):
             for key in self.allowed_tool_keys
         ):
             raise ValueError("Cada ferramenta deve possuir uma chave válida.")
+        classification_rank = {
+            "public": 0,
+            "internal": 1,
+            "confidential": 2,
+            "restricted": 3,
+        }
+        if any(
+            classification_rank[item] > classification_rank[self.max_classification]
+            for item in self.allowed_classifications
+        ):
+            raise ValueError("A classificação compartilhada supera o teto do contrato.")
         return self
 
 
@@ -248,13 +261,19 @@ class AgentTaskMemoryAccessGrantResponse(StrictSchema):
     purpose: TaskMemoryAccessPurpose
     allowed_classifications: list[MemoryClassification]
     allowed_tool_keys: list[str]
+    max_classification: MemoryClassification
+    max_cost_microunits: int
+    requires_human_approval: bool
+    approval_status: Literal["not_required", "pending", "approved", "rejected"]
     max_entries: int
     max_content_characters: int
     status: TaskMemoryAccessStatus
     granted_by_user_id: UUID
+    approved_by_user_id: UUID | None
     revoked_by_user_id: UUID | None
     expires_at: datetime
     created_at: datetime
+    approval_decided_at: datetime | None
     revoked_at: datetime | None
 
 
@@ -265,6 +284,10 @@ class AgentTaskMemoryAccessRevoke(StrictSchema):
     @classmethod
     def trim_reason(cls, value: str) -> str:
         return value.strip()
+
+
+class AgentTaskMemoryAccessDecision(StrictSchema):
+    decision: Literal["approved", "rejected"]
 
 
 class AgentTaskMemoryContextRequest(StrictSchema):
@@ -300,6 +323,7 @@ TaskMemoryTraceOutcome = Literal[
     "expired_before_use",
     "tool_policy_denied",
     "aggregate_limit_denied",
+    "cost_limit_denied",
 ]
 
 
@@ -314,4 +338,5 @@ class AgentTaskMemoryAccessTraceResponse(StrictSchema):
     item_count: int
     total_characters: int
     blocked_items: int
+    estimated_cost_microunits: int
     created_at: datetime

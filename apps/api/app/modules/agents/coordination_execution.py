@@ -95,6 +95,7 @@ async def _prepare_shared_task_memory(
                 AgentTaskMemoryAccessGrant.recipient_agent_id == delegation.assigned_agent_id,
                 AgentTaskMemoryAccessGrant.purpose == "coordination",
                 AgentTaskMemoryAccessGrant.status == "active",
+                AgentTaskMemoryAccessGrant.approval_status.in_(("not_required", "approved")),
                 AgentTaskMemoryAccessGrant.expires_at > utc_now(),
             )
             .order_by(AgentTaskMemoryAccessGrant.created_at.desc())
@@ -118,6 +119,7 @@ async def _prepare_shared_task_memory(
     traces: list[AgentTaskMemoryAccessTrace] = []
     for grant in grants:
         shared = SharedTaskMemoryContext((), 0, 0)
+        estimated_cost = 0
         if not set(grant.allowed_tool_keys).issubset(contract_tools):
             outcome = "tool_policy_denied"
         elif remaining_entries <= 0 or remaining_characters <= 0:
@@ -142,6 +144,14 @@ async def _prepare_shared_task_memory(
                 outcome = (
                     "consumed" if shared.items else ("blocked" if shared.blocked_items else "empty")
                 )
+                estimated_cost = (
+                    max(1, (shared.total_characters + 999) // 1000) * 100
+                    if shared.total_characters
+                    else 0
+                )
+                if estimated_cost > grant.max_cost_microunits:
+                    outcome = "cost_limit_denied"
+                    shared = SharedTaskMemoryContext((), 0, shared.blocked_items)
         item_count = len(shared.items)
         total_characters = shared.total_characters
         remaining_entries -= item_count
@@ -158,6 +168,7 @@ async def _prepare_shared_task_memory(
             item_count=item_count,
             total_characters=total_characters,
             blocked_items=shared.blocked_items,
+            estimated_cost_microunits=estimated_cost,
         )
         database.add(trace)
         await database.flush()

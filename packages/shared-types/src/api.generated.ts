@@ -369,6 +369,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Task Memory Access Grant */
+        post: operations["decide_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/revoke": {
         parameters: {
             query?: never;
@@ -5142,6 +5159,14 @@ export interface components {
              */
             worker_agent_id: string;
         };
+        /** AgentTaskMemoryAccessDecision */
+        AgentTaskMemoryAccessDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+        };
         /** AgentTaskMemoryAccessGrantCreate */
         AgentTaskMemoryAccessGrantCreate: {
             /** Allowed Classifications */
@@ -5159,10 +5184,21 @@ export interface components {
              */
             idempotency_key: string;
             /**
+             * Max Classification
+             * @default internal
+             * @enum {string}
+             */
+            max_classification: "public" | "internal" | "confidential" | "restricted";
+            /**
              * Max Content Characters
              * @default 512
              */
             max_content_characters: number;
+            /**
+             * Max Cost Microunits
+             * @default 1000
+             */
+            max_cost_microunits: number;
             /**
              * Max Entries
              * @default 1
@@ -5185,6 +5221,15 @@ export interface components {
             allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
             /** Allowed Tool Keys */
             allowed_tool_keys: string[];
+            /** Approval Decided At */
+            approval_decided_at: string | null;
+            /**
+             * Approval Status
+             * @enum {string}
+             */
+            approval_status: "not_required" | "pending" | "approved" | "rejected";
+            /** Approved By User Id */
+            approved_by_user_id: string | null;
             /**
              * Created At
              * Format: date-time
@@ -5205,8 +5250,15 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Max Classification
+             * @enum {string}
+             */
+            max_classification: "public" | "internal" | "confidential" | "restricted";
             /** Max Content Characters */
             max_content_characters: number;
+            /** Max Cost Microunits */
+            max_cost_microunits: number;
             /** Max Entries */
             max_entries: number;
             /**
@@ -5224,6 +5276,8 @@ export interface components {
              * Format: uuid
              */
             recipient_agent_id: string;
+            /** Requires Human Approval */
+            requires_human_approval: boolean;
             /** Revoked At */
             revoked_at: string | null;
             /** Revoked By User Id */
@@ -5255,6 +5309,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Estimated Cost Microunits */
+            estimated_cost_microunits: number;
             /**
              * Grant Id
              * Format: uuid
@@ -5271,7 +5327,7 @@ export interface components {
              * Outcome
              * @enum {string}
              */
-            outcome: "consumed" | "blocked" | "empty" | "revoked_before_use" | "expired_before_use" | "tool_policy_denied" | "aggregate_limit_denied";
+            outcome: "consumed" | "blocked" | "empty" | "revoked_before_use" | "expired_before_use" | "tool_policy_denied" | "aggregate_limit_denied" | "cost_limit_denied";
             /**
              * Owner Agent Id
              * Format: uuid
@@ -11771,6 +11827,61 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+                grant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryAccessDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

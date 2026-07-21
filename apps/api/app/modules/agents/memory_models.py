@@ -306,6 +306,27 @@ class AgentTaskMemoryAccessGrant(Base):
             name="ck_agent_task_memory_access_status",
         ),
         CheckConstraint(
+            "approval_status IN ('not_required', 'pending', 'approved', 'rejected')",
+            name="ck_agent_task_memory_access_approval_status",
+        ),
+        CheckConstraint(
+            "max_classification IN ('public', 'internal', 'confidential', 'restricted')",
+            name="ck_agent_task_memory_access_classification",
+        ),
+        CheckConstraint(
+            "max_cost_microunits BETWEEN 0 AND 2000000000",
+            name="ck_agent_task_memory_access_cost",
+        ),
+        CheckConstraint(
+            "(requires_human_approval = false AND approval_status = 'not_required' "
+            "AND approved_by_user_id IS NULL AND approval_decided_at IS NULL) OR "
+            "(requires_human_approval = true AND ((approval_status = 'pending' "
+            "AND approved_by_user_id IS NULL AND approval_decided_at IS NULL) OR "
+            "(approval_status IN ('approved', 'rejected') AND approved_by_user_id IS NOT NULL "
+            "AND approval_decided_at IS NOT NULL AND approved_by_user_id <> granted_by_user_id)))",
+            name="ck_agent_task_memory_access_approval",
+        ),
+        CheckConstraint(
             "max_entries BETWEEN 1 AND 5",
             name="ck_agent_task_memory_access_entries",
         ),
@@ -346,6 +367,16 @@ class AgentTaskMemoryAccessGrant(Base):
     allowed_tool_keys: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
     )
+    max_classification: Mapped[str] = mapped_column(
+        String(24), default="internal", server_default="internal"
+    )
+    max_cost_microunits: Mapped[int] = mapped_column(Integer, default=1000, server_default="1000")
+    requires_human_approval: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    approval_status: Mapped[str] = mapped_column(
+        String(16), default="not_required", server_default="not_required", index=True
+    )
     max_entries: Mapped[int] = mapped_column(Integer)
     max_content_characters: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(
@@ -355,6 +386,9 @@ class AgentTaskMemoryAccessGrant(Base):
     granted_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
+    approved_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     revoked_by_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
     )
@@ -363,6 +397,7 @@ class AgentTaskMemoryAccessGrant(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
+    approval_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
@@ -371,12 +406,17 @@ class AgentTaskMemoryAccessTrace(Base):
     __table_args__ = (
         CheckConstraint(
             "outcome IN ('consumed', 'blocked', 'empty', 'revoked_before_use', "
-            "'expired_before_use', 'tool_policy_denied', 'aggregate_limit_denied')",
+            "'expired_before_use', 'tool_policy_denied', 'aggregate_limit_denied', "
+            "'cost_limit_denied')",
             name="ck_agent_task_memory_trace_outcome",
         ),
         CheckConstraint(
             "item_count >= 0 AND total_characters >= 0 AND blocked_items >= 0",
             name="ck_agent_task_memory_trace_counters",
+        ),
+        CheckConstraint(
+            "estimated_cost_microunits >= 0",
+            name="ck_agent_task_memory_trace_cost",
         ),
         CheckConstraint(
             "outcome NOT IN ('revoked_before_use', 'expired_before_use') OR "
@@ -410,6 +450,7 @@ class AgentTaskMemoryAccessTrace(Base):
     item_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     total_characters: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     blocked_items: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    estimated_cost_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )

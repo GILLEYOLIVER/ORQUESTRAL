@@ -437,7 +437,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     "default_retention_days": 7,
                     "max_retention_days": 30,
                     "allowed_scopes": ["conversation", "task", "user"],
-                    "allowed_classifications": ["internal", "confidential"],
+                    "allowed_classifications": ["internal", "confidential", "restricted"],
                     "require_consent_for_user_scope": True,
                     "retrieval_enabled": True,
                     "max_retrieval_entries": 5,
@@ -952,6 +952,91 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 },
             )
             assert denied_tool_grant.status_code == 422
+            invalid_classification_grant = client.post(
+                f"/agents/{agent_id}/delegations/{queued.json()['id']}/memory-access-grants",
+                headers=headers_b,
+                json={
+                    **grant_payload,
+                    "allowed_classifications": ["confidential"],
+                    "max_classification": "internal",
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert invalid_classification_grant.status_code == 422
+            restricted_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": "Contexto restrito sujeito a aprovação independente.",
+                    "scope": "task",
+                    "classification": "restricted",
+                    "task_delegation_id": queued.json()["id"],
+                },
+            )
+            assert restricted_memory.status_code == 201
+            restricted_grant = client.post(
+                f"/agents/{agent_id}/delegations/{queued.json()['id']}/memory-access-grants",
+                headers=headers_b,
+                json={
+                    **grant_payload,
+                    "allowed_classifications": ["restricted"],
+                    "max_classification": "restricted",
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert restricted_grant.status_code == 201
+            assert restricted_grant.json()["approval_status"] == "pending"
+            restricted_decision_path = (
+                f"/agents/{agent_id}/delegations/{queued.json()['id']}/memory-access-grants/"
+                f"{restricted_grant.json()['id']}/decision"
+            )
+            restricted_context_path = (
+                f"/agents/{worker_id}/delegations/{queued.json()['id']}/shared-memory-context"
+            )
+            assert (
+                client.post(
+                    restricted_context_path,
+                    headers=headers_b,
+                    json={
+                        "grant_id": restricted_grant.json()["id"],
+                        "purpose": "coordination",
+                    },
+                ).status_code
+                == 404
+            )
+            assert (
+                client.post(
+                    restricted_decision_path,
+                    headers=headers_a,
+                    json={"decision": "approved"},
+                ).status_code
+                == 404
+            )
+            assert (
+                client.post(
+                    restricted_decision_path,
+                    headers=headers_b,
+                    json={"decision": "approved"},
+                ).status_code
+                == 409
+            )
+            approved_restricted = client.post(
+                restricted_decision_path,
+                headers=headers_reviewer,
+                json={"decision": "approved"},
+            )
+            assert approved_restricted.status_code == 200
+            assert approved_restricted.json()["approval_status"] == "approved"
+            approved_restricted_context = client.post(
+                restricted_context_path,
+                headers=headers_b,
+                json={
+                    "grant_id": restricted_grant.json()["id"],
+                    "purpose": "coordination",
+                },
+            )
+            assert approved_restricted_context.status_code == 200
+            assert approved_restricted_context.json()["items"][0]["classification"] == "restricted"
             assert grant.json()["recipient_agent_id"] == worker_id
             assert shared_task_content not in str(grant.json())
             repeated_grant = client.post(
@@ -1194,6 +1279,59 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert race_traces.json()[0]["outcome"] == "revoked_before_use"
             assert race_traces.json()[0]["item_count"] == 0
             assert race_traces.json()[0]["total_characters"] == 0
+            cost_delegation = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json={
+                    "contract_id": contract.json()["id"],
+                    "objective": "Não use contexto acima do orçamento.",
+                    "context_keys": ["customer_id"],
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert cost_delegation.status_code == 201
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memories",
+                    headers=headers_b,
+                    json={
+                        "content": "Contexto com custo controlado pela política.",
+                        "scope": "task",
+                        "classification": "internal",
+                        "task_delegation_id": cost_delegation.json()["id"],
+                    },
+                ).status_code
+                == 201
+            )
+            cost_grant = client.post(
+                f"/agents/{agent_id}/delegations/{cost_delegation.json()['id']}/memory-access-grants",
+                headers=headers_b,
+                json={
+                    "recipient_agent_id": worker_id,
+                    "purpose": "coordination",
+                    "allowed_classifications": ["internal"],
+                    "allowed_tool_keys": ["orkestral.company.summary"],
+                    "max_entries": 1,
+                    "max_content_characters": 64,
+                    "max_cost_microunits": 1,
+                    "expires_in_minutes": 30,
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert cost_grant.status_code == 201
+            assert (
+                asyncio.run(
+                    process_delegation(UUID(cost_delegation.json()["id"]), settings=settings)
+                )["status"]
+                == "completed"
+            )
+            cost_traces = client.get(
+                f"/agents/{agent_id}/delegations/{cost_delegation.json()['id']}/memory-access-traces",
+                headers=headers_b,
+            )
+            assert cost_traces.status_code == 200
+            assert cost_traces.json()[0]["outcome"] == "cost_limit_denied"
+            assert cost_traces.json()[0]["estimated_cost_microunits"] == 100
             for attempt in range(2):
                 blocked_delegation = client.post(
                     f"/agents/{agent_id}/delegations",

@@ -573,3 +573,12 @@ Data: 21 de julho de 2026.
 - A tela de governança permite configurar os três novos limites sem expor controles internos do executor.
 - Migração: `20260721_0051`.
 - Próximo passo: criar política de compartilhamento por classificação de dados, aprovação humana para contexto restrito e orçamento de custo por contrato.
+
+## Ciclo 31 - classificação, aprovação restrita e orçamento de custo
+
+- Grants declaram teto de classificação e a API rejeita qualquer classe acima desse limite.
+- Contexto `restricted` exige decisão de outra pessoa; autoaprovação é bloqueada e o executor ignora contratos pendentes ou rejeitados.
+- Cada grant possui orçamento em microunidades; o executor estima o custo antes da chamada ao modelo e produz `cost_limit_denied` quando o teto seria excedido.
+- Decisões, custos e desfechos são auditados sem conteúdo sensível.
+- Migração: `20260721_0052`.
+- Próximo passo: expiração automática de aprovações, revogação em lote por incidente e painel consolidado de riscos de memória.

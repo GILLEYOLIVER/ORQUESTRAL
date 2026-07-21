@@ -3426,6 +3426,24 @@
         "title": "AgentTaskContractResponse",
         "type": "object"
       },
+      "AgentTaskMemoryAccessDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "AgentTaskMemoryAccessDecision",
+        "type": "object"
+      },
       "AgentTaskMemoryAccessGrantCreate": {
         "additionalProperties": false,
         "properties": {
@@ -3465,11 +3483,29 @@
             "title": "Idempotency Key",
             "type": "string"
           },
+          "max_classification": {
+            "default": "internal",
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted"
+            ],
+            "title": "Max Classification",
+            "type": "string"
+          },
           "max_content_characters": {
             "default": 512,
             "maximum": 2000.0,
             "minimum": 64.0,
             "title": "Max Content Characters",
+            "type": "integer"
+          },
+          "max_cost_microunits": {
+            "default": 1000,
+            "maximum": 2000000000.0,
+            "minimum": 0.0,
+            "title": "Max Cost Microunits",
             "type": "integer"
           },
           "max_entries": {
@@ -3526,6 +3562,40 @@
             "title": "Allowed Tool Keys",
             "type": "array"
           },
+          "approval_decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Decided At"
+          },
+          "approval_status": {
+            "enum": [
+              "not_required",
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Approval Status",
+            "type": "string"
+          },
+          "approved_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By User Id"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -3546,8 +3616,22 @@
             "title": "Id",
             "type": "string"
           },
+          "max_classification": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted"
+            ],
+            "title": "Max Classification",
+            "type": "string"
+          },
           "max_content_characters": {
             "title": "Max Content Characters",
+            "type": "integer"
+          },
+          "max_cost_microunits": {
+            "title": "Max Cost Microunits",
             "type": "integer"
           },
           "max_entries": {
@@ -3572,6 +3656,10 @@
             "format": "uuid",
             "title": "Recipient Agent Id",
             "type": "string"
+          },
+          "requires_human_approval": {
+            "title": "Requires Human Approval",
+            "type": "boolean"
           },
           "revoked_at": {
             "anyOf": [
@@ -3620,13 +3708,19 @@
           "purpose",
           "allowed_classifications",
           "allowed_tool_keys",
+          "max_classification",
+          "max_cost_microunits",
+          "requires_human_approval",
+          "approval_status",
           "max_entries",
           "max_content_characters",
           "status",
           "granted_by_user_id",
+          "approved_by_user_id",
           "revoked_by_user_id",
           "expires_at",
           "created_at",
+          "approval_decided_at",
           "revoked_at"
         ],
         "title": "AgentTaskMemoryAccessGrantResponse",
@@ -3672,6 +3766,10 @@
             "title": "Created At",
             "type": "string"
           },
+          "estimated_cost_microunits": {
+            "title": "Estimated Cost Microunits",
+            "type": "integer"
+          },
           "grant_id": {
             "format": "uuid",
             "title": "Grant Id",
@@ -3694,7 +3792,8 @@
               "revoked_before_use",
               "expired_before_use",
               "tool_policy_denied",
-              "aggregate_limit_denied"
+              "aggregate_limit_denied",
+              "cost_limit_denied"
             ],
             "title": "Outcome",
             "type": "string"
@@ -3730,6 +3829,7 @@
           "item_count",
           "total_characters",
           "blocked_items",
+          "estimated_cost_microunits",
           "created_at"
         ],
         "title": "AgentTaskMemoryAccessTraceResponse",
@@ -19585,6 +19685,104 @@
           }
         ],
         "summary": "Create Agent Task Memory Access Grant",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/decision": {
+      "post": {
+        "operationId": "decide_agent_task_memory_access_grant_agents__agent_id__delegations__delegation_id__memory_access_grants__grant_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTaskMemoryAccessDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTaskMemoryAccessGrantResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Agent Task Memory Access Grant",
         "tags": [
           "agents"
         ]

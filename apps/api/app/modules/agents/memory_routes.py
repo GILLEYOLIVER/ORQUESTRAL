@@ -36,6 +36,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurposePolicyInput,
     AgentMemoryResponse,
     AgentMemoryScopePolicyInput,
+    AgentTaskMemoryAccessDecision,
     AgentTaskMemoryAccessGrantCreate,
     AgentTaskMemoryAccessGrantResponse,
     AgentTaskMemoryAccessRevoke,
@@ -238,13 +239,19 @@ def _task_memory_access_response(
         purpose=grant.purpose,
         allowed_classifications=grant.allowed_classifications,
         allowed_tool_keys=grant.allowed_tool_keys,
+        max_classification=cast(MemoryClassification, grant.max_classification),
+        max_cost_microunits=grant.max_cost_microunits,
+        requires_human_approval=grant.requires_human_approval,
+        approval_status=grant.approval_status,
         max_entries=grant.max_entries,
         max_content_characters=grant.max_content_characters,
         status=cast(TaskMemoryAccessStatus, effective_status),
         granted_by_user_id=grant.granted_by_user_id,
+        approved_by_user_id=grant.approved_by_user_id,
         revoked_by_user_id=grant.revoked_by_user_id,
         expires_at=grant.expires_at,
         created_at=grant.created_at,
+        approval_decided_at=grant.approval_decided_at,
         revoked_at=grant.revoked_at,
     )
 
@@ -263,6 +270,7 @@ def _task_memory_trace_response(
         item_count=trace.item_count,
         total_characters=trace.total_characters,
         blocked_items=trace.blocked_items,
+        estimated_cost_microunits=trace.estimated_cost_microunits,
         created_at=trace.created_at,
     )
 
@@ -852,6 +860,7 @@ async def create_agent_task_memory_access_grant(
         )
     normalized_classifications = sorted(payload.allowed_classifications)
     normalized_tool_keys = sorted(payload.allowed_tool_keys)
+    requires_human_approval = payload.max_classification == "restricted"
     existing = await database.scalar(
         select(AgentTaskMemoryAccessGrant).where(
             AgentTaskMemoryAccessGrant.company_id == context.company_id,
@@ -866,6 +875,8 @@ async def create_agent_task_memory_access_grant(
             and existing.purpose == payload.purpose
             and sorted(existing.allowed_classifications) == normalized_classifications
             and sorted(existing.allowed_tool_keys) == normalized_tool_keys
+            and existing.max_classification == payload.max_classification
+            and existing.max_cost_microunits == payload.max_cost_microunits
             and existing.max_entries == payload.max_entries
             and existing.max_content_characters == payload.max_content_characters
         )
@@ -888,6 +899,10 @@ async def create_agent_task_memory_access_grant(
         purpose=payload.purpose,
         allowed_classifications=normalized_classifications,
         allowed_tool_keys=normalized_tool_keys,
+        max_classification=payload.max_classification,
+        max_cost_microunits=payload.max_cost_microunits,
+        requires_human_approval=requires_human_approval,
+        approval_status="pending" if requires_human_approval else "not_required",
         max_entries=payload.max_entries,
         max_content_characters=payload.max_content_characters,
         idempotency_key=payload.idempotency_key,
@@ -911,12 +926,75 @@ async def create_agent_task_memory_access_grant(
             "max_entries": grant.max_entries,
             "max_content_characters": grant.max_content_characters,
             "allowed_tool_count": len(grant.allowed_tool_keys),
+            "max_classification": grant.max_classification,
+            "max_cost_microunits": grant.max_cost_microunits,
+            "approval_status": grant.approval_status,
         },
     )
     enqueue_domain_event(
         database,
         DomainEventCreate(
             event_type="agent.task_memory_access.granted",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"grant_id": str(grant.id), "delegation_id": str(delegation_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(grant)
+    return _task_memory_access_response(grant)
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/memory-access-grants/{grant_id}/decision",
+    response_model=AgentTaskMemoryAccessGrantResponse,
+)
+async def decide_agent_task_memory_access_grant(
+    agent_id: UUID,
+    delegation_id: UUID,
+    grant_id: UUID,
+    payload: AgentTaskMemoryAccessDecision,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentTaskMemoryAccessGrantResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    grant = await database.scalar(
+        select(AgentTaskMemoryAccessGrant)
+        .where(
+            AgentTaskMemoryAccessGrant.id == grant_id,
+            AgentTaskMemoryAccessGrant.company_id == context.company_id,
+            AgentTaskMemoryAccessGrant.task_delegation_id == delegation_id,
+            AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if grant is None:
+        raise HTTPException(status_code=404, detail="Contrato de memória não encontrado.")
+    if not grant.requires_human_approval or grant.approval_status != "pending":
+        raise HTTPException(status_code=409, detail="O contrato não aguarda aprovação.")
+    if grant.granted_by_user_id == context.user_id:
+        raise HTTPException(status_code=409, detail="A aprovação exige outra pessoa responsável.")
+    grant.approval_status = payload.decision
+    grant.approved_by_user_id = context.user_id
+    grant.approval_decided_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.task_memory_access.{payload.decision}",
+        target_type="agent_task_memory_access_grant",
+        target_id=grant.id,
+        details={
+            "delegation_id": str(delegation_id),
+            "max_classification": grant.max_classification,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.task_memory_access.{payload.decision}",
             company_id=context.company_id,
             actor_user_id=context.user_id,
             classification="confidential",
@@ -1026,6 +1104,7 @@ async def get_agent_shared_task_memory_context(
             AgentTaskMemoryAccessGrant.recipient_agent_id == agent_id,
             AgentTaskMemoryAccessGrant.purpose == payload.purpose,
             AgentTaskMemoryAccessGrant.status == "active",
+            AgentTaskMemoryAccessGrant.approval_status.in_(("not_required", "approved")),
             AgentTaskMemoryAccessGrant.expires_at > utc_now(),
         )
     )
