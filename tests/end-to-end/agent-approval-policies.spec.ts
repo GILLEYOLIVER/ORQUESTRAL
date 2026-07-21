@@ -51,6 +51,9 @@ test("administrador publica e simula política de aprovação de agente", async 
       .locator("..")
       .locator("..");
     await expect(policyCard).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Governança da memória" }),
+    ).toBeVisible();
     await policyCard
       .getByRole("textbox", { name: "Nome da política" })
       .fill(policyName);

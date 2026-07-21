@@ -451,3 +451,17 @@ Data: 21 de julho de 2026.
 - Runtime local: `/health`, `/ready` e `/app` responderam `200`; banco em `20260721_0042 (head)`.
 - Risco conhecido: o bundle web permanece acima de 500 kB e o `TestClient` emite aviso de depreciação do `httpx`.
 - Próximo passo: ciclo 22, memória de agentes com classificação, retenção, expiração e eliminação segura por empresa.
+
+## Ciclo 22 - Governança e eliminação de memória de agentes
+
+- Política individual por agente com retenção padrão e máxima, escopos, classificações e consentimento obrigatório para memória pessoal.
+- Conteúdo cifrado antes da persistência; respostas, eventos e auditorias contêm apenas metadados operacionais.
+- Fingerprint HMAC contextualizado por empresa e agente, impedindo comparação direta entre tenants e criação duplicada.
+- Memórias expiradas são excluídas das consultas ativas e podem ser eliminadas fisicamente em lote.
+- Exclusão individual remove o ciphertext do banco ativo e mantém somente auditoria sem conteúdo empresarial.
+- Interface em português no perfil do agente para configurar retenção, consentimento, expurgo e exclusão.
+- Migração: `20260721_0043_agent_memory_governance.py`.
+- Validação local: Ruff e MyPy aprovados em 193 arquivos; ESLint, TypeScript e Prettier aprovados; 136 testes da API, 12 integrações, 2 testes do worker e 12 testes do front-end aprovados; build, migração `0043 -> 0042 -> 0043`, auditoria de segurança e E2E com 7 aprovados e 2 cenários explicitamente ignorados concluídos sem bloqueios.
+- Segurança comprovada: teste real confirma isolamento multiempresa, exigência de consentimento, idempotência, ausência do segredo na API e no armazenamento em texto simples, e remoção física do registro.
+- Limite consciente: memórias ainda não são enviadas ao modelo; a recuperação será ligada somente após aplicar política de egress e filtragem de classificação.
+- Próximo passo: ciclo 23, recuperação autorizada de memória, expurgo automático e proteção de egress por provedor.

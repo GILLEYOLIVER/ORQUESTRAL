@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bot,
+  BrainCircuit,
   Check,
   Gauge,
   LockKeyhole,
@@ -10,6 +11,7 @@ import {
   ShieldAlert,
   Sparkles,
   Trash2,
+  TimerReset,
   X,
 } from "lucide-react";
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
@@ -18,6 +20,8 @@ import {
   type AgentApprovalPolicyEvaluationResponse,
   type AgentApprovalPolicyResponse,
   type AgentMessageResponse,
+  type AgentMemoryPolicyResponse,
+  type AgentMemoryResponse,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -122,6 +126,19 @@ export function AgentsPage() {
   const [policyDecision, setPolicyDecision] =
     useState<AgentApprovalPolicyEvaluationResponse | null>(null);
   const [policyFormError, setPolicyFormError] = useState<string | null>(null);
+  const [memoryDefaultRetention, setMemoryDefaultRetention] = useState("30");
+  const [memoryMaxRetention, setMemoryMaxRetention] = useState("365");
+  const [memoryScopes, setMemoryScopes] = useState<string[]>([
+    "conversation",
+    "task",
+    "operational",
+  ]);
+  const [memoryClassifications, setMemoryClassifications] = useState<string[]>([
+    "public",
+    "internal",
+  ]);
+  const [memoryConsentRequired, setMemoryConsentRequired] = useState(true);
+  const [memoryFeedback, setMemoryFeedback] = useState<string | null>(null);
   const selected = agents.data?.find((agent) => agent.id === selectedId);
 
   useEffect(() => {
@@ -152,6 +169,18 @@ export function AgentsPage() {
       request<AgentApprovalPolicyResponse[]>(
         `/agents/${selectedId}/approval-policies`,
       ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryPolicy = useQuery({
+    queryKey: ["agent-memory-policy", selectedId],
+    queryFn: () =>
+      request<AgentMemoryPolicyResponse>(`/agents/${selectedId}/memory-policy`),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memories = useQuery({
+    queryKey: ["agent-memories", selectedId],
+    queryFn: () =>
+      request<AgentMemoryResponse[]>(`/agents/${selectedId}/memories`),
     enabled: canConfigure && Boolean(selectedId),
   });
   const companyUsers = useQuery({
@@ -190,6 +219,14 @@ export function AgentsPage() {
     setPolicyDecision(null);
     setPolicyFormError(null);
   }, [selectedId]);
+  useEffect(() => {
+    if (!memoryPolicy.data) return;
+    setMemoryDefaultRetention(String(memoryPolicy.data.default_retention_days));
+    setMemoryMaxRetention(String(memoryPolicy.data.max_retention_days));
+    setMemoryScopes(memoryPolicy.data.allowed_scopes);
+    setMemoryClassifications(memoryPolicy.data.allowed_classifications);
+    setMemoryConsentRequired(memoryPolicy.data.require_consent_for_user_scope);
+  }, [memoryPolicy.data]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["agents"] });
@@ -203,6 +240,12 @@ export function AgentsPage() {
     void queryClient.invalidateQueries({ queryKey: ["agent-usage"] });
     void queryClient.invalidateQueries({
       queryKey: ["agent-approval-policies", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memory-policy", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memories", selectedId],
     });
   };
   const create = useMutation({
@@ -306,6 +349,54 @@ export function AgentsPage() {
       setPolicyFormError(null);
       setPolicyDecision(decision);
     },
+  });
+  const saveMemoryPolicy = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryPolicyResponse>(
+        `/agents/${selectedId}/memory-policy`,
+        {
+          method: "PUT",
+          body: {
+            default_retention_days: Number(memoryDefaultRetention),
+            max_retention_days: Number(memoryMaxRetention),
+            allowed_scopes: memoryScopes,
+            allowed_classifications: memoryClassifications,
+            require_consent_for_user_scope: memoryConsentRequired,
+          },
+        },
+      ),
+    onSuccess: () => {
+      setMemoryFeedback("Política de memória atualizada.");
+      refresh();
+    },
+    onError: (caught) => setMemoryFeedback(errorMessage(caught)),
+  });
+  const purgeExpiredMemories = useMutation({
+    mutationFn: () =>
+      request<{ deleted_count: number }>(`/agents/${selectedId}/memory-purge`, {
+        method: "POST",
+        body: { expired_only: true, confirm_all: false },
+      }),
+    onSuccess: (result) => {
+      setMemoryFeedback(
+        result.deleted_count
+          ? `${result.deleted_count} memória(s) expirada(s) eliminada(s).`
+          : "Nenhuma memória expirada encontrada.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryFeedback(errorMessage(caught)),
+  });
+  const deleteMemory = useMutation({
+    mutationFn: (memoryId: string) =>
+      request<void>(`/agents/${selectedId}/memories/${memoryId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      setMemoryFeedback("Memória eliminada do banco ativo.");
+      refresh();
+    },
+    onError: (caught) => setMemoryFeedback(errorMessage(caught)),
   });
   const submitAgent = (event: FormEvent) => {
     event.preventDefault();
@@ -607,6 +698,152 @@ export function AgentsPage() {
                 </Button>
               </div>
             </Card>
+            <PermissionGuard all={["agents.configure"]}>
+              <Card
+                className="agent-memory-card"
+                eyebrow="Privacidade por padrão"
+                title="Governança da memória"
+              >
+                <p>
+                  Defina por quanto tempo o agente pode conservar contexto. O
+                  conteúdo fica criptografado e nunca aparece em listas, eventos
+                  ou auditorias.
+                </p>
+                {memoryFeedback ? <Alert>{memoryFeedback}</Alert> : null}
+                <form
+                  className="agent-policy-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    saveMemoryPolicy.mutate();
+                  }}
+                >
+                  <TextField
+                    label="Retenção padrão (dias)"
+                    min={1}
+                    onChange={(event) =>
+                      setMemoryDefaultRetention(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryDefaultRetention}
+                  />
+                  <TextField
+                    label="Limite máximo (dias)"
+                    min={1}
+                    onChange={(event) =>
+                      setMemoryMaxRetention(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryMaxRetention}
+                  />
+                  <fieldset className="agent-memory-options">
+                    <legend>Escopos permitidos</legend>
+                    {[
+                      ["conversation", "Conversa"],
+                      ["task", "Tarefa"],
+                      ["user", "Pessoa"],
+                      ["company", "Empresa"],
+                      ["operational", "Operacional"],
+                    ].map(([value, label]) => (
+                      <label key={value}>
+                        <input
+                          checked={memoryScopes.includes(value)}
+                          onChange={(event) =>
+                            setMemoryScopes((current) =>
+                              event.target.checked
+                                ? [...new Set([...current, value])]
+                                : current.filter((item) => item !== value),
+                            )
+                          }
+                          type="checkbox"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </fieldset>
+                  <fieldset className="agent-memory-options">
+                    <legend>Classificações permitidas</legend>
+                    {[
+                      ["public", "Pública"],
+                      ["internal", "Interna"],
+                      ["confidential", "Confidencial"],
+                      ["restricted", "Restrita"],
+                    ].map(([value, label]) => (
+                      <label key={value}>
+                        <input
+                          checked={memoryClassifications.includes(value)}
+                          onChange={(event) =>
+                            setMemoryClassifications((current) =>
+                              event.target.checked
+                                ? [...new Set([...current, value])]
+                                : current.filter((item) => item !== value),
+                            )
+                          }
+                          type="checkbox"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </fieldset>
+                  <label className="agent-memory-consent">
+                    <input
+                      checked={memoryConsentRequired}
+                      onChange={(event) =>
+                        setMemoryConsentRequired(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    Exigir referência de consentimento para memória pessoal
+                  </label>
+                  <div className="form-actions">
+                    <Button loading={saveMemoryPolicy.isPending} type="submit">
+                      <BrainCircuit size={16} /> Salvar política
+                    </Button>
+                    <Button
+                      loading={purgeExpiredMemories.isPending}
+                      onClick={() => purgeExpiredMemories.mutate()}
+                      type="button"
+                      variant="secondary"
+                    >
+                      <TimerReset size={16} /> Eliminar expiradas
+                    </Button>
+                  </div>
+                </form>
+                <div className="agent-policy-list">
+                  {memories.data?.length ? (
+                    memories.data.map((memory) => (
+                      <article className="agent-policy-row" key={memory.id}>
+                        <div>
+                          <strong>
+                            {memory.scope} · {memory.classification}
+                          </strong>
+                          <small>
+                            Conteúdo protegido · expira em{" "}
+                            {new Date(memory.expires_at).toLocaleString(
+                              "pt-BR",
+                            )}
+                          </small>
+                        </div>
+                        <Button
+                          aria-label="Eliminar memória"
+                          loading={
+                            deleteMemory.isPending &&
+                            deleteMemory.variables === memory.id
+                          }
+                          onClick={() => deleteMemory.mutate(memory.id)}
+                          variant="ghost"
+                        >
+                          <Trash2 size={16} /> Eliminar
+                        </Button>
+                      </article>
+                    ))
+                  ) : (
+                    <p>Nenhuma memória ativa armazenada.</p>
+                  )}
+                </div>
+              </Card>
+            </PermissionGuard>
             <PermissionGuard all={["agents.configure"]}>
               <Card
                 eyebrow="Princípio do menor privilégio"

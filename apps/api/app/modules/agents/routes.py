@@ -47,6 +47,7 @@ from app.modules.agents.governance import (
     settle_agent_budget,
     version_checksum,
 )
+from app.modules.agents.memory_routes import router as memory_router
 from app.modules.agents.models import (
     Agent,
     AgentBudget,
@@ -2266,3 +2267,4 @@ async def chat_with_agent(
 
 
 router.include_router(approval_policy_router)
+router.include_router(memory_router)

@@ -143,6 +143,34 @@ export interface AgentApprovalPolicyEvaluationResponse {
   escalation_after_minutes: number | null;
 }
 
+export interface AgentMemoryPolicyResponse {
+  id: string | null;
+  agent_id: string;
+  default_retention_days: number;
+  max_retention_days: number;
+  allowed_scopes: Array<
+    "conversation" | "task" | "user" | "company" | "operational"
+  >;
+  allowed_classifications: Array<
+    "public" | "internal" | "confidential" | "restricted"
+  >;
+  require_consent_for_user_scope: boolean;
+  updated_at: string | null;
+}
+
+export interface AgentMemoryResponse {
+  id: string;
+  agent_id: string;
+  scope: "conversation" | "task" | "user" | "company" | "operational";
+  classification: "public" | "internal" | "confidential" | "restricted";
+  source_type: "manual" | "conversation" | "task" | "tool";
+  source_id: string | null;
+  consent_reference: string | null;
+  expires_at: string;
+  expired: boolean;
+  created_at: string;
+}
+
 export function useAgents(enabled = true) {
   const { me, status } = useSession();
   return useQuery({

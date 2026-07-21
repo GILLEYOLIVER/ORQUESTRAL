@@ -35,6 +35,8 @@ from app.modules.agents.governance import (
     evaluate_tool_autonomy,
     version_checksum,
 )
+from app.modules.agents.memory_schemas import AgentMemoryPolicyUpdate, AgentMemoryPurgeRequest
+from app.modules.agents.memory_service import memory_content_fingerprint
 from app.modules.agents.models import AgentTool
 from app.modules.agents.providers.base import ModelMessage, ToolDefinition
 from app.modules.agents.providers.local import LocalLanguageModelProvider
@@ -278,6 +280,34 @@ def test_temporal_approval_contracts_reject_invalid_ranges() -> None:
             ends_at=now + timedelta(days=91),
             reason="Ausência programada",
         )
+
+
+def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
+    company_a = UUID("00000000-0000-0000-0000-000000000058")
+    company_b = UUID("00000000-0000-0000-0000-000000000059")
+    agent_id = UUID("00000000-0000-0000-0000-000000000060")
+    test_secret = UUID("00000000-0000-0000-0000-000000000061").hex
+    first = memory_content_fingerprint(
+        secret=test_secret, company_id=company_a, agent_id=agent_id, content="dado sensível"
+    )
+    repeated = memory_content_fingerprint(
+        secret=test_secret, company_id=company_a, agent_id=agent_id, content="dado sensível"
+    )
+    other_tenant = memory_content_fingerprint(
+        secret=test_secret, company_id=company_b, agent_id=agent_id, content="dado sensível"
+    )
+    assert first == repeated
+    assert first != other_tenant
+    assert "dado" not in first
+    with pytest.raises(ValueError, match="superar"):
+        AgentMemoryPolicyUpdate(
+            default_retention_days=31,
+            max_retention_days=30,
+            allowed_scopes=["conversation"],
+            allowed_classifications=["internal"],
+        )
+    with pytest.raises(ValueError, match="Confirme"):
+        AgentMemoryPurgeRequest(expired_only=False)
 
 
 def test_approval_policy_rejects_invalid_escalation_chain() -> None:

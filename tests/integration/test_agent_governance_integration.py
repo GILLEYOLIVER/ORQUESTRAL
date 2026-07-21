@@ -15,6 +15,7 @@ from app.core.security import hash_password
 from app.main import create_app
 from app.modules.agents.coordination_execution import process_delegation
 from app.modules.agents.coordination_models import AgentDelegationPayload
+from app.modules.agents.memory_models import AgentMemoryEntry
 from app.modules.authorization.service import ensure_company_system_roles
 from app.modules.companies.models import Company
 from app.modules.events.models import OutboxEvent
@@ -170,6 +171,33 @@ async def _represented_approver(
         await resources.close()
 
 
+async def _assert_memory_storage(
+    settings: Settings,
+    *,
+    company_id: UUID,
+    memory_id: UUID,
+    secret_text: str,
+    exists: bool,
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            memory = await database.scalar(
+                select(AgentMemoryEntry).where(
+                    AgentMemoryEntry.id == memory_id,
+                    AgentMemoryEntry.company_id == company_id,
+                )
+            )
+            if not exists:
+                assert memory is None
+                return
+            assert memory is not None
+            assert secret_text.encode() not in memory.encrypted_content
+            assert secret_text not in memory.content_fingerprint
+    finally:
+        await resources.close()
+
+
 @pytest.mark.integration
 def test_approval_absence_delegation_is_tenant_scoped_and_revocable() -> None:
     settings = Settings(app_env="testing")
@@ -280,6 +308,84 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             assert created.status_code == 201
             agent_id = created.json()["id"]
             assert created.json()["active_version_id"]
+            default_memory_policy = client.get(
+                f"/agents/{agent_id}/memory-policy", headers=headers_b
+            )
+            assert default_memory_policy.status_code == 200
+            assert default_memory_policy.json()["default_retention_days"] == 30
+            assert (
+                client.get(f"/agents/{agent_id}/memory-policy", headers=headers_a).status_code
+                == 404
+            )
+            memory_policy = client.put(
+                f"/agents/{agent_id}/memory-policy",
+                headers=headers_b,
+                json={
+                    "default_retention_days": 7,
+                    "max_retention_days": 30,
+                    "allowed_scopes": ["conversation", "user"],
+                    "allowed_classifications": ["internal", "confidential"],
+                    "require_consent_for_user_scope": True,
+                },
+            )
+            assert memory_policy.status_code == 200
+            secret_memory = "SEGREDO-DE-MEMORIA-NAO-EXPOR"
+            missing_consent = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": secret_memory,
+                    "scope": "user",
+                    "classification": "confidential",
+                },
+            )
+            assert missing_consent.status_code == 422
+            stored_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": secret_memory,
+                    "scope": "user",
+                    "classification": "confidential",
+                    "consent_reference": "consent-test-2026",
+                },
+            )
+            assert stored_memory.status_code == 201
+            assert secret_memory not in str(stored_memory.json())
+            memory_id = UUID(stored_memory.json()["id"])
+            asyncio.run(
+                _assert_memory_storage(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    memory_id=memory_id,
+                    secret_text=secret_memory,
+                    exists=True,
+                )
+            )
+            repeated_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": secret_memory,
+                    "scope": "user",
+                    "classification": "confidential",
+                    "consent_reference": "consent-test-2026",
+                },
+            )
+            assert repeated_memory.json()["id"] == str(memory_id)
+            removed_memory = client.delete(
+                f"/agents/{agent_id}/memories/{memory_id}", headers=headers_b
+            )
+            assert removed_memory.status_code == 204
+            asyncio.run(
+                _assert_memory_storage(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    memory_id=memory_id,
+                    secret_text=secret_memory,
+                    exists=False,
+                )
+            )
 
             versions = client.get(f"/agents/{agent_id}/versions", headers=headers_b)
             assert versions.status_code == 200
