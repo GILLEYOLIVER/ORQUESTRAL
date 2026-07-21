@@ -5361,6 +5361,8 @@ export interface components {
             decided_at: string | null;
             /** Decided By User Id */
             decided_by_user_id: string | null;
+            /** Expiration Reminder Sent */
+            expiration_reminder_sent: boolean;
             /**
              * Expires At
              * Format: date-time
@@ -10950,6 +10952,11 @@ export interface components {
             component: "agent-memory-worker";
             /** Monitor Secret Rotation Days Remaining */
             monitor_secret_rotation_days_remaining: number | null;
+            /**
+             * Monitor Secret Rotation Policy
+             * @enum {string}
+             */
+            monitor_secret_rotation_policy: "optional" | "warn" | "enforce";
             /**
              * Monitor Secret Rotation State
              * @enum {string}

@@ -3171,6 +3171,10 @@
             ],
             "title": "Decided By User Id"
           },
+          "expiration_reminder_sent": {
+            "title": "Expiration Reminder Sent",
+            "type": "boolean"
+          },
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",
@@ -3224,6 +3228,7 @@
           "requested_by_user_id",
           "decided_by_user_id",
           "expires_at",
+          "expiration_reminder_sent",
           "created_at",
           "decided_at"
         ],
@@ -17987,6 +17992,15 @@
             ],
             "title": "Monitor Secret Rotation Days Remaining"
           },
+          "monitor_secret_rotation_policy": {
+            "enum": [
+              "optional",
+              "warn",
+              "enforce"
+            ],
+            "title": "Monitor Secret Rotation Policy",
+            "type": "string"
+          },
           "monitor_secret_rotation_state": {
             "enum": [
               "not_configured",
@@ -18024,6 +18038,7 @@
           "state",
           "monitor_secret_rotation_state",
           "monitor_secret_rotation_days_remaining",
+          "monitor_secret_rotation_policy",
           "request_id"
         ],
         "title": "WorkerHealthResponse",

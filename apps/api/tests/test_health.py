@@ -46,12 +46,14 @@ def test_agent_memory_scheduler_health_is_generic(client: TestClient) -> None:
     assert response.json()["state"] in {"idle", "healthy"}
     assert response.json()["monitor_secret_rotation_state"] == "not_configured"
     assert response.json()["monitor_secret_rotation_days_remaining"] is None
+    assert response.json()["monitor_secret_rotation_policy"] == "optional"
     assert set(response.json()) == {
         "status",
         "component",
         "state",
         "monitor_secret_rotation_state",
         "monitor_secret_rotation_days_remaining",
+        "monitor_secret_rotation_policy",
         "request_id",
     }
 

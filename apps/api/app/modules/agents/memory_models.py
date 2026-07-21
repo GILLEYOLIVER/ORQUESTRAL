@@ -795,6 +795,9 @@ class AgentMemoryReencryptionLegalHold(Base):
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    reminder_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )

@@ -52,7 +52,11 @@ class Settings(BaseSettings):
     agent_memory_monitor_secret_rotated_at: datetime | None = None
     agent_memory_monitor_secret_max_age_days: int = Field(default=90, ge=7, le=365)
     agent_memory_monitor_secret_rotation_warning_days: int = Field(default=14, ge=1, le=90)
+    agent_memory_monitor_secret_rotation_policy: Literal["optional", "warn", "enforce"] | None = (
+        None
+    )
     agent_memory_reencryption_terminal_retention_days: int = Field(default=90, ge=7, le=3_650)
+    agent_memory_reencryption_legal_hold_reminder_days: int = Field(default=7, ge=1, le=90)
     n8n_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:5678")
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
     n8n_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
@@ -141,6 +145,17 @@ class Settings(BaseSettings):
             >= self.agent_memory_monitor_secret_max_age_days
         ):
             raise ValueError("O alerta de rotação deve ocorrer antes da idade máxima do segredo")
+        rotation_policy = self.agent_memory_monitor_effective_rotation_policy
+        if self.app_env == "production" and rotation_policy != "enforce":
+            raise ValueError("Produção exige política enforce para rotação do segredo do monitor")
+        if self.app_env == "development" and rotation_policy == "optional":
+            raise ValueError("Desenvolvimento remoto não aceita política optional de rotação")
+        if (
+            rotation_policy == "enforce"
+            and self.app_env != "production"
+            and self.agent_memory_monitor_secret_rotated_at is None
+        ):
+            raise ValueError("Política enforce exige AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT")
         if self.agent_memory_monitor_secret_rotated_at is not None:
             rotated_at = self.agent_memory_monitor_secret_rotated_at
             if rotated_at.tzinfo is None:
@@ -341,6 +356,18 @@ class Settings(BaseSettings):
     @property
     def jwt_verification_secrets(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys((self.jwt_secret, *self.jwt_previous_secrets)))
+
+    @property
+    def agent_memory_monitor_effective_rotation_policy(
+        self,
+    ) -> Literal["optional", "warn", "enforce"]:
+        if self.agent_memory_monitor_secret_rotation_policy is not None:
+            return self.agent_memory_monitor_secret_rotation_policy
+        if self.app_env == "production" or self.remote_development_enabled:
+            return "enforce"
+        if self.app_env == "development":
+            return "warn"
+        return "optional"
 
     def agent_memory_monitor_rotation_status(
         self, *, now: datetime | None = None

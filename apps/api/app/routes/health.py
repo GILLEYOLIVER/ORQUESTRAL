@@ -112,6 +112,9 @@ async def agent_memory_scheduler_health(
         state="overdue" if overdue else ("healthy" if schedules else "idle"),
         monitor_secret_rotation_state=rotation_state,
         monitor_secret_rotation_days_remaining=rotation_days_remaining,
+        monitor_secret_rotation_policy=(
+            request.app.state.settings.agent_memory_monitor_effective_rotation_policy
+        ),
         request_id=request.state.request_id,
     )
     if overdue:

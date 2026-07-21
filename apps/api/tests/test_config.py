@@ -115,3 +115,18 @@ def test_monitor_secret_rotation_warning_precedes_expiration() -> None:
             agent_memory_monitor_secret_max_age_days=14,
             agent_memory_monitor_secret_rotation_warning_days=14,
         )
+
+
+def test_monitor_rotation_policy_is_environment_specific() -> None:
+    assert Settings(app_env="local").agent_memory_monitor_effective_rotation_policy == "optional"
+    assert Settings(app_env="development").agent_memory_monitor_effective_rotation_policy == "warn"
+    with pytest.raises(ValueError, match="não aceita política optional"):
+        Settings(
+            app_env="development",
+            agent_memory_monitor_secret_rotation_policy="optional",  # noqa: S106
+        )
+    with pytest.raises(ValueError, match="Política enforce"):
+        Settings(
+            app_env="local",
+            agent_memory_monitor_secret_rotation_policy="enforce",  # noqa: S106
+        )

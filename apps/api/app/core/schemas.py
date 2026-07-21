@@ -22,6 +22,7 @@ class WorkerHealthResponse(StrictSchema):
     state: Literal["idle", "healthy", "overdue"]
     monitor_secret_rotation_state: Literal["not_configured", "healthy", "due_soon"]
     monitor_secret_rotation_days_remaining: int | None
+    monitor_secret_rotation_policy: Literal["optional", "warn", "enforce"]
     request_id: str
 
 

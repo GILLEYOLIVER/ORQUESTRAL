@@ -222,7 +222,11 @@ async def _expire_reencryption_job(settings: Settings, *, company_id: UUID, job_
 
 
 async def _expire_reencryption_legal_hold(
-    settings: Settings, *, company_id: UUID, hold_id: UUID
+    settings: Settings,
+    *,
+    company_id: UUID,
+    hold_id: UUID,
+    expires_in_days: int = -1,
 ) -> None:
     resources = create_resources(settings)
     try:
@@ -234,8 +238,9 @@ async def _expire_reencryption_legal_hold(
                 )
             )
             assert hold is not None
-            hold.created_at = utc_now() - timedelta(days=2)
-            hold.expires_at = utc_now() - timedelta(days=1)
+            if expires_in_days < 0:
+                hold.created_at = utc_now() - timedelta(days=2)
+            hold.expires_at = utc_now() + timedelta(days=expires_in_days)
             await database.commit()
     finally:
         await resources.close()
@@ -1055,6 +1060,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert approved_hold.status_code == 200, approved_hold.text
             assert approved_hold.json()["status"] == "approved"
+            assert approved_hold.json()["expiration_reminder_sent"] is False
             assert (
                 asyncio.run(
                     _notification_count(
@@ -1065,6 +1071,59 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 )
                 == 1
             )
+            asyncio.run(
+                _expire_reencryption_legal_hold(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    hold_id=UUID(job_hold.json()["id"]),
+                    expires_in_days=3,
+                )
+            )
+            reminder_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert reminder_maintenance["legal_hold_reminders"] == 1
+            expiring_notifications = asyncio.run(
+                _notification_count(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    event_type="agent.memory_reencryption_legal_hold.expiring",
+                )
+            )
+            assert expiring_notifications >= 2
+            assert (
+                asyncio.run(
+                    maintain_agent_memory_reencryption_jobs(settings=settings)
+                )["legal_hold_reminders"]
+                == 0
+            )
+            assert (
+                asyncio.run(
+                    _notification_count(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        event_type="agent.memory_reencryption_legal_hold.expiring",
+                    )
+                )
+                == expiring_notifications
+            )
+            assert (
+                asyncio.run(
+                    _notification_count(
+                        settings,
+                        company_id=identity.company_ids[0],
+                        event_type="agent.memory_reencryption_legal_hold.expiring",
+                    )
+                )
+                == 0
+            )
+            listed_holds = client.get(
+                f"/agents/{agent_id}/memory-reencryption-jobs/"
+                f"{external_rotation.json()['id']}/legal-holds",
+                headers=headers_b,
+            )
+            assert listed_holds.status_code == 200
+            assert listed_holds.json()[0]["expiration_reminder_sent"] is True
             asyncio.run(
                 _expire_reencryption_job(
                     settings,
@@ -2268,6 +2327,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 "request_id",
                 "monitor_secret_rotation_state",
                 "monitor_secret_rotation_days_remaining",
+                "monitor_secret_rotation_policy",
             }
             asyncio.run(maintain_due_agent_memory_response_exercises(settings=settings))
             recovered_probe = client.get(

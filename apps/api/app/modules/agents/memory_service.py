@@ -39,7 +39,7 @@ from app.modules.agents.security import (
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
-from app.modules.notifications.service import create_notification
+from app.modules.notifications.service import company_approver_user_ids, create_notification
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 from app.modules.plugins.models import IntegrationCredential
 
@@ -978,11 +978,104 @@ async def purge_terminal_agent_memory_reencryption_jobs(
     return len(jobs)
 
 
+async def send_agent_memory_reencryption_legal_hold_reminders(
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    now: datetime | None = None,
+    limit: int = 1_000,
+) -> int:
+    current = now or utc_now()
+    warning_cutoff = current + timedelta(
+        days=settings.agent_memory_reencryption_legal_hold_reminder_days
+    )
+    holds = list(
+        await database.scalars(
+            select(AgentMemoryReencryptionLegalHold)
+            .where(
+                AgentMemoryReencryptionLegalHold.status.in_(("pending", "approved")),
+                AgentMemoryReencryptionLegalHold.reminder_sent_at.is_(None),
+                AgentMemoryReencryptionLegalHold.expires_at > current,
+                AgentMemoryReencryptionLegalHold.expires_at <= warning_cutoff,
+            )
+            .order_by(AgentMemoryReencryptionLegalHold.expires_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    for hold in holds:
+        reviewer_ids = [
+            user_id
+            for user_id in await company_approver_user_ids(
+                database,
+                company_id=hold.company_id,
+            )
+            if user_id != hold.requested_by_user_id
+        ]
+        recipient_ids = tuple(dict.fromkeys((*reviewer_ids, hold.requested_by_user_id)))
+        for recipient_user_id in recipient_ids:
+            await create_notification(
+                database,
+                company_id=hold.company_id,
+                recipient_user_id=recipient_user_id,
+                event_type="agent.memory_reencryption_legal_hold.expiring",
+                title="Retenção legal próxima do vencimento",
+                message=(
+                    "A retenção de um registro de recriptografia está próxima do vencimento. "
+                    "Revise a necessidade de preservação antes do prazo."
+                ),
+                severity="warning",
+                resource_type="agent_memory_reencryption_legal_hold",
+                resource_id=hold.id,
+                data={
+                    "agent_id": str(hold.agent_id),
+                    "job_id": str(hold.job_id),
+                    "expires_at": hold.expires_at.isoformat(),
+                },
+            )
+        hold.reminder_sent_at = current
+        record_authorization_audit(
+            database,
+            company_id=hold.company_id,
+            actor_user_id=hold.requested_by_user_id,
+            action="agent.memory_reencryption_legal_hold.expiration_reminded",
+            target_type="agent_memory_reencryption_legal_hold",
+            target_id=hold.id,
+            details={
+                "agent_id": str(hold.agent_id),
+                "job_id": str(hold.job_id),
+                "recipient_count": len(recipient_ids),
+            },
+        )
+        enqueue_domain_event(
+            database,
+            DomainEventCreate(
+                event_type="agent.memory_reencryption_legal_hold.expiration_reminded",
+                company_id=hold.company_id,
+                actor_user_id=hold.requested_by_user_id,
+                classification="internal",
+                payload={
+                    "hold_id": str(hold.id),
+                    "agent_id": str(hold.agent_id),
+                    "job_id": str(hold.job_id),
+                    "recipient_count": len(recipient_ids),
+                },
+            ),
+        )
+    await database.commit()
+    return len(holds)
+
+
 async def maintain_agent_memory_reencryption_jobs(*, settings: Settings) -> dict[str, int]:
     resources = create_resources(settings)
     try:
         async with resources.sessions() as database:
             result = await process_agent_memory_reencryption_jobs(database, settings=settings)
+            result[
+                "legal_hold_reminders"
+            ] = await send_agent_memory_reencryption_legal_hold_reminders(
+                database, settings=settings
+            )
             result["purged"] = await purge_terminal_agent_memory_reencryption_jobs(database)
             return result
     finally:

@@ -559,6 +559,7 @@ class AgentMemoryReencryptionLegalHoldResponse(StrictSchema):
     requested_by_user_id: UUID
     decided_by_user_id: UUID | None
     expires_at: datetime
+    expiration_reminder_sent: bool
     created_at: datetime
     decided_at: datetime | None
 

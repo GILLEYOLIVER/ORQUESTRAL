@@ -10,6 +10,10 @@ from app.modules.plugins.adapters import (
     get_plugin_adapter,
 )
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError, mask_credentials
+from app.modules.plugins.managed_vault import (
+    ManagedVaultResolutionError,
+    ManagedVaultSecretResolver,
+)
 
 
 def test_credential_vault_round_trip() -> None:
@@ -70,12 +74,45 @@ def test_managed_vault_adapters_validate_protected_references(
 
 
 @pytest.mark.asyncio
-async def test_managed_vault_test_does_not_claim_remote_access() -> None:
+async def test_managed_vault_test_requires_real_remote_access(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def resolve(
+        self: ManagedVaultSecretResolver,
+        reference: str,
+        *,
+        identity_reference: str | None = None,
+    ) -> str:
+        assert reference == "aws-sm://sa-east-1/orkestral/active"
+        assert identity_reference is None
+        return "resolved-secret-that-never-leaves-the-adapter"
+
+    monkeypatch.setattr(ManagedVaultSecretResolver, "resolve", resolve)
     result = await get_plugin_adapter("aws_secrets_manager").test_connection(
         {"key_reference": "aws-sm://sa-east-1/orkestral/active"}
     )
-    assert result.success is False
-    assert "não foi executada" in result.message
+    assert result.success is True
+    assert "resolved-secret" not in result.message
+
+
+@pytest.mark.asyncio
+async def test_managed_vault_test_masks_provider_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fail(
+        self: ManagedVaultSecretResolver,
+        reference: str,
+        *,
+        identity_reference: str | None = None,
+    ) -> str:
+        raise ManagedVaultResolutionError("provider-secret-response")
+
+    monkeypatch.setattr(ManagedVaultSecretResolver, "resolve", fail)
+    with pytest.raises(PluginAdapterError) as error:
+        await get_plugin_adapter("aws_secrets_manager").test_connection(
+            {"key_reference": "aws-sm://sa-east-1/orkestral/active"}
+        )
+    assert "provider-secret-response" not in str(error.value)
 
 
 def test_credential_vault_rotates_from_previous_key() -> None:

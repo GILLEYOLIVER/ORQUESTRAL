@@ -19,6 +19,11 @@ from orkestral_plugin_sdk import (
     PluginValidationError,
 )
 
+from app.modules.plugins.managed_vault import (
+    ManagedVaultResolutionError,
+    ManagedVaultSecretResolver,
+)
+
 
 class PluginAdapterError(PluginValidationError):
     pass
@@ -357,9 +362,18 @@ class ManagedVaultAdapter(BasePlugin):
         configuration: Mapping[str, Any] | None = None,
     ) -> ConnectionTestResult:
         self.validate_credentials(credentials)
+        try:
+            await ManagedVaultSecretResolver().resolve(
+                str(credentials["key_reference"]),
+                identity_reference=str(credentials.get("identity_reference", "")).strip() or None,
+            )
+        except ManagedVaultResolutionError as exc:
+            raise PluginAdapterError(
+                "A identidade gerenciada não conseguiu acessar a referência protegida."
+            ) from exc
         return ConnectionTestResult(
-            False,
-            "Referência válida; a leitura remota não foi executada. Configure a identidade gerenciada no ambiente.",
+            True,
+            "Identidade gerenciada e leitura protegida validadas com sucesso.",
         )
 
 

@@ -740,3 +740,16 @@ Data: 21 de julho de 2026.
 - Validação local concluída: Ruff nos 232 arquivos não históricos e na migração nova; MyPy em 193 arquivos; API `148 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0064 -> 0063 -> 0064`; `/health`, `/ready`, `/app` e monitor HMAC validados.
 - Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
 - Próximo passo: resolução real por identidade gerenciada, lembretes de hold próximos do vencimento e política de rotação por ambiente.
+
+## Ciclo 44 - identidade gerenciada, lembretes e rotação por ambiente
+
+- Implementada resolução real de segredos via identidade da carga de trabalho para AWS Secrets Manager, Azure Key Vault, Google Secret Manager e HashiCorp Vault, sem credenciais estáticas nos conectores e sem exposição do material resolvido.
+- As referências são analisadas por contrato estrito; metadados, redirecionamentos, tamanho de resposta, travessia de caminho e mensagens de erro possuem limites defensivos.
+- O teste de conexão de cofre agora somente retorna sucesso após leitura remota válida; falhas do provedor são sanitizadas.
+- Retenções legais de jobs de recriptografia recebem lembrete idempotente antes do vencimento, com auditoria, evento de domínio e notificações limitadas à empresa e sem referência jurídica.
+- A API informa se o lembrete já foi enviado, e o worker executa a manutenção junto ao ciclo de recriptografia.
+- A política de rotação do monitor é específica por ambiente: `optional` local, `warn` desenvolvimento e `enforce` produção/desenvolvimento remoto.
+- Migração: `20260721_0065_reencryption_hold_reminders.py`.
+- Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0065 -> 0064 -> 0065`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: ativação segura de keyrings externos na criptografia de memória, lembretes renováveis com nova aprovação e métricas operacionais por provedor de cofre.

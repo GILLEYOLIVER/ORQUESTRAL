@@ -2201,6 +2201,7 @@ def _memory_reencryption_legal_hold_response(
         requested_by_user_id=hold.requested_by_user_id,
         decided_by_user_id=hold.decided_by_user_id,
         expires_at=hold.expires_at,
+        expiration_reminder_sent=hold.reminder_sent_at is not None,
         created_at=hold.created_at,
         decided_at=hold.decided_at,
     )

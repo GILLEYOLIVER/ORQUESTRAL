@@ -110,3 +110,12 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 - Para cofres gerenciados, prefira os conectores AWS Secrets Manager, Azure Key Vault, Google Secret Manager ou HashiCorp Vault. Use identidade gerenciada e referências sem token, query string ou credencial embutida; o teste local nunca declara acesso remoto que não executou.
 - Um diagnóstico aprovado expira em 15 minutos. Mudanças no keyring ou em jobs concorrentes bloqueiam a retomada e exigem nova avaliação.
 - Nunca cole chaves no motivo, na interface, em logs ou em tickets. Restaure-as exclusivamente no gerenciador de segredos do ambiente.
+
+## Cofres gerenciados, identidade da carga e retenções
+
+- Os conectores AWS Secrets Manager, Azure Key Vault, Google Secret Manager e HashiCorp Vault resolvem referências somente por identidades temporárias da carga de trabalho; tokens e material secreto não são retornados, persistidos ou incluídos nos erros.
+- Endpoints de metadados são fixos ou restritos a endereços link-local conhecidos, redirecionamentos ficam desativados, respostas são limitadas a 64 KiB e referências bloqueiam query, fragmento, credenciais embutidas e travessia de caminho.
+- AWS usa credenciais temporárias ECS/EC2 IMDSv2 e assinatura SigV4; Azure e GCP usam tokens dos respectivos serviços de metadados; HashiCorp Vault exige HTTPS e autenticação Kubernetes com token montado na carga.
+- A conexão só é marcada como válida depois de uma leitura remota real. Falhas do provedor são convertidas em mensagem segura sem corpo, token, referência jurídica ou conteúdo secreto.
+- Retenções de jobs de recriptografia geram um único lembrete antes do vencimento para solicitante e revisores autorizados da mesma empresa. O registro `reminder_sent_at` impede duplicidade mesmo com execução periódica do worker.
+- A política de rotação do segredo do monitor é derivada do ambiente: `optional` no local, `warn` em desenvolvimento e `enforce` em produção ou desenvolvimento remoto. Produção e modo remoto continuam exigindo data de rotação válida.
