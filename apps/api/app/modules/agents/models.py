@@ -192,6 +192,9 @@ class AgentDataPolicy(Base):
     redact_sensitive_data: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true"
     )
+    require_evaluation_for_publish: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
     max_data_classification: Mapped[str] = mapped_column(
         String(20), default="confidential", server_default="confidential"
     )

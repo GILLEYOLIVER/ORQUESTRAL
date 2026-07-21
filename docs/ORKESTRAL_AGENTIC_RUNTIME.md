@@ -48,7 +48,6 @@ Todos os acessos são filtrados por `company_id` e exigem `agents.configure`. A 
 
 ## Próximos incrementos
 
-- suites de avaliação e testes de prompt injection;
 - coordenação multiagente com contratos de tarefa.
 
 ## Observabilidade e execução segura
@@ -70,3 +69,12 @@ O ciclo 12 adiciona uma política individual por agente. Ela define provedores p
 Antes de chamar um provedor externo, o runtime valida a política e mascara e-mails, CPF, CNPJ, bearer tokens e atribuições comuns de senha, token ou chave. Provedores não autorizados são bloqueados antes de qualquer saída.
 
 Mensagens e trechos de conhecimento são examinados por regras determinísticas contra sobrescrita de políticas, exposição do prompt do sistema, exfiltração de segredos e personificação do sistema. Conteúdo suspeito não chega ao modelo. A ocorrência gera `agent_security_events` contendo somente fingerprint SHA-256 e nomes dos indicadores. O endpoint `GET /agents/{agent_id}/security-events` respeita `company_id` e `agents.configure`.
+
+## Avaliação e bloqueio de publicação
+
+O ciclo 13 adiciona suítes vinculadas a uma versão em rascunho. Cada caso sintético declara se deve ser bloqueado, ferramentas esperadas e ferramentas proibidas. A execução é determinística, não chama provedor pago e gera resultados versionados com códigos de falha.
+
+Quando `require_evaluation_for_publish=true`, uma versão somente pode ser publicada após uma execução com pontuação igual ou superior ao mínimo da suíte. O bootstrap inicial cria a versão 1 publicada; toda evolução posterior passa pelo gate.
+
+- `POST /agents/{agent_id}/versions/{version_id}/evaluation-suites`
+- `POST /agents/{agent_id}/versions/{version_id}/evaluation-suites/{suite_id}/run`

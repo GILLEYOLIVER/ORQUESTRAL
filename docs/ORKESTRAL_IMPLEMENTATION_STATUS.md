@@ -327,3 +327,12 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 123 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0034_agent_data_security.py`.
 - Próximo passo: ciclo 13, suites de avaliação, casos adversariais e bloqueio de publicação.
+## Ciclo 13 - Avaliação e gate de publicação de agentes
+
+- Suítes e casos adversariais vinculados à versão do agente.
+- Avaliação determinística de prompt injection e contratos de ferramentas.
+- Resultados e pontuação auditáveis, sem chamada a provedor pago.
+- Publicação bloqueada até aprovação quando a política exigir.
+- Validação concluída: Ruff e MyPy aprovados; 124 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0035_agent_evaluation_gate.py`.
+- Próximo passo: ciclo 14, contratos de tarefa e coordenação multiagente.

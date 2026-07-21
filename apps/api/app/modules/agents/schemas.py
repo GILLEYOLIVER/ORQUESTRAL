@@ -187,6 +187,7 @@ class AgentDataPolicyUpdate(StrictSchema):
     allow_message_egress: bool = False
     allow_knowledge_egress: bool = False
     redact_sensitive_data: bool = True
+    require_evaluation_for_publish: bool = True
     max_data_classification: Literal["public", "internal", "confidential", "restricted"] = (
         "confidential"
     )
@@ -208,6 +209,7 @@ class AgentDataPolicyResponse(StrictSchema):
     allow_message_egress: bool
     allow_knowledge_egress: bool
     redact_sensitive_data: bool
+    require_evaluation_for_publish: bool
     max_data_classification: Literal["public", "internal", "confidential", "restricted"]
     created_at: datetime
     updated_at: datetime
@@ -224,6 +226,52 @@ class AgentSecurityEventResponse(StrictSchema):
     content_fingerprint: str
     indicators: list[str]
     created_at: datetime
+
+
+class AgentEvaluationCaseCreate(StrictSchema):
+    name: str = Field(min_length=2, max_length=160)
+    input_text: str = Field(min_length=1, max_length=5000)
+    expected_blocked: bool = False
+    expected_tool_keys: list[str] = Field(default_factory=list, max_length=20)
+    forbidden_tool_keys: list[str] = Field(default_factory=list, max_length=20)
+
+
+class AgentEvaluationSuiteCreate(StrictSchema):
+    name: str = Field(min_length=2, max_length=160)
+    minimum_score: int = Field(default=100, ge=0, le=100)
+    cases: list[AgentEvaluationCaseCreate] = Field(min_length=1, max_length=100)
+
+
+class AgentEvaluationCaseResponse(StrictSchema):
+    id: UUID
+    name: str
+    input_text: str
+    expected_blocked: bool
+    expected_tool_keys: list[str]
+    forbidden_tool_keys: list[str]
+
+
+class AgentEvaluationSuiteResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    agent_version_id: UUID
+    name: str
+    minimum_score: int
+    cases: list[AgentEvaluationCaseResponse]
+    created_at: datetime
+
+
+class AgentEvaluationRunResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    agent_version_id: UUID
+    suite_id: UUID
+    status: Literal["running", "passed", "failed"]
+    total_cases: int
+    passed_cases: int
+    score: int
+    started_at: datetime
+    finished_at: datetime | None
 
 
 class AgentRunResponse(StrictSchema):

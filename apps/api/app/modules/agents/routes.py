@@ -12,6 +12,13 @@ from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.agents.approvals import decide_agent_tool_run
+from app.modules.agents.evaluation import evaluate_agent_case
+from app.modules.agents.evaluation_models import (
+    AgentEvaluationCase,
+    AgentEvaluationResult,
+    AgentEvaluationRun,
+    AgentEvaluationSuite,
+)
 from app.modules.agents.governance import (
     AgentBudgetExceededError,
     active_agent_version,
@@ -52,6 +59,10 @@ from app.modules.agents.schemas import (
     AgentCreate,
     AgentDataPolicyResponse,
     AgentDataPolicyUpdate,
+    AgentEvaluationCaseResponse,
+    AgentEvaluationRunResponse,
+    AgentEvaluationSuiteCreate,
+    AgentEvaluationSuiteResponse,
     AgentMessageResponse,
     AgentProviderStatusResponse,
     AgentResponse,
@@ -133,6 +144,29 @@ def _data_policy_response(policy: AgentDataPolicy) -> AgentDataPolicyResponse:
 
 def _security_event_response(event: AgentSecurityEvent) -> AgentSecurityEventResponse:
     return AgentSecurityEventResponse.model_validate(event, from_attributes=True)
+
+
+async def _evaluation_suite_response(
+    database: DatabaseSession, suite: AgentEvaluationSuite
+) -> AgentEvaluationSuiteResponse:
+    cases = (
+        await database.scalars(
+            select(AgentEvaluationCase)
+            .where(AgentEvaluationCase.suite_id == suite.id)
+            .order_by(AgentEvaluationCase.created_at, AgentEvaluationCase.id)
+        )
+    ).all()
+    return AgentEvaluationSuiteResponse(
+        id=suite.id,
+        agent_id=suite.agent_id,
+        agent_version_id=suite.agent_version_id,
+        name=suite.name,
+        minimum_score=suite.minimum_score,
+        cases=[
+            AgentEvaluationCaseResponse.model_validate(case, from_attributes=True) for case in cases
+        ],
+        created_at=suite.created_at,
+    )
 
 
 async def _data_policy(
@@ -412,6 +446,7 @@ async def create_agent(
             allow_message_egress=is_external,
             allow_knowledge_egress=is_external,
             redact_sensitive_data=True,
+            require_evaluation_for_publish=True,
             max_data_classification="confidential",
         )
     )
@@ -736,6 +771,23 @@ async def publish_agent_version(
         raise HTTPException(
             status_code=409, detail="Somente versões em rascunho podem ser publicadas."
         )
+    data_policy = await _data_policy(database, agent_id=agent.id, company_id=context.company_id)
+    if data_policy.require_evaluation_for_publish:
+        approved_evaluation = await database.scalar(
+            select(AgentEvaluationRun)
+            .where(
+                AgentEvaluationRun.agent_version_id == version.id,
+                AgentEvaluationRun.company_id == context.company_id,
+                AgentEvaluationRun.status == "passed",
+            )
+            .order_by(AgentEvaluationRun.finished_at.desc())
+            .limit(1)
+        )
+        if approved_evaluation is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Execute e aprove a suíte de avaliação antes de publicar esta versão.",
+            )
     await _publish_agent_version(
         database, agent=agent, version=version, actor_user_id=context.user_id
     )
@@ -943,6 +995,159 @@ async def list_agent_security_events(
         )
     ).all()
     return [_security_event_response(event) for event in events]
+
+
+@router.post(
+    "/{agent_id}/versions/{version_id}/evaluation-suites",
+    response_model=AgentEvaluationSuiteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_evaluation_suite(
+    agent_id: UUID,
+    version_id: UUID,
+    payload: AgentEvaluationSuiteCreate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentEvaluationSuiteResponse:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    version = await database.scalar(
+        select(AgentVersion).where(
+            AgentVersion.id == version_id,
+            AgentVersion.agent_id == agent_id,
+            AgentVersion.company_id == context.company_id,
+            AgentVersion.status == "draft",
+        )
+    )
+    if version is None:
+        raise HTTPException(status_code=404, detail="Versão em rascunho não encontrada.")
+    existing = await database.scalar(
+        select(AgentEvaluationSuite).where(AgentEvaluationSuite.agent_version_id == version.id)
+    )
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="Esta versão já possui uma suíte de avaliação.")
+    suite = AgentEvaluationSuite(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        agent_version_id=version.id,
+        name=payload.name,
+        minimum_score=payload.minimum_score,
+        created_by_user_id=context.user_id,
+    )
+    database.add(suite)
+    await database.flush()
+    for case in payload.cases:
+        database.add(
+            AgentEvaluationCase(
+                company_id=context.company_id,
+                suite_id=suite.id,
+                **case.model_dump(),
+            )
+        )
+    await database.commit()
+    await database.refresh(suite)
+    return await _evaluation_suite_response(database, suite)
+
+
+@router.post(
+    "/{agent_id}/versions/{version_id}/evaluation-suites/{suite_id}/run",
+    response_model=AgentEvaluationRunResponse,
+)
+async def run_agent_evaluation_suite(
+    agent_id: UUID,
+    version_id: UUID,
+    suite_id: UUID,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentEvaluationRunResponse:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    suite = await database.scalar(
+        select(AgentEvaluationSuite).where(
+            AgentEvaluationSuite.id == suite_id,
+            AgentEvaluationSuite.agent_id == agent_id,
+            AgentEvaluationSuite.agent_version_id == version_id,
+            AgentEvaluationSuite.company_id == context.company_id,
+        )
+    )
+    if suite is None:
+        raise HTTPException(status_code=404, detail="Suíte de avaliação não encontrada.")
+    cases = (
+        await database.scalars(
+            select(AgentEvaluationCase).where(
+                AgentEvaluationCase.suite_id == suite.id,
+                AgentEvaluationCase.company_id == context.company_id,
+            )
+        )
+    ).all()
+    evaluation_run = AgentEvaluationRun(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        agent_version_id=version_id,
+        suite_id=suite.id,
+        status="running",
+        total_cases=len(cases),
+        created_by_user_id=context.user_id,
+    )
+    database.add(evaluation_run)
+    await database.flush()
+    passed = 0
+    for case in cases:
+        outcome = evaluate_agent_case(
+            input_text=case.input_text,
+            expected_blocked=case.expected_blocked,
+            expected_tool_keys=case.expected_tool_keys,
+            forbidden_tool_keys=case.forbidden_tool_keys,
+        )
+        passed += int(outcome.passed)
+        database.add(
+            AgentEvaluationResult(
+                company_id=context.company_id,
+                run_id=evaluation_run.id,
+                case_id=case.id,
+                passed=outcome.passed,
+                actual_blocked=outcome.actual_blocked,
+                planned_tool_keys=list(outcome.planned_tool_keys),
+                failure_codes=list(outcome.failure_codes),
+            )
+        )
+    score = round((passed / len(cases)) * 100) if cases else 0
+    evaluation_run.passed_cases = passed
+    evaluation_run.score = score
+    evaluation_run.status = "passed" if score >= suite.minimum_score else "failed"
+    evaluation_run.finished_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.evaluation.{evaluation_run.status}",
+        target_type="agent_evaluation_run",
+        target_id=evaluation_run.id,
+        details={
+            "agent_id": str(agent_id),
+            "agent_version_id": str(version_id),
+            "suite_id": str(suite.id),
+            "score": score,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.evaluation.{evaluation_run.status}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={
+                "agent_id": str(agent_id),
+                "agent_version_id": str(version_id),
+                "evaluation_run_id": str(evaluation_run.id),
+                "score": score,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(evaluation_run)
+    return AgentEvaluationRunResponse.model_validate(evaluation_run, from_attributes=True)
 
 
 @router.get("/{agent_id}/conversations", response_model=list[AgentConversationResponse])
