@@ -211,6 +211,28 @@ export interface AgentMemoryMetadataExport {
   memories: AgentMemoryResponse[];
 }
 
+export interface AgentMemoryRiskSummary {
+  agent_id: string;
+  generated_at: string;
+  risk_level: "low" | "elevated" | "high" | "critical";
+  active_grants: number;
+  restricted_active_grants: number;
+  pending_approvals: number;
+  expired_approvals: number;
+  blocked_events_last_24h: number;
+  cost_denials_last_24h: number;
+  incidents_last_30_days: number;
+  revoked_grants_last_30_days: number;
+}
+
+export interface AgentTaskMemoryIncidentResponse {
+  id: string;
+  agent_id: string;
+  revoked_grants: number;
+  already_processed: boolean;
+  created_at: string;
+}
+
 export function useAgents(enabled = true) {
   const { me, status } = useSession();
   return useQuery({

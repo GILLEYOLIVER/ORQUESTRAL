@@ -206,6 +206,7 @@ class AgentMemoryLegalHoldResponse(StrictSchema):
 
 TaskMemoryAccessPurpose = Literal["coordination", "review", "handoff"]
 TaskMemoryAccessStatus = Literal["active", "revoked", "expired"]
+TaskMemoryApprovalStatus = Literal["not_required", "pending", "approved", "rejected", "expired"]
 
 
 def _default_shared_classifications() -> list[MemoryClassification]:
@@ -221,6 +222,7 @@ class AgentTaskMemoryAccessGrantCreate(StrictSchema):
     allowed_tool_keys: list[str] = Field(min_length=1, max_length=50)
     max_classification: MemoryClassification = "internal"
     max_cost_microunits: int = Field(default=1000, ge=0, le=2_000_000_000)
+    approval_expires_in_minutes: int = Field(default=30, ge=5, le=240)
     max_entries: int = Field(default=1, ge=1, le=5)
     max_content_characters: int = Field(default=512, ge=64, le=2000)
     expires_in_minutes: int = Field(default=60, ge=5, le=1440)
@@ -264,7 +266,8 @@ class AgentTaskMemoryAccessGrantResponse(StrictSchema):
     max_classification: MemoryClassification
     max_cost_microunits: int
     requires_human_approval: bool
-    approval_status: Literal["not_required", "pending", "approved", "rejected"]
+    approval_status: TaskMemoryApprovalStatus
+    approval_ttl_minutes: int | None
     max_entries: int
     max_content_characters: int
     status: TaskMemoryAccessStatus
@@ -274,6 +277,7 @@ class AgentTaskMemoryAccessGrantResponse(StrictSchema):
     expires_at: datetime
     created_at: datetime
     approval_decided_at: datetime | None
+    approval_expires_at: datetime | None
     revoked_at: datetime | None
 
 
@@ -288,6 +292,39 @@ class AgentTaskMemoryAccessRevoke(StrictSchema):
 
 class AgentTaskMemoryAccessDecision(StrictSchema):
     decision: Literal["approved", "rejected"]
+
+
+class AgentTaskMemoryIncidentRevoke(StrictSchema):
+    incident_reference: str = Field(min_length=3, max_length=160)
+    reason: str = Field(min_length=3, max_length=160)
+    idempotency_key: UUID
+
+    @field_validator("incident_reference", "reason")
+    @classmethod
+    def trim_incident_value(cls, value: str) -> str:
+        return value.strip()
+
+
+class AgentTaskMemoryIncidentResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    revoked_grants: int
+    already_processed: bool
+    created_at: datetime
+
+
+class AgentMemoryRiskSummary(StrictSchema):
+    agent_id: UUID
+    generated_at: datetime
+    risk_level: Literal["low", "elevated", "high", "critical"]
+    active_grants: int
+    restricted_active_grants: int
+    pending_approvals: int
+    expired_approvals: int
+    blocked_events_last_24h: int
+    cost_denials_last_24h: int
+    incidents_last_30_days: int
+    revoked_grants_last_30_days: int
 
 
 class AgentTaskMemoryContextRequest(StrictSchema):

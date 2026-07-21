@@ -582,3 +582,12 @@ Data: 21 de julho de 2026.
 - Decisões, custos e desfechos são auditados sem conteúdo sensível.
 - Migração: `20260721_0052`.
 - Próximo passo: expiração automática de aprovações, revogação em lote por incidente e painel consolidado de riscos de memória.
+
+## Ciclo 32 - expiração de aprovação, incidente e risco consolidado
+
+- Aprovações para contexto restrito possuem janela de 5 a 240 minutos; após o prazo, API e executor deixam de autorizar o contexto sem depender de tarefa agendada.
+- Incidentes revogam atomicamente todos os grants ativos de um agente, com idempotência, isolamento multiempresa, auditoria e evento de domínio.
+- Referência e motivo do incidente são persistidos somente como fingerprints HMAC; textos operacionais não entram em banco, evento ou resposta.
+- O painel do agente consolida acessos ativos, aprovações, bloqueios, incidentes e revogações em linguagem clara.
+- Migração: `20260721_0053`.
+- Próximo passo: criar fila de revisão de incidentes, política de quarentena temporária e exportação assinada do relatório de risco.

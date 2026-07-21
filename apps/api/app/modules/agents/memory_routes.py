@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Annotated, cast
+from typing import Annotated, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import or_, select
+from sqlalchemy import and_, func, or_, select
 
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
@@ -19,6 +19,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
     AgentTaskMemoryAccessGrant,
+    AgentTaskMemoryAccessIncident,
     AgentTaskMemoryAccessTrace,
 )
 from app.modules.agents.memory_schemas import (
@@ -35,6 +36,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurgeResponse,
     AgentMemoryPurposePolicyInput,
     AgentMemoryResponse,
+    AgentMemoryRiskSummary,
     AgentMemoryScopePolicyInput,
     AgentTaskMemoryAccessDecision,
     AgentTaskMemoryAccessGrantCreate,
@@ -44,6 +46,8 @@ from app.modules.agents.memory_schemas import (
     AgentTaskMemoryContextItem,
     AgentTaskMemoryContextRequest,
     AgentTaskMemoryContextResponse,
+    AgentTaskMemoryIncidentResponse,
+    AgentTaskMemoryIncidentRevoke,
     LegalHoldStatus,
     MemoryClassification,
     MemoryPurpose,
@@ -57,6 +61,7 @@ from app.modules.agents.memory_service import (
     memory_access_revocation_fingerprint,
     memory_consent_fingerprint,
     memory_content_fingerprint,
+    memory_incident_value_fingerprint,
     memory_is_expired,
     memory_legal_reference_fingerprint,
     memory_policy_values,
@@ -242,7 +247,14 @@ def _task_memory_access_response(
         max_classification=cast(MemoryClassification, grant.max_classification),
         max_cost_microunits=grant.max_cost_microunits,
         requires_human_approval=grant.requires_human_approval,
-        approval_status=grant.approval_status,
+        approval_status=(
+            "expired"
+            if grant.requires_human_approval
+            and grant.approval_expires_at is not None
+            and grant.approval_expires_at <= utc_now()
+            else grant.approval_status
+        ),
+        approval_ttl_minutes=grant.approval_ttl_minutes,
         max_entries=grant.max_entries,
         max_content_characters=grant.max_content_characters,
         status=cast(TaskMemoryAccessStatus, effective_status),
@@ -252,6 +264,7 @@ def _task_memory_access_response(
         expires_at=grant.expires_at,
         created_at=grant.created_at,
         approval_decided_at=grant.approval_decided_at,
+        approval_expires_at=grant.approval_expires_at,
         revoked_at=grant.revoked_at,
     )
 
@@ -798,6 +811,249 @@ async def list_agent_task_memory_access_grants(
     return [_task_memory_access_response(grant) for grant in grants]
 
 
+@router.get(
+    "/{agent_id}/memory-risk-summary",
+    response_model=AgentMemoryRiskSummary,
+)
+async def get_agent_memory_risk_summary(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryRiskSummary:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    now = utc_now()
+    active_grants = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessGrant.id)).where(
+                AgentTaskMemoryAccessGrant.company_id == context.company_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessGrant.status == "active",
+                AgentTaskMemoryAccessGrant.expires_at > now,
+            )
+        )
+        or 0
+    )
+    restricted_active_grants = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessGrant.id)).where(
+                AgentTaskMemoryAccessGrant.company_id == context.company_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessGrant.status == "active",
+                AgentTaskMemoryAccessGrant.expires_at > now,
+                AgentTaskMemoryAccessGrant.max_classification == "restricted",
+                AgentTaskMemoryAccessGrant.approval_status == "approved",
+                AgentTaskMemoryAccessGrant.approval_expires_at > now,
+            )
+        )
+        or 0
+    )
+    pending_approvals = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessGrant.id)).where(
+                AgentTaskMemoryAccessGrant.company_id == context.company_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessGrant.status == "active",
+                AgentTaskMemoryAccessGrant.approval_status == "pending",
+                AgentTaskMemoryAccessGrant.approval_expires_at > now,
+            )
+        )
+        or 0
+    )
+    expired_approvals = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessGrant.id)).where(
+                AgentTaskMemoryAccessGrant.company_id == context.company_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessGrant.status == "active",
+                AgentTaskMemoryAccessGrant.approval_status.in_(("pending", "approved")),
+                AgentTaskMemoryAccessGrant.approval_expires_at <= now,
+            )
+        )
+        or 0
+    )
+    last_24h = now - timedelta(hours=24)
+    blocked_events = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessTrace.id)).where(
+                AgentTaskMemoryAccessTrace.company_id == context.company_id,
+                AgentTaskMemoryAccessTrace.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessTrace.created_at >= last_24h,
+                AgentTaskMemoryAccessTrace.outcome.in_(
+                    ("blocked", "tool_policy_denied", "aggregate_limit_denied")
+                ),
+            )
+        )
+        or 0
+    )
+    cost_denials = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessTrace.id)).where(
+                AgentTaskMemoryAccessTrace.company_id == context.company_id,
+                AgentTaskMemoryAccessTrace.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessTrace.created_at >= last_24h,
+                AgentTaskMemoryAccessTrace.outcome == "cost_limit_denied",
+            )
+        )
+        or 0
+    )
+    last_30_days = now - timedelta(days=30)
+    incident_metrics = (
+        await database.execute(
+            select(
+                func.count(AgentTaskMemoryAccessIncident.id),
+                func.coalesce(func.sum(AgentTaskMemoryAccessIncident.revoked_grants), 0),
+            ).where(
+                AgentTaskMemoryAccessIncident.company_id == context.company_id,
+                AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessIncident.created_at >= last_30_days,
+            )
+        )
+    ).one()
+    incidents = int(incident_metrics[0])
+    incident_revocations = int(incident_metrics[1])
+    risk_level: Literal["low", "elevated", "high", "critical"] = "low"
+    if incidents and restricted_active_grants:
+        risk_level = "critical"
+    elif incidents or expired_approvals:
+        risk_level = "high"
+    elif pending_approvals or blocked_events or cost_denials or restricted_active_grants:
+        risk_level = "elevated"
+    return AgentMemoryRiskSummary(
+        agent_id=agent_id,
+        generated_at=now,
+        risk_level=risk_level,
+        active_grants=active_grants,
+        restricted_active_grants=restricted_active_grants,
+        pending_approvals=pending_approvals,
+        expired_approvals=expired_approvals,
+        blocked_events_last_24h=blocked_events,
+        cost_denials_last_24h=cost_denials,
+        incidents_last_30_days=incidents,
+        revoked_grants_last_30_days=incident_revocations,
+    )
+
+
+@router.post(
+    "/{agent_id}/memory-access-incidents/revoke",
+    response_model=AgentTaskMemoryIncidentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def revoke_agent_task_memory_access_for_incident(
+    agent_id: UUID,
+    payload: AgentTaskMemoryIncidentRevoke,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentTaskMemoryIncidentResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    reference_fingerprint = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="reference",
+        value=payload.incident_reference,
+    )
+    reason_fingerprint = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="reason",
+        value=payload.reason,
+    )
+    existing = await database.scalar(
+        select(AgentTaskMemoryAccessIncident).where(
+            AgentTaskMemoryAccessIncident.company_id == context.company_id,
+            AgentTaskMemoryAccessIncident.idempotency_key == payload.idempotency_key,
+        )
+    )
+    if existing is not None:
+        if (
+            existing.owner_agent_id != agent_id
+            or existing.incident_reference_fingerprint != reference_fingerprint
+            or existing.reason_fingerprint != reason_fingerprint
+        ):
+            raise HTTPException(
+                status_code=409, detail="Chave idempotente usada por outro incidente."
+            )
+        return AgentTaskMemoryIncidentResponse(
+            id=existing.id,
+            agent_id=existing.owner_agent_id,
+            revoked_grants=existing.revoked_grants,
+            already_processed=True,
+            created_at=existing.created_at,
+        )
+    incident = AgentTaskMemoryAccessIncident(
+        company_id=context.company_id,
+        owner_agent_id=agent_id,
+        idempotency_key=payload.idempotency_key,
+        incident_reference_fingerprint=reference_fingerprint,
+        reason_fingerprint=reason_fingerprint,
+        revoked_grants=0,
+        triggered_by_user_id=context.user_id,
+    )
+    database.add(incident)
+    await database.flush()
+    now = utc_now()
+    grants = list(
+        await database.scalars(
+            select(AgentTaskMemoryAccessGrant)
+            .where(
+                AgentTaskMemoryAccessGrant.company_id == context.company_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessGrant.status == "active",
+                AgentTaskMemoryAccessGrant.expires_at > now,
+            )
+            .with_for_update()
+        )
+    )
+    for grant in grants:
+        grant.status = "revoked"
+        grant.revoked_by_user_id = context.user_id
+        grant.revoked_at = now
+        grant.revocation_incident_id = incident.id
+        grant.revocation_reason_fingerprint = memory_access_revocation_fingerprint(
+            secret=settings.encryption_key,
+            company_id=context.company_id,
+            grant_id=grant.id,
+            reason=payload.reason,
+        )
+    incident.revoked_grants = len(grants)
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.task_memory_access.incident_revoked",
+        target_type="agent_task_memory_access_incident",
+        target_id=incident.id,
+        details={"agent_id": str(agent_id), "revoked_grants": incident.revoked_grants},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.task_memory_access.incident_revoked",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "incident_id": str(incident.id),
+                "agent_id": str(agent_id),
+                "revoked_grants": incident.revoked_grants,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(incident)
+    return AgentTaskMemoryIncidentResponse(
+        id=incident.id,
+        agent_id=agent_id,
+        revoked_grants=incident.revoked_grants,
+        already_processed=False,
+        created_at=incident.created_at,
+    )
+
+
 @router.post(
     "/{agent_id}/delegations/{delegation_id}/memory-access-grants",
     response_model=AgentTaskMemoryAccessGrantResponse,
@@ -877,6 +1133,8 @@ async def create_agent_task_memory_access_grant(
             and sorted(existing.allowed_tool_keys) == normalized_tool_keys
             and existing.max_classification == payload.max_classification
             and existing.max_cost_microunits == payload.max_cost_microunits
+            and existing.approval_ttl_minutes
+            == (payload.approval_expires_in_minutes if requires_human_approval else None)
             and existing.max_entries == payload.max_entries
             and existing.max_content_characters == payload.max_content_characters
         )
@@ -903,6 +1161,14 @@ async def create_agent_task_memory_access_grant(
         max_cost_microunits=payload.max_cost_microunits,
         requires_human_approval=requires_human_approval,
         approval_status="pending" if requires_human_approval else "not_required",
+        approval_ttl_minutes=(
+            payload.approval_expires_in_minutes if requires_human_approval else None
+        ),
+        approval_expires_at=(
+            min(now + timedelta(minutes=payload.approval_expires_in_minutes), expires_at)
+            if requires_human_approval
+            else None
+        ),
         max_entries=payload.max_entries,
         max_content_characters=payload.max_content_characters,
         idempotency_key=payload.idempotency_key,
@@ -972,13 +1238,20 @@ async def decide_agent_task_memory_access_grant(
     )
     if grant is None:
         raise HTTPException(status_code=404, detail="Contrato de memória não encontrado.")
+    now = utc_now()
+    if (
+        grant.requires_human_approval
+        and grant.approval_expires_at is not None
+        and grant.approval_expires_at <= now
+    ):
+        raise HTTPException(status_code=409, detail="A janela de aprovação expirou.")
     if not grant.requires_human_approval or grant.approval_status != "pending":
         raise HTTPException(status_code=409, detail="O contrato não aguarda aprovação.")
     if grant.granted_by_user_id == context.user_id:
         raise HTTPException(status_code=409, detail="A aprovação exige outra pessoa responsável.")
     grant.approval_status = payload.decision
     grant.approved_by_user_id = context.user_id
-    grant.approval_decided_at = utc_now()
+    grant.approval_decided_at = now
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -1104,7 +1377,13 @@ async def get_agent_shared_task_memory_context(
             AgentTaskMemoryAccessGrant.recipient_agent_id == agent_id,
             AgentTaskMemoryAccessGrant.purpose == payload.purpose,
             AgentTaskMemoryAccessGrant.status == "active",
-            AgentTaskMemoryAccessGrant.approval_status.in_(("not_required", "approved")),
+            or_(
+                AgentTaskMemoryAccessGrant.approval_status == "not_required",
+                and_(
+                    AgentTaskMemoryAccessGrant.approval_status == "approved",
+                    AgentTaskMemoryAccessGrant.approval_expires_at > utc_now(),
+                ),
+            ),
             AgentTaskMemoryAccessGrant.expires_at > utc_now(),
         )
     )

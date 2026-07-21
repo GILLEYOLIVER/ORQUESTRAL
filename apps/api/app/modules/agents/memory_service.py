@@ -100,6 +100,13 @@ def memory_access_revocation_fingerprint(
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
+def memory_incident_value_fingerprint(
+    *, secret: str, company_id: UUID, agent_id: UUID, value_type: str, value: str
+) -> str:
+    payload = f"{company_id}:{agent_id}:{value_type}:{value}".encode()
+    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
 def memory_is_expired(memory: AgentMemoryEntry, *, now: datetime | None = None) -> bool:
     return memory.expires_at <= (now or utc_now())
 

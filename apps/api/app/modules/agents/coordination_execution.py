@@ -7,7 +7,7 @@ from datetime import timedelta
 from time import perf_counter
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -95,7 +95,13 @@ async def _prepare_shared_task_memory(
                 AgentTaskMemoryAccessGrant.recipient_agent_id == delegation.assigned_agent_id,
                 AgentTaskMemoryAccessGrant.purpose == "coordination",
                 AgentTaskMemoryAccessGrant.status == "active",
-                AgentTaskMemoryAccessGrant.approval_status.in_(("not_required", "approved")),
+                or_(
+                    AgentTaskMemoryAccessGrant.approval_status == "not_required",
+                    and_(
+                        AgentTaskMemoryAccessGrant.approval_status == "approved",
+                        AgentTaskMemoryAccessGrant.approval_expires_at > utc_now(),
+                    ),
+                ),
                 AgentTaskMemoryAccessGrant.expires_at > utc_now(),
             )
             .order_by(AgentTaskMemoryAccessGrant.created_at.desc())

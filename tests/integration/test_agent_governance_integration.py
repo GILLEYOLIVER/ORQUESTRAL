@@ -15,6 +15,7 @@ from app.core.resources import create_resources
 from app.core.security import hash_password
 from app.main import create_app
 from app.modules.agents import coordination_execution as coordination_execution_module
+from app.modules.agents import memory_routes as memory_routes_module
 from app.modules.agents.coordination_execution import process_delegation
 from app.modules.agents.coordination_models import AgentDelegationPayload
 from app.modules.agents.memory_models import (
@@ -981,6 +982,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     **grant_payload,
                     "allowed_classifications": ["restricted"],
                     "max_classification": "restricted",
+                    "approval_expires_in_minutes": 5,
                     "idempotency_key": str(uuid4()),
                 },
             )
@@ -1027,6 +1029,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert approved_restricted.status_code == 200
             assert approved_restricted.json()["approval_status"] == "approved"
+            assert approved_restricted.json()["approval_expires_at"] is not None
             approved_restricted_context = client.post(
                 restricted_context_path,
                 headers=headers_b,
@@ -1037,6 +1040,27 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert approved_restricted_context.status_code == 200
             assert approved_restricted_context.json()["items"][0]["classification"] == "restricted"
+            current_memory_route_time = memory_routes_module.utc_now
+            monkeypatch.setattr(
+                memory_routes_module,
+                "utc_now",
+                lambda: current_memory_route_time() + timedelta(minutes=6),
+            )
+            assert (
+                client.post(
+                    restricted_context_path,
+                    headers=headers_b,
+                    json={
+                        "grant_id": restricted_grant.json()["id"],
+                        "purpose": "coordination",
+                    },
+                ).status_code
+                == 404
+            )
+            expired_risk = client.get(f"/agents/{agent_id}/memory-risk-summary", headers=headers_b)
+            assert expired_risk.status_code == 200
+            assert expired_risk.json()["expired_approvals"] >= 1
+            monkeypatch.setattr(memory_routes_module, "utc_now", current_memory_route_time)
             assert grant.json()["recipient_agent_id"] == worker_id
             assert shared_task_content not in str(grant.json())
             repeated_grant = client.post(
@@ -1332,6 +1356,39 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert cost_traces.status_code == 200
             assert cost_traces.json()[0]["outcome"] == "cost_limit_denied"
             assert cost_traces.json()[0]["estimated_cost_microunits"] == 100
+            incident_payload = {
+                "incident_reference": "INC-MEM-2026-001",
+                "reason": "Possível exposição de credencial operacional.",
+                "idempotency_key": str(uuid4()),
+            }
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-access-incidents/revoke",
+                    headers=headers_a,
+                    json=incident_payload,
+                ).status_code
+                == 404
+            )
+            incident = client.post(
+                f"/agents/{agent_id}/memory-access-incidents/revoke",
+                headers=headers_b,
+                json=incident_payload,
+            )
+            assert incident.status_code == 201
+            assert incident.json()["revoked_grants"] >= 1
+            assert "incident_reference" not in incident.json()
+            repeated_incident = client.post(
+                f"/agents/{agent_id}/memory-access-incidents/revoke",
+                headers=headers_b,
+                json=incident_payload,
+            )
+            assert repeated_incident.status_code == 201
+            assert repeated_incident.json()["id"] == incident.json()["id"]
+            assert repeated_incident.json()["already_processed"] is True
+            incident_risk = client.get(f"/agents/{agent_id}/memory-risk-summary", headers=headers_b)
+            assert incident_risk.status_code == 200
+            assert incident_risk.json()["incidents_last_30_days"] >= 1
+            assert incident_risk.json()["revoked_grants_last_30_days"] >= 1
             for attempt in range(2):
                 blocked_delegation = client.post(
                     f"/agents/{agent_id}/delegations",

@@ -229,6 +229,37 @@
 .agent-memory-card {
   background: linear-gradient(145deg, #f2f8f4, #fffaf0);
 }
+.agent-memory-risk {
+  background: linear-gradient(145deg, #fff8e8, #f3f8f4);
+  border-left: 4px solid #4f7668;
+}
+.agent-memory-risk--elevated {
+  border-left-color: #bf7a15;
+}
+.agent-memory-risk--high,
+.agent-memory-risk--critical {
+  border-left-color: #a13c32;
+}
+.agent-memory-risk__grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 1rem 0;
+}
+.agent-memory-risk__grid article {
+  background: rgb(255 255 255 / 76%);
+  border: 1px solid #d8d7c9;
+  border-radius: 14px;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+}
+.agent-memory-risk__grid small {
+  color: #68736b;
+}
+.agent-memory-risk__grid strong {
+  font-size: 1.15rem;
+}
 .agent-memory-options {
   border: 1px solid #ccd9d0;
   border-radius: 14px;
@@ -328,6 +359,9 @@
   .agent-tool-grid,
   .agent-composer {
     grid-template-columns: 1fr;
+  }
+  .agent-memory-risk__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .agent-policy-row {
     align-items: stretch;

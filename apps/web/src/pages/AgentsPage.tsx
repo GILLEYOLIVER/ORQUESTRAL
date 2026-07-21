@@ -25,10 +25,12 @@ import {
   type AgentMemoryResponse,
   type AgentMemoryConsentRevocationResponse,
   type AgentMemoryMetadataExport,
+  type AgentMemoryRiskSummary,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
   type AgentToolRunResponse,
+  type AgentTaskMemoryIncidentResponse,
   type AgentUsageResponse,
   useAgents,
 } from "../agents/useAgents";
@@ -165,6 +167,13 @@ export function AgentsPage() {
     useState("");
   const [memoryConsentReference, setMemoryConsentReference] = useState("");
   const [memoryFeedback, setMemoryFeedback] = useState<string | null>(null);
+  const [memoryIncidentReference, setMemoryIncidentReference] = useState("");
+  const [memoryIncidentReason, setMemoryIncidentReason] = useState("");
+  const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
+    useState(() => crypto.randomUUID());
+  const [memoryIncidentFeedback, setMemoryIncidentFeedback] = useState<
+    string | null
+  >(null);
   const [conversationFeedback, setConversationFeedback] = useState<
     string | null
   >(null);
@@ -211,6 +220,14 @@ export function AgentsPage() {
     queryKey: ["agent-memories", selectedId],
     queryFn: () =>
       request<AgentMemoryResponse[]>(`/agents/${selectedId}/memories`),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryRisk = useQuery({
+    queryKey: ["agent-memory-risk", selectedId],
+    queryFn: () =>
+      request<AgentMemoryRiskSummary>(
+        `/agents/${selectedId}/memory-risk-summary`,
+      ),
     enabled: canConfigure && Boolean(selectedId),
   });
   const myMemories = useQuery({
@@ -323,6 +340,9 @@ export function AgentsPage() {
     });
     void queryClient.invalidateQueries({
       queryKey: ["agent-my-memories", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memory-risk", selectedId],
     });
   };
   const create = useMutation({
@@ -509,6 +529,32 @@ export function AgentsPage() {
       refresh();
     },
     onError: (caught) => setMemoryFeedback(errorMessage(caught)),
+  });
+  const revokeMemoryAccessForIncident = useMutation({
+    mutationFn: () =>
+      request<AgentTaskMemoryIncidentResponse>(
+        `/agents/${selectedId}/memory-access-incidents/revoke`,
+        {
+          method: "POST",
+          body: {
+            incident_reference: memoryIncidentReference,
+            reason: memoryIncidentReason,
+            idempotency_key: memoryIncidentIdempotencyKey,
+          },
+        },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.already_processed
+          ? "Este incidente já havia sido processado com segurança."
+          : `${result.revoked_grants} autorização(ões) de memória revogada(s).`,
+      );
+      setMemoryIncidentReference("");
+      setMemoryIncidentReason("");
+      setMemoryIncidentIdempotencyKey(crypto.randomUUID());
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
   });
   const deleteMemory = useMutation({
     mutationFn: (memoryId: string) =>
@@ -1231,6 +1277,107 @@ export function AgentsPage() {
                     <p>Nenhuma memória ativa armazenada.</p>
                   )}
                 </div>
+              </Card>
+            </PermissionGuard>
+            <PermissionGuard all={["agents.configure"]}>
+              <Card
+                className={`agent-memory-risk agent-memory-risk--${memoryRisk.data?.risk_level ?? "low"}`}
+                eyebrow="Resposta preventiva"
+                title="Risco de memória compartilhada"
+              >
+                <p>
+                  Autorizações vencidas deixam de funcionar automaticamente. Em
+                  caso de suspeita, revogue todos os acessos ativos deste agente
+                  em uma única operação auditada.
+                </p>
+                {memoryIncidentFeedback ? (
+                  <Alert>{memoryIncidentFeedback}</Alert>
+                ) : null}
+                <div className="agent-memory-risk__grid">
+                  <article>
+                    <small>Nível atual</small>
+                    <strong>
+                      {
+                        {
+                          low: "Baixo",
+                          elevated: "Atenção",
+                          high: "Alto",
+                          critical: "Crítico",
+                        }[memoryRisk.data?.risk_level ?? "low"]
+                      }
+                    </strong>
+                  </article>
+                  <article>
+                    <small>Acessos ativos</small>
+                    <strong>{memoryRisk.data?.active_grants ?? 0}</strong>
+                  </article>
+                  <article>
+                    <small>Restritos ativos</small>
+                    <strong>
+                      {memoryRisk.data?.restricted_active_grants ?? 0}
+                    </strong>
+                  </article>
+                  <article>
+                    <small>Aprovações pendentes</small>
+                    <strong>{memoryRisk.data?.pending_approvals ?? 0}</strong>
+                  </article>
+                  <article>
+                    <small>Aprovações vencidas</small>
+                    <strong>{memoryRisk.data?.expired_approvals ?? 0}</strong>
+                  </article>
+                  <article>
+                    <small>Bloqueios em 24 h</small>
+                    <strong>
+                      {(memoryRisk.data?.blocked_events_last_24h ?? 0) +
+                        (memoryRisk.data?.cost_denials_last_24h ?? 0)}
+                    </strong>
+                  </article>
+                  <article>
+                    <small>Incidentes em 30 dias</small>
+                    <strong>
+                      {memoryRisk.data?.incidents_last_30_days ?? 0}
+                    </strong>
+                  </article>
+                  <article>
+                    <small>Acessos revogados</small>
+                    <strong>
+                      {memoryRisk.data?.revoked_grants_last_30_days ?? 0}
+                    </strong>
+                  </article>
+                </div>
+                <form
+                  className="agent-policy-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    revokeMemoryAccessForIncident.mutate();
+                  }}
+                >
+                  <TextField
+                    label="Referência interna do incidente"
+                    maxLength={160}
+                    onChange={(event) =>
+                      setMemoryIncidentReference(event.target.value)
+                    }
+                    required
+                    value={memoryIncidentReference}
+                  />
+                  <TextField
+                    label="Motivo da revogação"
+                    maxLength={160}
+                    onChange={(event) =>
+                      setMemoryIncidentReason(event.target.value)
+                    }
+                    required
+                    value={memoryIncidentReason}
+                  />
+                  <Button
+                    loading={revokeMemoryAccessForIncident.isPending}
+                    type="submit"
+                    variant="secondary"
+                  >
+                    <ShieldAlert size={16} /> Revogar acessos por incidente
+                  </Button>
+                </form>
               </Card>
             </PermissionGuard>
             <PermissionGuard all={["agents.execute"]}>

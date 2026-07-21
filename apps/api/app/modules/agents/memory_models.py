@@ -285,6 +285,41 @@ class AgentMemoryLegalHold(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class AgentTaskMemoryAccessIncident(Base):
+    __tablename__ = "agent_task_memory_access_incidents"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "idempotency_key",
+            name="uq_agent_task_memory_incident_idempotency",
+        ),
+        CheckConstraint(
+            "revoked_grants >= 0",
+            name="ck_agent_task_memory_incident_revoked_grants",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    owner_agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="CASCADE"), index=True
+    )
+    idempotency_key: Mapped[UUID] = mapped_column(index=True)
+    incident_reference_fingerprint: Mapped[str] = mapped_column(String(64))
+    reason_fingerprint: Mapped[str] = mapped_column(String(64))
+    revoked_grants: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    triggered_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+
+
 class AgentTaskMemoryAccessGrant(Base):
     __tablename__ = "agent_task_memory_access_grants"
     __table_args__ = (
@@ -316,6 +351,14 @@ class AgentTaskMemoryAccessGrant(Base):
         CheckConstraint(
             "max_cost_microunits BETWEEN 0 AND 2000000000",
             name="ck_agent_task_memory_access_cost",
+        ),
+        CheckConstraint(
+            "(requires_human_approval = false AND approval_ttl_minutes IS NULL "
+            "AND approval_expires_at IS NULL) OR "
+            "(requires_human_approval = true AND approval_ttl_minutes BETWEEN 5 AND 240 "
+            "AND approval_expires_at IS NOT NULL AND approval_expires_at > created_at "
+            "AND approval_expires_at <= expires_at)",
+            name="ck_agent_task_memory_access_approval_expiration",
         ),
         CheckConstraint(
             "(requires_human_approval = false AND approval_status = 'not_required' "
@@ -377,6 +420,7 @@ class AgentTaskMemoryAccessGrant(Base):
     approval_status: Mapped[str] = mapped_column(
         String(16), default="not_required", server_default="not_required", index=True
     )
+    approval_ttl_minutes: Mapped[int | None] = mapped_column(Integer)
     max_entries: Mapped[int] = mapped_column(Integer)
     max_content_characters: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(
@@ -392,12 +436,20 @@ class AgentTaskMemoryAccessGrant(Base):
     revoked_by_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
     )
+    revocation_incident_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_task_memory_access_incidents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     revocation_reason_fingerprint: Mapped[str | None] = mapped_column(String(64))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
     approval_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approval_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
