@@ -78,9 +78,7 @@ class Plugin(Protocol):
         configuration: Mapping[str, Any] | None = None,
     ) -> Mapping[str, Any]: ...
 
-    async def refresh_credentials(
-        self, credentials: Mapping[str, Any]
-    ) -> Mapping[str, Any]: ...
+    async def refresh_credentials(self, credentials: Mapping[str, Any]) -> Mapping[str, Any]: ...
 
     async def handle_webhook(
         self,
@@ -102,9 +100,7 @@ class BasePlugin:
             if field.required and credentials.get(field.key) in (None, "")
         ]
         if missing:
-            raise PluginValidationError(
-                f"Campos obrigatórios ausentes: {', '.join(missing)}."
-            )
+            raise PluginValidationError(f"Campos obrigatórios ausentes: {', '.join(missing)}.")
 
     async def test_connection(
         self,
@@ -126,9 +122,7 @@ class BasePlugin:
 
         raise PluginExecutionError(f"A ação {action} não é suportada por este plugin.")
 
-    async def refresh_credentials(
-        self, credentials: Mapping[str, Any]
-    ) -> Mapping[str, Any]:
+    async def refresh_credentials(self, credentials: Mapping[str, Any]) -> Mapping[str, Any]:
         from .exceptions import PluginExecutionError
 
         raise PluginExecutionError("Este plugin não implementa renovação de token.")

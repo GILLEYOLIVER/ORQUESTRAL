@@ -135,3 +135,26 @@ Iniciar o ciclo 2 com os itens imediatos 4 a 6:
 3. executar auditoria sistematica de multiempresa e permissoes, incluindo testes negativos entre empresas.
 
 Depois dos tres itens, publicar e mesclar o segundo PR somente com os checks obrigatorios aprovados.
+
+## Ciclo empresarial 2 - contratos multiempresa e governanca
+
+Data: 21 de julho de 2026.
+
+- Fase atual: Fase 1 - Fundacao empresarial.
+- Concluido neste recorte: contrato automatico de tabelas por tenant, contrato de seguranca das rotas, validacao rota versus catalogo de permissoes, inventario funcional e auditoria de multiempresa.
+- Teste negativo adicionado: Empresa A nao consegue consultar nem excluir oportunidade, campanha, projeto ou agente da Empresa B.
+- Migracoes: nenhuma; o ciclo protege o schema atual sem alterar dados.
+- Risco externo: GitHub Actions nao inicia por restricao de pagamento/limite da conta e branch protection nao esta disponivel para este repositorio privado no plano atual.
+- Regra de integracao: manter PR aberto ate os checks remotos aprovarem; nunca tornar o repositorio publico.
+- Proximo passo exato: executar a bateria local do ciclo, publicar o PR e iniciar a auditoria de agentes, automacoes, integracoes e plugins.
+
+### Evidencia de validacao do ciclo 2
+
+- Ruff: 226 arquivos formatados e lint aprovado.
+- MyPy: 165 arquivos de producao aprovados.
+- Backend: 95 testes unitarios e 6 testes de integracao aprovados.
+- Frontend: 9 testes, lint, tipos e build de producao aprovados.
+- E2E: 5 aprovados e 2 ignorados por contrato de ambiente.
+- Seguranca: auditoria concluida sem bloqueios.
+- Runtime: 8 containers saudaveis; `/health`, `/ready` e `/app` aprovados.
+- Banco: Alembic `20260720_0027 (head)` confirmado.
