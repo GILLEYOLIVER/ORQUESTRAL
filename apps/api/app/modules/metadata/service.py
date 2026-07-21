@@ -22,11 +22,15 @@ from app.modules.authorization.policy_service import evaluate_and_record_policy
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
+from app.modules.metadata.formula_engine import validate_formula_contracts
 from app.modules.metadata.models import (
     MetadataEntityDefinition,
     MetadataEntityVersion,
     MetadataFieldDefinition,
+    MetadataFormulaDefinition,
     MetadataLayoutDefinition,
+    MetadataRecordTypeDefinition,
+    MetadataRelationshipDefinition,
     MetadataValidationRule,
     MetadataViewDefinition,
 )
@@ -47,8 +51,11 @@ from app.modules.metadata.schemas import (
     MetadataEntityVersionResponse,
     MetadataFieldInput,
     MetadataFieldResponse,
+    MetadataFormulaInput,
     MetadataLayoutInput,
     MetadataLayoutSectionInput,
+    MetadataRecordTypeInput,
+    MetadataRelationshipInput,
     MetadataValidationResponse,
     MetadataValidationRuleInput,
     MetadataViewInput,
@@ -117,6 +124,32 @@ def _default_design(fields: Sequence[MetadataFieldDefinition]) -> MetadataDesign
                 is_default=True,
             )
         ],
+        record_types=[
+            MetadataRecordTypeInput(
+                key="default",
+                label="Padrao",
+                layout_key="default_layout",
+                is_default=True,
+            )
+        ],
+    )
+
+
+def _canonical_design(payload: MetadataDesignUpdate) -> MetadataDesignUpdate:
+    if payload.record_types:
+        return payload
+    default_layout = next(item for item in payload.layouts if item.is_default)
+    return payload.model_copy(
+        update={
+            "record_types": [
+                MetadataRecordTypeInput(
+                    key="default",
+                    label="Padrao",
+                    layout_key=default_layout.key,
+                    is_default=True,
+                )
+            ]
+        }
     )
 
 
@@ -154,6 +187,51 @@ def validate_design_contracts(
     for rule in payload.validation_rules:
         if rule.field_key not in field_keys:
             errors.append(f"A regra '{rule.key}' usa o campo desconhecido '{rule.field_key}'.")
+    layout_keys = {layout.key for layout in payload.layouts}
+    for record_type in payload.record_types:
+        if record_type.layout_key not in layout_keys:
+            errors.append(
+                f"O tipo de registro '{record_type.key}' usa o layout desconhecido "
+                f"'{record_type.layout_key}'."
+            )
+    field_by_key = {field.key: field for field in fields}
+    formula_targets = {formula.target_field_key for formula in payload.formulas if formula.active}
+    for relationship in payload.relationships:
+        source = field_by_key.get(relationship.source_field_key)
+        if source is None:
+            errors.append(
+                f"O relacionamento '{relationship.key}' usa o campo desconhecido "
+                f"'{relationship.source_field_key}'."
+            )
+        elif source.data_type != "uuid":
+            errors.append(f"O relacionamento '{relationship.key}' exige um campo UUID.")
+        elif relationship.source_field_key in formula_targets:
+            errors.append(f"O relacionamento '{relationship.key}' nao pode usar campo calculado.")
+        elif relationship.relationship_type == "one_to_one" and not source.unique_values:
+            errors.append(
+                f"O relacionamento individual '{relationship.key}' exige campo com valor unico."
+            )
+    errors.extend(validate_formula_contracts(payload.formulas, fields))
+    return errors
+
+
+async def _validate_relationship_targets(
+    database: AsyncSession,
+    company_id: UUID,
+    definition_id: UUID,
+    relationships: Sequence[MetadataRelationshipInput],
+) -> list[str]:
+    errors: list[str] = []
+    for relationship in relationships:
+        target = await get_entity_definition(
+            database, company_id, relationship.target_definition_id
+        )
+        if target is None:
+            errors.append(f"O relacionamento '{relationship.key}' possui destino indisponivel.")
+        elif target.id != definition_id and target.published_version is None:
+            errors.append(
+                f"O relacionamento '{relationship.key}' exige uma entidade de destino publicada."
+            )
     return errors
 
 
@@ -203,6 +281,9 @@ async def _load_design_rows(
     list[MetadataLayoutDefinition],
     list[MetadataViewDefinition],
     list[MetadataValidationRule],
+    list[MetadataRelationshipDefinition],
+    list[MetadataFormulaDefinition],
+    list[MetadataRecordTypeDefinition],
 ]:
     layouts = list(
         (
@@ -240,13 +321,46 @@ async def _load_design_rows(
             )
         ).all()
     )
-    return layouts, views, rules
+    relationships = list(
+        await database.scalars(
+            select(MetadataRelationshipDefinition)
+            .where(
+                MetadataRelationshipDefinition.company_id == company_id,
+                MetadataRelationshipDefinition.version_id == version_id,
+            )
+            .order_by(MetadataRelationshipDefinition.key)
+        )
+    )
+    formulas = list(
+        await database.scalars(
+            select(MetadataFormulaDefinition)
+            .where(
+                MetadataFormulaDefinition.company_id == company_id,
+                MetadataFormulaDefinition.version_id == version_id,
+            )
+            .order_by(MetadataFormulaDefinition.key)
+        )
+    )
+    record_types = list(
+        await database.scalars(
+            select(MetadataRecordTypeDefinition)
+            .where(
+                MetadataRecordTypeDefinition.company_id == company_id,
+                MetadataRecordTypeDefinition.version_id == version_id,
+            )
+            .order_by(MetadataRecordTypeDefinition.key)
+        )
+    )
+    return layouts, views, rules, relationships, formulas, record_types
 
 
 def _design_from_rows(
     layouts: Sequence[MetadataLayoutDefinition],
     views: Sequence[MetadataViewDefinition],
     rules: Sequence[MetadataValidationRule],
+    relationships: Sequence[MetadataRelationshipDefinition],
+    formulas: Sequence[MetadataFormulaDefinition],
+    record_types: Sequence[MetadataRecordTypeDefinition],
 ) -> MetadataDesignUpdate:
     return MetadataDesignUpdate(
         layouts=[
@@ -281,6 +395,38 @@ def _design_from_rows(
             )
             for item in rules
         ],
+        relationships=[
+            MetadataRelationshipInput(
+                key=item.key,
+                label=item.label,
+                source_field_key=item.source_field_key,
+                target_definition_id=item.target_definition_id,
+                relationship_type=item.relationship_type,
+                on_delete=item.on_delete,
+            )
+            for item in relationships
+        ],
+        formulas=[
+            MetadataFormulaInput(
+                key=item.key,
+                label=item.label,
+                target_field_key=item.target_field_key,
+                expression=item.expression,
+                active=item.active,
+            )
+            for item in formulas
+        ],
+        record_types=[
+            MetadataRecordTypeInput(
+                key=item.key,
+                label=item.label,
+                description=item.description,
+                layout_key=item.layout_key,
+                is_default=item.is_default,
+                active=item.active,
+            )
+            for item in record_types
+        ],
     )
 
 
@@ -290,10 +436,10 @@ async def _load_design(
     version: MetadataEntityVersion,
     fields: Sequence[MetadataFieldDefinition],
 ) -> tuple[MetadataDesignUpdate, bool]:
-    layouts, views, rules = await _load_design_rows(database, company_id, version.id)
-    if not layouts and not views and not rules:
+    rows = await _load_design_rows(database, company_id, version.id)
+    if not any(rows):
         return _default_design(fields), False
-    return _design_from_rows(layouts, views, rules), True
+    return _canonical_design(_design_from_rows(*rows)), True
 
 
 async def _replace_design(
@@ -303,7 +449,15 @@ async def _replace_design(
     version_id: UUID,
     payload: MetadataDesignUpdate,
 ) -> None:
-    for model in (MetadataLayoutDefinition, MetadataViewDefinition, MetadataValidationRule):
+    payload = _canonical_design(payload)
+    for model in (
+        MetadataLayoutDefinition,
+        MetadataViewDefinition,
+        MetadataValidationRule,
+        MetadataRelationshipDefinition,
+        MetadataFormulaDefinition,
+        MetadataRecordTypeDefinition,
+    ):
         await database.execute(
             delete(model).where(
                 model.company_id == company_id,
@@ -349,13 +503,51 @@ async def _replace_design(
             )
             for item in payload.validation_rules
         ]
+        + [
+            MetadataRelationshipDefinition(
+                company_id=company_id,
+                version_id=version_id,
+                key=item.key,
+                label=item.label,
+                source_field_key=item.source_field_key,
+                target_definition_id=item.target_definition_id,
+                relationship_type=item.relationship_type,
+                on_delete=item.on_delete,
+            )
+            for item in payload.relationships
+        ]
+        + [
+            MetadataFormulaDefinition(
+                company_id=company_id,
+                version_id=version_id,
+                key=item.key,
+                label=item.label,
+                target_field_key=item.target_field_key,
+                expression=item.expression.model_dump(mode="json"),
+                active=item.active,
+            )
+            for item in payload.formulas
+        ]
+        + [
+            MetadataRecordTypeDefinition(
+                company_id=company_id,
+                version_id=version_id,
+                key=item.key,
+                label=item.label,
+                description=item.description,
+                layout_key=item.layout_key,
+                is_default=item.is_default,
+                active=item.active,
+            )
+            for item in payload.record_types
+        ]
     )
 
 
 async def validation_rules_for_version(
     database: AsyncSession, company_id: UUID, version_id: UUID
 ) -> list[MetadataValidationRuleInput]:
-    _, _, rules = await _load_design_rows(database, company_id, version_id)
+    _, _, rules, _, _, _ = await _load_design_rows(database, company_id, version_id)
     return [
         MetadataValidationRuleInput(
             key=item.key,
@@ -368,6 +560,74 @@ async def validation_rules_for_version(
         )
         for item in rules
     ]
+
+
+async def formulas_for_version(
+    database: AsyncSession, company_id: UUID, version_id: UUID
+) -> list[MetadataFormulaInput]:
+    _, _, _, _, formulas, _ = await _load_design_rows(database, company_id, version_id)
+    return [
+        MetadataFormulaInput(
+            key=item.key,
+            label=item.label,
+            target_field_key=item.target_field_key,
+            expression=item.expression,
+            active=item.active,
+        )
+        for item in formulas
+    ]
+
+
+async def relationships_for_version(
+    database: AsyncSession, company_id: UUID, version_id: UUID
+) -> list[MetadataRelationshipInput]:
+    _, _, _, relationships, _, _ = await _load_design_rows(database, company_id, version_id)
+    return [
+        MetadataRelationshipInput(
+            key=item.key,
+            label=item.label,
+            source_field_key=item.source_field_key,
+            target_definition_id=item.target_definition_id,
+            relationship_type=item.relationship_type,
+            on_delete=item.on_delete,
+        )
+        for item in relationships
+    ]
+
+
+async def record_types_for_version(
+    database: AsyncSession, company_id: UUID, version_id: UUID
+) -> list[MetadataRecordTypeInput]:
+    _, _, _, _, _, record_types = await _load_design_rows(database, company_id, version_id)
+    return [
+        MetadataRecordTypeInput(
+            key=item.key,
+            label=item.label,
+            description=item.description,
+            layout_key=item.layout_key,
+            is_default=item.is_default,
+            active=item.active,
+        )
+        for item in record_types
+    ]
+
+
+async def incoming_relationships_for_definition(
+    database: AsyncSession, company_id: UUID, definition_id: UUID
+) -> list[tuple[MetadataRelationshipDefinition, UUID]]:
+    rows = await database.execute(
+        select(MetadataRelationshipDefinition, MetadataEntityVersion.definition_id)
+        .join(
+            MetadataEntityVersion,
+            MetadataEntityVersion.id == MetadataRelationshipDefinition.version_id,
+        )
+        .where(
+            MetadataRelationshipDefinition.company_id == company_id,
+            MetadataRelationshipDefinition.target_definition_id == definition_id,
+            MetadataEntityVersion.status == "published",
+        )
+    )
+    return [(relationship, source_id) for relationship, source_id in rows.all()]
 
 
 async def _authorize(
@@ -605,7 +865,13 @@ async def update_design(
         permission="metadata.configure",
         resource_id=definition_id,
     )
+    payload = _canonical_design(payload)
     errors = validate_design_contracts(payload, fields)
+    errors.extend(
+        await _validate_relationship_targets(
+            database, context.company_id, definition_id, payload.relationships
+        )
+    )
     if errors:
         await database.commit()
         raise MetadataServiceError(" ".join(errors), status_code=422)
@@ -630,6 +896,9 @@ async def update_design(
             "layout_count": len(payload.layouts),
             "view_count": len(payload.views),
             "rule_count": len(payload.validation_rules),
+            "relationship_count": len(payload.relationships),
+            "formula_count": len(payload.formulas),
+            "record_type_count": len(payload.record_types),
             "checksum": checksum,
         },
     )
@@ -877,6 +1146,11 @@ async def validate_entity(
     errors = validate_field_contracts(inputs)
     design, persisted = await _load_design(database, context.company_id, version, fields)
     errors.extend(validate_design_contracts(design, fields))
+    errors.extend(
+        await _validate_relationship_targets(
+            database, context.company_id, definition_id, design.relationships
+        )
+    )
     if not errors and not persisted:
         await _replace_design(
             database,

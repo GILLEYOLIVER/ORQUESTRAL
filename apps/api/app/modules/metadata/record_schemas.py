@@ -10,11 +10,13 @@ from app.core.schemas import StrictSchema
 
 class MetadataRecordCreate(StrictSchema):
     values: dict[str, JsonValue] = Field(min_length=1, max_length=200)
+    record_type_key: str | None = Field(default=None, min_length=2, max_length=80)
     idempotency_key: UUID | None = None
 
 
 class MetadataRecordUpdate(StrictSchema):
     values: dict[str, JsonValue] = Field(min_length=1, max_length=200)
+    record_type_key: str | None = Field(default=None, min_length=2, max_length=80)
     expected_version: int = Field(ge=1)
 
     @model_validator(mode="after")
@@ -28,6 +30,7 @@ class MetadataRecordResponse(StrictSchema):
     id: UUID
     definition_id: UUID
     schema_version: int
+    record_type_key: str | None
     values: dict[str, JsonValue]
     masked_fields: list[str]
     record_version: int

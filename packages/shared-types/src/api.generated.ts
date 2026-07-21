@@ -9769,8 +9769,14 @@ export interface components {
         MetadataDesignResponse: {
             /** Checksum */
             checksum: string;
+            /** Formulas */
+            formulas?: components["schemas"]["MetadataFormulaInput"][];
             /** Layouts */
             layouts: components["schemas"]["MetadataLayoutInput"][];
+            /** Record Types */
+            record_types?: components["schemas"]["MetadataRecordTypeInput"][];
+            /** Relationships */
+            relationships?: components["schemas"]["MetadataRelationshipInput"][];
             /** Validation Rules */
             validation_rules?: components["schemas"]["MetadataValidationRuleInput"][];
             /** Version */
@@ -9785,8 +9791,14 @@ export interface components {
         };
         /** MetadataDesignUpdate */
         MetadataDesignUpdate: {
+            /** Formulas */
+            formulas?: components["schemas"]["MetadataFormulaInput"][];
             /** Layouts */
             layouts: components["schemas"]["MetadataLayoutInput"][];
+            /** Record Types */
+            record_types?: components["schemas"]["MetadataRecordTypeInput"][];
+            /** Relationships */
+            relationships?: components["schemas"]["MetadataRelationshipInput"][];
             /** Validation Rules */
             validation_rules?: components["schemas"]["MetadataValidationRuleInput"][];
             /** Views */
@@ -9995,6 +10007,42 @@ export interface components {
              */
             unique_values: boolean;
         };
+        /** MetadataFormulaExpressionInput */
+        MetadataFormulaExpressionInput: {
+            /** Operands */
+            operands: components["schemas"]["MetadataFormulaOperandInput"][];
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: "add" | "subtract" | "multiply" | "divide" | "concat" | "coalesce";
+        };
+        /** MetadataFormulaInput */
+        MetadataFormulaInput: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            expression: components["schemas"]["MetadataFormulaExpressionInput"];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Target Field Key */
+            target_field_key: string;
+        };
+        /** MetadataFormulaOperandInput */
+        MetadataFormulaOperandInput: {
+            /** Field Key */
+            field_key?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "field" | "literal";
+            value?: components["schemas"]["JsonValue"] | null;
+        };
         /** MetadataLayoutInput */
         MetadataLayoutInput: {
             /**
@@ -10027,6 +10075,8 @@ export interface components {
         MetadataRecordCreate: {
             /** Idempotency Key */
             idempotency_key?: string | null;
+            /** Record Type Key */
+            record_type_key?: string | null;
             /** Values */
             values: {
                 [key: string]: components["schemas"]["JsonValue"];
@@ -10064,6 +10114,8 @@ export interface components {
             id: string;
             /** Masked Fields */
             masked_fields: string[];
+            /** Record Type Key */
+            record_type_key: string | null;
             /** Record Version */
             record_version: number;
             /** Schema Version */
@@ -10078,14 +10130,63 @@ export interface components {
                 [key: string]: components["schemas"]["JsonValue"];
             };
         };
+        /** MetadataRecordTypeInput */
+        MetadataRecordTypeInput: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            /** Description */
+            description?: string | null;
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Layout Key */
+            layout_key: string;
+        };
         /** MetadataRecordUpdate */
         MetadataRecordUpdate: {
             /** Expected Version */
             expected_version: number;
+            /** Record Type Key */
+            record_type_key?: string | null;
             /** Values */
             values: {
                 [key: string]: components["schemas"]["JsonValue"];
             };
+        };
+        /** MetadataRelationshipInput */
+        MetadataRelationshipInput: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * On Delete
+             * @default restrict
+             * @constant
+             */
+            on_delete: "restrict";
+            /**
+             * Relationship Type
+             * @default many_to_one
+             * @enum {string}
+             */
+            relationship_type: "many_to_one" | "one_to_one";
+            /** Source Field Key */
+            source_field_key: string;
+            /**
+             * Target Definition Id
+             * Format: uuid
+             */
+            target_definition_id: string;
         };
         /** MetadataValidationResponse */
         MetadataValidationResponse: {

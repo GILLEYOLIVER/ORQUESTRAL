@@ -9,6 +9,9 @@ import {
   LayoutTemplate,
   Layers3,
   ListChecks,
+  Calculator,
+  Network,
+  Tags,
   Pencil,
   Plus,
   Rocket,
@@ -27,6 +30,9 @@ import {
   type MetadataEntitySummary,
   type MetadataFieldInput,
   type MetadataRecordResponse,
+  type MetadataFormulaInput,
+  type MetadataRecordTypeInput,
+  type MetadataRelationshipInput,
   type MetadataValidationResponse,
   type MetadataValidationRuleInput,
   type MetadataValue,
@@ -100,6 +106,49 @@ function blankRule(
   };
 }
 
+function blankRelationship(
+  index: number,
+  fieldKey: string,
+  targetId: string,
+): MetadataRelationshipInput {
+  return {
+    key: `relationship_${Date.now()}_${index}`,
+    label: "",
+    source_field_key: fieldKey,
+    target_definition_id: targetId,
+    relationship_type: "many_to_one",
+    on_delete: "restrict",
+  };
+}
+
+function blankFormula(index: number, fieldKey: string): MetadataFormulaInput {
+  return {
+    key: `formula_${Date.now()}_${index}`,
+    label: "",
+    target_field_key: fieldKey,
+    expression: {
+      operator: "add",
+      operands: [
+        { type: "field", field_key: fieldKey, value: null },
+        { type: "literal", field_key: null, value: 0 },
+      ],
+    },
+    active: true,
+  };
+}
+
+function blankRecordType(index: number): MetadataRecordTypeInput {
+  const key = `tipo_${Date.now()}_${index}`;
+  return {
+    key,
+    label: "",
+    description: null,
+    layout_key: `layout_${key}`,
+    is_default: false,
+    active: true,
+  };
+}
+
 function errorMessage(error: unknown) {
   return error instanceof ApiClientError
     ? error.message
@@ -159,6 +208,15 @@ export function MetadataStudioPage() {
   const [validationRules, setValidationRules] = useState<
     MetadataValidationRuleInput[]
   >([]);
+  const [relationships, setRelationships] = useState<
+    MetadataRelationshipInput[]
+  >([]);
+  const [formulas, setFormulas] = useState<MetadataFormulaInput[]>([]);
+  const [recordTypes, setRecordTypes] = useState<MetadataRecordTypeInput[]>([]);
+  const [recordTypeFields, setRecordTypeFields] = useState<
+    Record<string, string[]>
+  >({});
+  const [recordTypeKey, setRecordTypeKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedId && entities.data?.length) {
@@ -183,6 +241,25 @@ export function MetadataStudioPage() {
     setViewLabel(defaultView?.label ?? "Lista principal");
     setViewFieldKeys(defaultView?.columns ?? []);
     setValidationRules(design.data.validation_rules);
+    setRelationships(design.data.relationships);
+    setFormulas(design.data.formulas);
+    setRecordTypes(design.data.record_types);
+    setRecordTypeFields(
+      Object.fromEntries(
+        design.data.record_types.map((recordType) => {
+          const layout = design.data.layouts.find(
+            (item) => item.key === recordType.layout_key,
+          );
+          return [
+            recordType.key,
+            layout?.sections.flatMap((section) => section.fields) ?? [],
+          ];
+        }),
+      ),
+    );
+    setRecordTypeKey(
+      design.data.record_types.find((item) => item.is_default)?.key ?? null,
+    );
   }, [design.data]);
 
   const refresh = (definitionId = selectedId) => {
@@ -293,27 +370,32 @@ export function MetadataStudioPage() {
   });
 
   const saveDesign = useMutation({
-    mutationFn: () =>
-      request<MetadataDesignResponse>(
+    mutationFn: () => {
+      const layouts = recordTypes.map((recordType) => ({
+        key: recordType.layout_key,
+        label: recordType.is_default
+          ? layoutLabel
+          : `Formulario - ${recordType.label}`,
+        is_default: recordType.is_default,
+        sections: [
+          {
+            key: "main_section",
+            label: recordType.is_default
+              ? sectionLabel
+              : `Dados de ${recordType.label}`,
+            fields: recordType.is_default
+              ? layoutFieldKeys
+              : (recordTypeFields[recordType.key] ?? layoutFieldKeys),
+            columns: 2,
+          },
+        ],
+      }));
+      return request<MetadataDesignResponse>(
         `/metadata/entities/${selectedId}/design`,
         {
           method: "PUT",
           body: {
-            layouts: [
-              {
-                key: "default_layout",
-                label: layoutLabel,
-                is_default: true,
-                sections: [
-                  {
-                    key: "main_section",
-                    label: sectionLabel,
-                    fields: layoutFieldKeys,
-                    columns: 2,
-                  },
-                ],
-              },
-            ],
+            layouts,
             views: [
               {
                 key: "default_view",
@@ -325,9 +407,13 @@ export function MetadataStudioPage() {
               },
             ],
             validation_rules: validationRules,
+            relationships,
+            formulas,
+            record_types: recordTypes,
           },
         },
-      ),
+      );
+    },
     onSuccess: () => {
       setDesignOpen(false);
       refresh();
@@ -340,7 +426,11 @@ export function MetadataStudioPage() {
         `/metadata/entities/${selectedId}/records`,
         {
           method: "POST",
-          body: { values, idempotency_key: crypto.randomUUID() },
+          body: {
+            values,
+            record_type_key: recordTypeKey,
+            idempotency_key: crypto.randomUUID(),
+          },
         },
       ),
     onSuccess: () => {
@@ -361,7 +451,11 @@ export function MetadataStudioPage() {
         `/metadata/entities/${selectedId}/records/${record.id}`,
         {
           method: "PUT",
-          body: { values, expected_version: record.record_version },
+          body: {
+            values,
+            record_type_key: recordTypeKey,
+            expected_version: record.record_version,
+          },
         },
       ),
     onSuccess: () => {
@@ -394,14 +488,39 @@ export function MetadataStudioPage() {
     () => selected?.version.fields ?? [],
     [selected],
   );
+  const formulaTargetKeys = useMemo(
+    () =>
+      new Set(
+        formulas
+          .filter((item) => item.active)
+          .map((item) => item.target_field_key),
+      ),
+    [formulas],
+  );
+  const activeRecordType = useMemo(
+    () =>
+      design.data?.record_types.find((item) => item.key === recordTypeKey) ??
+      design.data?.record_types.find((item) => item.is_default),
+    [design.data, recordTypeKey],
+  );
+  const activeLayoutFieldKeys = useMemo(() => {
+    const layout = design.data?.layouts.find(
+      (item) => item.key === activeRecordType?.layout_key,
+    );
+    return (
+      layout?.sections.flatMap((section) => section.fields) ?? layoutFieldKeys
+    );
+  }, [activeRecordType, design.data, layoutFieldKeys]);
   const runtimeFields = useMemo(() => {
-    const order = new Map(layoutFieldKeys.map((key, index) => [key, index]));
+    const order = new Map(
+      activeLayoutFieldKeys.map((key, index) => [key, index]),
+    );
     return [...selectedFields].sort(
       (left, right) =>
         (order.get(left.key) ?? Number.MAX_SAFE_INTEGER) -
         (order.get(right.key) ?? Number.MAX_SAFE_INTEGER),
     );
-  }, [layoutFieldKeys, selectedFields]);
+  }, [activeLayoutFieldKeys, selectedFields]);
   const visibleFields = useMemo(() => {
     const allowed = new Set(viewFieldKeys);
     const configured = runtimeFields.filter((field) => allowed.has(field.key));
@@ -427,11 +546,13 @@ export function MetadataStudioPage() {
     setLocalError(null);
     try {
       const values = Object.fromEntries(
-        selectedFields.flatMap((field) => {
-          const raw = recordValues[field.key] ?? "";
-          const value = coerceMetadataInput(field.data_type, raw);
-          return value === undefined ? [] : [[field.key, value]];
-        }),
+        runtimeFields
+          .filter((field) => !formulaTargetKeys.has(field.key))
+          .flatMap((field) => {
+            const raw = recordValues[field.key] ?? "";
+            const value = coerceMetadataInput(field.data_type, raw);
+            return value === undefined ? [] : [[field.key, value]];
+          }),
       ) as Record<string, MetadataValue>;
       if (editingRecord) {
         updateRecord.mutate({ record: editingRecord, values });
@@ -460,11 +581,20 @@ export function MetadataStudioPage() {
       setLocalError("Informe o nome e a mensagem de todas as regras.");
       return;
     }
+    if (
+      relationships.some((item) => !item.label.trim()) ||
+      formulas.some((item) => !item.label.trim()) ||
+      recordTypes.some((item) => !item.label.trim())
+    ) {
+      setLocalError("Preencha os nomes das configuracoes avancadas.");
+      return;
+    }
     saveDesign.mutate();
   };
 
   const editRecord = (record: MetadataRecordResponse) => {
     setEditingRecord(record);
+    setRecordTypeKey(record.record_type_key);
     setRecordValues(
       Object.fromEntries(
         Object.entries(record.values).map(([key, value]) => [
@@ -880,6 +1010,18 @@ export function MetadataStudioPage() {
                     <ShieldCheck size={16} />
                     {design.data?.validation_rules.length ?? 0} regras ativas
                   </span>
+                  <span>
+                    <Network size={16} />
+                    {design.data?.relationships.length ?? 0} relacionamentos
+                  </span>
+                  <span>
+                    <Calculator size={16} />
+                    {design.data?.formulas.length ?? 0} formulas
+                  </span>
+                  <span>
+                    <Tags size={16} />
+                    {design.data?.record_types.length ?? 0} tipos
+                  </span>
                 </div>
                 {designOpen ? (
                   <form
@@ -1106,6 +1248,426 @@ export function MetadataStudioPage() {
                         </div>
                       ))}
                     </div>
+                    <div className="metadata-advanced-grid">
+                      <section className="metadata-advanced-card">
+                        <div className="metadata-rule-heading">
+                          <div>
+                            <strong>Tipos de registro</strong>
+                            <small>Cada tipo usa seu proprio layout.</small>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              const item = blankRecordType(recordTypes.length);
+                              setRecordTypes((current) => [...current, item]);
+                              setRecordTypeFields((current) => ({
+                                ...current,
+                                [item.key]: [...layoutFieldKeys],
+                              }));
+                            }}
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Plus size={16} /> Adicionar tipo
+                          </Button>
+                        </div>
+                        {recordTypes.map((recordType, index) => (
+                          <div
+                            className="metadata-advanced-row"
+                            key={recordType.key}
+                          >
+                            <label>
+                              <span>Nome do tipo</span>
+                              <input
+                                onChange={(event) =>
+                                  setRecordTypes((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? { ...item, label: event.target.value }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                required
+                                value={recordType.label}
+                              />
+                            </label>
+                            <fieldset>
+                              <legend>Campos deste layout</legend>
+                              {selectedFields.map((field) => (
+                                <label key={`${recordType.key}-${field.key}`}>
+                                  <input
+                                    checked={(recordType.is_default
+                                      ? layoutFieldKeys
+                                      : (recordTypeFields[recordType.key] ?? [])
+                                    ).includes(field.key)}
+                                    onChange={(event) => {
+                                      if (recordType.is_default) {
+                                        setLayoutFieldKeys((current) =>
+                                          event.target.checked
+                                            ? [...current, field.key]
+                                            : current.filter(
+                                                (key) => key !== field.key,
+                                              ),
+                                        );
+                                      } else {
+                                        setRecordTypeFields((current) => {
+                                          const fieldsForType =
+                                            current[recordType.key] ?? [];
+                                          return {
+                                            ...current,
+                                            [recordType.key]: event.target
+                                              .checked
+                                              ? [...fieldsForType, field.key]
+                                              : fieldsForType.filter(
+                                                  (key) => key !== field.key,
+                                                ),
+                                          };
+                                        });
+                                      }
+                                    }}
+                                    type="checkbox"
+                                  />
+                                  {field.label}
+                                </label>
+                              ))}
+                            </fieldset>
+                            {!recordType.is_default ? (
+                              <button
+                                aria-label={`Remover tipo ${recordType.label || index + 1}`}
+                                className="metadata-remove-field"
+                                onClick={() =>
+                                  setRecordTypes((current) =>
+                                    current.filter(
+                                      (_, itemIndex) => itemIndex !== index,
+                                    ),
+                                  )
+                                }
+                                type="button"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            ) : null}
+                          </div>
+                        ))}
+                      </section>
+
+                      <section className="metadata-advanced-card">
+                        <div className="metadata-rule-heading">
+                          <div>
+                            <strong>Relacionamentos</strong>
+                            <small>
+                              Referencias UUID validadas na mesma empresa.
+                            </small>
+                          </div>
+                          <Button
+                            onClick={() =>
+                              setRelationships((current) => [
+                                ...current,
+                                blankRelationship(
+                                  current.length,
+                                  selectedFields.find(
+                                    (field) => field.data_type === "uuid",
+                                  )?.key ?? "",
+                                  entities.data?.find(
+                                    (item) => item.id !== selectedId,
+                                  )?.id ??
+                                    selectedId ??
+                                    "",
+                                ),
+                              ])
+                            }
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Plus size={16} /> Adicionar relacao
+                          </Button>
+                        </div>
+                        {relationships.map((relationship, index) => (
+                          <div
+                            className="metadata-advanced-row metadata-advanced-row--columns"
+                            key={relationship.key}
+                          >
+                            <label>
+                              <span>Nome</span>
+                              <input
+                                required
+                                value={relationship.label}
+                                onChange={(event) =>
+                                  setRelationships((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? { ...item, label: event.target.value }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              />
+                            </label>
+                            <label>
+                              <span>Campo UUID</span>
+                              <select
+                                value={relationship.source_field_key}
+                                onChange={(event) =>
+                                  setRelationships((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? {
+                                            ...item,
+                                            source_field_key:
+                                              event.target.value,
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              >
+                                {selectedFields
+                                  .filter((field) => field.data_type === "uuid")
+                                  .map((field) => (
+                                    <option key={field.id} value={field.key}>
+                                      {field.label}
+                                    </option>
+                                  ))}
+                              </select>
+                            </label>
+                            <label>
+                              <span>Entidade relacionada</span>
+                              <select
+                                value={relationship.target_definition_id}
+                                onChange={(event) =>
+                                  setRelationships((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? {
+                                            ...item,
+                                            target_definition_id:
+                                              event.target.value,
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              >
+                                {entities.data?.map((entity) => (
+                                  <option key={entity.id} value={entity.id}>
+                                    {entity.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              <span>Cardinalidade</span>
+                              <select
+                                value={relationship.relationship_type}
+                                onChange={(event) =>
+                                  setRelationships((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? {
+                                            ...item,
+                                            relationship_type: event.target
+                                              .value as MetadataRelationshipInput["relationship_type"],
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              >
+                                <option value="many_to_one">
+                                  Muitos para um
+                                </option>
+                                <option value="one_to_one">Um para um</option>
+                              </select>
+                            </label>
+                            <button
+                              aria-label={`Remover relacionamento ${index + 1}`}
+                              className="metadata-remove-field"
+                              onClick={() =>
+                                setRelationships((current) =>
+                                  current.filter(
+                                    (_, itemIndex) => itemIndex !== index,
+                                  ),
+                                )
+                              }
+                              type="button"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </section>
+
+                      <section className="metadata-advanced-card">
+                        <div className="metadata-rule-heading">
+                          <div>
+                            <strong>Campos calculados</strong>
+                            <small>
+                              Operacoes deterministas, sem codigo executavel.
+                            </small>
+                          </div>
+                          <Button
+                            onClick={() =>
+                              setFormulas((current) => [
+                                ...current,
+                                blankFormula(
+                                  current.length,
+                                  selectedFields[0]?.key ?? "",
+                                ),
+                              ])
+                            }
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Plus size={16} /> Adicionar formula
+                          </Button>
+                        </div>
+                        {formulas.map((formula, index) => (
+                          <div
+                            className="metadata-advanced-row metadata-advanced-row--columns"
+                            key={formula.key}
+                          >
+                            <label>
+                              <span>Nome</span>
+                              <input
+                                required
+                                value={formula.label}
+                                onChange={(event) =>
+                                  setFormulas((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? { ...item, label: event.target.value }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              />
+                            </label>
+                            <label>
+                              <span>Campo calculado</span>
+                              <select
+                                value={formula.target_field_key}
+                                onChange={(event) =>
+                                  setFormulas((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? {
+                                            ...item,
+                                            target_field_key:
+                                              event.target.value,
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              >
+                                {selectedFields.map((field) => (
+                                  <option key={field.id} value={field.key}>
+                                    {field.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              <span>Operacao</span>
+                              <select
+                                value={formula.expression.operator}
+                                onChange={(event) =>
+                                  setFormulas((current) =>
+                                    current.map((item, itemIndex) =>
+                                      itemIndex === index
+                                        ? {
+                                            ...item,
+                                            expression: {
+                                              ...item.expression,
+                                              operator: event.target
+                                                .value as MetadataFormulaInput["expression"]["operator"],
+                                            },
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              >
+                                <option value="add">Somar</option>
+                                <option value="subtract">Subtrair</option>
+                                <option value="multiply">Multiplicar</option>
+                                <option value="divide">Dividir</option>
+                                <option value="concat">Concatenar</option>
+                                <option value="coalesce">
+                                  Primeiro preenchido
+                                </option>
+                              </select>
+                            </label>
+                            {[0, 1].map((operandIndex) => (
+                              <label key={operandIndex}>
+                                <span>
+                                  {operandIndex === 0
+                                    ? "Primeiro campo"
+                                    : "Segundo campo"}
+                                </span>
+                                <select
+                                  value={
+                                    formula.expression.operands[operandIndex]
+                                      ?.field_key ?? ""
+                                  }
+                                  onChange={(event) =>
+                                    setFormulas((current) =>
+                                      current.map((item, itemIndex) =>
+                                        itemIndex === index
+                                          ? {
+                                              ...item,
+                                              expression: {
+                                                ...item.expression,
+                                                operands:
+                                                  item.expression.operands.map(
+                                                    (
+                                                      operand,
+                                                      currentOperand,
+                                                    ) =>
+                                                      currentOperand ===
+                                                      operandIndex
+                                                        ? {
+                                                            type: "field",
+                                                            field_key:
+                                                              event.target
+                                                                .value,
+                                                            value: null,
+                                                          }
+                                                        : operand,
+                                                  ),
+                                              },
+                                            }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                >
+                                  {selectedFields.map((field) => (
+                                    <option key={field.id} value={field.key}>
+                                      {field.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            ))}
+                            <button
+                              aria-label={`Remover formula ${index + 1}`}
+                              className="metadata-remove-field"
+                              onClick={() =>
+                                setFormulas((current) =>
+                                  current.filter(
+                                    (_, itemIndex) => itemIndex !== index,
+                                  ),
+                                )
+                              }
+                              type="button"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </section>
+                    </div>
                     <div className="metadata-form-actions">
                       <Button loading={saveDesign.isPending} type="submit">
                         <FileCheck2 size={16} /> Salvar experiência
@@ -1151,63 +1713,84 @@ export function MetadataStudioPage() {
                         className="metadata-record-form"
                         onSubmit={submitRecord}
                       >
-                        {runtimeFields.map((field) => (
-                          <label key={field.id}>
-                            <span>
-                              {field.label}
-                              {field.required ? <b> obrigatório</b> : null}
-                            </span>
-                            {field.data_type === "boolean" ? (
-                              <input
-                                checked={Boolean(recordValues[field.key])}
-                                onChange={(event) =>
-                                  setRecordValues((current) => ({
-                                    ...current,
-                                    [field.key]: event.target.checked,
-                                  }))
-                                }
-                                type="checkbox"
-                              />
-                            ) : field.data_type === "long_text" ||
-                              field.data_type === "json" ? (
-                              <textarea
-                                onChange={(event) =>
-                                  setRecordValues((current) => ({
-                                    ...current,
-                                    [field.key]: event.target.value,
-                                  }))
-                                }
-                                placeholder={
-                                  field.data_type === "json"
-                                    ? '{"chave":"valor"}'
-                                    : "Digite o conteúdo"
-                                }
-                                required={field.required}
-                                rows={field.data_type === "json" ? 5 : 3}
-                                value={String(recordValues[field.key] ?? "")}
-                              />
-                            ) : (
-                              <input
-                                onChange={(event) =>
-                                  setRecordValues((current) => ({
-                                    ...current,
-                                    [field.key]: event.target.value,
-                                  }))
-                                }
-                                required={field.required}
-                                step={
-                                  field.data_type === "decimal"
-                                    ? "any"
-                                    : undefined
-                                }
-                                type={inputTypeForMetadataField(
-                                  field.data_type,
-                                )}
-                                value={String(recordValues[field.key] ?? "")}
-                              />
-                            )}
+                        {(design.data?.record_types.length ?? 0) > 1 ? (
+                          <label>
+                            <span>Tipo de registro</span>
+                            <select
+                              value={recordTypeKey ?? ""}
+                              onChange={(event) =>
+                                setRecordTypeKey(event.target.value)
+                              }
+                            >
+                              {design.data?.record_types
+                                .filter((item) => item.active)
+                                .map((item) => (
+                                  <option key={item.key} value={item.key}>
+                                    {item.label}
+                                  </option>
+                                ))}
+                            </select>
                           </label>
-                        ))}
+                        ) : null}
+                        {runtimeFields
+                          .filter((field) => !formulaTargetKeys.has(field.key))
+                          .map((field) => (
+                            <label key={field.id}>
+                              <span>
+                                {field.label}
+                                {field.required ? <b> obrigatório</b> : null}
+                              </span>
+                              {field.data_type === "boolean" ? (
+                                <input
+                                  checked={Boolean(recordValues[field.key])}
+                                  onChange={(event) =>
+                                    setRecordValues((current) => ({
+                                      ...current,
+                                      [field.key]: event.target.checked,
+                                    }))
+                                  }
+                                  type="checkbox"
+                                />
+                              ) : field.data_type === "long_text" ||
+                                field.data_type === "json" ? (
+                                <textarea
+                                  onChange={(event) =>
+                                    setRecordValues((current) => ({
+                                      ...current,
+                                      [field.key]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder={
+                                    field.data_type === "json"
+                                      ? '{"chave":"valor"}'
+                                      : "Digite o conteúdo"
+                                  }
+                                  required={field.required}
+                                  rows={field.data_type === "json" ? 5 : 3}
+                                  value={String(recordValues[field.key] ?? "")}
+                                />
+                              ) : (
+                                <input
+                                  onChange={(event) =>
+                                    setRecordValues((current) => ({
+                                      ...current,
+                                      [field.key]: event.target.value,
+                                    }))
+                                  }
+                                  required={field.required}
+                                  step={
+                                    field.data_type === "decimal"
+                                      ? "any"
+                                      : undefined
+                                  }
+                                  type={inputTypeForMetadataField(
+                                    field.data_type,
+                                  )}
+                                  value={String(recordValues[field.key] ?? "")}
+                                />
+                              )}
+                            </label>
+                          ))}
                         <Button
                           loading={
                             createRecord.isPending || updateRecord.isPending

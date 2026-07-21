@@ -23,6 +23,7 @@ from app.modules.authorization.policy_service import evaluate_and_record_policy
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
+from app.modules.metadata.formula_engine import apply_formulas
 from app.modules.metadata.models import (
     MetadataEntityDefinition,
     MetadataEntityVersion,
@@ -34,6 +35,7 @@ from app.modules.metadata.record_repository import (
     get_record,
     get_record_by_idempotency_key,
     list_records,
+    relationship_reference_exists,
     unique_value_exists,
 )
 from app.modules.metadata.record_schemas import (
@@ -46,7 +48,11 @@ from app.modules.metadata.repository import get_entity_definition, list_version_
 from app.modules.metadata.service import (
     MetadataServiceError,
     evaluate_record_validation_rules,
+    formulas_for_version,
+    incoming_relationships_for_definition,
     published_version,
+    record_types_for_version,
+    relationships_for_version,
     validation_rules_for_version,
 )
 
@@ -131,11 +137,19 @@ def _normalize_value(field: MetadataFieldDefinition, value: JsonValue) -> JsonVa
 def normalize_record_values(
     fields: Sequence[MetadataFieldDefinition],
     values: Mapping[str, JsonValue],
+    *,
+    computed_field_keys: frozenset[str] = frozenset(),
 ) -> tuple[dict[str, JsonValue], list[str]]:
     field_by_key = {field.key: field for field in fields}
     errors = [f"Campo desconhecido: {key}." for key in sorted(set(values) - set(field_by_key))]
+    errors.extend(
+        f"O campo calculado '{key}' nao aceita valor manual."
+        for key in sorted(set(values) & computed_field_keys)
+    )
     normalized: dict[str, JsonValue] = {}
     for field in fields:
+        if field.key in computed_field_keys:
+            continue
         if field.key not in values:
             if field.default_value is not None:
                 normalized[field.key] = field.default_value
@@ -147,6 +161,77 @@ def normalize_record_values(
         except ValueError as exc:
             errors.append(str(exc))
     return normalized, errors
+
+
+async def _prepare_record_values(
+    database: AsyncSession,
+    company_id: UUID,
+    version: MetadataEntityVersion,
+    fields: Sequence[MetadataFieldDefinition],
+    values: Mapping[str, JsonValue],
+) -> tuple[dict[str, JsonValue], list[str]]:
+    formulas = await formulas_for_version(database, company_id, version.id)
+    computed = frozenset(item.target_field_key for item in formulas if item.active)
+    normalized, errors = normalize_record_values(fields, values, computed_field_keys=computed)
+    if errors:
+        return normalized, errors
+    try:
+        calculated = apply_formulas(formulas, normalized)
+        field_by_key = {field.key: field for field in fields}
+        for key in computed:
+            if key in calculated:
+                normalized[key] = _normalize_value(field_by_key[key], calculated[key])
+    except ValueError as exc:
+        errors.append(str(exc))
+    return normalized, errors
+
+
+async def _resolve_record_type(
+    database: AsyncSession,
+    company_id: UUID,
+    version_id: UUID,
+    requested: str | None,
+) -> str | None:
+    record_types = await record_types_for_version(database, company_id, version_id)
+    if not record_types:
+        return None
+    chosen = (
+        next(
+            (item for item in record_types if item.active and item.key == requested),
+            None,
+        )
+        if requested
+        else next((item for item in record_types if item.active and item.is_default), None)
+    )
+    if chosen is None:
+        raise MetadataServiceError("Tipo de registro indisponivel.", status_code=422)
+    return chosen.key
+
+
+async def _validate_relationship_values(
+    database: AsyncSession,
+    company_id: UUID,
+    version_id: UUID,
+    values: Mapping[str, JsonValue],
+) -> None:
+    for relationship in await relationships_for_version(database, company_id, version_id):
+        value = values.get(relationship.source_field_key)
+        if value in (None, ""):
+            continue
+        try:
+            target_id = UUID(str(value))
+        except (TypeError, ValueError) as exc:
+            raise MetadataServiceError(
+                f"O relacionamento '{relationship.label}' exige UUID valido.", status_code=422
+            ) from exc
+        if (
+            await get_record(database, company_id, relationship.target_definition_id, target_id)
+            is None
+        ):
+            raise MetadataServiceError(
+                f"O registro relacionado de '{relationship.label}' nao foi encontrado.",
+                status_code=422,
+            )
 
 
 def field_permission_map(
@@ -248,6 +333,7 @@ def _response(
         id=record.id,
         definition_id=record.definition_id,
         schema_version=record.schema_version,
+        record_type_key=record.record_type_key,
         values={key: value for key, value in record.values.items() if key in allowed},
         masked_fields=sorted(denied_fields),
         record_version=record.record_version,
@@ -265,6 +351,7 @@ def _revision(
         record_id=record.id,
         schema_version_id=record.schema_version_id,
         schema_version=record.schema_version,
+        record_type_key=record.record_type_key,
         revision=record.record_version,
         change_type=change_type,
         values=dict(record.values),
@@ -379,7 +466,9 @@ async def create_custom_record(
     correlation_id: UUID,
 ) -> MetadataRecordResponse:
     _, version, fields = await _load_published_schema(database, context.company_id, definition_id)
-    normalized, errors = normalize_record_values(fields, payload.values)
+    normalized, errors = await _prepare_record_values(
+        database, context.company_id, version, fields, payload.values
+    )
     if errors:
         raise MetadataServiceError(" ".join(errors), status_code=422)
     decision = await _evaluate_record_policy(
@@ -404,6 +493,10 @@ async def create_custom_record(
     if rule_errors:
         await database.commit()
         raise MetadataServiceError(" ".join(rule_errors), status_code=422)
+    await _validate_relationship_values(database, context.company_id, version.id, normalized)
+    record_type_key = await _resolve_record_type(
+        database, context.company_id, version.id, payload.record_type_key
+    )
     if payload.idempotency_key is not None:
         existing = await get_record_by_idempotency_key(
             database, context.company_id, definition_id, payload.idempotency_key
@@ -422,6 +515,7 @@ async def create_custom_record(
         definition_id=definition_id,
         schema_version_id=version.id,
         schema_version=version.version,
+        record_type_key=record_type_key,
         values=normalized,
         record_version=1,
         idempotency_key=payload.idempotency_key,
@@ -495,7 +589,9 @@ async def update_custom_record(
     known_keys = {field.key for field in fields}
     combined = {key: value for key, value in record.values.items() if key in known_keys}
     combined.update(payload.values)
-    normalized, errors = normalize_record_values(fields, combined)
+    normalized, errors = await _prepare_record_values(
+        database, context.company_id, version, fields, combined
+    )
     if errors:
         await database.commit()
         raise MetadataServiceError(" ".join(errors), status_code=422)
@@ -506,6 +602,7 @@ async def update_custom_record(
     if rule_errors:
         await database.commit()
         raise MetadataServiceError(" ".join(rule_errors), status_code=422)
+    await _validate_relationship_values(database, context.company_id, version.id, normalized)
     await _ensure_unique_values(
         database,
         context.company_id,
@@ -517,6 +614,12 @@ async def update_custom_record(
     record.values = normalized
     record.schema_version_id = version.id
     record.schema_version = version.version
+    record.record_type_key = await _resolve_record_type(
+        database,
+        context.company_id,
+        version.id,
+        payload.record_type_key or record.record_type_key,
+    )
     record.record_version += 1
     record.updated_by_user_id = context.user_id
     record.updated_at = utc_now()
@@ -564,6 +667,20 @@ async def delete_custom_record(
             "O registro foi alterado por outra operacao. Atualize os dados e tente novamente.",
             status_code=409,
         )
+    for relationship, source_definition_id in await incoming_relationships_for_definition(
+        database, context.company_id, definition_id
+    ):
+        if await relationship_reference_exists(
+            database,
+            context.company_id,
+            source_definition_id,
+            relationship.source_field_key,
+            record_id,
+        ):
+            raise MetadataServiceError(
+                f"O registro esta em uso pelo relacionamento '{relationship.label}'.",
+                status_code=409,
+            )
     await _evaluate_record_policy(
         database,
         context,

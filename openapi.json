@@ -14067,6 +14067,14 @@
             "title": "Checksum",
             "type": "string"
           },
+          "formulas": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataFormulaInput"
+            },
+            "maxItems": 50,
+            "title": "Formulas",
+            "type": "array"
+          },
           "layouts": {
             "items": {
               "$ref": "#/components/schemas/MetadataLayoutInput"
@@ -14074,6 +14082,22 @@
             "maxItems": 12,
             "minItems": 1,
             "title": "Layouts",
+            "type": "array"
+          },
+          "record_types": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataRecordTypeInput"
+            },
+            "maxItems": 20,
+            "title": "Record Types",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataRelationshipInput"
+            },
+            "maxItems": 50,
+            "title": "Relationships",
             "type": "array"
           },
           "validation_rules": {
@@ -14121,6 +14145,14 @@
       "MetadataDesignUpdate": {
         "additionalProperties": false,
         "properties": {
+          "formulas": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataFormulaInput"
+            },
+            "maxItems": 50,
+            "title": "Formulas",
+            "type": "array"
+          },
           "layouts": {
             "items": {
               "$ref": "#/components/schemas/MetadataLayoutInput"
@@ -14128,6 +14160,22 @@
             "maxItems": 12,
             "minItems": 1,
             "title": "Layouts",
+            "type": "array"
+          },
+          "record_types": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataRecordTypeInput"
+            },
+            "maxItems": 20,
+            "title": "Record Types",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataRelationshipInput"
+            },
+            "maxItems": 50,
+            "title": "Relationships",
             "type": "array"
           },
           "validation_rules": {
@@ -14658,6 +14706,119 @@
         "title": "MetadataFieldResponse",
         "type": "object"
       },
+      "MetadataFormulaExpressionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "operands": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataFormulaOperandInput"
+            },
+            "maxItems": 8,
+            "minItems": 2,
+            "title": "Operands",
+            "type": "array"
+          },
+          "operator": {
+            "enum": [
+              "add",
+              "subtract",
+              "multiply",
+              "divide",
+              "concat",
+              "coalesce"
+            ],
+            "title": "Operator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operator",
+          "operands"
+        ],
+        "title": "MetadataFormulaExpressionInput",
+        "type": "object"
+      },
+      "MetadataFormulaInput": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "expression": {
+            "$ref": "#/components/schemas/MetadataFormulaExpressionInput"
+          },
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "target_field_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Target Field Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "target_field_key",
+          "expression"
+        ],
+        "title": "MetadataFormulaInput",
+        "type": "object"
+      },
+      "MetadataFormulaOperandInput": {
+        "additionalProperties": false,
+        "properties": {
+          "field_key": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Key"
+          },
+          "type": {
+            "enum": [
+              "field",
+              "literal"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "MetadataFormulaOperandInput",
+        "type": "object"
+      },
       "MetadataLayoutInput": {
         "additionalProperties": false,
         "properties": {
@@ -14753,6 +14914,19 @@
             ],
             "title": "Idempotency Key"
           },
+          "record_type_key": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Type Key"
+          },
           "values": {
             "additionalProperties": {
               "$ref": "#/components/schemas/JsonValue"
@@ -14831,6 +15005,17 @@
             "title": "Masked Fields",
             "type": "array"
           },
+          "record_type_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Type Key"
+          },
           "record_version": {
             "title": "Record Version",
             "type": "integer"
@@ -14856,6 +15041,7 @@
           "id",
           "definition_id",
           "schema_version",
+          "record_type_key",
           "values",
           "masked_fields",
           "record_version",
@@ -14865,6 +15051,59 @@
         "title": "MetadataRecordResponse",
         "type": "object"
       },
+      "MetadataRecordTypeInput": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_default": {
+            "default": false,
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "layout_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Layout Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "layout_key"
+        ],
+        "title": "MetadataRecordTypeInput",
+        "type": "object"
+      },
       "MetadataRecordUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -14872,6 +15111,19 @@
             "minimum": 1.0,
             "title": "Expected Version",
             "type": "integer"
+          },
+          "record_type_key": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Type Key"
           },
           "values": {
             "additionalProperties": {
@@ -14888,6 +15140,58 @@
           "expected_version"
         ],
         "title": "MetadataRecordUpdate",
+        "type": "object"
+      },
+      "MetadataRelationshipInput": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "on_delete": {
+            "const": "restrict",
+            "default": "restrict",
+            "title": "On Delete",
+            "type": "string"
+          },
+          "relationship_type": {
+            "default": "many_to_one",
+            "enum": [
+              "many_to_one",
+              "one_to_one"
+            ],
+            "title": "Relationship Type",
+            "type": "string"
+          },
+          "source_field_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Source Field Key",
+            "type": "string"
+          },
+          "target_definition_id": {
+            "format": "uuid",
+            "title": "Target Definition Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "source_field_key",
+          "target_definition_id"
+        ],
+        "title": "MetadataRelationshipInput",
         "type": "object"
       },
       "MetadataValidationResponse": {

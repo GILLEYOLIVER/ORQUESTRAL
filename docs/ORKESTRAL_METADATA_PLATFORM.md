@@ -14,6 +14,9 @@ O Orkestral Studio permite que cada empresa modele registros proprios sem altera
 - layouts com secoes e ordem dos campos;
 - visualizacoes com colunas, filtros e ordenacao declarativos;
 - regras de validacao deterministas;
+- relacionamentos tipados `many_to_one` e `one_to_one` com integridade tenant-scoped;
+- formulas declarativas com operadores permitidos e deteccao de ciclos;
+- tipos de registro associados a layouts condicionais;
 - formulario e lista renderizados no Orkestral Studio;
 - Policy Engine, auditoria e transactional outbox.
 
@@ -41,6 +44,8 @@ O Orkestral Studio permite que cada empresa modele registros proprios sem altera
 - regras nao executam Python, JavaScript, SQL ou chamadas externas;
 - valores dos registros nao entram nos eventos de configuracao;
 - regras tambem sao aplicadas no back-end, independentemente da interface;
+- campos calculados recusam escrita manual e nunca executam codigo;
+- referencias sao resolvidas somente dentro da empresa e bloqueiam exclusao do alvo em uso;
 - publicacao exige permissao dedicada e avaliacao de risco.
 
 ## Operadores permitidos
@@ -50,11 +55,15 @@ O Orkestral Studio permite que cada empresa modele registros proprios sem altera
 - contem para texto e colecoes;
 - vazio e nao vazio.
 
+## Operadores de formula permitidos
+
+- soma, subtracao, multiplicacao e divisao decimal segura;
+- concatenacao de texto;
+- primeiro valor preenchido;
+- operandos limitados a campos declarados ou literais validados.
+
 ## Lacunas seguintes
 
-- relacionamentos tipados entre entidades;
-- formulas e campos calculados em linguagem restrita;
-- tipos de registro e layouts condicionais;
 - multiplas visualizacoes escolhidas pelo usuario;
 - filtros salvos executados no repositorio com paginacao segura;
 - importacao, exportacao e empacotamento de metadados.
