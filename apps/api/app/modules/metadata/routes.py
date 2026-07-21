@@ -61,6 +61,20 @@ from app.modules.metadata.schemas import (
     MetadataEntitySummary,
     MetadataValidationResponse,
 )
+from app.modules.metadata.security_schemas import (
+    MetadataRecordShareCreate,
+    MetadataRecordShareResponse,
+    MetadataSecurityConfigurationResponse,
+    MetadataSecurityConfigurationUpdate,
+)
+from app.modules.metadata.security_service import (
+    MetadataSecurityError,
+    delete_record_share,
+    get_security_configuration,
+    list_record_shares,
+    replace_security_configuration,
+    upsert_record_share,
+)
 from app.modules.metadata.service import (
     MetadataServiceError,
     create_draft_version,
@@ -94,7 +108,7 @@ CanDeleteMetadataRecords = Annotated[
 async def _run[ResultT](operation: Awaitable[ResultT]) -> ResultT:
     try:
         return await operation
-    except MetadataServiceError as exc:
+    except (MetadataServiceError, MetadataSecurityError) as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
@@ -104,6 +118,109 @@ def _correlation_id(request: Request) -> UUID:
         return UUID(str(request_id))
     except (TypeError, ValueError):
         return uuid4()
+
+
+@router.get(
+    "/entities/{definition_id}/security",
+    response_model=MetadataSecurityConfigurationResponse,
+)
+async def get_metadata_security_configuration(
+    definition_id: UUID,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataSecurityConfigurationResponse:
+    return await _run(
+        get_security_configuration(database, get_request_context(principal), definition_id)
+    )
+
+
+@router.put(
+    "/entities/{definition_id}/security",
+    response_model=MetadataSecurityConfigurationResponse,
+)
+async def update_metadata_security_configuration(
+    definition_id: UUID,
+    payload: MetadataSecurityConfigurationUpdate,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataSecurityConfigurationResponse:
+    return await _run(
+        replace_security_configuration(
+            database,
+            get_request_context(principal),
+            definition_id,
+            payload,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.get(
+    "/entities/{definition_id}/records/{record_id}/shares",
+    response_model=list[MetadataRecordShareResponse],
+)
+async def get_metadata_record_shares(
+    definition_id: UUID,
+    record_id: UUID,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> list[MetadataRecordShareResponse]:
+    return await _run(
+        list_record_shares(
+            database, get_request_context(principal), definition_id, record_id
+        )
+    )
+
+
+@router.post(
+    "/entities/{definition_id}/records/{record_id}/shares",
+    response_model=MetadataRecordShareResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_metadata_record_share(
+    definition_id: UUID,
+    record_id: UUID,
+    payload: MetadataRecordShareCreate,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataRecordShareResponse:
+    return await _run(
+        upsert_record_share(
+            database,
+            get_request_context(principal),
+            definition_id,
+            record_id,
+            payload,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.delete(
+    "/entities/{definition_id}/records/{record_id}/shares/{share_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def revoke_metadata_record_share(
+    definition_id: UUID,
+    record_id: UUID,
+    share_id: UUID,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> Response:
+    await _run(
+        delete_record_share(
+            database,
+            get_request_context(principal),
+            definition_id,
+            record_id,
+            share_id,
+            _correlation_id(request),
+        )
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/entities", response_model=list[MetadataEntitySummary])

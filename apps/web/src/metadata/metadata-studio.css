@@ -966,6 +966,102 @@
   background: #fbfdfa;
 }
 
+.metadata-security-card {
+  display: grid;
+  gap: 1rem;
+  border-top: 4px solid #1f6b5d;
+}
+
+.metadata-security-subject,
+.metadata-security-save,
+.metadata-record-sharing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.metadata-security-subject label,
+.metadata-security-actions > label,
+.metadata-record-sharing > label {
+  display: grid;
+  gap: 0.4rem;
+  color: #415f58;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.metadata-security-subject select,
+.metadata-security-actions select,
+.metadata-record-sharing input[type="text"],
+.metadata-record-sharing > input {
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #cadbd5;
+  border-radius: 10px;
+  background: #fff;
+  color: #173d36;
+}
+
+.metadata-security-actions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(90px, 1fr)) minmax(180px, 1.4fr);
+  gap: 0.65rem;
+  padding: 0.9rem;
+  border: 1px solid #d4e3de;
+  border-radius: 14px;
+  background: #f5faf7;
+}
+
+.metadata-security-actions > label:not(:last-child),
+.metadata-security-field > label,
+.metadata-record-sharing > label {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.metadata-security-fields,
+.metadata-share-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.metadata-security-field,
+.metadata-share-list > div {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) repeat(3, auto);
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #dce8e4;
+  border-radius: 12px;
+}
+
+.metadata-security-field div,
+.metadata-record-sharing > div,
+.metadata-share-list span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.metadata-security-field small,
+.metadata-record-sharing small,
+.metadata-share-list small {
+  color: #61766f;
+}
+
+.metadata-record-sharing {
+  padding-top: 1rem;
+  border-top: 1px solid #dce8e4;
+}
+
+.metadata-record-sharing > input {
+  min-width: 280px;
+  flex: 1;
+}
+
 @media (max-width: 1100px) {
   .metadata-studio__workspace,
   .metadata-record-workspace {
@@ -998,6 +1094,10 @@
   .metadata-advanced-row--columns,
   .metadata-view-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metadata-security-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -1041,6 +1141,12 @@
   .metadata-view-toolbar,
   .metadata-view-rule,
   .metadata-view-rule--sort {
+    grid-template-columns: 1fr;
+  }
+
+  .metadata-security-actions,
+  .metadata-security-field,
+  .metadata-share-list > div {
     grid-template-columns: 1fr;
   }
 

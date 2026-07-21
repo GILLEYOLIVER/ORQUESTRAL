@@ -365,6 +365,9 @@ class MetadataRecord(Base):
     values: Mapped[dict[str, Any]] = mapped_column(JSONB)
     record_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     idempotency_key: Mapped[UUID | None]
+    owner_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     created_by_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -424,6 +427,165 @@ class MetadataRecordRevision(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class MetadataEntityAccessRule(Base):
+    __tablename__ = "metadata_entity_access_rules"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "definition_id",
+            "subject_type",
+            "subject_id",
+            name="uq_metadata_entity_access_subject",
+        ),
+        CheckConstraint(
+            "subject_type IN ('user', 'role')",
+            name="ck_metadata_entity_access_subject_type",
+        ),
+        CheckConstraint(
+            "record_scope IN ('all', 'owned', 'owned_shared')",
+            name="ck_metadata_entity_access_record_scope",
+        ),
+        Index(
+            "ix_metadata_entity_access_company_definition",
+            "company_id",
+            "definition_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    definition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="CASCADE"), index=True
+    )
+    subject_type: Mapped[str] = mapped_column(String(16))
+    subject_id: Mapped[UUID] = mapped_column(index=True)
+    can_view: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    can_create: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    can_update: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    can_delete: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    can_export: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    record_scope: Mapped[str] = mapped_column(
+        String(24), default="owned", server_default="owned"
+    )
+    created_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class MetadataFieldAccessRule(Base):
+    __tablename__ = "metadata_field_access_rules"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "definition_id",
+            "field_key",
+            "subject_type",
+            "subject_id",
+            name="uq_metadata_field_access_subject",
+        ),
+        CheckConstraint(
+            "subject_type IN ('user', 'role')",
+            name="ck_metadata_field_access_subject_type",
+        ),
+        Index(
+            "ix_metadata_field_access_company_definition",
+            "company_id",
+            "definition_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    definition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="CASCADE"), index=True
+    )
+    field_key: Mapped[str] = mapped_column(String(80))
+    subject_type: Mapped[str] = mapped_column(String(16))
+    subject_id: Mapped[UUID] = mapped_column(index=True)
+    can_view: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    can_edit: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class MetadataRecordShare(Base):
+    __tablename__ = "metadata_record_shares"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "record_id",
+            "subject_type",
+            "subject_id",
+            name="uq_metadata_record_share_subject",
+        ),
+        CheckConstraint(
+            "subject_type IN ('user', 'role')",
+            name="ck_metadata_record_share_subject_type",
+        ),
+        Index(
+            "ix_metadata_record_share_company_definition",
+            "company_id",
+            "definition_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    definition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="CASCADE"), index=True
+    )
+    record_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_records.id", ondelete="CASCADE"), index=True
+    )
+    subject_type: Mapped[str] = mapped_column(String(16))
+    subject_id: Mapped[UUID] = mapped_column(index=True)
+    can_view: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    can_edit: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
 

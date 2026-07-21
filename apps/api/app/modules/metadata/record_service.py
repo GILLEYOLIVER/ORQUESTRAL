@@ -47,6 +47,11 @@ from app.modules.metadata.record_schemas import (
 )
 from app.modules.metadata.repository import get_entity_definition, list_version_fields
 from app.modules.metadata.schemas import MetadataViewInput
+from app.modules.metadata.security_service import (
+    MetadataAccessDecision,
+    evaluate_metadata_access,
+    record_is_accessible,
+)
 from app.modules.metadata.service import (
     MetadataServiceError,
     evaluate_record_validation_rules,
@@ -342,6 +347,7 @@ def _response(
     return MetadataRecordResponse(
         id=record.id,
         definition_id=record.definition_id,
+        owner_user_id=record.owner_user_id,
         schema_version=record.schema_version,
         record_type_key=record.record_type_key,
         values={key: value for key, value in record.values.items() if key in allowed},
@@ -350,6 +356,21 @@ def _response(
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
+
+
+def _combined_field_access(
+    policy: PolicyDecision, security: MetadataAccessDecision
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    allowed = tuple(
+        field for field in policy.allowed_fields if field in set(security.allowed_fields)
+    )
+    denied = tuple(sorted(set(policy.denied_fields) | set(security.denied_fields)))
+    return allowed, denied
+
+
+def _require_security_action(decision: MetadataAccessDecision) -> None:
+    if not decision.allowed:
+        raise MetadataServiceError("Operacao nao autorizada pela politica.", status_code=403)
 
 
 def _revision(
@@ -417,6 +438,15 @@ async def list_custom_records(
         mode="read",
         requested_fields=[field.key for field in fields],
     )
+    security = await evaluate_metadata_access(
+        database,
+        context,
+        definition_id,
+        action="view",
+        field_keys=tuple(field.key for field in fields),
+    )
+    _require_security_action(security)
+    allowed_fields, denied_fields = _combined_field_access(decision, security)
     stored_views = await views_for_version(database, context.company_id, version.id)
     selected_view: MetadataViewDefinition | None = None
     if view_key is not None:
@@ -449,7 +479,7 @@ async def list_custom_records(
             *(item.field_key for item in view.filters),
             *(item.field_key for item in view.sorting),
         }
-        denied_references = sorted(referenced_fields - set(decision.allowed_fields))
+        denied_references = sorted(referenced_fields - set(allowed_fields))
         if denied_references:
             await database.commit()
             raise MetadataServiceError(
@@ -489,14 +519,17 @@ async def list_custom_records(
         page_size=page_size,
         view_filters=filter_specs,
         view_sorting=sort_specs,
+        access_scope=security.record_scope,
+        actor_user_id=context.user_id,
+        role_ids=context.role_ids,
     )
     await database.commit()
     return MetadataRecordPage(
         items=[
             _response(
                 record,
-                allowed_fields=decision.allowed_fields,
-                denied_fields=decision.denied_fields,
+                allowed_fields=allowed_fields,
+                denied_fields=denied_fields,
             )
             for record in records
         ],
@@ -529,10 +562,19 @@ async def get_custom_record(
         requested_fields=[field.key for field in fields],
         record_id=record_id,
     )
-    await database.commit()
-    return _response(
-        record, allowed_fields=decision.allowed_fields, denied_fields=decision.denied_fields
+    security = await evaluate_metadata_access(
+        database,
+        context,
+        definition_id,
+        action="view",
+        field_keys=tuple(field.key for field in fields),
     )
+    if not await record_is_accessible(database, context, record, security, action="view"):
+        await database.commit()
+        raise MetadataServiceError("Registro nao encontrado.", status_code=404)
+    allowed_fields, denied_fields = _combined_field_access(decision, security)
+    await database.commit()
+    return _response(record, allowed_fields=allowed_fields, denied_fields=denied_fields)
 
 
 async def create_custom_record(
@@ -558,10 +600,19 @@ async def create_custom_record(
         mode="write",
         requested_fields=tuple(payload.values),
     )
-    if decision.denied_fields:
+    security = await evaluate_metadata_access(
+        database,
+        context,
+        definition_id,
+        action="create",
+        field_keys=tuple(payload.values),
+    )
+    _require_security_action(security)
+    allowed_fields, denied_fields = _combined_field_access(decision, security)
+    if denied_fields:
         await database.commit()
         raise MetadataServiceError(
-            f"Sem permissao para gravar: {', '.join(decision.denied_fields)}.", status_code=403
+            f"Sem permissao para gravar: {', '.join(denied_fields)}.", status_code=403
         )
     rule_errors = evaluate_record_validation_rules(
         await validation_rules_for_version(database, context.company_id, version.id),
@@ -579,13 +630,20 @@ async def create_custom_record(
             database, context.company_id, definition_id, payload.idempotency_key
         )
         if existing is not None:
+            if (
+                existing.owner_user_id != context.user_id
+                and not context.is_owner
+                and not context.is_platform_admin
+            ):
+                await database.commit()
+                raise MetadataServiceError("Conflito de idempotencia.", status_code=409)
             if existing.values != normalized:
                 await database.commit()
                 raise MetadataServiceError(
                     "A chave de idempotencia ja foi usada com outro conteudo.", status_code=409
                 )
             await database.commit()
-            return _response(existing, allowed_fields=tuple(normalized), denied_fields=())
+            return _response(existing, allowed_fields=allowed_fields, denied_fields=denied_fields)
     await _ensure_unique_values(database, context.company_id, definition_id, fields, normalized)
     record = MetadataRecord(
         company_id=context.company_id,
@@ -596,6 +654,7 @@ async def create_custom_record(
         values=normalized,
         record_version=1,
         idempotency_key=payload.idempotency_key,
+        owner_user_id=context.user_id,
         created_by_user_id=context.user_id,
         updated_by_user_id=context.user_id,
     )
@@ -627,7 +686,29 @@ async def create_custom_record(
         raise MetadataServiceError(
             "Conflito ao criar o registro personalizado.", status_code=409
         ) from exc
-    return _response(record, allowed_fields=tuple(normalized), denied_fields=())
+    read_policy = await _evaluate_record_policy(
+        database,
+        context,
+        correlation_id=correlation_id,
+        action="view",
+        permission="metadata.records.view",
+        fields=fields,
+        mode="read",
+        requested_fields=tuple(normalized),
+        record_id=record.id,
+    )
+    read_security = await evaluate_metadata_access(
+        database,
+        context,
+        definition_id,
+        action="view",
+        field_keys=tuple(normalized),
+    )
+    response_allowed, response_denied = _combined_field_access(read_policy, read_security)
+    await database.commit()
+    return _response(
+        record, allowed_fields=response_allowed, denied_fields=response_denied
+    )
 
 
 async def update_custom_record(
@@ -658,10 +739,21 @@ async def update_custom_record(
         requested_fields=tuple(payload.values),
         record_id=record_id,
     )
-    if decision.denied_fields:
+    security = await evaluate_metadata_access(
+        database,
+        context,
+        definition_id,
+        action="update",
+        field_keys=tuple(payload.values),
+    )
+    if not await record_is_accessible(database, context, record, security, action="update"):
+        await database.commit()
+        raise MetadataServiceError("Operacao nao autorizada pela politica.", status_code=403)
+    _allowed_fields, denied_fields = _combined_field_access(decision, security)
+    if denied_fields:
         await database.commit()
         raise MetadataServiceError(
-            f"Sem permissao para gravar: {', '.join(decision.denied_fields)}.", status_code=403
+            f"Sem permissao para gravar: {', '.join(denied_fields)}.", status_code=403
         )
     known_keys = {field.key for field in fields}
     combined = {key: value for key, value in record.values.items() if key in known_keys}
@@ -723,8 +815,22 @@ async def update_custom_record(
         record_id=record.id,
         record_version=record.record_version,
     )
+    readable_security = await evaluate_metadata_access(
+        database,
+        context,
+        definition_id,
+        action="view",
+        field_keys=tuple(normalized),
+    )
+    response_allowed = tuple(
+        field for field in normalized if field in set(readable_security.allowed_fields)
+    )
     await database.commit()
-    return _response(record, allowed_fields=tuple(normalized), denied_fields=())
+    return _response(
+        record,
+        allowed_fields=response_allowed,
+        denied_fields=tuple(sorted(set(normalized) - set(response_allowed))),
+    )
 
 
 async def delete_custom_record(
@@ -769,6 +875,16 @@ async def delete_custom_record(
         requested_fields=(),
         record_id=record_id,
     )
+    security = await evaluate_metadata_access(
+        database,
+        context,
+        definition_id,
+        action="delete",
+        field_keys=(),
+    )
+    if not await record_is_accessible(database, context, record, security, action="delete"):
+        await database.commit()
+        raise MetadataServiceError("Operacao nao autorizada pela politica.", status_code=403)
     record_authorization_audit(
         database,
         company_id=context.company_id,

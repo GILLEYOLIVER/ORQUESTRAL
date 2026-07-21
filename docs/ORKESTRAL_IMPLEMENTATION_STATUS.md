@@ -888,3 +888,15 @@ controlada de metadados entre ambientes.
 - promocao controlada com bundle verificavel entre ambientes adjacentes;
 - painel de releases e instalacao no Orkestral Studio;
 - proximo recorte: permissoes de entidade, campo e acao para metadados e compartilhamento de registros.
+
+## Ciclo 57 - seguranca fina da plataforma de metadados
+
+- Registros personalizados agora possuem proprietario e escopo `all`, `owned` ou `owned_shared`.
+- Regras por usuario ou papel controlam acoes da entidade; regra direta do usuario prevalece.
+- Regras de campo controlam leitura e edicao no backend, com mascaramento e resposta `403`.
+- Compartilhamentos concedem leitura ou edicao a usuarios e papeis sem permitir exclusao.
+- Configuracao visual entregue no Studio de Metadados, incluindo revogacao de compartilhamento.
+- Auditoria e outbox registram configuracao, compartilhamento e revogacao sem valores empresariais.
+- Migracao: `20260721_0077_metadata_permissions_sharing.py`.
+- Testes do recorte cobrem propriedade, campo restrito, compartilhamento e isolamento entre empresas.
+- Proximo recorte: iniciar a Fase 3 com contratos versionados de eventos, transactional outbox e consumidores idempotentes para automacoes.

@@ -29,6 +29,7 @@ class MetadataRecordUpdate(StrictSchema):
 class MetadataRecordResponse(StrictSchema):
     id: UUID
     definition_id: UUID
+    owner_user_id: UUID | None
     schema_version: int
     record_type_key: str | None
     values: dict[str, JsonValue]
