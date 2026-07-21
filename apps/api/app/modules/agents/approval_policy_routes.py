@@ -10,20 +10,24 @@ from app.core.dependencies import DatabaseSession
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.agents.approval_policy import evaluate_agent_approval_policy
-from app.modules.agents.approval_policy_models import AgentApprovalPolicyVersion
+from app.modules.agents.approval_policy_models import (
+    AgentApprovalPolicyStage,
+    AgentApprovalPolicyStageApprover,
+    AgentApprovalPolicyVersion,
+)
 from app.modules.agents.approval_policy_schemas import (
     AgentApprovalPolicyCreate,
     AgentApprovalPolicyEvaluationRequest,
     AgentApprovalPolicyEvaluationResponse,
     AgentApprovalPolicyResponse,
+    AgentApprovalPolicyStageResponse,
 )
 from app.modules.agents.models import Agent
 from app.modules.agents.tools import TOOL_CATALOG
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
-from app.modules.notifications.service import is_company_approver
-from app.modules.users.models import CompanyUser
+from app.modules.notifications.service import company_approver_user_ids
 
 router = APIRouter()
 CanConfigureAgents = Annotated[Principal, Depends(require_permission("agents.configure"))]
@@ -38,8 +42,42 @@ async def _tenant_agent(database: DatabaseSession, *, company_id: UUID, agent_id
     return agent
 
 
-def _response(policy: AgentApprovalPolicyVersion) -> AgentApprovalPolicyResponse:
-    return AgentApprovalPolicyResponse.model_validate(policy, from_attributes=True)
+async def _response(
+    database: DatabaseSession, policy: AgentApprovalPolicyVersion
+) -> AgentApprovalPolicyResponse:
+    stages = list(
+        await database.scalars(
+            select(AgentApprovalPolicyStage)
+            .where(
+                AgentApprovalPolicyStage.company_id == policy.company_id,
+                AgentApprovalPolicyStage.policy_version_id == policy.id,
+            )
+            .order_by(AgentApprovalPolicyStage.stage_order)
+        )
+    )
+    stage_responses: list[AgentApprovalPolicyStageResponse] = []
+    for stage in stages:
+        approver_ids = list(
+            await database.scalars(
+                select(AgentApprovalPolicyStageApprover.user_id)
+                .where(
+                    AgentApprovalPolicyStageApprover.company_id == policy.company_id,
+                    AgentApprovalPolicyStageApprover.stage_id == stage.id,
+                )
+                .order_by(AgentApprovalPolicyStageApprover.created_at)
+            )
+        )
+        stage_responses.append(
+            AgentApprovalPolicyStageResponse(
+                id=stage.id,
+                stage_order=stage.stage_order,
+                name=stage.name,
+                quorum=stage.quorum,
+                approver_user_ids=approver_ids,
+            )
+        )
+    response = AgentApprovalPolicyResponse.model_validate(policy, from_attributes=True)
+    return response.model_copy(update={"approval_stages": stage_responses})
 
 
 @router.get(
@@ -66,7 +104,7 @@ async def list_agent_approval_policies(
             )
         )
     ).all()
-    return [_response(policy) for policy in policies]
+    return [await _response(database, policy) for policy in policies]
 
 
 @router.post(
@@ -84,26 +122,20 @@ async def create_agent_approval_policy(
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
     if payload.tool_key is not None and payload.tool_key not in TOOL_CATALOG:
         raise HTTPException(status_code=422, detail="Ferramenta desconhecida.")
-    for user_id, label in (
-        (payload.assigned_user_id, "Aprovador principal"),
-        (payload.escalation_user_id, "Aprovador substituto"),
-    ):
-        if user_id is None:
-            continue
-        member = await database.scalar(
-            select(CompanyUser).where(
-                CompanyUser.company_id == context.company_id,
-                CompanyUser.user_id == user_id,
-                CompanyUser.status == "active",
-            )
+    configured_approvers = {
+        user_id
+        for user_id in (payload.assigned_user_id, payload.escalation_user_id)
+        if user_id is not None
+    }
+    configured_approvers.update(
+        user_id for stage in payload.approval_stages for user_id in stage.approver_user_ids
+    )
+    authorized_approvers = set(await company_approver_user_ids(database, context.company_id))
+    if configured_approvers - authorized_approvers:
+        raise HTTPException(
+            status_code=422,
+            detail="Todos os aprovadores devem pertencer à empresa e possuir approvals.decide.",
         )
-        if member is None:
-            raise HTTPException(status_code=422, detail=f"{label} não pertence à empresa.")
-        if not await is_company_approver(database, company_id=context.company_id, user_id=user_id):
-            raise HTTPException(
-                status_code=422,
-                detail=f"{label} não possui permissão para decidir aprovações.",
-            )
     current_version = await database.scalar(
         select(func.max(AgentApprovalPolicyVersion.version)).where(
             AgentApprovalPolicyVersion.company_id == context.company_id,
@@ -111,16 +143,35 @@ async def create_agent_approval_policy(
             AgentApprovalPolicyVersion.policy_key == payload.policy_key,
         )
     )
+    policy_data = payload.model_dump(exclude={"approval_stages"})
     policy = AgentApprovalPolicyVersion(
         company_id=context.company_id,
         agent_id=agent_id,
         version=(current_version or 0) + 1,
         status="draft",
         created_by_user_id=context.user_id,
-        **payload.model_dump(),
+        **policy_data,
     )
     database.add(policy)
     await database.flush()
+    for stage_order, stage_payload in enumerate(payload.approval_stages, start=1):
+        stage = AgentApprovalPolicyStage(
+            company_id=context.company_id,
+            policy_version_id=policy.id,
+            stage_order=stage_order,
+            name=stage_payload.name.strip(),
+            quorum=stage_payload.quorum,
+        )
+        database.add(stage)
+        await database.flush()
+        database.add_all(
+            AgentApprovalPolicyStageApprover(
+                company_id=context.company_id,
+                stage_id=stage.id,
+                user_id=user_id,
+            )
+            for user_id in stage_payload.approver_user_ids
+        )
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -137,7 +188,7 @@ async def create_agent_approval_policy(
     )
     await database.commit()
     await database.refresh(policy)
-    return _response(policy)
+    return await _response(database, policy)
 
 
 @router.post(
@@ -213,7 +264,7 @@ async def publish_agent_approval_policy(
     )
     await database.commit()
     await database.refresh(policy)
-    return _response(policy)
+    return await _response(database, policy)
 
 
 @router.post(

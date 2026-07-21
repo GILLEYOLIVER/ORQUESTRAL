@@ -70,12 +70,20 @@ test("administrador publica e simula política de aprovação de agente", async 
       }),
     ).toHaveValue("60");
     await expect(policyCard.getByLabel("Aprovador substituto")).toBeDisabled();
+    await policyCard.getByRole("button", { name: "Adicionar etapa" }).click();
+    await expect(
+      policyCard.getByRole("textbox", { name: "Nome da etapa 1" }),
+    ).toHaveValue("Etapa 1");
+    await policyCard
+      .getByLabel("Participantes da etapa 1")
+      .selectOption({ index: 0 });
     await policyCard.getByRole("button", { name: "Criar rascunho" }).click();
 
     const policyRow = policyCard.locator(".agent-policy-row", {
       hasText: policyName,
     });
     await expect(policyRow.getByText("Rascunho")).toBeVisible();
+    await expect(policyRow.getByText(/1 etapa/)).toBeVisible();
     await policyRow.getByRole("button", { name: "Publicar" }).click();
     await expect(policyRow.getByText("Publicada")).toBeVisible();
 

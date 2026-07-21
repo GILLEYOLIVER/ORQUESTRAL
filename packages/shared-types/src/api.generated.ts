@@ -3536,6 +3536,8 @@ export interface components {
         AgentApprovalPolicyCreate: {
             /** Amount Field */
             amount_field?: string | null;
+            /** Approval Stages */
+            approval_stages?: components["schemas"]["AgentApprovalPolicyStageCreate"][];
             /**
              * Approval Ttl Minutes
              * @default 30
@@ -3613,6 +3615,8 @@ export interface components {
             agent_id: string;
             /** Amount Field */
             amount_field: string | null;
+            /** Approval Stages */
+            approval_stages?: components["schemas"]["AgentApprovalPolicyStageResponse"][];
             /** Approval Ttl Minutes */
             approval_ttl_minutes: number;
             /** Assigned User Id */
@@ -3663,6 +3667,34 @@ export interface components {
             tool_key: string | null;
             /** Version */
             version: number;
+        };
+        /** AgentApprovalPolicyStageCreate */
+        AgentApprovalPolicyStageCreate: {
+            /** Approver User Ids */
+            approver_user_ids: string[];
+            /** Name */
+            name: string;
+            /**
+             * Quorum
+             * @default 1
+             */
+            quorum: number;
+        };
+        /** AgentApprovalPolicyStageResponse */
+        AgentApprovalPolicyStageResponse: {
+            /** Approver User Ids */
+            approver_user_ids: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Quorum */
+            quorum: number;
+            /** Stage Order */
+            stage_order: number;
         };
         /** AgentBudgetResponse */
         AgentBudgetResponse: {

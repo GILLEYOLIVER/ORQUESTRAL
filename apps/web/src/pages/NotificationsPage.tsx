@@ -117,11 +117,13 @@ export function NotificationsPage() {
         method: "POST",
         body: { decision },
       }),
-    onSuccess: async (_, variables) => {
+    onSuccess: async (approval, variables) => {
       setError(null);
       setFeedback(
         variables.decision === "approved"
-          ? "A solicitação foi aprovada e a operação pode continuar."
+          ? approval.status === "pending"
+            ? "Seu voto foi registrado. A solicitação continua aguardando o quórum ou a próxima etapa."
+            : "A solicitação foi aprovada e a operação pode continuar."
           : "A solicitação foi rejeitada e a operação foi interrompida.",
       );
       await refresh();
@@ -210,6 +212,20 @@ export function NotificationsPage() {
                   </div>
                   <h3>{approval.title}</h3>
                   <p>{approval.description}</p>
+                  {typeof approval.context.approval_stage_name === "string" ? (
+                    <div className="approval-card__progress">
+                      <span>
+                        Etapa {String(approval.context.approval_stage_order)} ·{" "}
+                        {approval.context.approval_stage_name}
+                      </span>
+                      <strong>
+                        {String(
+                          approval.context.approval_stage_approved_votes ?? 0,
+                        )}
+                        /{String(approval.context.approval_stage_quorum)} votos
+                      </strong>
+                    </div>
+                  ) : null}
                   {canDecideApprovals ? (
                     <div className="approval-card__actions">
                       <Button

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from datetime import timedelta
 from typing import Any, Literal
 from uuid import UUID
@@ -108,7 +109,7 @@ async def create_notification(
     return notification
 
 
-async def _approver_user_ids(database: AsyncSession, company_id: UUID) -> list[UUID]:
+async def company_approver_user_ids(database: AsyncSession, company_id: UUID) -> list[UUID]:
     owner_ids = set(
         await database.scalars(
             select(CompanyUser.user_id).where(
@@ -139,7 +140,7 @@ async def _approver_user_ids(database: AsyncSession, company_id: UUID) -> list[U
 
 
 async def is_company_approver(database: AsyncSession, *, company_id: UUID, user_id: UUID) -> bool:
-    return user_id in await _approver_user_ids(database, company_id)
+    return user_id in await company_approver_user_ids(database, company_id)
 
 
 async def create_approval_request(
@@ -152,6 +153,7 @@ async def create_approval_request(
     description: str,
     context: dict[str, Any] | None = None,
     assigned_user_id: UUID | None = None,
+    recipient_user_ids: Sequence[UUID] | None = None,
     required_permission: str = "approvals.decide",
     workflow_id: UUID | None = None,
     workflow_execution_id: UUID | None = None,
@@ -179,7 +181,11 @@ async def create_approval_request(
     database.add(approval)
     await database.flush()
     recipients = (
-        [assigned_user_id] if assigned_user_id else await _approver_user_ids(database, company_id)
+        list(recipient_user_ids)
+        if recipient_user_ids is not None
+        else [assigned_user_id]
+        if assigned_user_id
+        else await company_approver_user_ids(database, company_id)
     )
     if not recipients and requested_by_user_id is not None:
         recipients = [requested_by_user_id]
@@ -296,7 +302,7 @@ async def process_due_reminders(database: AsyncSession, *, reminder_minutes: int
         recipients = (
             [approval.assigned_user_id]
             if approval.assigned_user_id
-            else await _approver_user_ids(database, approval.company_id)
+            else await company_approver_user_ids(database, approval.company_id)
         )
         for recipient_id in recipients:
             preference = await get_notification_preference(

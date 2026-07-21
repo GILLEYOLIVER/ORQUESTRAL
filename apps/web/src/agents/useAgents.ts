@@ -118,6 +118,13 @@ export interface AgentApprovalPolicyResponse {
   assigned_user_id: string | null;
   escalation_user_id: string | null;
   escalation_after_minutes: number | null;
+  approval_stages: Array<{
+    id: string;
+    stage_order: number;
+    name: string;
+    quorum: number;
+    approver_user_ids: string[];
+  }>;
   created_at: string;
   published_at: string | null;
 }

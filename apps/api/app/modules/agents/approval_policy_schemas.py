@@ -11,6 +11,28 @@ from app.core.schemas import StrictSchema
 JsonScalar = str | int | float | bool | None
 
 
+class AgentApprovalPolicyStageCreate(StrictSchema):
+    name: str = Field(min_length=2, max_length=160)
+    quorum: int = Field(default=1, ge=1, le=20)
+    approver_user_ids: list[UUID] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def validate_stage(self) -> Self:
+        if len(set(self.approver_user_ids)) != len(self.approver_user_ids):
+            raise ValueError("Um aprovador não pode aparecer duas vezes na mesma etapa.")
+        if self.quorum > len(self.approver_user_ids):
+            raise ValueError("O quórum não pode ser maior que o número de aprovadores.")
+        return self
+
+
+class AgentApprovalPolicyStageResponse(StrictSchema):
+    id: UUID
+    stage_order: int
+    name: str
+    quorum: int
+    approver_user_ids: list[UUID]
+
+
 class AgentApprovalPolicyCreate(StrictSchema):
     policy_key: str = Field(min_length=2, max_length=80, pattern=r"^[a-z0-9_.-]+$")
     name: str = Field(min_length=2, max_length=160)
@@ -28,6 +50,9 @@ class AgentApprovalPolicyCreate(StrictSchema):
     assigned_user_id: UUID | None = None
     escalation_user_id: UUID | None = None
     escalation_after_minutes: int | None = Field(default=None, ge=5, le=10_079)
+    approval_stages: list[AgentApprovalPolicyStageCreate] = Field(
+        default_factory=list, max_length=10
+    )
 
     @field_validator("currency")
     @classmethod
@@ -75,6 +100,22 @@ class AgentApprovalPolicyCreate(StrictSchema):
             and self.escalation_after_minutes >= self.approval_ttl_minutes
         ):
             raise ValueError("O escalonamento deve ocorrer antes da expiração da aprovação.")
+        if self.approval_stages and self.effect != "require_approval":
+            raise ValueError("Etapas só podem ser usadas em políticas que exigem aprovação.")
+        if self.approval_stages and any(
+            value is not None
+            for value in (
+                self.assigned_user_id,
+                self.escalation_user_id,
+                self.escalation_after_minutes,
+            )
+        ):
+            raise ValueError("Use uma cadeia de etapas ou a aprovação simples, nunca as duas.")
+        stage_users = [
+            user_id for stage in self.approval_stages for user_id in stage.approver_user_ids
+        ]
+        if len(set(stage_users)) != len(stage_users):
+            raise ValueError("Cada pessoa só pode participar de uma etapa da cadeia.")
         return self
 
 
@@ -97,6 +138,7 @@ class AgentApprovalPolicyResponse(StrictSchema):
     assigned_user_id: UUID | None
     escalation_user_id: UUID | None
     escalation_after_minutes: int | None
+    approval_stages: list[AgentApprovalPolicyStageResponse] = Field(default_factory=list)
     created_at: datetime
     published_at: datetime | None
 

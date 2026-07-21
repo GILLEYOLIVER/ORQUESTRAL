@@ -175,7 +175,8 @@ class ApprovalAction(Base):
     __tablename__ = "approval_actions"
     __table_args__ = (
         CheckConstraint(
-            "action IN ('approved', 'rejected', 'commented', 'reminded', 'escalated', 'expired')",
+            "action IN ('approved', 'rejected', 'commented', 'reminded', 'escalated', "
+            "'vote_approved', 'expired')",
             name="ck_approval_actions_action",
         ),
     )

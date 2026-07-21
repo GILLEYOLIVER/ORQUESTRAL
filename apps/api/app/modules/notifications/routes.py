@@ -10,7 +10,10 @@ from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import CurrentPrincipal, Principal, get_request_context, require_permission
 from app.modules.agents.approvals import decide_agent_tool_run
-from app.modules.agents.coordination_approvals import decide_delegation_approval
+from app.modules.agents.coordination_approvals import (
+    ApprovalStageAccessError,
+    decide_delegation_approval,
+)
 from app.modules.agents.coordination_queue import enqueue_delegation
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.notifications.models import (
@@ -313,15 +316,48 @@ async def decide_approval(
             sync_approval=False,
         )
     try:
-        resumed_delegation_id = await decide_delegation_approval(
+        delegation_outcome = await decide_delegation_approval(
             database,
             approval_request_id=approval.id,
             company_id=context.company_id,
             actor_user_id=context.user_id,
             decision=payload.decision,
         )
+    except ApprovalStageAccessError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if delegation_outcome.pending:
+        database.add(
+            ApprovalAction(
+                company_id=context.company_id,
+                approval_request_id=approval.id,
+                actor_user_id=context.user_id,
+                action="vote_approved",
+                comment=payload.comment,
+                details={
+                    "stage_order": delegation_outcome.stage_order,
+                    "approved_votes": delegation_outcome.approved_votes,
+                    "quorum": delegation_outcome.quorum,
+                },
+            )
+        )
+        record_authorization_audit(
+            database,
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            action="approval.vote_approved",
+            target_type="approval_request",
+            target_id=approval.id,
+            details={
+                "source_type": approval.source_type,
+                "stage_order": delegation_outcome.stage_order,
+            },
+        )
+        await database.commit()
+        await database.refresh(approval)
+        return _approval_response(approval, await _approval_actions(database, approval.id))
+    resumed_delegation_id = delegation_outcome.resumed_delegation_id
     await resolve_approval_request(
         database,
         approval=approval,

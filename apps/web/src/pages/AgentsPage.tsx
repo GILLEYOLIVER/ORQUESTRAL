@@ -71,6 +71,13 @@ interface CompanyUserOption {
   membership_status: string;
 }
 
+interface ApprovalStageDraft {
+  id: string;
+  name: string;
+  quorum: string;
+  approverUserIds: string[];
+}
+
 export function AgentsPage() {
   const queryClient = useQueryClient();
   const { me } = useSession();
@@ -107,6 +114,7 @@ export function AgentsPage() {
   const [policyAssignedUserId, setPolicyAssignedUserId] = useState("");
   const [policyEscalationUserId, setPolicyEscalationUserId] = useState("");
   const [policyEscalationAfter, setPolicyEscalationAfter] = useState("30");
+  const [policyStages, setPolicyStages] = useState<ApprovalStageDraft[]>([]);
   const [simulationToolKey, setSimulationToolKey] = useState("");
   const [simulationArguments, setSimulationArguments] = useState("{}");
   const [policyDecision, setPolicyDecision] =
@@ -348,6 +356,20 @@ export function AgentsPage() {
       return;
     }
     if (
+      policyStages.some(
+        (stage) =>
+          !stage.name.trim() ||
+          !Number.isInteger(Number(stage.quorum)) ||
+          Number(stage.quorum) < 1 ||
+          Number(stage.quorum) > stage.approverUserIds.length,
+      )
+    ) {
+      setPolicyFormError(
+        "Cada etapa precisa de nome, participantes e quórum compatível.",
+      );
+      return;
+    }
+    if (
       (minAmount !== null && !Number.isInteger(minAmount)) ||
       (maxAmount !== null && !Number.isInteger(maxAmount))
     ) {
@@ -369,15 +391,29 @@ export function AgentsPage() {
         : {},
       approval_ttl_minutes: approvalTtl,
       assigned_user_id:
-        policyEffect === "require_approval" && policyAssignedUserId
+        policyEffect === "require_approval" &&
+        policyStages.length === 0 &&
+        policyAssignedUserId
           ? policyAssignedUserId
           : null,
       escalation_user_id:
-        policyEffect === "require_approval" && policyEscalationUserId
+        policyEffect === "require_approval" &&
+        policyStages.length === 0 &&
+        policyEscalationUserId
           ? policyEscalationUserId
           : null,
       escalation_after_minutes:
-        policyEffect === "require_approval" ? escalationAfter : null,
+        policyEffect === "require_approval" && policyStages.length === 0
+          ? escalationAfter
+          : null,
+      approval_stages:
+        policyEffect === "require_approval"
+          ? policyStages.map((stage) => ({
+              name: stage.name,
+              quorum: Number(stage.quorum),
+              approver_user_ids: stage.approverUserIds,
+            }))
+          : [],
     });
   };
   const simulatePolicy = () => {
@@ -727,7 +763,9 @@ export function AgentsPage() {
                     <select
                       className="agent-native-select"
                       disabled={
-                        policyEffect !== "require_approval" || !canViewUsers
+                        policyEffect !== "require_approval" ||
+                        !canViewUsers ||
+                        policyStages.length > 0
                       }
                       onChange={(event) =>
                         setPolicyAssignedUserId(event.target.value)
@@ -755,7 +793,8 @@ export function AgentsPage() {
                       disabled={
                         policyEffect !== "require_approval" ||
                         !canViewUsers ||
-                        !policyAssignedUserId
+                        !policyAssignedUserId ||
+                        policyStages.length > 0
                       }
                       onChange={(event) =>
                         setPolicyEscalationUserId(event.target.value)
@@ -778,7 +817,9 @@ export function AgentsPage() {
                     </select>
                   </label>
                   <TextField
-                    disabled={!policyEscalationUserId}
+                    disabled={
+                      !policyEscalationUserId || policyStages.length > 0
+                    }
                     label="Escalonar após (minutos)"
                     min={5}
                     onChange={(event) =>
@@ -788,6 +829,124 @@ export function AgentsPage() {
                     type="number"
                     value={policyEscalationAfter}
                   />
+                  <div className="agent-policy-stages">
+                    <div className="agent-policy-stages__heading">
+                      <div>
+                        <strong>Cadeia de aprovação</strong>
+                        <small>
+                          Use etapas para decisões com separação de funções e
+                          quórum.
+                        </small>
+                      </div>
+                      <Button
+                        disabled={
+                          policyEffect !== "require_approval" || !canViewUsers
+                        }
+                        onClick={() =>
+                          setPolicyStages((current) => [
+                            ...current,
+                            {
+                              id: crypto.randomUUID(),
+                              name: `Etapa ${current.length + 1}`,
+                              quorum: "1",
+                              approverUserIds: [],
+                            },
+                          ])
+                        }
+                        type="button"
+                        variant="secondary"
+                      >
+                        Adicionar etapa
+                      </Button>
+                    </div>
+                    {policyStages.map((stage, index) => (
+                      <article className="agent-policy-stage" key={stage.id}>
+                        <TextField
+                          label={`Nome da etapa ${index + 1}`}
+                          onChange={(event) =>
+                            setPolicyStages((current) =>
+                              current.map((item) =>
+                                item.id === stage.id
+                                  ? { ...item, name: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          required
+                          value={stage.name}
+                        />
+                        <TextField
+                          label={`Quórum da etapa ${index + 1}`}
+                          min={1}
+                          onChange={(event) =>
+                            setPolicyStages((current) =>
+                              current.map((item) =>
+                                item.id === stage.id
+                                  ? { ...item, quorum: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          required
+                          type="number"
+                          value={stage.quorum}
+                        />
+                        <label className="native-field">
+                          <span>Participantes da etapa {index + 1}</span>
+                          <select
+                            aria-label={`Participantes da etapa ${index + 1}`}
+                            className="agent-native-select"
+                            multiple
+                            onChange={(event) => {
+                              const approverUserIds = Array.from(
+                                event.currentTarget.selectedOptions,
+                                (option) => option.value,
+                              );
+                              setPolicyStages((current) =>
+                                current.map((item) =>
+                                  item.id === stage.id
+                                    ? { ...item, approverUserIds }
+                                    : item,
+                                ),
+                              );
+                            }}
+                            required
+                            value={stage.approverUserIds}
+                          >
+                            {companyUsers.data
+                              ?.filter(
+                                (user) =>
+                                  user.user_status === "active" &&
+                                  user.membership_status === "active" &&
+                                  !policyStages.some(
+                                    (other) =>
+                                      other.id !== stage.id &&
+                                      other.approverUserIds.includes(
+                                        user.user_id,
+                                      ),
+                                  ),
+                              )
+                              .map((user) => (
+                                <option key={user.user_id} value={user.user_id}>
+                                  {user.name} · {user.email}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                        <Button
+                          onClick={() =>
+                            setPolicyStages((current) =>
+                              current.filter((item) => item.id !== stage.id),
+                            )
+                          }
+                          type="button"
+                          variant="ghost"
+                        >
+                          Remover etapa
+                        </Button>
+                      </article>
+                    ))}
+                  </div>
                   <Button loading={createPolicy.isPending} type="submit">
                     Criar rascunho
                   </Button>
@@ -827,6 +986,15 @@ export function AgentsPage() {
                             policy.escalation_after_minutes
                               ? ` · escala após ${policy.escalation_after_minutes} min`
                               : ""}
+                          </small>
+                        ) : null}
+                        {policy.approval_stages.length ? (
+                          <small>
+                            {policy.approval_stages.length}{" "}
+                            {policy.approval_stages.length === 1
+                              ? "etapa"
+                              : "etapas"}{" "}
+                            · quórum configurado
                           </small>
                         ) : null}
                       </div>

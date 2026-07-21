@@ -213,6 +213,20 @@
   padding: 0.3rem;
 }
 
+.approval-card__progress {
+  align-items: center;
+  background: #edf5ef;
+  border: 1px solid #c2d9c9;
+  border-radius: 0.8rem;
+  color: var(--color-brand-800);
+  display: flex;
+  font-size: 0.78rem;
+  gap: 0.8rem;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+  padding: 0.65rem 0.75rem;
+}
+
 .attention-empty {
   align-items: center;
   color: var(--color-text-muted);

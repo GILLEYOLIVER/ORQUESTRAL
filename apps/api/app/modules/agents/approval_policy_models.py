@@ -111,3 +111,51 @@ class AgentApprovalPolicyVersion(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentApprovalPolicyStage(Base):
+    __tablename__ = "agent_approval_policy_stages"
+    __table_args__ = (
+        UniqueConstraint(
+            "policy_version_id", "stage_order", name="uq_agent_approval_policy_stage_order"
+        ),
+        CheckConstraint("stage_order BETWEEN 1 AND 10", name="ck_agent_approval_stage_order"),
+        CheckConstraint("quorum BETWEEN 1 AND 20", name="ck_agent_approval_stage_quorum"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    policy_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_approval_policy_versions.id", ondelete="CASCADE"), index=True
+    )
+    stage_order: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(160))
+    quorum: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class AgentApprovalPolicyStageApprover(Base):
+    __tablename__ = "agent_approval_policy_stage_approvers"
+    __table_args__ = (
+        UniqueConstraint("stage_id", "user_id", name="uq_agent_approval_stage_approver"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    stage_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_approval_policy_stages.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )

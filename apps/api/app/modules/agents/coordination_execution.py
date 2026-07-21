@@ -17,6 +17,10 @@ from app.modules.agents.approval_policy import (
     approval_escalation_due,
     evaluate_agent_approval_policy,
 )
+from app.modules.agents.approval_policy_models import (
+    AgentApprovalPolicyStage,
+    AgentApprovalPolicyStageApprover,
+)
 from app.modules.agents.coordination import coordination_fingerprint
 from app.modules.agents.coordination_models import (
     AgentDelegation,
@@ -267,6 +271,40 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                     )
                     escalation_user_id = policy_decision.escalation_user_id
                     escalate_at = None
+                    approval_stage = None
+                    stage_recipient_ids: list[UUID] | None = None
+                    assigned_user_id = policy_decision.assigned_user_id
+                    stage_count = 0
+                    if policy_decision.policy_version_id is not None:
+                        policy_stages = list(
+                            await database.scalars(
+                                select(AgentApprovalPolicyStage)
+                                .where(
+                                    AgentApprovalPolicyStage.company_id == delegation.company_id,
+                                    AgentApprovalPolicyStage.policy_version_id
+                                    == policy_decision.policy_version_id,
+                                )
+                                .order_by(AgentApprovalPolicyStage.stage_order)
+                            )
+                        )
+                        stage_count = len(policy_stages)
+                        approval_stage = policy_stages[0] if policy_stages else None
+                    if approval_stage is not None:
+                        stage_recipient_ids = list(
+                            await database.scalars(
+                                select(AgentApprovalPolicyStageApprover.user_id).where(
+                                    AgentApprovalPolicyStageApprover.company_id
+                                    == delegation.company_id,
+                                    AgentApprovalPolicyStageApprover.stage_id == approval_stage.id,
+                                )
+                            )
+                        )
+                        assigned_user_id = (
+                            stage_recipient_ids[0]
+                            if approval_stage.quorum == 1 and len(stage_recipient_ids) == 1
+                            else None
+                        )
+                        escalation_user_id = None
                     if (
                         escalation_user_id is not None
                         and policy_decision.escalation_after_minutes is not None
@@ -284,6 +322,9 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                         delegation_id=delegation.id,
                         tool_id=tool.id,
                         policy_version_id=policy_decision.policy_version_id,
+                        current_policy_stage_id=(
+                            approval_stage.id if approval_stage is not None else None
+                        ),
                         encrypted_arguments=encrypt_approval_arguments(
                             settings,
                             company_id=delegation.company_id,
@@ -322,8 +363,18 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                                 else None
                             ),
                             "policy_key": policy_decision.policy_key,
+                            "approval_stage_order": (
+                                approval_stage.stage_order if approval_stage else None
+                            ),
+                            "approval_stage_name": approval_stage.name if approval_stage else None,
+                            "approval_stage_quorum": approval_stage.quorum
+                            if approval_stage
+                            else None,
+                            "approval_stage_approved_votes": 0 if approval_stage else None,
+                            "approval_stage_total": stage_count if approval_stage else None,
                         },
-                        assigned_user_id=policy_decision.assigned_user_id,
+                        assigned_user_id=assigned_user_id,
+                        recipient_user_ids=stage_recipient_ids,
                         expires_at=approval_expires_at,
                         reminder_minutes=settings.notification_reminder_minutes,
                     )

@@ -420,3 +420,19 @@ Data: 21 de julho de 2026.
   build, migração reversível, auditoria de segurança e E2E com 7 aprovados e 2
   cenários explicitamente ignorados concluídos sem bloqueios.
 - Próximo passo: ciclo 20, cadeias com múltiplos estágios e quórum de aprovação.
+
+## Ciclo 20 - Cadeias de aprovação e quórum
+
+- Estágios versionados e relacionais, com ordem, participantes e quórum próprios.
+- Separação de funções: uma pessoa não pode ocupar mais de uma etapa da mesma cadeia.
+- Votos únicos por solicitação, etapa e usuário, protegidos também por restrição no banco.
+- Revalidação de empresa e approvals.decide em cada voto, inclusive após revogação.
+- Aprovação parcial mantém a operação bloqueada; rejeição encerra e destrói payloads sensíveis.
+- Avanço automático para a próxima etapa com notificação apenas aos novos participantes.
+- Progresso de etapa e quórum visível na Central de Atenção, sem expor argumentos.
+- Migração: 20260721_0041_agent_approval_quorum.py.
+- Validação local: Ruff, MyPy, ESLint, TypeScript e Prettier aprovados; 133 testes da
+  API, 11 integrações, 2 testes do worker e 12 testes do front-end aprovados;
+  build, migração reversível, auditoria de segurança e E2E com 7 aprovados e 2
+  cenários explicitamente ignorados concluídos sem bloqueios.
+- Próximo passo: ciclo 21, políticas temporais, delegação formal e substituição por ausência.

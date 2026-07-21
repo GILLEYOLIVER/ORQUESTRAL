@@ -192,6 +192,9 @@ class AgentDelegationApproval(Base):
     policy_version_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("agent_approval_policy_versions.id", ondelete="SET NULL"), index=True
     )
+    current_policy_stage_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_approval_policy_stages.id", ondelete="SET NULL"), index=True
+    )
     encrypted_arguments: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         String(16), default="pending", server_default="pending", index=True
@@ -212,6 +215,40 @@ class AgentDelegationApproval(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentDelegationApprovalVote(Base):
+    __tablename__ = "agent_delegation_approval_votes"
+    __table_args__ = (
+        UniqueConstraint(
+            "delegation_approval_id",
+            "policy_stage_id",
+            "user_id",
+            name="uq_agent_delegation_approval_vote",
+        ),
+        CheckConstraint(
+            "decision IN ('approved', 'rejected')",
+            name="ck_agent_delegation_approval_vote_decision",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    delegation_approval_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_delegation_approvals.id", ondelete="CASCADE"), index=True
+    )
+    policy_stage_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_approval_policy_stages.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    decision: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
 
 
 class AgentHandoff(Base):

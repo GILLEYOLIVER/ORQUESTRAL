@@ -21,6 +21,7 @@ from app.modules.agents.coordination import (
     transition_delegation,
     validate_task_contract,
 )
+from app.modules.agents.coordination_approvals import evaluate_stage_vote
 from app.modules.agents.coordination_payload import (
     decrypt_approval_arguments,
     decrypt_delegation_objective,
@@ -319,6 +320,47 @@ def test_enterprise_approval_policy_ignores_other_tenants_and_agents() -> None:
 
 
 def test_agent_version_checksum_is_stable_and_sensitive_to_changes() -> None:
+    first_user = UUID("00000000-0000-0000-0000-000000000061")
+    second_user = UUID("00000000-0000-0000-0000-000000000062")
+    policy = AgentApprovalPolicyCreate(
+        policy_key="finance.board",
+        name="Conselho financeiro",
+        effect="require_approval",
+        approval_stages=[
+            {"name": "Gestão", "quorum": 2, "approver_user_ids": [first_user, second_user]},
+        ],
+    )
+    assert policy.approval_stages[0].quorum == 2
+    with pytest.raises(ValueError, match="só pode participar"):
+        AgentApprovalPolicyCreate(
+            policy_key="finance.duplicate",
+            name="Cadeia duplicada",
+            effect="require_approval",
+            approval_stages=[
+                {"name": "Gestão", "quorum": 1, "approver_user_ids": [first_user]},
+                {"name": "Diretoria", "quorum": 1, "approver_user_ids": [first_user]},
+            ],
+        )
+    first_vote = evaluate_stage_vote(
+        quorum=2, existing_approved_votes=0, actor_has_voted=False, decision="approved"
+    )
+    final_vote = evaluate_stage_vote(
+        quorum=2, existing_approved_votes=1, actor_has_voted=False, decision="approved"
+    )
+    rejection = evaluate_stage_vote(
+        quorum=2, existing_approved_votes=1, actor_has_voted=False, decision="rejected"
+    )
+    assert not first_vote.stage_approved
+    assert final_vote.stage_approved
+    assert rejection.rejected
+    with pytest.raises(ValueError, match="já registrou"):
+        evaluate_stage_vote(
+            quorum=2,
+            existing_approved_votes=1,
+            actor_has_voted=True,
+            decision="approved",
+        )
+
     first = version_checksum({"model": "local", "autonomy_level": 2})
     reordered = version_checksum({"autonomy_level": 2, "model": "local"})
     changed = version_checksum({"model": "local", "autonomy_level": 3})
