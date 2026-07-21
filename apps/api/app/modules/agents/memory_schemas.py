@@ -35,6 +35,9 @@ class AgentMemoryPolicyUpdate(StrictSchema):
     retrieval_enabled: bool = False
     max_retrieval_entries: int = Field(default=5, ge=1, le=20)
     max_context_tokens: int = Field(default=1000, ge=128, le=16_000)
+    max_shared_context_entries: int = Field(default=5, ge=1, le=20)
+    max_shared_context_characters: int = Field(default=2000, ge=64, le=16_000)
+    blocked_context_alert_threshold: int = Field(default=3, ge=2, le=20)
     scope_policies: list[AgentMemoryScopePolicyInput] = Field(default_factory=list, max_length=5)
     purpose_policies: list[AgentMemoryPurposePolicyInput] = Field(
         default_factory=list, max_length=5
@@ -74,6 +77,9 @@ class AgentMemoryPolicyResponse(StrictSchema):
     retrieval_enabled: bool
     max_retrieval_entries: int
     max_context_tokens: int
+    max_shared_context_entries: int
+    max_shared_context_characters: int
+    blocked_context_alert_threshold: int
     scope_policies: list[AgentMemoryScopePolicyInput]
     purpose_policies: list[AgentMemoryPurposePolicyInput]
     updated_at: datetime | None
@@ -212,6 +218,7 @@ class AgentTaskMemoryAccessGrantCreate(StrictSchema):
     allowed_classifications: list[MemoryClassification] = Field(
         default_factory=_default_shared_classifications, min_length=1, max_length=4
     )
+    allowed_tool_keys: list[str] = Field(min_length=1, max_length=50)
     max_entries: int = Field(default=1, ge=1, le=5)
     max_content_characters: int = Field(default=512, ge=64, le=2000)
     expires_in_minutes: int = Field(default=60, ge=5, le=1440)
@@ -221,6 +228,15 @@ class AgentTaskMemoryAccessGrantCreate(StrictSchema):
     def validate_classifications(self) -> Self:
         if len(set(self.allowed_classifications)) != len(self.allowed_classifications):
             raise ValueError("As classificações compartilhadas não podem ser repetidas.")
+        if len(set(self.allowed_tool_keys)) != len(self.allowed_tool_keys):
+            raise ValueError("As ferramentas compartilhadas não podem ser repetidas.")
+        if any(
+            key != key.strip()
+            or len(key) > 160
+            or not all(character.isalnum() or character in "._-" for character in key)
+            for key in self.allowed_tool_keys
+        ):
+            raise ValueError("Cada ferramenta deve possuir uma chave válida.")
         return self
 
 
@@ -231,6 +247,7 @@ class AgentTaskMemoryAccessGrantResponse(StrictSchema):
     recipient_agent_id: UUID
     purpose: TaskMemoryAccessPurpose
     allowed_classifications: list[MemoryClassification]
+    allowed_tool_keys: list[str]
     max_entries: int
     max_content_characters: int
     status: TaskMemoryAccessStatus
@@ -276,7 +293,13 @@ class AgentTaskMemoryContextResponse(StrictSchema):
 
 
 TaskMemoryTraceOutcome = Literal[
-    "consumed", "blocked", "empty", "revoked_before_use", "expired_before_use"
+    "consumed",
+    "blocked",
+    "empty",
+    "revoked_before_use",
+    "expired_before_use",
+    "tool_policy_denied",
+    "aggregate_limit_denied",
 ]
 
 

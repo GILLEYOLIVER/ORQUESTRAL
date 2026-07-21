@@ -41,6 +41,18 @@ class AgentMemoryPolicy(Base):
             "max_context_tokens BETWEEN 128 AND 16000",
             name="ck_agent_memory_policy_context_tokens",
         ),
+        CheckConstraint(
+            "max_shared_context_entries BETWEEN 1 AND 20",
+            name="ck_agent_memory_policy_shared_entries",
+        ),
+        CheckConstraint(
+            "max_shared_context_characters BETWEEN 64 AND 16000",
+            name="ck_agent_memory_policy_shared_characters",
+        ),
+        CheckConstraint(
+            "blocked_context_alert_threshold BETWEEN 2 AND 20",
+            name="ck_agent_memory_policy_blocked_alert",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -68,6 +80,13 @@ class AgentMemoryPolicy(Base):
     retrieval_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     max_retrieval_entries: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
     max_context_tokens: Mapped[int] = mapped_column(Integer, default=1000, server_default="1000")
+    max_shared_context_entries: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
+    max_shared_context_characters: Mapped[int] = mapped_column(
+        Integer, default=2000, server_default="2000"
+    )
+    blocked_context_alert_threshold: Mapped[int] = mapped_column(
+        Integer, default=3, server_default="3"
+    )
     updated_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -324,6 +343,9 @@ class AgentTaskMemoryAccessGrant(Base):
     )
     purpose: Mapped[str] = mapped_column(String(24), index=True)
     allowed_classifications: Mapped[list[str]] = mapped_column(JSONB)
+    allowed_tool_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
     max_entries: Mapped[int] = mapped_column(Integer)
     max_content_characters: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(
@@ -348,7 +370,8 @@ class AgentTaskMemoryAccessTrace(Base):
     __tablename__ = "agent_task_memory_access_traces"
     __table_args__ = (
         CheckConstraint(
-            "outcome IN ('consumed', 'blocked', 'empty', 'revoked_before_use', 'expired_before_use')",
+            "outcome IN ('consumed', 'blocked', 'empty', 'revoked_before_use', "
+            "'expired_before_use', 'tool_policy_denied', 'aggregate_limit_denied')",
             name="ck_agent_task_memory_trace_outcome",
         ),
         CheckConstraint(

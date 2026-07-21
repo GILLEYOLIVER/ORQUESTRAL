@@ -563,3 +563,13 @@ Data: 21 de julho de 2026.
 - Auditoria e evento operacional registram somente identificadores e contadores seguros.
 - Migração: `20260721_0050`.
 - Próximo passo: adicionar políticas de compartilhamento por ferramenta, limites agregados por delegação e alertas para tentativas repetidas de contexto bloqueado.
+
+## Ciclo 30 - política por ferramenta, orçamento agregado e alertas
+
+- Cada contrato de memória declara ferramentas autorizadas e a API rejeita chaves fora do contrato canônico da tarefa.
+- A política do agente supervisor define orçamento agregado de itens e caracteres para toda a delegação, independentemente da quantidade de grants ativos.
+- O executor produz trace `tool_policy_denied` ou `aggregate_limit_denied` sem recuperar conteúdo quando uma política ou limite impede o uso.
+- Contextos bloqueados por injeção são contados em janela de 24 horas; ao atingir o limiar configurado, o solicitante recebe alerta seguro sem conteúdo suspeito.
+- A tela de governança permite configurar os três novos limites sem expor controles internos do executor.
+- Migração: `20260721_0051`.
+- Próximo passo: criar política de compartilhamento por classificação de dados, aprovação humana para contexto restrito e orçamento de custo por contrato.

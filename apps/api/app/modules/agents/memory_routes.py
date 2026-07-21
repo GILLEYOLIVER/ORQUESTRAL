@@ -10,7 +10,7 @@ from sqlalchemy import or_, select
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
-from app.modules.agents.coordination_models import AgentDelegation
+from app.modules.agents.coordination_models import AgentDelegation, AgentTaskContract
 from app.modules.agents.memory_models import (
     AgentMemoryConsentRevocation,
     AgentMemoryEntry,
@@ -153,6 +153,9 @@ def _policy_response(
         retrieval_enabled=cast(bool, values["retrieval_enabled"]),
         max_retrieval_entries=cast(int, values["max_retrieval_entries"]),
         max_context_tokens=cast(int, values["max_context_tokens"]),
+        max_shared_context_entries=cast(int, values["max_shared_context_entries"]),
+        max_shared_context_characters=cast(int, values["max_shared_context_characters"]),
+        blocked_context_alert_threshold=cast(int, values["blocked_context_alert_threshold"]),
         scope_policies=[
             AgentMemoryScopePolicyInput.model_validate(item)
             for item in cast(list[dict[str, object]], values["scope_policies"])
@@ -234,6 +237,7 @@ def _task_memory_access_response(
         recipient_agent_id=grant.recipient_agent_id,
         purpose=grant.purpose,
         allowed_classifications=grant.allowed_classifications,
+        allowed_tool_keys=grant.allowed_tool_keys,
         max_entries=grant.max_entries,
         max_content_characters=grant.max_content_characters,
         status=cast(TaskMemoryAccessStatus, effective_status),
@@ -362,6 +366,9 @@ async def update_agent_memory_policy(
             "allowed_scopes": payload.allowed_scopes,
             "allowed_classifications": payload.allowed_classifications,
             "max_context_tokens": payload.max_context_tokens,
+            "max_shared_context_entries": payload.max_shared_context_entries,
+            "max_shared_context_characters": payload.max_shared_context_characters,
+            "blocked_context_alert_threshold": payload.blocked_context_alert_threshold,
             "scope_policy_count": len(payload.scope_policies),
             "purpose_policy_count": len(payload.purpose_policies),
         },
@@ -829,7 +836,22 @@ async def create_agent_task_memory_access_grant(
             status_code=422,
             detail="O contrato tenta compartilhar classificação não autorizada pela política.",
         )
+    contract = await database.scalar(
+        select(AgentTaskContract).where(
+            AgentTaskContract.id == delegation.contract_id,
+            AgentTaskContract.company_id == context.company_id,
+            AgentTaskContract.status == "active",
+        )
+    )
+    if contract is None:
+        raise HTTPException(status_code=409, detail="Contrato da tarefa não está ativo.")
+    if not set(payload.allowed_tool_keys).issubset(set(contract.allowed_tool_keys)):
+        raise HTTPException(
+            status_code=422,
+            detail="O compartilhamento solicita ferramenta fora do contrato da tarefa.",
+        )
     normalized_classifications = sorted(payload.allowed_classifications)
+    normalized_tool_keys = sorted(payload.allowed_tool_keys)
     existing = await database.scalar(
         select(AgentTaskMemoryAccessGrant).where(
             AgentTaskMemoryAccessGrant.company_id == context.company_id,
@@ -843,6 +865,7 @@ async def create_agent_task_memory_access_grant(
             and existing.recipient_agent_id == payload.recipient_agent_id
             and existing.purpose == payload.purpose
             and sorted(existing.allowed_classifications) == normalized_classifications
+            and sorted(existing.allowed_tool_keys) == normalized_tool_keys
             and existing.max_entries == payload.max_entries
             and existing.max_content_characters == payload.max_content_characters
         )
@@ -864,6 +887,7 @@ async def create_agent_task_memory_access_grant(
         recipient_agent_id=payload.recipient_agent_id,
         purpose=payload.purpose,
         allowed_classifications=normalized_classifications,
+        allowed_tool_keys=normalized_tool_keys,
         max_entries=payload.max_entries,
         max_content_characters=payload.max_content_characters,
         idempotency_key=payload.idempotency_key,
@@ -886,6 +910,7 @@ async def create_agent_task_memory_access_grant(
             "purpose": grant.purpose,
             "max_entries": grant.max_entries,
             "max_content_characters": grant.max_content_characters,
+            "allowed_tool_count": len(grant.allowed_tool_keys),
         },
     )
     enqueue_domain_event(

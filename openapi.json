@@ -2339,6 +2339,10 @@
             "title": "Allowed Scopes",
             "type": "array"
           },
+          "blocked_context_alert_threshold": {
+            "title": "Blocked Context Alert Threshold",
+            "type": "integer"
+          },
           "default_retention_days": {
             "title": "Default Retention Days",
             "type": "integer"
@@ -2365,6 +2369,14 @@
           },
           "max_retrieval_entries": {
             "title": "Max Retrieval Entries",
+            "type": "integer"
+          },
+          "max_shared_context_characters": {
+            "title": "Max Shared Context Characters",
+            "type": "integer"
+          },
+          "max_shared_context_entries": {
+            "title": "Max Shared Context Entries",
             "type": "integer"
           },
           "purpose_policies": {
@@ -2413,6 +2425,9 @@
           "retrieval_enabled",
           "max_retrieval_entries",
           "max_context_tokens",
+          "max_shared_context_entries",
+          "max_shared_context_characters",
+          "blocked_context_alert_threshold",
           "scope_policies",
           "purpose_policies",
           "updated_at"
@@ -2454,6 +2469,13 @@
             "title": "Allowed Scopes",
             "type": "array"
           },
+          "blocked_context_alert_threshold": {
+            "default": 3,
+            "maximum": 20.0,
+            "minimum": 2.0,
+            "title": "Blocked Context Alert Threshold",
+            "type": "integer"
+          },
           "default_retention_days": {
             "default": 30,
             "maximum": 3650.0,
@@ -2480,6 +2502,20 @@
             "maximum": 20.0,
             "minimum": 1.0,
             "title": "Max Retrieval Entries",
+            "type": "integer"
+          },
+          "max_shared_context_characters": {
+            "default": 2000,
+            "maximum": 16000.0,
+            "minimum": 64.0,
+            "title": "Max Shared Context Characters",
+            "type": "integer"
+          },
+          "max_shared_context_entries": {
+            "default": 5,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Shared Context Entries",
             "type": "integer"
           },
           "purpose_policies": {
@@ -3408,6 +3444,15 @@
             "title": "Allowed Classifications",
             "type": "array"
           },
+          "allowed_tool_keys": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Allowed Tool Keys",
+            "type": "array"
+          },
           "expires_in_minutes": {
             "default": 60,
             "maximum": 1440.0,
@@ -3452,6 +3497,7 @@
         "required": [
           "recipient_agent_id",
           "purpose",
+          "allowed_tool_keys",
           "idempotency_key"
         ],
         "title": "AgentTaskMemoryAccessGrantCreate",
@@ -3471,6 +3517,13 @@
               "type": "string"
             },
             "title": "Allowed Classifications",
+            "type": "array"
+          },
+          "allowed_tool_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Tool Keys",
             "type": "array"
           },
           "created_at": {
@@ -3566,6 +3619,7 @@
           "recipient_agent_id",
           "purpose",
           "allowed_classifications",
+          "allowed_tool_keys",
           "max_entries",
           "max_content_characters",
           "status",
@@ -3638,7 +3692,9 @@
               "blocked",
               "empty",
               "revoked_before_use",
-              "expired_before_use"
+              "expired_before_use",
+              "tool_policy_denied",
+              "aggregate_limit_denied"
             ],
             "title": "Outcome",
             "type": "string"

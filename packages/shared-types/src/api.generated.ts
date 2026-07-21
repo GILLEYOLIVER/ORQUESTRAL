@@ -4682,6 +4682,8 @@ export interface components {
             allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
             /** Allowed Scopes */
             allowed_scopes: ("conversation" | "task" | "user" | "company" | "operational")[];
+            /** Blocked Context Alert Threshold */
+            blocked_context_alert_threshold: number;
             /** Default Retention Days */
             default_retention_days: number;
             /** Id */
@@ -4692,6 +4694,10 @@ export interface components {
             max_retention_days: number;
             /** Max Retrieval Entries */
             max_retrieval_entries: number;
+            /** Max Shared Context Characters */
+            max_shared_context_characters: number;
+            /** Max Shared Context Entries */
+            max_shared_context_entries: number;
             /** Purpose Policies */
             purpose_policies: components["schemas"]["AgentMemoryPurposePolicyInput"][];
             /** Require Consent For User Scope */
@@ -4709,6 +4715,11 @@ export interface components {
             allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
             /** Allowed Scopes */
             allowed_scopes: ("conversation" | "task" | "user" | "company" | "operational")[];
+            /**
+             * Blocked Context Alert Threshold
+             * @default 3
+             */
+            blocked_context_alert_threshold: number;
             /**
              * Default Retention Days
              * @default 30
@@ -4729,6 +4740,16 @@ export interface components {
              * @default 5
              */
             max_retrieval_entries: number;
+            /**
+             * Max Shared Context Characters
+             * @default 2000
+             */
+            max_shared_context_characters: number;
+            /**
+             * Max Shared Context Entries
+             * @default 5
+             */
+            max_shared_context_entries: number;
             /** Purpose Policies */
             purpose_policies?: components["schemas"]["AgentMemoryPurposePolicyInput"][];
             /**
@@ -5125,6 +5146,8 @@ export interface components {
         AgentTaskMemoryAccessGrantCreate: {
             /** Allowed Classifications */
             allowed_classifications?: ("public" | "internal" | "confidential" | "restricted")[];
+            /** Allowed Tool Keys */
+            allowed_tool_keys: string[];
             /**
              * Expires In Minutes
              * @default 60
@@ -5160,6 +5183,8 @@ export interface components {
         AgentTaskMemoryAccessGrantResponse: {
             /** Allowed Classifications */
             allowed_classifications: ("public" | "internal" | "confidential" | "restricted")[];
+            /** Allowed Tool Keys */
+            allowed_tool_keys: string[];
             /**
              * Created At
              * Format: date-time
@@ -5246,7 +5271,7 @@ export interface components {
              * Outcome
              * @enum {string}
              */
-            outcome: "consumed" | "blocked" | "empty" | "revoked_before_use" | "expired_before_use";
+            outcome: "consumed" | "blocked" | "empty" | "revoked_before_use" | "expired_before_use" | "tool_policy_denied" | "aggregate_limit_denied";
             /**
              * Owner Agent Id
              * Format: uuid

@@ -7,7 +7,7 @@ from datetime import timedelta
 from time import perf_counter
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -35,11 +35,13 @@ from app.modules.agents.coordination_payload import (
 )
 from app.modules.agents.governance import active_agent_version, evaluate_tool_autonomy
 from app.modules.agents.memory_models import (
+    AgentMemoryPolicy,
     AgentTaskMemoryAccessGrant,
     AgentTaskMemoryAccessTrace,
 )
 from app.modules.agents.memory_service import (
     SharedTaskMemoryContext,
+    SharedTaskMemoryItem,
     purge_terminal_task_memories,
     retrieve_shared_task_memories,
 )
@@ -82,87 +84,163 @@ async def _prepare_shared_task_memory(
     *,
     settings: Settings,
     delegation: AgentDelegation,
-) -> tuple[SharedTaskMemoryContext | None, AgentTaskMemoryAccessTrace | None]:
-    grant = await database.scalar(
-        select(AgentTaskMemoryAccessGrant)
-        .where(
-            AgentTaskMemoryAccessGrant.company_id == delegation.company_id,
-            AgentTaskMemoryAccessGrant.task_delegation_id == delegation.id,
-            AgentTaskMemoryAccessGrant.recipient_agent_id == delegation.assigned_agent_id,
-            AgentTaskMemoryAccessGrant.purpose == "coordination",
-            AgentTaskMemoryAccessGrant.status == "active",
-            AgentTaskMemoryAccessGrant.expires_at > utc_now(),
+    contract: AgentTaskContract,
+) -> tuple[SharedTaskMemoryContext | None, tuple[AgentTaskMemoryAccessTrace, ...]]:
+    grants = list(
+        await database.scalars(
+            select(AgentTaskMemoryAccessGrant)
+            .where(
+                AgentTaskMemoryAccessGrant.company_id == delegation.company_id,
+                AgentTaskMemoryAccessGrant.task_delegation_id == delegation.id,
+                AgentTaskMemoryAccessGrant.recipient_agent_id == delegation.assigned_agent_id,
+                AgentTaskMemoryAccessGrant.purpose == "coordination",
+                AgentTaskMemoryAccessGrant.status == "active",
+                AgentTaskMemoryAccessGrant.expires_at > utc_now(),
+            )
+            .order_by(AgentTaskMemoryAccessGrant.created_at.desc())
+            .limit(20)
         )
-        .order_by(AgentTaskMemoryAccessGrant.created_at.desc())
-        .limit(1)
     )
-    if grant is None:
-        return None, None
-    shared = await retrieve_shared_task_memories(
-        database,
-        settings=settings,
-        company_id=delegation.company_id,
-        grant=grant,
+    if not grants:
+        return None, ()
+    policy = await database.scalar(
+        select(AgentMemoryPolicy).where(
+            AgentMemoryPolicy.company_id == delegation.company_id,
+            AgentMemoryPolicy.agent_id == delegation.supervisor_agent_id,
+        )
     )
-    await database.refresh(grant)
-    now = utc_now()
-    if grant.status != "active":
-        outcome = "revoked_before_use"
-        item_count = total_characters = 0
-        context = None
-    elif grant.expires_at <= now:
-        outcome = "expired_before_use"
-        item_count = total_characters = 0
-        context = None
-    else:
+    remaining_entries = policy.max_shared_context_entries if policy else 5
+    remaining_characters = policy.max_shared_context_characters if policy else 2000
+    alert_threshold = policy.blocked_context_alert_threshold if policy else 3
+    contract_tools = set(contract.allowed_tool_keys)
+    combined_items: list[SharedTaskMemoryItem] = []
+    total_blocked = 0
+    traces: list[AgentTaskMemoryAccessTrace] = []
+    for grant in grants:
+        shared = SharedTaskMemoryContext((), 0, 0)
+        if not set(grant.allowed_tool_keys).issubset(contract_tools):
+            outcome = "tool_policy_denied"
+        elif remaining_entries <= 0 or remaining_characters <= 0:
+            outcome = "aggregate_limit_denied"
+        else:
+            shared = await retrieve_shared_task_memories(
+                database,
+                settings=settings,
+                company_id=delegation.company_id,
+                grant=grant,
+                max_entries=remaining_entries,
+                max_content_characters=remaining_characters,
+            )
+            await database.refresh(grant)
+            if grant.status != "active":
+                outcome = "revoked_before_use"
+                shared = SharedTaskMemoryContext((), 0, shared.blocked_items)
+            elif grant.expires_at <= utc_now():
+                outcome = "expired_before_use"
+                shared = SharedTaskMemoryContext((), 0, shared.blocked_items)
+            else:
+                outcome = (
+                    "consumed" if shared.items else ("blocked" if shared.blocked_items else "empty")
+                )
         item_count = len(shared.items)
         total_characters = shared.total_characters
-        outcome = "consumed" if item_count else ("blocked" if shared.blocked_items else "empty")
-        context = shared if item_count else None
-    trace = AgentTaskMemoryAccessTrace(
-        company_id=delegation.company_id,
-        grant_id=grant.id,
-        task_delegation_id=delegation.id,
-        owner_agent_id=grant.owner_agent_id,
-        recipient_agent_id=delegation.assigned_agent_id,
-        outcome=outcome,
-        item_count=item_count,
-        total_characters=total_characters,
-        blocked_items=shared.blocked_items,
-    )
-    database.add(trace)
-    await database.flush()
-    record_authorization_audit(
-        database,
-        company_id=delegation.company_id,
-        actor_user_id=delegation.requested_by_user_id,
-        action=f"agent.task_memory_access.{outcome}",
-        target_type="agent_task_memory_access_trace",
-        target_id=trace.id,
-        details={
-            "grant_id": str(grant.id),
-            "delegation_id": str(delegation.id),
-            "item_count": item_count,
-            "total_characters": total_characters,
-            "blocked_items": shared.blocked_items,
-        },
-    )
-    enqueue_domain_event(
-        database,
-        DomainEventCreate(
-            event_type=f"agent.task_memory_access.{outcome}",
+        remaining_entries -= item_count
+        remaining_characters -= total_characters
+        combined_items.extend(shared.items)
+        total_blocked += shared.blocked_items
+        trace = AgentTaskMemoryAccessTrace(
+            company_id=delegation.company_id,
+            grant_id=grant.id,
+            task_delegation_id=delegation.id,
+            owner_agent_id=grant.owner_agent_id,
+            recipient_agent_id=delegation.assigned_agent_id,
+            outcome=outcome,
+            item_count=item_count,
+            total_characters=total_characters,
+            blocked_items=shared.blocked_items,
+        )
+        database.add(trace)
+        await database.flush()
+        traces.append(trace)
+        record_authorization_audit(
+            database,
             company_id=delegation.company_id,
             actor_user_id=delegation.requested_by_user_id,
-            classification="confidential",
-            payload={
-                "trace_id": str(trace.id),
+            action=f"agent.task_memory_access.{outcome}",
+            target_type="agent_task_memory_access_trace",
+            target_id=trace.id,
+            details={
                 "grant_id": str(grant.id),
                 "delegation_id": str(delegation.id),
-                "outcome": outcome,
+                "item_count": item_count,
+                "total_characters": total_characters,
+                "blocked_items": shared.blocked_items,
             },
-        ),
+        )
+        enqueue_domain_event(
+            database,
+            DomainEventCreate(
+                event_type=f"agent.task_memory_access.{outcome}",
+                company_id=delegation.company_id,
+                actor_user_id=delegation.requested_by_user_id,
+                classification="confidential",
+                payload={
+                    "trace_id": str(trace.id),
+                    "grant_id": str(grant.id),
+                    "delegation_id": str(delegation.id),
+                    "outcome": outcome,
+                },
+            ),
+        )
+        if outcome == "blocked":
+            blocked_count = await database.scalar(
+                select(func.count())
+                .select_from(AgentTaskMemoryAccessTrace)
+                .where(
+                    AgentTaskMemoryAccessTrace.company_id == delegation.company_id,
+                    AgentTaskMemoryAccessTrace.recipient_agent_id == delegation.assigned_agent_id,
+                    AgentTaskMemoryAccessTrace.outcome == "blocked",
+                    AgentTaskMemoryAccessTrace.created_at >= utc_now() - timedelta(hours=24),
+                )
+            )
+            if blocked_count == alert_threshold:
+                await create_notification(
+                    database,
+                    company_id=delegation.company_id,
+                    recipient_user_id=delegation.requested_by_user_id,
+                    event_type="agent.task_memory.blocked_repeatedly",
+                    title="Contextos de agente bloqueados repetidamente",
+                    message=(
+                        "O limite de segurança foi atingido. Revise as fontes de memória "
+                        "antes de novas delegações."
+                    ),
+                    severity="warning",
+                    resource_type="agent_delegation",
+                    resource_id=delegation.id,
+                    data={"blocked_count": blocked_count, "period_hours": 24},
+                )
+                enqueue_domain_event(
+                    database,
+                    DomainEventCreate(
+                        event_type="agent.task_memory.blocked_repeatedly",
+                        company_id=delegation.company_id,
+                        actor_user_id=None,
+                        classification="confidential",
+                        payload={
+                            "delegation_id": str(delegation.id),
+                            "recipient_agent_id": str(delegation.assigned_agent_id),
+                            "blocked_count": blocked_count,
+                        },
+                    ),
+                )
+    context = (
+        SharedTaskMemoryContext(
+            tuple(combined_items), sum(len(item.content) for item in combined_items), total_blocked
+        )
+        if combined_items
+        else None
     )
-    return context, trace
+    return context, tuple(traces)
 
 
 async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict[str, str | int]:
@@ -317,10 +395,11 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
             protected_objective = protect_provider_text(
                 policy, provider=version.provider, text=objective
             )[0]
-            shared_memory, shared_memory_trace = await _prepare_shared_task_memory(
+            shared_memory, shared_memory_traces = await _prepare_shared_task_memory(
                 database,
                 settings=settings,
                 delegation=delegation,
+                contract=contract,
             )
             messages = [ModelMessage(role="system", content=protected_instructions)]
             if shared_memory is not None:
@@ -529,7 +608,7 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                     )
                     database.add(agent_run)
                     await database.flush()
-                    if shared_memory_trace is not None:
+                    for shared_memory_trace in shared_memory_traces:
                         shared_memory_trace.agent_run_id = agent_run.id
                     delegation.status = "awaiting_approval"
                     delegation.consumed_cost_microunits = usage.cost_microunits
@@ -612,7 +691,7 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
             )
             database.add(agent_run)
             await database.flush()
-            if shared_memory_trace is not None:
+            for shared_memory_trace in shared_memory_traces:
                 shared_memory_trace.agent_run_id = agent_run.id
             delegation.status = run_status
             delegation.last_error_code = error_code

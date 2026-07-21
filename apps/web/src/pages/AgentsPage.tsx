@@ -144,6 +144,11 @@ export function AgentsPage() {
   const [memoryRetrievalEnabled, setMemoryRetrievalEnabled] = useState(false);
   const [memoryRetrievalLimit, setMemoryRetrievalLimit] = useState("5");
   const [memoryMaxContextTokens, setMemoryMaxContextTokens] = useState("1000");
+  const [memoryMaxSharedEntries, setMemoryMaxSharedEntries] = useState("5");
+  const [memoryMaxSharedCharacters, setMemoryMaxSharedCharacters] =
+    useState("2000");
+  const [memoryBlockedAlertThreshold, setMemoryBlockedAlertThreshold] =
+    useState("3");
   const [memoryScopeRetention, setMemoryScopeRetention] = useState<
     Record<string, string>
   >({});
@@ -260,6 +265,15 @@ export function AgentsPage() {
     setMemoryRetrievalEnabled(memoryPolicy.data.retrieval_enabled);
     setMemoryRetrievalLimit(String(memoryPolicy.data.max_retrieval_entries));
     setMemoryMaxContextTokens(String(memoryPolicy.data.max_context_tokens));
+    setMemoryMaxSharedEntries(
+      String(memoryPolicy.data.max_shared_context_entries),
+    );
+    setMemoryMaxSharedCharacters(
+      String(memoryPolicy.data.max_shared_context_characters),
+    );
+    setMemoryBlockedAlertThreshold(
+      String(memoryPolicy.data.blocked_context_alert_threshold),
+    );
     setMemoryScopeRetention(
       Object.fromEntries(
         memoryPolicy.data.scope_policies.map((item) => [
@@ -446,6 +460,11 @@ export function AgentsPage() {
             retrieval_enabled: memoryRetrievalEnabled,
             max_retrieval_entries: Number(memoryRetrievalLimit),
             max_context_tokens: Number(memoryMaxContextTokens),
+            max_shared_context_entries: Number(memoryMaxSharedEntries),
+            max_shared_context_characters: Number(memoryMaxSharedCharacters),
+            blocked_context_alert_threshold: Number(
+              memoryBlockedAlertThreshold,
+            ),
             scope_policies: memoryScopes.map((scope) => ({
               scope,
               retention_days: Number(
@@ -987,6 +1006,39 @@ export function AgentsPage() {
                     required
                     type="number"
                     value={memoryMaxContextTokens}
+                  />
+                  <TextField
+                    label="Máximo compartilhado por tarefa (itens)"
+                    max={20}
+                    min={1}
+                    onChange={(event) =>
+                      setMemoryMaxSharedEntries(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryMaxSharedEntries}
+                  />
+                  <TextField
+                    label="Máximo compartilhado por tarefa (caracteres)"
+                    max={16000}
+                    min={64}
+                    onChange={(event) =>
+                      setMemoryMaxSharedCharacters(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryMaxSharedCharacters}
+                  />
+                  <TextField
+                    label="Alertar após contextos bloqueados"
+                    max={20}
+                    min={2}
+                    onChange={(event) =>
+                      setMemoryBlockedAlertThreshold(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryBlockedAlertThreshold}
                   />
                   <fieldset className="agent-memory-options">
                     <legend>Retenção e recuperação por escopo</legend>

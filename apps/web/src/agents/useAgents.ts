@@ -164,6 +164,9 @@ export interface AgentMemoryPolicyResponse {
   retrieval_enabled: boolean;
   max_retrieval_entries: number;
   max_context_tokens: number;
+  max_shared_context_entries: number;
+  max_shared_context_characters: number;
+  blocked_context_alert_threshold: number;
   scope_policies: Array<{
     scope: "conversation" | "task" | "user" | "company" | "operational";
     retention_days: number;

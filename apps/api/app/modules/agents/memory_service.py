@@ -123,6 +123,9 @@ def memory_policy_values(
             "retrieval_enabled": False,
             "max_retrieval_entries": 5,
             "max_context_tokens": 1000,
+            "max_shared_context_entries": 5,
+            "max_shared_context_characters": 2000,
+            "blocked_context_alert_threshold": 3,
             "scope_policies": [
                 {
                     "scope": scope,
@@ -175,6 +178,9 @@ def memory_policy_values(
         "retrieval_enabled": policy.retrieval_enabled,
         "max_retrieval_entries": policy.max_retrieval_entries,
         "max_context_tokens": policy.max_context_tokens,
+        "max_shared_context_entries": policy.max_shared_context_entries,
+        "max_shared_context_characters": policy.max_shared_context_characters,
+        "blocked_context_alert_threshold": policy.blocked_context_alert_threshold,
         "scope_policies": effective_scopes,
         "purpose_policies": effective_purposes,
     }
@@ -271,7 +277,14 @@ async def retrieve_shared_task_memories(
     settings: Settings,
     company_id: UUID,
     grant: AgentTaskMemoryAccessGrant,
+    max_entries: int | None = None,
+    max_content_characters: int | None = None,
 ) -> SharedTaskMemoryContext:
+    effective_max_entries = min(grant.max_entries, max_entries or grant.max_entries)
+    effective_max_characters = min(
+        grant.max_content_characters,
+        max_content_characters or grant.max_content_characters,
+    )
     rows = list(
         await database.scalars(
             select(AgentMemoryEntry)
@@ -284,12 +297,12 @@ async def retrieve_shared_task_memories(
                 AgentMemoryEntry.expires_at > utc_now(),
             )
             .order_by(AgentMemoryEntry.created_at.desc())
-            .limit(grant.max_entries)
+            .limit(effective_max_entries)
         )
     )
     vault = CredentialVault(settings.encryption_key)
     items: list[SharedTaskMemoryItem] = []
-    remaining_characters = grant.max_content_characters
+    remaining_characters = effective_max_characters
     blocked_items = 0
     for row in rows:
         try:
@@ -319,7 +332,7 @@ async def retrieve_shared_task_memories(
         remaining_characters -= len(minimized)
     return SharedTaskMemoryContext(
         items=tuple(items),
-        total_characters=grant.max_content_characters - remaining_characters,
+        total_characters=effective_max_characters - remaining_characters,
         blocked_items=blocked_items,
     )
 
