@@ -7,11 +7,16 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings
 from app.modules.agents.coordination import (
     AgentCoordinationError,
     ContractLimits,
     transition_delegation,
     validate_task_contract,
+)
+from app.modules.agents.coordination_payload import (
+    decrypt_delegation_objective,
+    encrypt_delegation_objective,
 )
 from app.modules.agents.evaluation import evaluate_agent_case
 from app.modules.agents.governance import (
@@ -218,3 +223,32 @@ def test_delegation_state_machine_blocks_replay_after_completion() -> None:
     assert transition_delegation("in_progress", "complete") == "completed"
     with pytest.raises(AgentCoordinationError, match="não permitida"):
         transition_delegation("completed", "complete")
+
+
+def test_delegation_payload_is_authenticated_to_tenant_and_delegation() -> None:
+    settings = Settings(app_env="testing")
+    company_id = UUID("00000000-0000-0000-0000-000000000010")
+    delegation_id = UUID("00000000-0000-0000-0000-000000000011")
+    token = encrypt_delegation_objective(
+        settings,
+        company_id=company_id,
+        delegation_id=delegation_id,
+        objective="objetivo confidencial",
+    )
+    assert "objetivo confidencial" not in token
+    assert (
+        decrypt_delegation_objective(
+            settings,
+            company_id=company_id,
+            delegation_id=delegation_id,
+            encrypted=token,
+        )
+        == "objetivo confidencial"
+    )
+    with pytest.raises(ValueError, match="autenticar"):
+        decrypt_delegation_objective(
+            settings,
+            company_id=UUID("00000000-0000-0000-0000-000000000012"),
+            delegation_id=delegation_id,
+            encrypted=token,
+        )

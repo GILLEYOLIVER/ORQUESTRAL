@@ -4,6 +4,10 @@ from __future__ import annotations
 from typing import Literal, TypedDict
 
 from app.core import model_registry as _model_registry  # noqa: F401
+from app.modules.agents.coordination_execution import (
+    maintain_delegations_sync,
+    process_delegation_sync,
+)
 from app.modules.knowledge.processing import process_document_sync
 from app.modules.metrics.aggregation import aggregate_metrics_sync
 from app.modules.notifications.service import run_notification_maintenance_sync
@@ -36,3 +40,19 @@ def aggregate_metrics_task() -> dict[str, int | str]:
 def maintain_notifications_task() -> dict[str, int | str]:
     result = run_notification_maintenance_sync()
     return {"status": "ok", **result}
+
+
+@celery_app.task(
+    name="orkestral.agents.process_delegation",
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_jitter=True,
+    max_retries=3,
+)
+def process_agent_delegation_task(delegation_id: str) -> dict[str, str | int]:
+    return process_delegation_sync(delegation_id)
+
+
+@celery_app.task(name="orkestral.agents.maintain_delegations")
+def maintain_agent_delegations_task() -> dict[str, int | str]:
+    return {"status": "ok", **maintain_delegations_sync()}

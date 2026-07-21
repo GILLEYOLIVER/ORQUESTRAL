@@ -12,6 +12,8 @@ from app.core.config import Settings
 from app.core.resources import create_resources
 from app.core.security import hash_password
 from app.main import create_app
+from app.modules.agents.coordination_execution import process_delegation
+from app.modules.agents.coordination_models import AgentDelegationPayload
 from app.modules.authorization.service import ensure_company_system_roles
 from app.modules.companies.models import Company
 from app.modules.events.models import OutboxEvent
@@ -103,6 +105,25 @@ async def _assert_safe_events(settings: Settings, company_id: UUID) -> None:
                 )
             )
             assert all("SEGREDO-DO-AGENTE" not in str(event.payload) for event in events)
+    finally:
+        await resources.close()
+
+
+async def _assert_delegation_payload_destroyed(
+    settings: Settings, company_id: UUID, delegation_id: UUID
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            payload = await database.scalar(
+                select(AgentDelegationPayload).where(
+                    AgentDelegationPayload.company_id == company_id,
+                    AgentDelegationPayload.delegation_id == delegation_id,
+                )
+            )
+            assert payload is not None
+            assert payload.encrypted_objective is None
+            assert payload.destroyed_at is not None
     finally:
         await resources.close()
 
@@ -279,6 +300,37 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             assert completed.status_code == 200
             assert completed.json()["status"] == "completed"
             assert "tarefa concluída" not in str(completed.json())
+            asyncio.run(
+                _assert_delegation_payload_destroyed(
+                    settings, identity.company_ids[1], UUID(delegation_id)
+                )
+            )
+            queued = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json={
+                    "contract_id": contract.json()["id"],
+                    "objective": "Produza um resumo interno sem executar ferramentas.",
+                    "context_keys": ["customer_id"],
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert queued.status_code == 201
+            processed = asyncio.run(
+                process_delegation(UUID(queued.json()["id"]), settings=settings)
+            )
+            assert processed["status"] == "completed"
+            processed_state = client.get(
+                f"/agents/{agent_id}/delegations/{queued.json()['id']}", headers=headers_b
+            )
+            assert processed_state.status_code == 200
+            assert processed_state.json()["status"] == "completed"
+            assert processed_state.json()["attempt_count"] == 1
+            asyncio.run(
+                _assert_delegation_payload_destroyed(
+                    settings, identity.company_ids[1], UUID(queued.json()["id"])
+                )
+            )
 
             budget = client.put(
                 f"/agents/{agent_id}/budget",

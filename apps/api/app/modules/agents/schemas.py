@@ -350,6 +350,10 @@ class AgentDelegationResponse(StrictSchema):
     depth: int
     reserved_cost_microunits: int
     consumed_cost_microunits: int
+    attempt_count: int
+    claimed_by: str | None
+    lease_expires_at: datetime | None
+    last_error_code: str | None
     due_at: datetime
     created_at: datetime
     started_at: datetime | None

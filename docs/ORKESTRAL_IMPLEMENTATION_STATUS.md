@@ -345,3 +345,13 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 126 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0036_multiagent_coordination.py`.
 - Próximo passo: ciclo 15, fila assíncrona de delegações e execução coordenada.
+## Ciclo 15 - Worker seguro de delegações
+
+- Payload temporário protegido por AES-256-GCM e vinculado a empresa/delegação.
+- Mensagens Redis contêm somente o identificador da delegação.
+- Claim transacional, lease, retry, recuperação e expiração automática.
+- Execução coordenada valida versão, política, autonomia, ferramentas, passos e custo.
+- Destruição do ciphertext em qualquer estado terminal.
+- Validação concluída: Ruff e MyPy aprovados; 127 testes unitários da API, 11 testes de integração e 2 testes do worker aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0037_delegation_worker_payloads.py`.
+- Próximo passo: ciclo 16, aprovação humana assíncrona em delegações de alto risco.

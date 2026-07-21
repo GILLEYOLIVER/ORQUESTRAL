@@ -48,7 +48,7 @@ Todos os acessos são filtrados por `company_id` e exigem `agents.configure`. A 
 
 ## Próximos incrementos
 
-- execução assíncrona automática de filas de delegação.
+- aprovação assíncrona de ferramentas de alto risco dentro de delegações.
 
 ## Observabilidade e execução segura
 
@@ -93,3 +93,11 @@ Handoffs exigem decisão explícita e revalidam o agente de destino contra o con
 - `POST /agents/{supervisor_id}/delegations/{delegation_id}/transition`
 - `POST /agents/{supervisor_id}/delegations/{delegation_id}/handoffs`
 - `POST /agents/{supervisor_id}/delegations/{delegation_id}/handoffs/{handoff_id}/decision`
+
+## Worker de delegações e payload efêmero
+
+O ciclo 15 conecta delegações ao Celery sem colocar objetivos na mensagem Redis. A fila recebe somente o identificador da delegação. O objetivo é protegido com AES-256-GCM, chave derivada do segredo da plataforma e dados associados de empresa e delegação, impedindo cópia de ciphertext entre tenants.
+
+O worker realiza claim transacional com lease, recupera leases vencidos, valida contrato, versão, política de dados, prompt injection, autonomia e ferramentas antes da execução. O custo e os passos permanecem limitados pelo contrato. A execução gera `AgentRun` e evento mínimo.
+
+O ciphertext é destruído quando a tarefa conclui, falha, é cancelada ou expira. A manutenção `orkestral.agents.maintain_delegations` roda a cada minuto para expirar payloads e recuperar trabalhos interrompidos. A tarefa `orkestral.agents.process_delegation` possui retry com backoff e jitter.

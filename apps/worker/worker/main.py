@@ -30,6 +30,10 @@ celery_app.conf.update(
             "task": "orkestral.notifications.maintain",
             "schedule": 60.0,
         },
+        "maintain-agent-delegations-every-minute": {
+            "task": "orkestral.agents.maintain_delegations",
+            "schedule": 60.0,
+        },
     },
 )
 

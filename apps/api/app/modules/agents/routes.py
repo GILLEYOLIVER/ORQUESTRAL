@@ -6,6 +6,7 @@ from time import perf_counter
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
+from celery import Celery
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 
@@ -22,9 +23,11 @@ from app.modules.agents.coordination import (
 )
 from app.modules.agents.coordination_models import (
     AgentDelegation,
+    AgentDelegationPayload,
     AgentHandoff,
     AgentTaskContract,
 )
+from app.modules.agents.coordination_payload import encrypt_delegation_objective
 from app.modules.agents.evaluation import evaluate_agent_case
 from app.modules.agents.evaluation_models import (
     AgentEvaluationCase,
@@ -222,6 +225,14 @@ async def _published_version_required(
     if version is None:
         raise HTTPException(status_code=409, detail="O agente não possui versão publicada.")
     return version
+
+
+def _enqueue_delegation(settings: RequestSettings, delegation_id: UUID) -> None:
+    if not settings.background_worker_enabled:
+        return
+    Celery(broker=str(settings.celery_broker_url)).send_task(
+        "orkestral.agents.process_delegation", args=[str(delegation_id)]
+    )
 
 
 async def _budget(database: DatabaseSession, *, agent_id: UUID, company_id: UUID) -> AgentBudget:
@@ -1305,6 +1316,7 @@ async def create_agent_delegation(
     payload: AgentDelegationCreate,
     principal: CanExecuteAgents,
     database: DatabaseSession,
+    settings: RequestSettings,
 ) -> AgentDelegationResponse:
     context = get_request_context(principal)
     await _agent(database, agent_id=agent_id, company_id=context.company_id)
@@ -1365,6 +1377,19 @@ async def create_agent_delegation(
     )
     database.add(delegation)
     await database.flush()
+    database.add(
+        AgentDelegationPayload(
+            company_id=context.company_id,
+            delegation_id=delegation.id,
+            encrypted_objective=encrypt_delegation_objective(
+                settings,
+                company_id=context.company_id,
+                delegation_id=delegation.id,
+                objective=payload.objective,
+            ),
+            expires_at=delegation.due_at,
+        )
+    )
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -1395,6 +1420,7 @@ async def create_agent_delegation(
     )
     await database.commit()
     await database.refresh(delegation)
+    _enqueue_delegation(settings, delegation.id)
     return _delegation_response(delegation)
 
 
@@ -1458,11 +1484,21 @@ async def transition_agent_delegation(
         delegation.started_at = now
     else:
         delegation.finished_at = now
+        delegation.lease_expires_at = None
         delegation.consumed_cost_microunits = payload.consumed_cost_microunits
         if payload.result:
             delegation.result_fingerprint = coordination_fingerprint(
                 company_id=context.company_id, value=payload.result
             )
+        encrypted_payload = await database.scalar(
+            select(AgentDelegationPayload).where(
+                AgentDelegationPayload.delegation_id == delegation.id,
+                AgentDelegationPayload.company_id == context.company_id,
+            )
+        )
+        if encrypted_payload is not None:
+            encrypted_payload.encrypted_objective = None
+            encrypted_payload.destroyed_at = now
     record_authorization_audit(
         database,
         company_id=context.company_id,

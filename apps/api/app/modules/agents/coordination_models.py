@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     func,
     text,
@@ -121,12 +122,37 @@ class AgentDelegation(Base):
     depth: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     reserved_cost_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     consumed_cost_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    claimed_by: Mapped[str | None] = mapped_column(String(160))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(80))
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentDelegationPayload(Base):
+    __tablename__ = "agent_delegation_payloads"
+    __table_args__ = (UniqueConstraint("delegation_id", name="uq_agent_delegation_payload"),)
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    delegation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_delegations.id", ondelete="CASCADE"), index=True
+    )
+    encrypted_objective: Mapped[str | None] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    destroyed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
 
 
 class AgentHandoff(Base):
