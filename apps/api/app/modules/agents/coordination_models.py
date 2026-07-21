@@ -180,6 +180,9 @@ class AgentDelegationApproval(Base):
     tool_id: Mapped[UUID] = mapped_column(
         ForeignKey("agent_tools.id", ondelete="RESTRICT"), index=True
     )
+    policy_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_approval_policy_versions.id", ondelete="SET NULL"), index=True
+    )
     encrypted_arguments: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         String(16), default="pending", server_default="pending", index=True

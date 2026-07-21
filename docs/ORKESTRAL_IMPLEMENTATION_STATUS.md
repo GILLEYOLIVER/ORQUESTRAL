@@ -376,3 +376,17 @@ Data: 21 de julho de 2026.
   2 cenários explicitamente ignorados; build, migração reversível, auditoria de
   dependências e varredura de segredos aprovados.
 - Próximo passo: ciclo 17, políticas de aprovação por valor e contexto.
+
+## Ciclo 17 - Políticas empresariais de aprovação
+
+- Regras por empresa e agente, com chave estável, versões imutáveis e publicação controlada.
+- Efeitos `allow`, `require_approval` e `deny`, prioridade determinística e bloqueio seguro.
+- Condições por ferramenta, faixa de valor em microunidades, moeda e contexto aninhado.
+- Aprovador e prazo configuráveis, sem exposição dos argumentos em notificações ou eventos.
+- Reavaliação da política imediatamente antes da execução aprovada.
+- API administrativa com isolamento multiempresa, auditoria e evento transacional.
+- Migração: `20260721_0039_agent_approval_policies.py`.
+- Validação local: Ruff, MyPy e Prettier aprovados; 130 testes da API, 11
+  integrações, 2 testes do worker e 12 testes do front-end aprovados; build,
+  contratos gerados, migração reversível e auditoria de segurança aprovados.
+- Próximo passo: ciclo 18, testes de isolamento da política e experiência administrativa.

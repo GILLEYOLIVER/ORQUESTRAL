@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.agents.approval_policy_routes import router as approval_policy_router
 from app.modules.agents.approvals import decide_agent_tool_run
 from app.modules.agents.coordination import (
     AgentCoordinationError,
@@ -2262,3 +2263,6 @@ async def chat_with_agent(
         pending_actions=pending,
         run=_run_response(agent_run),
     )
+
+
+router.include_router(approval_policy_router)

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.resources import create_resources
 from app.core.security import utc_now
+from app.modules.agents.approval_policy import evaluate_agent_approval_policy
 from app.modules.agents.coordination import coordination_fingerprint
 from app.modules.agents.coordination_models import (
     AgentDelegation,
@@ -238,13 +239,29 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                 autonomy = evaluate_tool_autonomy(
                     autonomy_level=version.autonomy_level, risk_level=tool.risk_level
                 )
-                if autonomy.allowed and autonomy.requires_approval:
+                policy_decision = await evaluate_agent_approval_policy(
+                    database,
+                    company_id=delegation.company_id,
+                    agent_id=agent.id,
+                    tool_key=tool.tool_key,
+                    arguments=call.arguments,
+                )
+                if not policy_decision.allowed:
+                    continue
+                if autonomy.allowed and (
+                    autonomy.requires_approval or policy_decision.requires_approval
+                ):
                     approval_id = uuid4()
+                    approval_expires_at = min(
+                        delegation.due_at,
+                        utc_now() + timedelta(minutes=policy_decision.approval_ttl_minutes),
+                    )
                     linked = AgentDelegationApproval(
                         id=approval_id,
                         company_id=delegation.company_id,
                         delegation_id=delegation.id,
                         tool_id=tool.id,
+                        policy_version_id=policy_decision.policy_version_id,
                         encrypted_arguments=encrypt_approval_arguments(
                             settings,
                             company_id=delegation.company_id,
@@ -253,7 +270,7 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                             arguments=call.arguments,
                         ),
                         requested_by_user_id=delegation.requested_by_user_id,
-                        expires_at=delegation.due_at,
+                        expires_at=approval_expires_at,
                     )
                     database.add(linked)
                     await database.flush()
@@ -264,14 +281,26 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                         source_type="agent",
                         title="Autorizar ferramenta de delegação",
                         description=(
-                            f"A ferramenta {tool.name} exige aprovação antes da execução."
+                            f"A ferramenta {tool.name} exige aprovação antes da execução. "
+                            + (
+                                policy_decision.reason
+                                if policy_decision.requires_approval
+                                else autonomy.reason
+                            )
                         ),
                         context={
                             "delegation_id": str(delegation.id),
                             "agent_id": str(agent.id),
                             "tool_key": tool.tool_key,
+                            "policy_version_id": (
+                                str(policy_decision.policy_version_id)
+                                if policy_decision.policy_version_id
+                                else None
+                            ),
+                            "policy_key": policy_decision.policy_key,
                         },
-                        expires_at=delegation.due_at,
+                        assigned_user_id=policy_decision.assigned_user_id,
+                        expires_at=approval_expires_at,
                         reminder_minutes=settings.notification_reminder_minutes,
                     )
                     linked.approval_request_id = approval_request.id
@@ -320,7 +349,22 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                 autonomy = evaluate_tool_autonomy(
                     autonomy_level=version.autonomy_level, risk_level=tool.risk_level
                 )
-                if not autonomy.allowed or autonomy.requires_approval:
+                policy_decision = await evaluate_agent_approval_policy(
+                    database,
+                    company_id=delegation.company_id,
+                    agent_id=agent.id,
+                    tool_key=tool.tool_key,
+                    arguments=call.arguments,
+                )
+                if not policy_decision.allowed:
+                    denied.append(call.key)
+                    error_code = "approval_policy_denied"
+                    continue
+                if (
+                    not autonomy.allowed
+                    or autonomy.requires_approval
+                    or policy_decision.requires_approval
+                ):
                     denied.append(call.key)
                     error_code = "human_approval_required"
                     continue
@@ -445,6 +489,20 @@ async def _execute_approved_tool(
         )
         if not autonomy.allowed:
             raise ToolAccessError("A autonomia atual não permite esta ferramenta.")
+        policy_decision = await evaluate_agent_approval_policy(
+            database,
+            company_id=delegation.company_id,
+            agent_id=agent.id,
+            tool_key=tool.tool_key,
+            arguments=arguments,
+        )
+        if not policy_decision.allowed:
+            raise ToolAccessError("A política empresarial passou a bloquear esta ferramenta.")
+        if (
+            policy_decision.requires_approval
+            and policy_decision.policy_version_id != approval.policy_version_id
+        ):
+            raise ToolAccessError("A política de aprovação mudou após a decisão humana.")
         started = perf_counter()
         async with asyncio.timeout(min(version.max_runtime_seconds, contract.deadline_seconds)):
             tool_result = await execute_builtin_tool(

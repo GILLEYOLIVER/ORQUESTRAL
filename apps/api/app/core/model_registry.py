@@ -176,6 +176,7 @@ __all__ = [
     "WorkflowVersion",
 ]
 
+from app.modules.agents import approval_policy_models as _agent_approval_policy_models  # noqa: F401
 from app.modules.agents import coordination_models as _agent_coordination_models  # noqa: F401
 from app.modules.agents import evaluation_models as _agent_evaluation_models  # noqa: F401
 from app.modules.authorization import policy_models as _policy_models  # noqa: F401

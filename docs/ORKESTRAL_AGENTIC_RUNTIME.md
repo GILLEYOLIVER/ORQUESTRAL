@@ -107,3 +107,12 @@ O ciphertext é destruído quando a tarefa conclui, falha, é cancelada ou expir
 O ciclo 16 faz o worker pausar uma delegação antes de qualquer ferramenta que exija supervisão. Os argumentos são protegidos por AES-256-GCM com dados associados de empresa, delegação e aprovação. A solicitação entra na central existente de notificações sem argumentos ou objetivo.
 
 Uma aprovação válida move a delegação novamente para `queued`; o worker revalida usuário, permissões, contrato, agente e ferramenta, descriptografa exatamente a chamada aprovada e executa sem consultar novamente o modelo. Rejeição, expiração ou falha destroem objetivo e argumentos cifrados. A decisão é idempotente e isolada por empresa.
+A partir do ciclo 17, a decisão também consulta políticas empresariais versionadas por
+agente. Cada política publicada pode permitir, exigir aprovação ou bloquear uma
+ferramenta por prioridade, faixa de valor em microunidades, moeda e condições exatas
+de contexto. Uma regra `allow` nunca remove controles de autonomia ou risco já
+existentes; `deny` prevalece em prioridades equivalentes.
+
+As notificações recebem somente identificadores da política, nunca os argumentos da
+ferramenta. Antes de retomar uma ação aprovada, o worker reavalia as regras publicadas
+e interrompe a execução caso uma política nova seja mais restritiva.

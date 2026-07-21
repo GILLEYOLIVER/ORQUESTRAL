@@ -8,6 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
+from app.modules.agents.approval_policy import evaluate_published_policies
+from app.modules.agents.approval_policy_models import AgentApprovalPolicyVersion
 from app.modules.agents.coordination import (
     AgentCoordinationError,
     ContractLimits,
@@ -107,6 +109,10 @@ def test_tool_access_blocks_disabled_or_unauthorized_tool() -> None:
 def test_agents_route_requires_authentication(client: TestClient) -> None:
     assert client.get("/agents").status_code == 401
     assert client.delete("/agents/00000000-0000-0000-0000-000000000000").status_code == 401
+    assert (
+        client.get("/agents/00000000-0000-0000-0000-000000000000/approval-policies").status_code
+        == 401
+    )
 
 
 @pytest.mark.parametrize(
@@ -124,6 +130,70 @@ def test_agent_autonomy_policy(level: int, risk: str, allowed: bool, approval: b
     decision = evaluate_tool_autonomy(autonomy_level=level, risk_level=risk)
     assert decision.allowed is allowed
     assert decision.requires_approval is approval
+
+
+def test_enterprise_approval_policy_prioritizes_deny_by_value_and_context() -> None:
+    company_id = UUID("00000000-0000-0000-0000-000000000031")
+    agent_id = UUID("00000000-0000-0000-0000-000000000032")
+    allow = AgentApprovalPolicyVersion(
+        id=UUID("00000000-0000-0000-0000-000000000033"),
+        company_id=company_id,
+        agent_id=agent_id,
+        policy_key="finance.standard",
+        version=1,
+        name="Operação padrão",
+        status="published",
+        effect="allow",
+        priority=100,
+        amount_field="amount_microunits",
+        max_amount_microunits=500_000,
+        context_conditions={},
+        approval_ttl_minutes=30,
+    )
+    deny = AgentApprovalPolicyVersion(
+        id=UUID("00000000-0000-0000-0000-000000000034"),
+        company_id=company_id,
+        agent_id=agent_id,
+        policy_key="finance.blocked_region",
+        version=2,
+        name="Região bloqueada",
+        status="published",
+        effect="deny",
+        priority=900,
+        amount_field="amount_microunits",
+        min_amount_microunits=100_000,
+        context_conditions={"customer.region": "restricted"},
+        approval_ttl_minutes=10,
+    )
+    decision = evaluate_published_policies(
+        [allow, deny],
+        arguments={
+            "amount_microunits": 200_000,
+            "customer": {"region": "restricted"},
+        },
+    )
+    assert not decision.allowed
+    assert decision.policy_key == "finance.blocked_region"
+
+
+def test_enterprise_approval_policy_requires_human_for_matching_context() -> None:
+    policy = AgentApprovalPolicyVersion(
+        id=UUID("00000000-0000-0000-0000-000000000035"),
+        company_id=UUID("00000000-0000-0000-0000-000000000036"),
+        agent_id=UUID("00000000-0000-0000-0000-000000000037"),
+        policy_key="workflows.production",
+        version=1,
+        name="Produção supervisionada",
+        status="published",
+        effect="require_approval",
+        priority=500,
+        context_conditions={"environment": "production"},
+        approval_ttl_minutes=15,
+    )
+    decision = evaluate_published_policies([policy], arguments={"environment": "production"})
+    assert decision.allowed
+    assert decision.requires_approval
+    assert decision.approval_ttl_minutes == 15
 
 
 def test_agent_version_checksum_is_stable_and_sensitive_to_changes() -> None:

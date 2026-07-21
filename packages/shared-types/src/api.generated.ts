@@ -126,6 +126,58 @@ export interface paths {
         patch: operations["update_agent_agents__agent_id__patch"];
         trace?: never;
     };
+    "/agents/{agent_id}/approval-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Approval Policies */
+        get: operations["list_agent_approval_policies_agents__agent_id__approval_policies_get"];
+        put?: never;
+        /** Create Agent Approval Policy */
+        post: operations["create_agent_approval_policy_agents__agent_id__approval_policies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/approval-policies/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Evaluate Agent Approval Policy Endpoint */
+        post: operations["evaluate_agent_approval_policy_endpoint_agents__agent_id__approval_policies_evaluate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/approval-policies/{policy_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Agent Approval Policy */
+        post: operations["publish_agent_approval_policy_agents__agent_id__approval_policies__policy_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/budget": {
         parameters: {
             query?: never;
@@ -3479,6 +3531,126 @@ export interface components {
             name?: string | null;
             /** Opening Balance */
             opening_balance?: number | string | null;
+        };
+        /** AgentApprovalPolicyCreate */
+        AgentApprovalPolicyCreate: {
+            /** Amount Field */
+            amount_field?: string | null;
+            /**
+             * Approval Ttl Minutes
+             * @default 30
+             */
+            approval_ttl_minutes: number;
+            /** Assigned User Id */
+            assigned_user_id?: string | null;
+            /** Context Conditions */
+            context_conditions?: {
+                [key: string]: string | number | boolean | null;
+            };
+            /** Currency */
+            currency?: string | null;
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "allow" | "require_approval" | "deny";
+            /** Max Amount Microunits */
+            max_amount_microunits?: number | null;
+            /** Min Amount Microunits */
+            min_amount_microunits?: number | null;
+            /** Name */
+            name: string;
+            /** Policy Key */
+            policy_key: string;
+            /**
+             * Priority
+             * @default 100
+             */
+            priority: number;
+            /** Tool Key */
+            tool_key?: string | null;
+        };
+        /** AgentApprovalPolicyEvaluationRequest */
+        AgentApprovalPolicyEvaluationRequest: {
+            /** Arguments */
+            arguments?: {
+                [key: string]: unknown;
+            };
+            /** Tool Key */
+            tool_key: string;
+        };
+        /** AgentApprovalPolicyEvaluationResponse */
+        AgentApprovalPolicyEvaluationResponse: {
+            /** Allowed */
+            allowed: boolean;
+            /** Approval Ttl Minutes */
+            approval_ttl_minutes: number;
+            /** Assigned User Id */
+            assigned_user_id: string | null;
+            /** Policy Key */
+            policy_key: string | null;
+            /** Policy Version Id */
+            policy_version_id: string | null;
+            /** Reason */
+            reason: string;
+            /** Requires Approval */
+            requires_approval: boolean;
+        };
+        /** AgentApprovalPolicyResponse */
+        AgentApprovalPolicyResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Amount Field */
+            amount_field: string | null;
+            /** Approval Ttl Minutes */
+            approval_ttl_minutes: number;
+            /** Assigned User Id */
+            assigned_user_id: string | null;
+            /** Context Conditions */
+            context_conditions: {
+                [key: string]: string | number | boolean | null;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string | null;
+            /**
+             * Effect
+             * @enum {string}
+             */
+            effect: "allow" | "require_approval" | "deny";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Amount Microunits */
+            max_amount_microunits: number | null;
+            /** Min Amount Microunits */
+            min_amount_microunits: number | null;
+            /** Name */
+            name: string;
+            /** Policy Key */
+            policy_key: string;
+            /** Priority */
+            priority: number;
+            /** Published At */
+            published_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "retired";
+            /** Tool Key */
+            tool_key: string | null;
+            /** Version */
+            version: number;
         };
         /** AgentBudgetResponse */
         AgentBudgetResponse: {
@@ -9607,6 +9779,211 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_approval_policies_agents__agent_id__approval_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_approval_policy_agents__agent_id__approval_policies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentApprovalPolicyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    evaluate_agent_approval_policy_endpoint_agents__agent_id__approval_policies_evaluate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentApprovalPolicyEvaluationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyEvaluationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_agent_approval_policy_agents__agent_id__approval_policies__policy_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalPolicyResponse"];
                 };
             };
             /** @description Solicitação inválida */
