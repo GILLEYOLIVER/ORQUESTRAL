@@ -1,0 +1,120 @@
+# Matriz de equivalencia funcional Salesforce x Orkestral
+
+Data da avaliacao: 21 de julho de 2026.
+
+Documento interno de arquitetura e produto. Os nomes Salesforce aparecem somente como referencia comparativa. A implementacao do Orkestral deve ser original em codigo, identidade, linguagem, componentes e experiencia.
+
+## Escala
+
+| Nivel | Definicao |
+| --- | --- |
+| 0 | Inexistente |
+| 1 | Prototipo ou contrato inicial |
+| 2 | Basico funcional |
+| 3 | Equivalente essencial |
+| 4 | Equivalente empresarial |
+| 5 | Superior a referencia no problema avaliado |
+
+## Matriz executiva
+
+| ID | Capacidade de referencia | Problema e usuarios | Orkestral atual | Nivel | Lacuna principal | Solucao original proposta | Prioridade | Complexidade | Fase | Situacao |
+| --- | --- | --- | --- | ---: | --- | --- | --- | --- | ---: | --- |
+| C01 | Arquitetura multi-tenant | Isolar clientes; todos os usuarios | `Company`, `company_id`, contexto e testes negativos | 3 | Defesa de banco e escopos internos | Tenant Context obrigatorio, constraints compostas e RLS avaliado | Critica | Alta | 1 | Parcial |
+| C02 | Plataforma orientada por metadados | Customizar sem alterar o nucleo; admins e parceiros | Catalogos fixos de modulos/plugins | 1 | Entidades, campos, layouts e publicacao dinamicos | Orkestral Studio com schemas versionados | Critica | Muito alta | 2 | Planejado |
+| C03 | Objetos, campos e relacionamentos personalizados | Modelar processos proprios; admins | Tabelas de dominio estaticas | 0 | Runtime de registros personalizados | Definicoes tipadas e armazenamento validado | Critica | Muito alta | 2 | Nao iniciado |
+| C04 | Layouts, formularios, listas e tipos de registro | Adaptar UX por processo; admins e operadores | Componentes React fixos | 1 | Renderizacao por metadata | Renderer compartilhado web/API com versoes | Alta | Alta | 2 | Planejado |
+| C05 | Validacoes, formulas e campos calculados | Garantir qualidade; admins | Validacao Pydantic e regras em servicos | 1 | Linguagem segura e reutilizavel | Expression engine restrito, compilado e auditado | Alta | Alta | 2 | Planejado |
+| C06 | Seguranca de objeto, campo e registro | Menor privilegio; seguranca e gestores | Permissoes por acao e filtro por tenant | 2 | Compartilhamento e field-level security | Policy Engine com ownership, grants e masking | Critica | Muito alta | 1-2 | Parcial |
+| C07 | Hierarquia e conjuntos de permissoes | Administrar acesso em escala; IAM | Papeis por empresa e catalogo de permissoes | 2 | Grupos, delegacao e composicao | Permission Sets, grupos e politicas condicionais | Alta | Alta | 1 | Parcial |
+| C08 | Auditoria e historico de campos | Investigar mudancas; compliance | Dois fluxos de auditoria e expurgo | 3 | Imutabilidade, exportacao e field history generico | Ledger de auditoria, retencao e exportacao assinada | Critica | Alta | 1 | Parcial |
+| C09 | Eventos, CDC e assincrono | Desacoplar sistemas; devs e operacoes | Celery/Redis e eventos pontuais | 1 | Outbox, replay, DLQ e contratos | Event Hub interno com transactional outbox | Critica | Alta | 3 | Planejado |
+| C10 | APIs e integracao empresarial | Conectar sistemas; devs e integradores | REST/OpenAPI, webhooks e 7 plugins | 2 | Catalogo, OAuth, policies, bulk e SDK | Orkestral Connect com contratos e gateway substituivel | Critica | Muito alta | 3/11 | Parcial |
+| C11 | CRM e vendas | Gerir receita; vendas e lideranca | Contatos, pipelines, oportunidades e atividades | 2 | Leads, contas, produtos, propostas e previsao | Orkestral Vendas com workspace diario orientado a acao | Alta | Muito alta | 6 | Parcial |
+| C12 | Atendimento e servico | Resolver demandas; suporte e clientes | Tickets, filas, SLA, eventos e satisfacao | 2 | Roteamento, omnichannel, portal e campo | Orkestral Atendimento com fila por habilidade e carga | Alta | Muito alta | 7 | Parcial |
+| C13 | Marketing e jornadas | Adquirir e nutrir; marketing | Campanhas, audiencias, jornadas, testes e atribuicao | 2 | Segmentos, consentimento e canais reais | Orkestral Jornadas com frequencia e governanca | Alta | Muito alta | 8 | Parcial |
+| C14 | Comercio e pedidos | Vender produtos/servicos; comercial e cliente | Estoque e financeiro separados | 0 | Catalogo comercial, carrinho, pedido e devolucao | Orkestral Comercio integrado aos dominios existentes | Media | Muito alta | 9 | Nao iniciado |
+| C15 | Receita, contratos e assinaturas | Monetizar recorrencia; financeiro | Assinatura SaaS interna e lancamentos basicos | 1 | CPQ, contrato cliente, recorrencia e cobranca | Orkestral Receita com provedores fiscais/pagamento | Alta | Muito alta | 9 | Planejado |
+| C16 | Financeiro empresarial | Controlar caixa; financeiro e diretoria | Contas, categorias, entradas e liquidacao | 2 | Conciliacao, recorrencia, orcamento e cobranca | Orkestral Financeiro com aprovacao de alto impacto | Alta | Muito alta | 9 | Parcial |
+| C17 | Estoque e cadeia operacional | Controlar disponibilidade; operacoes | Itens, locais, saldos e movimentos | 2 | Lotes, series, reservas, inventario e previsao | Orkestral Estoque rastreavel e orientado a eventos | Alta | Alta | 9 | Parcial |
+| C18 | Projetos e portfolio | Entregar trabalho; PMO e equipes | Projetos, tarefas, portfolio, marcos, riscos e membros | 2 | Capacidade, horas, custos e caminho critico | Orkestral Projetos com previsao e governanca | Alta | Alta | 9 | Parcial |
+| C19 | Recursos humanos | Gerir jornada do colaborador; RH e gestores | Departamentos, colaboradores e afastamentos | 2 | Admissao, documentos, competencias e avaliacoes | Orkestral Pessoas com privacy by design | Alta | Muito alta | 9 | Parcial |
+| C20 | Customer 360 | Unificar relacionamento; areas de negocio | Dados distribuidos por modulos | 1 | Modelo canonico, fonte e perfil unificado | Orkestral Visao Unica com dados vinculados, nao duplicados | Critica | Muito alta | 5 | Planejado |
+| C21 | Resolucao de identidade e duplicidade | Unir cadastros; dados e atendimento | Busca e validacoes locais | 0 | Matching, reconciliacao e merge assistido | Identity Graph versionado por empresa | Alta | Muito alta | 5 | Nao iniciado |
+| C22 | Dados nao estruturados e vetores | Usar documentos; conhecimento e agentes | Documentos, chunks e pgvector(384) | 2 | Citacoes, avaliacao RAG, linhagem e politicas | Knowledge Fabric com fonte, versao e avaliacao | Alta | Alta | 4-5 | Parcial |
+| C23 | Analytics e camada semantica | Decidir com numeros consistentes; gestores | Indicadores, medicoes e agregacoes | 2 | Metricas centrais, dimensoes e drill-down | Orkestral Insights com semantic model versionado | Alta | Muito alta | 10 | Parcial |
+| C24 | Relatorios e dashboards visuais | Explorar e compartilhar; usuarios de negocio | Paineis fixos por modulo | 1 | Builder, filtros, formulas e agendamento | Insight Builder por metadados | Alta | Alta | 10 | Planejado |
+| C25 | Portais externos | Autoatendimento; clientes, parceiros e fornecedores | Interface interna autenticada | 0 | Identidade externa, branding e escopo | Orkestral Portais sobre o mesmo policy engine | Media | Muito alta | 10 | Nao iniciado |
+| C26 | Colaboracao contextual | Coordenar pessoas; todos os times | Notificacoes, aprovacoes e atividades de dominio | 1 | Comentarios, mencoes, seguidores e feed | Orkestral Conversas ligadas ao registro | Media | Alta | 10 | Planejado |
+| C27 | Marketplace e pacotes | Estender com seguranca; admins e parceiros | Catalogo de modulos/plugins e manifestos | 2 | Assinatura, dependencias, migracoes e rollback | Orkestral Exchange com pacotes declarativos | Alta | Muito alta | 11 | Parcial |
+| C28 | Definicao e versao de agentes | Publicar trabalhadores digitais; admins | Agente editavel sem versao imutavel | 1 | Draft, publish, rollback e promocao | Agent Studio com `AgentVersion` | Critica | Alta | 4 | Planejado |
+| C29 | Ferramentas e acoes de agentes | Executar tarefas; agentes e operadores | 3 ferramentas tipadas com permissao | 2 | Catalogo extensivel, output schema e reversao | Tool Registry versionado e policy-aware | Critica | Alta | 4 | Parcial |
+| C30 | Seguranca e politicas de IA | Evitar abuso; seguranca e compliance | Tenant, permissao, sensibilidade e aprovacao | 2 | Prompt injection, data egress e limites granulares | Agent Policy Engine deterministico | Critica | Muito alta | 4 | Parcial |
+| C31 | Testes e modo sombra de agentes | Publicar com confianca; QA e donos de agente | Testes tecnicos comuns | 1 | Suites, casos, ataques, simulacao e gates | Agent Lab com avaliadores deterministas/modelo | Critica | Alta | 4 | Planejado |
+| C32 | Observabilidade e custos de agentes | Operar e controlar gasto; gestores e SRE | Tokens, custo, duracao e tool runs | 2 | Trace, metricas, violacoes e tendencias | Agent Command Center | Alta | Alta | 4 | Parcial |
+| C33 | Multiagentes | Delegar objetivos; operacoes e agentes | Ausente | 0 | Supervisor, contratos, estado e budget | Orkestral Crew com delegacao autorizada | Media | Muito alta | 4+ | Nao iniciado |
+| C34 | Automacoes e aprovacoes | Orquestrar processos; admins e operadores | 16 blocos, versoes, rollback e aprovacao | 3 | Outbox, simulacao, DLQ e compensacao | Orkestral Flow sobre engine substituivel | Critica | Muito alta | 3 | Parcial |
+| C35 | Ambientes e sandboxes | Testar sem risco; devs e admins | Local, development e production documentados | 1 | Sandbox por tenant e promocao | Environment Manager com dados mascarados | Alta | Muito alta | 11 | Planejado |
+| C36 | Pacotes, metadata e versionamento | Promover configuracao; devs e parceiros | Versoes de workflow e catalogos | 1 | Pacote unificado e dependency graph | Orkestral Package Format assinado | Alta | Muito alta | 11 | Planejado |
+| C37 | DevOps e ciclo de release | Entregar com seguranca; engenharia | GitHub Actions, Docker, testes e health | 2 | Actions bloqueadas, branch protection e promocao | Pipeline portavel com gates e rollback | Critica | Alta | 11-12 | Parcial |
+| C38 | Billing, entitlements e uso | Controlar produto/custo; financeiro e admins | Planos, assinatura e registros de uso | 2 | Direitos granulares, excedente e grace period | Entitlement Engine central e idempotente | Alta | Alta | 9/11 | Parcial |
+| C39 | SSO, SCIM e identidade empresarial | Integrar IAM; TI e seguranca | Login proprio e sessoes | 1 | MFA, OIDC, SAML, SCIM e dispositivos | Identity Gateway por adaptadores | Critica | Muito alta | 12 | Planejado |
+| C40 | Observabilidade, DR e solucoes por setor | Operar em escala; SRE e clientes enterprise | Logs, health e Docker; docs de deploy | 1 | Traces, SLO, backup testado, HA e templates setoriais | Control Plane operacional e pacotes de industria | Critica | Muito alta | 12 | Planejado |
+
+## Contratos de entrega por capacidade
+
+Cada linha abaixo resume os artefatos minimos. Os nomes finais podem ser adaptados ao padrao do repositorio durante a implementacao.
+
+| ID | Modelos e dados | APIs e eventos | Telas e permissoes | Automacoes/agentes | Risco e criterio de aceitacao |
+| --- | --- | --- | --- | --- | --- |
+| C01 | TenantContext, escopos e constraints | Context middleware; `tenant.access_denied` | Seletor de empresa; `companies.access` | Toda execucao resolve tenant | Teste A->B retorna 404 em todos os dominios |
+| C02 | Application/Module/Entity Definition | CRUD, validate, publish, rollback; `metadata.published` | Orkestral Studio; `metadata.*` | Gatilhos por publicacao | Schema invalido nunca e publicado |
+| C03 | Field/Relationship/Record Definition | CRUD generico; `record.*` | Builder e pagina dinamica; objeto/campo | Acoes por entidade | Backend e frontend validam o mesmo schema |
+| C04 | Layout/View/RecordType Definition | Preview e publish | Designer responsivo; `layouts.*` | Acao de navegacao | Rollback restaura UX sem perda de dado |
+| C05 | ValidationRule/Formula Definition | Test e evaluate | Editor com amostras; `rules.*` | Regra bloqueia workflow | Expressao sem IO, loop ou codigo arbitrario |
+| C06 | RecordGrant/FieldPolicy | Explain decision; `access.*` | Painel de acesso; `security.*` | Ferramenta recebe campos permitidos | Negacao no backend e explicacao auditavel |
+| C07 | PermissionSet/Group/Delegation | Assign/revoke; `permission.*` | Gestao ao lado de usuarios | Aprovacao de privilegio | Composicao deterministica e menor privilegio |
+| C08 | AuditLedger/FieldChange | Export/verify; `audit.recorded` | Busca e exportacao; `audit.*` | Alertas de risco | Evento inviolavel, sem segredo e com retencao |
+| C09 | DomainEvent/Outbox/DLQ | Publish/replay; `*.v1` | Console de eventos; `events.*` | Trigger de workflow | Commit atomico e consumidor idempotente |
+| C10 | ApiAsset/Connector/Policy | Catalog, test, invoke; `integration.*` | Connect Center; `integrations.*` | Agent tools e actions | Timeout, retry, revogacao e rate limit |
+| C11 | Lead/Account/Product/Quote | CRUD e pipeline events | Workspace vendas; `sales.*` | Agentes comerciais | Forecast explicavel e revisavel |
+| C12 | Case/Skill/Assignment/SLA | Route/respond; `case.*` | Console omnichannel; `service.*` | Agente com handoff | SLA e atribuicao reproduziveis |
+| C13 | Segment/Journey/Consent/Message | Publish/send; `marketing.*` | Journey Builder; `marketing.*` | Agente de campanha | Consentimento e frequencia bloqueiam envio |
+| C14 | Catalog/Cart/Order/Return | Checkout/order; `order.*` | Loja/operacao; `commerce.*` | Abandono e reposicao | Pedido consistente com estoque e pagamento |
+| C15 | Contract/Subscription/Invoice | Renew/bill; `revenue.*` | Receita; `revenue.*` | Cobranca supervisionada | Idempotencia financeira e trilha completa |
+| C16 | Reconciliation/Budget/RecurringEntry | Reconcile/forecast; `finance.*` | Financeiro; `finance.*` | Agente requer aprovacao | Nenhuma baixa critica autonoma sem politica |
+| C17 | Lot/Serial/Reservation/InventoryCount | Reserve/transfer; `inventory.*` | Estoque; `inventory.*` | Agente de reposicao | Quantidade nunca fica inconsistente |
+| C18 | TimeEntry/Capacity/Cost/Baseline | Plan/report; `project.*` | Portfolio; `projects.*` | Agente de risco | Dependencias sem ciclo e custos rastreaveis |
+| C19 | Competency/Document/Review/Onboarding | HR lifecycle; `hr.*` | Pessoas; `hr.*` | Agente interno limitado | Dado sensivel mascarado e auditado |
+| C20 | Party/Profile/Interaction/Source | Profile/activate; `profile.*` | Visao unica; `customer360.*` | Contexto para agentes | Fonte e consentimento sempre visiveis |
+| C21 | Identity/MatchRule/MergeDecision | Match/merge; `identity.*` | Merge assistido; `data.*` | Sugestao sem merge autonomo | Reversao e linhagem completas |
+| C22 | KnowledgeVersion/Citation/Evaluation | Search/cite/evaluate; `knowledge.*` | Biblioteca; `knowledge.*` | RAG com filtros | Toda resposta documental possui fonte autorizada |
+| C23 | Metric/Dimension/SemanticModel | Query/explain; `analytics.*` | Catalogo semantico | Agente analitico | Uma metrica tem uma definicao publicada |
+| C24 | Report/Dashboard/Schedule | Run/export; `report.*` | Builder visual; `reports.*` | Relatorio em linguagem natural | Consulta respeita campo e registro |
+| C25 | Portal/Site/ExternalIdentity | Publish/login; `portal.*` | Builder de portal; `portals.*` | Autoatendimento | Usuario externo ve somente grants explicitos |
+| C26 | Comment/Mention/Follow/Channel | Comment/follow; `collab.*` | Feed contextual; `collaboration.*` | Agente participa identificado | Humano e agente sempre distinguiveis |
+| C27 | Package/Version/Signature/Install | Validate/install/rollback | Marketplace; `marketplace.*` | Pacotes de agentes/flows | Codigo arbitrario nao executa sem isolamento |
+| C28 | AgentVersion/Release | Draft/publish/rollback | Agent Studio; `agents.publish` | Runtime fixa versao | Execucao e reproduzivel por versao |
+| C29 | ToolDefinition/Binding | Validate/simulate/invoke | Tool catalog; `tools.*` | Tool calls tipadas | Input/output validos e resultado real |
+| C30 | AgentPolicy/DataEgressRule | Evaluate/explain; `agent.policy.*` | Policy Center | Enforcement pre-tool | Prompt injection nao amplia privilegio |
+| C31 | EvaluationSuite/Case/Run | Run/compare/gate | Agent Lab; `agent.tests.*` | Ataques e modo sombra | Publicacao bloqueada abaixo do limiar |
+| C32 | AgentRun/Step/Metric/Violation | Trace/metrics | Command Center; `agents.observe` | Alertas de custo | Trace sem chain-of-thought ou segredo |
+| C33 | AgentTask/Handoff/SharedState | Delegate/cancel | Crew Console; `agents.coordinate` | Supervisor e especialistas | Budget e escopo propagados na delegacao |
+| C34 | WorkflowPolicy/Execution/DLQ | Simulate/publish/replay | Flow Builder; `workflows.*` | Agentes como blocos | Loop, retry e compensacao controlados |
+| C35 | Environment/Sandbox/Promotion | Create/promote/compare | Environment Manager | Testes sinteticos | Producao nunca recebe segredo/dado de dev |
+| C36 | PackageManifest/Dependency | Pack/verify/install | Package Center | Distribui metadata e agentes | Assinatura e compatibilidade obrigatorias |
+| C37 | Release/Deployment | Build/deploy/rollback | Release Center | Gates automaticos | Commit publicado corresponde a versao ativa |
+| C38 | Entitlement/Meter/Credit | Check/consume; `usage.*` | Plano e consumo | Budget de agente | Consumo idempotente e autorizacao server-side |
+| C39 | IdentityProvider/Device/Provisioning | OIDC/SAML/SCIM | Security Center | Sessao de agente delegada | MFA e revogacao testadas |
+| C40 | SLO/Backup/Restore/IndustryPack | Health/restore/install | Operations Center | Alertas e runbooks | Restore testado, RTO/RPO medidos e tenant isolado |
+
+## Dependencias criticas
+
+1. C01, C06, C07 e C08 precedem qualquer autonomia ampliada.
+2. C02 a C05 sustentam C24, C25, C27, C35 e C36.
+3. C09 precede confiabilidade de C10, C13, C28 a C34.
+4. C20 a C22 precedem agentes e analytics com contexto empresarial confiavel.
+5. C37, C39 e C40 precedem liberacao para clientes enterprise.
+
+## Regra de conclusao
+
+Uma linha somente muda para concluida quando o recorte definido possuir modelo, migracao, servico, autorizacao, isolamento, auditoria, API, interface, testes, observabilidade e documentacao. Arquitetura, tela ou endpoint isolado nao contam como equivalencia concluida.

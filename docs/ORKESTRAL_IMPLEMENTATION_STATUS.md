@@ -172,3 +172,14 @@ Data: 21 de julho de 2026.
 - Maior lacuna: eventos transacionais, politicas versionadas de agentes, avaliacao, DLQ e governanca de APIs.
 - Migracoes: nenhuma neste ciclo de diagnostico.
 - Proximo passo exato: criar matriz de equivalencia detalhada, arquitetura-alvo e roadmap por dependencia.
+
+## Ciclo empresarial 4 - matriz, arquitetura-alvo e roadmap
+
+Data: 21 de julho de 2026.
+
+- Matriz: 40 capacidades avaliadas com nivel, lacuna, solucao, fase e contrato de entrega.
+- Arquitetura: monolito modular orientado por metadata, eventos e agentes controlados.
+- Roadmap: Fases 0 a 12 ordenadas por dependencias e criterios de saida.
+- Decisao imediata: concluir fundacao empresarial, eventos transacionais e base de metadata antes de ampliar autonomia.
+- Migracoes: nenhuma neste ciclo de arquitetura.
+- Proximo passo exato: implementar o primeiro recorte vertical de Fase 1 com Tenant Context, policy e auditoria/evento.
