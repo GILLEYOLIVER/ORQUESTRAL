@@ -667,3 +667,18 @@ Data: 21 de julho de 2026.
 - Segurança comprovada: falhas de recriptografia respeitam os invariantes do banco, retomadas preservam o checkpoint, reatribuições continuam isoladas por empresa e justificativas são persistidas somente por HMAC.
 - Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno retorna `503`; investigar separadamente sem enfraquecer o readiness obrigatório da API.
 - Próximo passo: monitor externo do heartbeat, política de tentativas máximas e runbook assistido de recuperação de chave.
+
+## Ciclo 39 - monitor externo, orçamento de retry e recuperação assistida
+
+- Probe público `GET /health/agent-memory-scheduler` permite que um monitor independente detecte heartbeat vencido por HTTP `503` sem revelar tenant, agente ou métricas internas.
+- Script portátil consulta o probe com timeout e código de saída próprio para integração com qualquer monitor, sem acoplamento a provedor.
+- Jobs definem de uma a dez retomadas; API, interface e restrição do banco impedem ultrapassar o orçamento persistido.
+- Toda retomada exige diagnóstico recente que verifica keyring, identificação da chave, snapshot, concorrência e orçamento sem expor segredos.
+- Avaliações geram auditoria e evento de domínio; aprovação expira em 15 minutos e é consumida pela retomada.
+- Interface apresenta diagnóstico e instruções operacionais antes de liberar o botão de checkpoint.
+- Migração: `20260721_0060_agent_memory_monitor_retry_recovery.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos; 143 testes da API/worker, 13 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria de segurança sem bloqueios.
+- Migração reversível `0060 -> 0059 -> 0060` aprovada; banco em `20260721_0060 (head)`.
+- Runtime local: Nginx validado e recarregado; `/health`, `/ready`, `/app` e o probe externo responderam `200`; worker saudável; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: probe sem dados de tenant, acesso cruzado ao diagnóstico retorna `404`, retry sem avaliação ou acima do orçamento retorna `409` e nenhum segredo aparece na resposta assistida.
+- Próximo passo: monitoramento autenticado por ambiente, cofre externo com rotação coordenada e política de encerramento definitivo de jobs irrecuperáveis.

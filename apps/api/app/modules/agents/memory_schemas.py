@@ -478,6 +478,7 @@ class AgentMemorySchedulerMetricsResponse(StrictSchema):
 
 class AgentMemoryReencryptionJobCreate(StrictSchema):
     batch_size: int = Field(default=100, ge=1, le=500)
+    max_retry_attempts: int = Field(default=3, ge=1, le=10)
 
 
 class AgentMemoryReencryptionJobRetry(StrictSchema):
@@ -500,13 +501,27 @@ class AgentMemoryReencryptionJobResponse(StrictSchema):
     rotated_count: int
     failed_count: int
     retry_count: int
+    max_retry_attempts: int
+    retry_attempts_remaining: int
     last_retry_at: datetime | None
+    recovery_status: Literal["not_assessed", "ready", "blocked"]
+    last_recovery_assessment_at: datetime | None
+    recovery_assessed_by_user_id: UUID | None
     error_code: str | None
     requested_by_user_id: UUID
     created_at: datetime
     started_at: datetime | None
     completed_at: datetime | None
     updated_at: datetime
+
+
+class AgentMemoryReencryptionRecoveryAssessmentResponse(StrictSchema):
+    job_id: UUID
+    status: Literal["ready", "blocked"]
+    checks: dict[str, bool]
+    instructions: list[str]
+    retry_attempts_remaining: int
+    assessed_at: datetime
 
 
 class AgentTaskMemoryContextRequest(StrictSchema):

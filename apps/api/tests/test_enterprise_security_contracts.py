@@ -44,6 +44,7 @@ PUBLIC_READ_ROUTES = frozenset(
     {
         "/auth/development-access",
         "/health",
+        "/health/agent-memory-scheduler",
         "/ready",
         "/system/capabilities",
         "/system/features",

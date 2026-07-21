@@ -33,6 +33,7 @@ import {
   type AgentMemoryExerciseSchedule,
   type AgentMemoryExerciseDue,
   type AgentMemoryReencryptionJob,
+  type AgentMemoryReencryptionRecoveryAssessment,
   type AgentMemorySchedulerMetrics,
   type AgentResponse,
   type AgentToolCatalog,
@@ -201,8 +202,12 @@ export function AgentsPage() {
   ] = useState("15");
   const [memoryReencryptionBatchSize, setMemoryReencryptionBatchSize] =
     useState("100");
+  const [memoryReencryptionMaxRetries, setMemoryReencryptionMaxRetries] =
+    useState("3");
   const [memoryReencryptionRetryReason, setMemoryReencryptionRetryReason] =
     useState("");
+  const [memoryRecoveryAssessment, setMemoryRecoveryAssessment] =
+    useState<AgentMemoryReencryptionRecoveryAssessment | null>(null);
   const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
     useState(() => crypto.randomUUID());
   const [memoryIncidentFeedback, setMemoryIncidentFeedback] = useState<
@@ -225,6 +230,7 @@ export function AgentsPage() {
   useEffect(() => {
     setConversationId(null);
     setConversationFeedback(null);
+    setMemoryRecoveryAssessment(null);
   }, [selectedId]);
   const catalog = useQuery({
     queryKey: ["agent-tools-catalog"],
@@ -305,6 +311,9 @@ export function AgentsPage() {
     enabled: canConfigure && Boolean(selectedId),
   });
   const latestMemoryReencryptionJob = memoryReencryptionJobs.data?.[0];
+  useEffect(() => {
+    setMemoryRecoveryAssessment(null);
+  }, [latestMemoryReencryptionJob?.id, latestMemoryReencryptionJob?.status]);
   const myMemories = useQuery({
     queryKey: ["agent-my-memories", selectedId],
     queryFn: () =>
@@ -816,7 +825,10 @@ export function AgentsPage() {
         `/agents/${selectedId}/memory-reencryption-jobs`,
         {
           method: "POST",
-          body: { batch_size: Number(memoryReencryptionBatchSize) },
+          body: {
+            batch_size: Number(memoryReencryptionBatchSize),
+            max_retry_attempts: Number(memoryReencryptionMaxRetries),
+          },
         },
       ),
     onSuccess: (result) => {
@@ -824,6 +836,24 @@ export function AgentsPage() {
         result.total_count
           ? `Recriptografia iniciada para ${result.total_count} memória(s).`
           : "Job criado; não há memórias para recriptografar.",
+      );
+      setMemoryRecoveryAssessment(null);
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const assessMemoryReencryptionRecovery = useMutation({
+    mutationFn: (jobId: string) =>
+      request<AgentMemoryReencryptionRecoveryAssessment>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${jobId}/recovery-assessment`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      setMemoryRecoveryAssessment(result);
+      setMemoryIncidentFeedback(
+        result.status === "ready"
+          ? "Diagnóstico aprovado. A retomada está liberada por 15 minutos."
+          : "Diagnóstico bloqueado. Siga as orientações antes de retomar.",
       );
       refresh();
     },
@@ -843,6 +873,7 @@ export function AgentsPage() {
         "Job retomado a partir do último checkpoint seguro.",
       );
       setMemoryReencryptionRetryReason("");
+      setMemoryRecoveryAssessment(null);
       refresh();
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
@@ -2074,6 +2105,17 @@ export function AgentsPage() {
                     type="number"
                     value={memoryReencryptionBatchSize}
                   />
+                  <TextField
+                    label="Máximo de retomadas"
+                    max={10}
+                    min={1}
+                    onChange={(event) =>
+                      setMemoryReencryptionMaxRetries(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryReencryptionMaxRetries}
+                  />
                   <Button
                     loading={startMemoryReencryption.isPending}
                     type="submit"
@@ -2089,12 +2131,37 @@ export function AgentsPage() {
                       {latestMemoryReencryptionJob.error_code
                         ? ` · erro ${latestMemoryReencryptionJob.error_code}`
                         : ""}
+                      {` · retomadas ${latestMemoryReencryptionJob.retry_count}/${latestMemoryReencryptionJob.max_retry_attempts}`}
                     </small>
                   ) : (
                     <small>Nenhuma recriptografia solicitada.</small>
                   )}
                   {latestMemoryReencryptionJob?.status === "failed" ? (
                     <>
+                      <Button
+                        loading={assessMemoryReencryptionRecovery.isPending}
+                        onClick={() =>
+                          assessMemoryReencryptionRecovery.mutate(
+                            latestMemoryReencryptionJob.id,
+                          )
+                        }
+                        type="button"
+                        variant="secondary"
+                      >
+                        <ShieldAlert size={16} /> Verificar recuperação
+                      </Button>
+                      {memoryRecoveryAssessment ? (
+                        <div className="agent-policy-list">
+                          <strong>
+                            Diagnóstico: {memoryRecoveryAssessment.status}
+                          </strong>
+                          {memoryRecoveryAssessment.instructions.map(
+                            (instruction) => (
+                              <small key={instruction}>{instruction}</small>
+                            ),
+                          )}
+                        </div>
+                      ) : null}
                       <TextField
                         label="Justificativa para retomar"
                         maxLength={160}
@@ -2104,6 +2171,11 @@ export function AgentsPage() {
                         value={memoryReencryptionRetryReason}
                       />
                       <Button
+                        disabled={
+                          memoryRecoveryAssessment?.status !== "ready" ||
+                          latestMemoryReencryptionJob.retry_attempts_remaining <=
+                            0
+                        }
                         loading={retryMemoryReencryption.isPending}
                         onClick={() => {
                           if (memoryReencryptionRetryReason.trim().length < 3) {

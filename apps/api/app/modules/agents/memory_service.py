@@ -741,6 +741,9 @@ async def process_agent_memory_reencryption_jobs(
             job.status = "failed"
             job.error_code = "target_key_changed"
             job.completed_at = now
+            job.recovery_status = "not_assessed"
+            job.last_recovery_assessment_at = None
+            job.recovery_assessed_by_user_id = None
             failed += 1
             continue
         if job.status == "pending":
@@ -792,6 +795,9 @@ async def process_agent_memory_reencryption_jobs(
                 job.status = "failed"
                 job.error_code = "memory_decryption_failed"
                 job.completed_at = utc_now()
+                job.recovery_status = "not_assessed"
+                job.last_recovery_assessment_at = None
+                job.recovery_assessed_by_user_id = None
                 failed += 1
                 job_failed = True
                 break

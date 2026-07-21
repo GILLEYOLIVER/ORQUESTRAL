@@ -2824,6 +2824,13 @@
             "minimum": 1.0,
             "title": "Batch Size",
             "type": "integer"
+          },
+          "max_retry_attempts": {
+            "default": 3,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Retry Attempts",
+            "type": "integer"
           }
         },
         "title": "AgentMemoryReencryptionJobCreate",
@@ -2878,6 +2885,18 @@
             "title": "Id",
             "type": "string"
           },
+          "last_recovery_assessment_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Recovery Assessment At"
+          },
           "last_retry_at": {
             "anyOf": [
               {
@@ -2890,10 +2909,39 @@
             ],
             "title": "Last Retry At"
           },
+          "max_retry_attempts": {
+            "title": "Max Retry Attempts",
+            "type": "integer"
+          },
+          "recovery_assessed_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Assessed By User Id"
+          },
+          "recovery_status": {
+            "enum": [
+              "not_assessed",
+              "ready",
+              "blocked"
+            ],
+            "title": "Recovery Status",
+            "type": "string"
+          },
           "requested_by_user_id": {
             "format": "uuid",
             "title": "Requested By User Id",
             "type": "string"
+          },
+          "retry_attempts_remaining": {
+            "title": "Retry Attempts Remaining",
+            "type": "integer"
           },
           "retry_count": {
             "title": "Retry Count",
@@ -2954,7 +3002,12 @@
           "rotated_count",
           "failed_count",
           "retry_count",
+          "max_retry_attempts",
+          "retry_attempts_remaining",
           "last_retry_at",
+          "recovery_status",
+          "last_recovery_assessment_at",
+          "recovery_assessed_by_user_id",
           "error_code",
           "requested_by_user_id",
           "created_at",
@@ -2979,6 +3032,57 @@
           "reason"
         ],
         "title": "AgentMemoryReencryptionJobRetry",
+        "type": "object"
+      },
+      "AgentMemoryReencryptionRecoveryAssessmentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "assessed_at": {
+            "format": "date-time",
+            "title": "Assessed At",
+            "type": "string"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "instructions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instructions",
+            "type": "array"
+          },
+          "job_id": {
+            "format": "uuid",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "retry_attempts_remaining": {
+            "title": "Retry Attempts Remaining",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "blocked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "checks",
+          "instructions",
+          "retry_attempts_remaining",
+          "assessed_at"
+        ],
+        "title": "AgentMemoryReencryptionRecoveryAssessmentResponse",
         "type": "object"
       },
       "AgentMemoryResponse": {
@@ -17620,6 +17724,45 @@
         "title": "VersionResponse",
         "type": "object"
       },
+      "WorkerHealthResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "const": "agent-memory-worker",
+            "title": "Component",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "idle",
+              "healthy",
+              "overdue"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "component",
+          "state",
+          "request_id"
+        ],
+        "title": "WorkerHealthResponse",
+        "type": "object"
+      },
       "WorkflowComparisonResponse": {
         "additionalProperties": false,
         "properties": {
@@ -22603,6 +22746,84 @@
           }
         ],
         "summary": "Create Agent Memory Reencryption Job",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/recovery-assessment": {
+      "post": {
+        "operationId": "assess_agent_memory_reencryption_recovery_agents__agent_id__memory_reencryption_jobs__job_id__recovery_assessment_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryReencryptionRecoveryAssessmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assess Agent Memory Reencryption Recovery",
         "tags": [
           "agents"
         ]
@@ -29805,6 +30026,67 @@
           }
         },
         "summary": "Health",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/health/agent-memory-scheduler": {
+      "get": {
+        "operationId": "agent_memory_scheduler_health_health_agent_memory_scheduler_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerHealthResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Agent Memory Scheduler Health",
         "tags": [
           "system"
         ]

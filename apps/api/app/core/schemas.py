@@ -16,6 +16,13 @@ class HealthResponse(StrictSchema):
     request_id: str
 
 
+class WorkerHealthResponse(StrictSchema):
+    status: Literal["ok", "degraded"]
+    component: Literal["agent-memory-worker"]
+    state: Literal["idle", "healthy", "overdue"]
+    request_id: str
+
+
 class CheckResult(StrictSchema):
     status: Literal["ok", "error"]
     latency_ms: float

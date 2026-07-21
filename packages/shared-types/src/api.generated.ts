@@ -679,6 +679,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/recovery-assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assess Agent Memory Reencryption Recovery */
+        post: operations["assess_agent_memory_reencryption_recovery_agents__agent_id__memory_reencryption_jobs__job_id__recovery_assessment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/retry": {
         parameters: {
             query?: never;
@@ -1987,6 +2004,23 @@ export interface paths {
         };
         /** Health */
         get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/agent-memory-scheduler": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Agent Memory Scheduler Health */
+        get: operations["agent_memory_scheduler_health_health_agent_memory_scheduler_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5141,6 +5175,11 @@ export interface components {
              * @default 100
              */
             batch_size: number;
+            /**
+             * Max Retry Attempts
+             * @default 3
+             */
+            max_retry_attempts: number;
         };
         /** AgentMemoryReencryptionJobResponse */
         AgentMemoryReencryptionJobResponse: {
@@ -5167,13 +5206,26 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Recovery Assessment At */
+            last_recovery_assessment_at: string | null;
             /** Last Retry At */
             last_retry_at: string | null;
+            /** Max Retry Attempts */
+            max_retry_attempts: number;
+            /** Recovery Assessed By User Id */
+            recovery_assessed_by_user_id: string | null;
+            /**
+             * Recovery Status
+             * @enum {string}
+             */
+            recovery_status: "not_assessed" | "ready" | "blocked";
             /**
              * Requested By User Id
              * Format: uuid
              */
             requested_by_user_id: string;
+            /** Retry Attempts Remaining */
+            retry_attempts_remaining: number;
             /** Retry Count */
             retry_count: number;
             /** Rotated Count */
@@ -5201,6 +5253,32 @@ export interface components {
         AgentMemoryReencryptionJobRetry: {
             /** Reason */
             reason: string;
+        };
+        /** AgentMemoryReencryptionRecoveryAssessmentResponse */
+        AgentMemoryReencryptionRecoveryAssessmentResponse: {
+            /**
+             * Assessed At
+             * Format: date-time
+             */
+            assessed_at: string;
+            /** Checks */
+            checks: {
+                [key: string]: boolean;
+            };
+            /** Instructions */
+            instructions: string[];
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Retry Attempts Remaining */
+            retry_attempts_remaining: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "blocked";
         };
         /** AgentMemoryResponse */
         AgentMemoryResponse: {
@@ -10705,6 +10783,26 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** WorkerHealthResponse */
+        WorkerHealthResponse: {
+            /**
+             * Component
+             * @constant
+             */
+            component: "agent-memory-worker";
+            /** Request Id */
+            request_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "idle" | "healthy" | "overdue";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "degraded";
+        };
         /** WorkflowComparisonResponse */
         WorkflowComparisonResponse: {
             /** Added Nodes */
@@ -13704,6 +13802,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    assess_agent_memory_reencryption_recovery_agents__agent_id__memory_reencryption_jobs__job_id__recovery_assessment_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionRecoveryAssessmentResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -18742,6 +18890,62 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    agent_memory_scheduler_health_health_agent_memory_scheduler_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkerHealthResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkerHealthResponse"];
                 };
             };
         };

@@ -622,6 +622,20 @@ class AgentMemoryReencryptionJob(Base):
             "AND char_length(retry_reason_fingerprint) = 64)",
             name="ck_agent_memory_reencryption_job_retry",
         ),
+        CheckConstraint(
+            "max_retry_attempts BETWEEN 1 AND 100 "
+            "AND retry_count <= max_retry_attempts",
+            name="ck_agent_memory_reencryption_job_retry_budget",
+        ),
+        CheckConstraint(
+            "(recovery_status = 'not_assessed' "
+            "AND last_recovery_assessment_at IS NULL "
+            "AND recovery_assessed_by_user_id IS NULL) OR "
+            "(recovery_status IN ('ready', 'blocked') "
+            "AND last_recovery_assessment_at IS NOT NULL "
+            "AND recovery_assessed_by_user_id IS NOT NULL)",
+            name="ck_agent_memory_reencryption_job_recovery",
+        ),
         Index(
             "uq_agent_memory_reencryption_job_active",
             "company_id",
@@ -653,8 +667,18 @@ class AgentMemoryReencryptionJob(Base):
     snapshot_memory_id: Mapped[UUID | None] = mapped_column(nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(64))
     retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_retry_attempts: Mapped[int] = mapped_column(Integer, default=3, server_default="3")
     last_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     retry_reason_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    recovery_status: Mapped[str] = mapped_column(
+        String(24), default="not_assessed", server_default="not_assessed", index=True
+    )
+    last_recovery_assessment_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    recovery_assessed_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     requested_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )

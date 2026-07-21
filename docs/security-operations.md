@@ -91,3 +91,12 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 3. Isole integrações e workflows envolvidos sem apagar evidências.
 4. Recupere em ambiente separado e compare checksums.
 5. Documente causa, alcance, correção e prevenção antes de reabrir o serviço.
+
+# Monitor externo e recuperação assistida da memória
+
+- Monitore `GET /health/agent-memory-scheduler` fora do worker. A resposta é genérica, não exige credencial e nunca revela empresa, agente, horários ou quantidade de agendas.
+- Execute `ORKESTRAL_BASE_URL=https://seu-ambiente bash scripts/monitor-agent-memory-worker.sh` em um monitor independente. Código de saída diferente de zero exige investigação do worker e do Celery Beat.
+- Cada job de recriptografia recebe um limite imutável de retomadas entre 1 e 10. O banco impede que a contagem ultrapasse esse orçamento.
+- Antes de uma retomada, execute o diagnóstico assistido na interface. Ele verifica estado falho, keyring histórico, identificação da chave, snapshot, exclusividade e orçamento sem retornar material secreto.
+- Um diagnóstico aprovado expira em 15 minutos. Mudanças no keyring ou em jobs concorrentes bloqueiam a retomada e exigem nova avaliação.
+- Nunca cole chaves no motivo, na interface, em logs ou em tickets. Restaure-as exclusivamente no gerenciador de segredos do ambiente.

@@ -21,6 +21,7 @@ from app.modules.agents.coordination_execution import process_delegation
 from app.modules.agents.coordination_models import AgentDelegationPayload
 from app.modules.agents.memory_models import (
     AgentMemoryEntry,
+    AgentMemoryExerciseSchedule,
     AgentMemoryPolicy,
     AgentMemoryScopePolicy,
     AgentTaskMemoryAccessGrant,
@@ -225,6 +226,25 @@ async def _assert_memory_storage(
             assert memory is not None
             assert secret_text.encode() not in memory.encrypted_content
             assert secret_text not in memory.content_fingerprint
+    finally:
+        await resources.close()
+
+
+async def _age_memory_scheduler_heartbeat(
+    settings: Settings, *, company_id: UUID, agent_id: UUID
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            schedule = await database.scalar(
+                select(AgentMemoryExerciseSchedule).where(
+                    AgentMemoryExerciseSchedule.company_id == company_id,
+                    AgentMemoryExerciseSchedule.agent_id == agent_id,
+                )
+            )
+            assert schedule is not None
+            schedule.last_worker_heartbeat_at = datetime.now(UTC) - timedelta(hours=2)
+            await database.commit()
     finally:
         await resources.close()
 
@@ -723,7 +743,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             retry_candidate = client.post(
                 f"/agents/{agent_id}/memory-reencryption-jobs",
                 headers=headers_b,
-                json={"batch_size": 1},
+                json={"batch_size": 1, "max_retry_attempts": 1},
             )
             assert retry_candidate.status_code == 201
             settings.encryption_key = rotated_encryption_key
@@ -732,6 +752,29 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 maintain_agent_memory_reencryption_jobs(settings=settings)
             )
             assert failed_rotation["failed"] == 1
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/retry",
+                    headers=headers_b,
+                    json={"reason": "Tentativa sem diagnóstico prévio."},
+                ).status_code
+                == 409
+            )
+            recovery_assessment = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/recovery-assessment",
+                headers=headers_b,
+            )
+            assert recovery_assessment.status_code == 200
+            assert recovery_assessment.json()["status"] == "ready"
+            assert all(recovery_assessment.json()["checks"].values())
+            assert original_encryption_key not in str(recovery_assessment.json())
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/recovery-assessment",
+                    headers=headers_a,
+                ).status_code
+                == 404
+            )
             retried_rotation = client.post(
                 f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/retry",
                 headers=headers_b,
@@ -740,11 +783,29 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert retried_rotation.status_code == 200
             assert retried_rotation.json()["status"] == "pending"
             assert retried_rotation.json()["retry_count"] == 1
+            assert retried_rotation.json()["retry_attempts_remaining"] == 0
             assert "reason" not in retried_rotation.json()
-            for _ in range(3):
-                asyncio.run(maintain_agent_memory_reencryption_jobs(settings=settings))
             settings.encryption_key = original_encryption_key
             settings.encryption_previous_keys = [rotated_encryption_key]
+            exhausted_rotation = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert exhausted_rotation["failed"] == 1
+            exhausted_assessment = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/recovery-assessment",
+                headers=headers_b,
+            )
+            assert exhausted_assessment.status_code == 200
+            assert exhausted_assessment.json()["status"] == "blocked"
+            assert exhausted_assessment.json()["checks"]["retry_budget_available"] is False
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/retry",
+                    headers=headers_b,
+                    json={"reason": "Tentativa acima do limite."},
+                ).status_code
+                == 409
+            )
             other_user_retrieval = asyncio.run(
                 _retrieve_memory_context(
                     settings,
@@ -1899,6 +1960,26 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 )
                 >= 1
             )
+            asyncio.run(
+                _age_memory_scheduler_heartbeat(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                )
+            )
+            external_probe = client.get("/health/agent-memory-scheduler")
+            assert external_probe.status_code == 503
+            assert external_probe.json()["state"] == "overdue"
+            assert set(external_probe.json()) == {
+                "status",
+                "component",
+                "state",
+                "request_id",
+            }
+            asyncio.run(maintain_due_agent_memory_response_exercises(settings=settings))
+            recovered_probe = client.get("/health/agent-memory-scheduler")
+            assert recovered_probe.status_code == 200
+            assert recovered_probe.json()["state"] == "healthy"
             monkeypatch.setattr(memory_service_module, "utc_now", current_memory_service_time)
             for attempt in range(2):
                 blocked_delegation = client.post(

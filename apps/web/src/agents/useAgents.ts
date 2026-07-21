@@ -337,13 +337,27 @@ export interface AgentMemoryReencryptionJob {
   rotated_count: number;
   failed_count: number;
   retry_count: number;
+  max_retry_attempts: number;
+  retry_attempts_remaining: number;
   last_retry_at: string | null;
+  recovery_status: "not_assessed" | "ready" | "blocked";
+  last_recovery_assessment_at: string | null;
+  recovery_assessed_by_user_id: string | null;
   error_code: string | null;
   requested_by_user_id: string;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
   updated_at: string;
+}
+
+export interface AgentMemoryReencryptionRecoveryAssessment {
+  job_id: string;
+  status: "ready" | "blocked";
+  checks: Record<string, boolean>;
+  instructions: string[];
+  retry_attempts_remaining: number;
+  assessed_at: string;
 }
 
 export function useAgents(enabled = true) {
