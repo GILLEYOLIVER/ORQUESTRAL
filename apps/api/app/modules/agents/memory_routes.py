@@ -19,10 +19,13 @@ from app.modules.agents.memory_models import (
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
+    AgentMemoryResponseExercise,
+    AgentMemoryRiskReportRecord,
     AgentMemoryScopePolicy,
     AgentTaskMemoryAccessGrant,
     AgentTaskMemoryAccessIncident,
     AgentTaskMemoryAccessTrace,
+    AgentTaskMemoryIncidentReviewRecord,
 )
 from app.modules.agents.memory_schemas import (
     AgentMemoryConsentRevocationResponse,
@@ -38,6 +41,8 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurgeResponse,
     AgentMemoryPurposePolicyInput,
     AgentMemoryResponse,
+    AgentMemoryResponseExerciseCreate,
+    AgentMemoryResponseExerciseResponse,
     AgentMemoryRiskReport,
     AgentMemoryRiskReportPayload,
     AgentMemoryRiskReportVerification,
@@ -305,6 +310,9 @@ def _task_memory_incident_response(
         quarantine_until=incident.quarantine_until,
         quarantined=incident.quarantine_until > utc_now(),
         review_status=incident.review_status,
+        severity=incident.severity,
+        required_review_quorum=incident.required_review_quorum,
+        review_count=incident.review_count,
         triggered_by_user_id=incident.triggered_by_user_id,
         reviewed_by_user_id=incident.reviewed_by_user_id,
         reviewed_at=incident.reviewed_at,
@@ -1042,29 +1050,80 @@ async def review_agent_task_memory_access_incident(
         raise HTTPException(status_code=409, detail="O incidente já foi revisado.")
     if incident.triggered_by_user_id == context.user_id:
         raise HTTPException(status_code=409, detail="A revisão exige outra pessoa responsável.")
+    existing_review = await database.scalar(
+        select(AgentTaskMemoryIncidentReviewRecord.id).where(
+            AgentTaskMemoryIncidentReviewRecord.company_id == context.company_id,
+            AgentTaskMemoryIncidentReviewRecord.incident_id == incident.id,
+            AgentTaskMemoryIncidentReviewRecord.reviewer_user_id == context.user_id,
+        )
+    )
+    if existing_review is not None:
+        raise HTTPException(status_code=409, detail="Esta pessoa já revisou o incidente.")
     now = utc_now()
-    incident.review_status = payload.decision
-    incident.reviewed_by_user_id = context.user_id
-    incident.reviewed_at = now
-    if payload.decision == "dismissed":
-        incident.quarantine_until = now
+    database.add(
+        AgentTaskMemoryIncidentReviewRecord(
+            company_id=context.company_id,
+            incident_id=incident.id,
+            agent_id=agent_id,
+            reviewer_user_id=context.user_id,
+            decision=payload.decision,
+        )
+    )
+    await database.flush()
+    incident.review_count = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryIncidentReviewRecord.id)).where(
+                AgentTaskMemoryIncidentReviewRecord.company_id == context.company_id,
+                AgentTaskMemoryIncidentReviewRecord.incident_id == incident.id,
+            )
+        )
+        or 0
+    )
+    decision_count = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryIncidentReviewRecord.id)).where(
+                AgentTaskMemoryIncidentReviewRecord.company_id == context.company_id,
+                AgentTaskMemoryIncidentReviewRecord.incident_id == incident.id,
+                AgentTaskMemoryIncidentReviewRecord.decision == payload.decision,
+            )
+        )
+        or 0
+    )
+    if decision_count >= incident.required_review_quorum:
+        incident.review_status = payload.decision
+        incident.reviewed_by_user_id = context.user_id
+        incident.reviewed_at = now
+        if payload.decision == "dismissed":
+            incident.quarantine_until = now
     record_authorization_audit(
         database,
         company_id=context.company_id,
         actor_user_id=context.user_id,
-        action=f"agent.task_memory_incident.{payload.decision}",
+        action="agent.task_memory_incident.review_recorded",
         target_type="agent_task_memory_access_incident",
         target_id=incident.id,
-        details={"agent_id": str(agent_id), "revoked_grants": incident.revoked_grants},
+        details={
+            "agent_id": str(agent_id),
+            "decision": payload.decision,
+            "review_count": incident.review_count,
+            "required_review_quorum": incident.required_review_quorum,
+            "final_status": incident.review_status,
+        },
     )
     enqueue_domain_event(
         database,
         DomainEventCreate(
-            event_type=f"agent.task_memory_incident.{payload.decision}",
+            event_type="agent.task_memory_incident.review_recorded",
             company_id=context.company_id,
             actor_user_id=context.user_id,
             classification="confidential",
-            payload={"incident_id": str(incident.id), "agent_id": str(agent_id)},
+            payload={
+                "incident_id": str(incident.id),
+                "agent_id": str(agent_id),
+                "review_count": incident.review_count,
+                "required_review_quorum": incident.required_review_quorum,
+                "final_status": incident.review_status,
+            },
         ),
     )
     await database.commit()
@@ -1072,7 +1131,7 @@ async def review_agent_task_memory_access_incident(
     return _task_memory_incident_response(incident)
 
 
-@router.get(
+@router.post(
     "/{agent_id}/memory-risk-report",
     response_model=AgentMemoryRiskReport,
 )
@@ -1084,6 +1143,20 @@ async def export_agent_memory_risk_report(
 ) -> AgentMemoryRiskReport:
     context = get_request_context(principal)
     risk_summary = await get_agent_memory_risk_summary(agent_id, principal, database)
+    await database.execute(
+        select(Agent.id)
+        .where(Agent.id == agent_id, Agent.company_id == context.company_id)
+        .with_for_update()
+    )
+    latest_report = await database.scalar(
+        select(AgentMemoryRiskReportRecord)
+        .where(
+            AgentMemoryRiskReportRecord.company_id == context.company_id,
+            AgentMemoryRiskReportRecord.agent_id == agent_id,
+        )
+        .order_by(AgentMemoryRiskReportRecord.sequence.desc())
+        .limit(1)
+    )
     pending_incident_ids = list(
         await database.scalars(
             select(AgentTaskMemoryAccessIncident.id).where(
@@ -1097,6 +1170,8 @@ async def export_agent_memory_risk_report(
         report_id=uuid4(),
         agent_id=agent_id,
         generated_at=utc_now(),
+        sequence=(latest_report.sequence + 1 if latest_report else 1),
+        previous_signature=(latest_report.signature if latest_report else None),
         risk_summary=risk_summary,
         pending_incident_ids=pending_incident_ids,
     )
@@ -1107,6 +1182,18 @@ async def export_agent_memory_risk_report(
         value_type="risk_report_v1",
         value=_canonical_risk_report(payload),
     )
+    database.add(
+        AgentMemoryRiskReportRecord(
+            id=payload.report_id,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            sequence=payload.sequence,
+            signature=signature,
+            previous_signature=payload.previous_signature,
+            generated_by_user_id=context.user_id,
+        )
+    )
+    await database.commit()
     return AgentMemoryRiskReport(payload=payload, signature=signature)
 
 
@@ -1125,6 +1212,15 @@ async def verify_agent_memory_risk_report(
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
     if payload.payload.agent_id != agent_id:
         return AgentMemoryRiskReportVerification(valid=False, reason="Relatório de outro agente.")
+    record = await database.scalar(
+        select(AgentMemoryRiskReportRecord).where(
+            AgentMemoryRiskReportRecord.id == payload.payload.report_id,
+            AgentMemoryRiskReportRecord.company_id == context.company_id,
+            AgentMemoryRiskReportRecord.agent_id == agent_id,
+        )
+    )
+    if record is None:
+        return AgentMemoryRiskReportVerification(valid=False, reason="Relatório não registrado.")
     expected = memory_incident_value_fingerprint(
         secret=settings.encryption_key,
         company_id=context.company_id,
@@ -1132,10 +1228,207 @@ async def verify_agent_memory_risk_report(
         value_type="risk_report_v1",
         value=_canonical_risk_report(payload.payload),
     )
-    valid = compare_digest(expected, payload.signature)
+    previous_signature = None
+    if payload.payload.sequence > 1:
+        previous_signature = await database.scalar(
+            select(AgentMemoryRiskReportRecord.signature).where(
+                AgentMemoryRiskReportRecord.company_id == context.company_id,
+                AgentMemoryRiskReportRecord.agent_id == agent_id,
+                AgentMemoryRiskReportRecord.sequence == payload.payload.sequence - 1,
+            )
+        )
+    valid = (
+        compare_digest(expected, payload.signature)
+        and compare_digest(record.signature, payload.signature)
+        and record.sequence == payload.payload.sequence
+        and record.previous_signature == payload.payload.previous_signature
+        and previous_signature == payload.payload.previous_signature
+    )
     return AgentMemoryRiskReportVerification(
         valid=valid,
         reason="Assinatura válida." if valid else "Relatório alterado ou assinatura inválida.",
+    )
+
+
+@router.get(
+    "/{agent_id}/memory-response-exercises",
+    response_model=list[AgentMemoryResponseExerciseResponse],
+)
+async def list_agent_memory_response_exercises(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryResponseExerciseResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    exercises = list(
+        await database.scalars(
+            select(AgentMemoryResponseExercise)
+            .where(
+                AgentMemoryResponseExercise.company_id == context.company_id,
+                AgentMemoryResponseExercise.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryResponseExercise.created_at.desc())
+            .limit(50)
+        )
+    )
+    return [
+        AgentMemoryResponseExerciseResponse(
+            id=exercise.id,
+            agent_id=exercise.agent_id,
+            scenario=exercise.scenario,
+            status=exercise.status,
+            checks=exercise.checks,
+            requested_by_user_id=exercise.requested_by_user_id,
+            created_at=exercise.created_at,
+        )
+        for exercise in exercises
+    ]
+
+
+@router.post(
+    "/{agent_id}/memory-response-exercises",
+    response_model=AgentMemoryResponseExerciseResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def run_agent_memory_response_exercise(
+    agent_id: UUID,
+    payload: AgentMemoryResponseExerciseCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryResponseExerciseResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    quarantine_violations = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessGrant.id))
+            .select_from(AgentTaskMemoryAccessGrant)
+            .join(
+                AgentTaskMemoryAccessIncident,
+                and_(
+                    AgentTaskMemoryAccessIncident.company_id
+                    == AgentTaskMemoryAccessGrant.company_id,
+                    AgentTaskMemoryAccessIncident.owner_agent_id
+                    == AgentTaskMemoryAccessGrant.owner_agent_id,
+                    AgentTaskMemoryAccessGrant.created_at
+                    >= AgentTaskMemoryAccessIncident.created_at,
+                    AgentTaskMemoryAccessGrant.created_at
+                    < AgentTaskMemoryAccessIncident.quarantine_until,
+                ),
+            )
+            .where(
+                AgentTaskMemoryAccessGrant.company_id == context.company_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessGrant.status == "active",
+            )
+        )
+        or 0
+    )
+    quorum_violations = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessIncident.id)).where(
+                AgentTaskMemoryAccessIncident.company_id == context.company_id,
+                AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessIncident.severity == "critical",
+                or_(
+                    and_(
+                        AgentTaskMemoryAccessIncident.review_status != "pending",
+                        AgentTaskMemoryAccessIncident.review_count
+                        < AgentTaskMemoryAccessIncident.required_review_quorum,
+                    ),
+                    and_(
+                        AgentTaskMemoryAccessIncident.review_status == "pending",
+                        AgentTaskMemoryAccessIncident.review_count
+                        >= AgentTaskMemoryAccessIncident.required_review_quorum,
+                    ),
+                ),
+            )
+        )
+        or 0
+    )
+    tenant_mismatches = sum(
+        int(value or 0)
+        for value in (
+            await database.scalar(
+                select(func.count(AgentTaskMemoryAccessGrant.id)).where(
+                    AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                    AgentTaskMemoryAccessGrant.company_id != context.company_id,
+                )
+            ),
+            await database.scalar(
+                select(func.count(AgentTaskMemoryAccessIncident.id)).where(
+                    AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+                    AgentTaskMemoryAccessIncident.company_id != context.company_id,
+                )
+            ),
+            await database.scalar(
+                select(func.count(AgentMemoryRiskReportRecord.id)).where(
+                    AgentMemoryRiskReportRecord.agent_id == agent_id,
+                    AgentMemoryRiskReportRecord.company_id != context.company_id,
+                )
+            ),
+        )
+    )
+    report_records = list(
+        await database.scalars(
+            select(AgentMemoryRiskReportRecord)
+            .where(
+                AgentMemoryRiskReportRecord.company_id == context.company_id,
+                AgentMemoryRiskReportRecord.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryRiskReportRecord.sequence)
+        )
+    )
+    report_chain_intact = all(
+        record.sequence == index + 1
+        and record.previous_signature == (report_records[index - 1].signature if index else None)
+        for index, record in enumerate(report_records)
+    )
+    checks = {
+        "quarantine_enforced": quarantine_violations == 0,
+        "critical_quorum_enforced": quorum_violations == 0,
+        "tenant_scope_intact": tenant_mismatches == 0,
+        "report_chain_intact": report_chain_intact,
+    }
+    exercise = AgentMemoryResponseExercise(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        scenario=payload.scenario,
+        status="passed" if all(checks.values()) else "failed",
+        checks=checks,
+        requested_by_user_id=context.user_id,
+    )
+    database.add(exercise)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_response_exercise.completed",
+        target_type="agent_memory_response_exercise",
+        target_id=exercise.id,
+        details={"status": exercise.status, "checks": checks},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_response_exercise.completed",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={"exercise_id": str(exercise.id), "status": exercise.status},
+        ),
+    )
+    await database.commit()
+    await database.refresh(exercise)
+    return AgentMemoryResponseExerciseResponse(
+        id=exercise.id,
+        agent_id=agent_id,
+        scenario=exercise.scenario,
+        status=exercise.status,
+        checks=exercise.checks,
+        requested_by_user_id=exercise.requested_by_user_id,
+        created_at=exercise.created_at,
     )
 
 
@@ -1179,6 +1472,8 @@ async def revoke_agent_task_memory_access_for_incident(
             or existing.incident_reference_fingerprint != reference_fingerprint
             or existing.reason_fingerprint != reason_fingerprint
             or existing.quarantine_minutes != payload.quarantine_minutes
+            or existing.severity != payload.severity
+            or existing.required_review_quorum != payload.required_review_quorum
         ):
             raise HTTPException(
                 status_code=409, detail="Chave idempotente usada por outro incidente."
@@ -1195,6 +1490,9 @@ async def revoke_agent_task_memory_access_for_incident(
         quarantine_minutes=payload.quarantine_minutes,
         quarantine_until=now + timedelta(minutes=payload.quarantine_minutes),
         review_status="pending",
+        severity=payload.severity,
+        required_review_quorum=payload.required_review_quorum,
+        review_count=0,
         triggered_by_user_id=context.user_id,
     )
     database.add(incident)

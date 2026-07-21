@@ -400,6 +400,71 @@ def test_approval_absence_delegation_is_tenant_scoped_and_revocable() -> None:
 
 
 @pytest.mark.integration
+def test_critical_memory_incident_requires_independent_quorum() -> None:
+    settings = Settings(app_env="testing")
+    identity = asyncio.run(_seed(settings))
+    try:
+        with TestClient(create_app(settings)) as client:
+            headers_a = _login(client, identity.emails[0], identity.password)
+            headers_b = _login(client, identity.emails[1], identity.password)
+            headers_reviewer = _login(client, identity.emails[2], identity.password)
+            agent = client.post(
+                "/agents",
+                headers=headers_b,
+                json={
+                    "name": "Agente de Quorum Crítico",
+                    "instructions": "Permaneça bloqueado até o quorum independente.",
+                },
+            )
+            assert agent.status_code == 201
+            agent_id = agent.json()["id"]
+            incident = client.post(
+                f"/agents/{agent_id}/memory-access-incidents/revoke",
+                headers=headers_b,
+                json={
+                    "incident_reference": "INC-CRIT-QUORUM-001",
+                    "reason": "Exercício de quorum para incidente crítico.",
+                    "quarantine_minutes": 5,
+                    "severity": "critical",
+                    "required_review_quorum": 2,
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert incident.status_code == 201
+            assert incident.json()["review_status"] == "pending"
+            review_path = (
+                f"/agents/{agent_id}/memory-access-incidents/{incident.json()['id']}/review"
+            )
+            first_vote = client.post(
+                review_path,
+                headers=headers_reviewer,
+                json={"decision": "confirmed"},
+            )
+            assert first_vote.status_code == 200
+            assert first_vote.json()["review_status"] == "pending"
+            assert first_vote.json()["review_count"] == 1
+            assert first_vote.json()["required_review_quorum"] == 2
+            assert (
+                client.post(
+                    review_path,
+                    headers=headers_reviewer,
+                    json={"decision": "confirmed"},
+                ).status_code
+                == 409
+            )
+            assert (
+                client.post(
+                    review_path,
+                    headers=headers_a,
+                    json={"decision": "confirmed"},
+                ).status_code
+                == 404
+            )
+    finally:
+        asyncio.run(_remove(settings, identity))
+
+
+@pytest.mark.integration
 def test_agent_versions_budgets_and_tenant_boundaries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1360,8 +1425,21 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 "incident_reference": "INC-MEM-2026-001",
                 "reason": "Possível exposição de credencial operacional.",
                 "quarantine_minutes": 5,
+                "severity": "high",
+                "required_review_quorum": 1,
                 "idempotency_key": str(uuid4()),
             }
+            invalid_critical_incident = client.post(
+                f"/agents/{agent_id}/memory-access-incidents/revoke",
+                headers=headers_b,
+                json={
+                    **incident_payload,
+                    "severity": "critical",
+                    "required_review_quorum": 1,
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert invalid_critical_incident.status_code == 422
             assert (
                 client.post(
                     f"/agents/{agent_id}/memory-access-incidents/revoke",
@@ -1462,7 +1540,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 json=quarantined_grant_payload,
             )
             assert released_grant.status_code == 201
-            risk_report = client.get(f"/agents/{agent_id}/memory-risk-report", headers=headers_b)
+            risk_report = client.post(f"/agents/{agent_id}/memory-risk-report", headers=headers_b)
             assert risk_report.status_code == 200
             assert risk_report.json()["signature_algorithm"] == "HMAC-SHA256"
             assert len(risk_report.json()["signature"]) == 64
@@ -1473,6 +1551,26 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert verified_report.status_code == 200
             assert verified_report.json()["valid"] is True
+            second_risk_report = client.post(
+                f"/agents/{agent_id}/memory-risk-report", headers=headers_b
+            )
+            assert second_risk_report.status_code == 200
+            assert (
+                second_risk_report.json()["payload"]["sequence"]
+                == risk_report.json()["payload"]["sequence"] + 1
+            )
+            assert (
+                second_risk_report.json()["payload"]["previous_signature"]
+                == risk_report.json()["signature"]
+            )
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-risk-report/verify",
+                    headers=headers_b,
+                    json=second_risk_report.json(),
+                ).json()["valid"]
+                is True
+            )
             tampered_report = risk_report.json()
             tampered_report["payload"]["risk_summary"]["active_grants"] += 1
             rejected_report = client.post(
@@ -1482,6 +1580,20 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert rejected_report.status_code == 200
             assert rejected_report.json()["valid"] is False
+            response_exercise = client.post(
+                f"/agents/{agent_id}/memory-response-exercises",
+                headers=headers_b,
+                json={"scenario": "full"},
+            )
+            assert response_exercise.status_code == 201
+            assert response_exercise.json()["status"] == "passed"
+            assert all(response_exercise.json()["checks"].values())
+            listed_exercises = client.get(
+                f"/agents/{agent_id}/memory-response-exercises",
+                headers=headers_b,
+            )
+            assert listed_exercises.status_code == 200
+            assert listed_exercises.json()[0]["id"] == response_exercise.json()["id"]
             for attempt in range(2):
                 blocked_delegation = client.post(
                     f"/agents/{agent_id}/delegations",

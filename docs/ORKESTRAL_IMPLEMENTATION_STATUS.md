@@ -600,3 +600,12 @@ Data: 21 de julho de 2026.
 - A interface exibe quarentena, revisões pendentes, fila de incidentes e download do relatório assinado.
 - Migração: `20260721_0054`.
 - Próximo passo: exigir quorum configurável para incidentes críticos, adicionar cadeia de custódia dos relatórios e criar exercícios automatizados de resposta.
+
+## Ciclo 34 - quorum, cadeia de custódia e exercícios de resposta
+
+- Revisões são votos únicos por pessoa; incidentes críticos exigem pelo menos duas pessoas e só mudam de estado quando uma decisão alcança o quorum configurado.
+- Cada relatório recebe sequência e assinatura anterior, e a API valida HMAC, registro persistido e continuidade da cadeia antes de aceitá-lo como íntegro.
+- Exercícios de resposta verificam quarentena, quorum crítico, isolamento multiempresa e cadeia de relatórios sem ler conteúdo protegido ou alterar dados operacionais.
+- A interface permite configurar severidade/quorum, acompanhar votos e executar exercícios com resultado objetivo.
+- Migração: `20260721_0055`.
+- Próximo passo: adicionar SLA e escalonamento da fila, rotação de chaves com verificação histórica e agendamento recorrente de exercícios.

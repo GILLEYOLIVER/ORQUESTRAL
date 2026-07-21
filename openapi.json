@@ -2743,6 +2743,75 @@
         "title": "AgentMemoryResponse",
         "type": "object"
       },
+      "AgentMemoryResponseExerciseCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "scenario": {
+            "const": "full",
+            "default": "full",
+            "title": "Scenario",
+            "type": "string"
+          }
+        },
+        "title": "AgentMemoryResponseExerciseCreate",
+        "type": "object"
+      },
+      "AgentMemoryResponseExerciseResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_by_user_id": {
+            "format": "uuid",
+            "title": "Requested By User Id",
+            "type": "string"
+          },
+          "scenario": {
+            "const": "full",
+            "title": "Scenario",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "scenario",
+          "status",
+          "checks",
+          "requested_by_user_id",
+          "created_at"
+        ],
+        "title": "AgentMemoryResponseExerciseResponse",
+        "type": "object"
+      },
       "AgentMemoryRiskReport": {
         "additionalProperties": false,
         "properties": {
@@ -2796,6 +2865,17 @@
             "title": "Pending Incident Ids",
             "type": "array"
           },
+          "previous_signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Signature"
+          },
           "report_id": {
             "format": "uuid",
             "title": "Report Id",
@@ -2803,12 +2883,18 @@
           },
           "risk_summary": {
             "$ref": "#/components/schemas/AgentMemoryRiskSummary"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
           }
         },
         "required": [
           "report_id",
           "agent_id",
           "generated_at",
+          "sequence",
+          "previous_signature",
           "risk_summary",
           "pending_incident_ids"
         ],
@@ -4229,6 +4315,14 @@
             "title": "Quarantined",
             "type": "boolean"
           },
+          "required_review_quorum": {
+            "title": "Required Review Quorum",
+            "type": "integer"
+          },
+          "review_count": {
+            "title": "Review Count",
+            "type": "integer"
+          },
           "review_status": {
             "enum": [
               "pending",
@@ -4266,6 +4360,16 @@
             "title": "Revoked Grants",
             "type": "integer"
           },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
           "triggered_by_user_id": {
             "format": "uuid",
             "title": "Triggered By User Id",
@@ -4280,6 +4384,9 @@
           "quarantine_until",
           "quarantined",
           "review_status",
+          "severity",
+          "required_review_quorum",
+          "review_count",
           "triggered_by_user_id",
           "reviewed_by_user_id",
           "reviewed_at",
@@ -4332,6 +4439,24 @@
             "maxLength": 160,
             "minLength": 3,
             "title": "Reason",
+            "type": "string"
+          },
+          "required_review_quorum": {
+            "default": 1,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Required Review Quorum",
+            "type": "integer"
+          },
+          "severity": {
+            "default": "high",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
             "type": "string"
           }
         },
@@ -21545,9 +21670,157 @@
         ]
       }
     },
-    "/agents/{agent_id}/memory-risk-report": {
+    "/agents/{agent_id}/memory-response-exercises": {
       "get": {
-        "operationId": "export_agent_memory_risk_report_agents__agent_id__memory_risk_report_get",
+        "operationId": "list_agent_memory_response_exercises_agents__agent_id__memory_response_exercises_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryResponseExerciseResponse"
+                  },
+                  "title": "Response List Agent Memory Response Exercises Agents  Agent Id  Memory Response Exercises Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Memory Response Exercises",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "operationId": "run_agent_memory_response_exercise_agents__agent_id__memory_response_exercises_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryResponseExerciseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryResponseExerciseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Agent Memory Response Exercise",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-risk-report": {
+      "post": {
+        "operationId": "export_agent_memory_risk_report_agents__agent_id__memory_risk_report_post",
         "parameters": [
           {
             "in": "path",

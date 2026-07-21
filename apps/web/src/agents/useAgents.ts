@@ -236,6 +236,9 @@ export interface AgentTaskMemoryIncidentResponse {
   quarantine_until: string;
   quarantined: boolean;
   review_status: "pending" | "confirmed" | "dismissed";
+  severity: "low" | "medium" | "high" | "critical";
+  required_review_quorum: number;
+  review_count: number;
   triggered_by_user_id: string;
   reviewed_by_user_id: string | null;
   reviewed_at: string | null;
@@ -248,12 +251,24 @@ export interface AgentMemoryRiskReport {
     report_id: string;
     agent_id: string;
     generated_at: string;
+    sequence: number;
+    previous_signature: string | null;
     risk_summary: AgentMemoryRiskSummary;
     pending_incident_ids: string[];
   };
   signature_algorithm: "HMAC-SHA256";
   signature_key_id: "orkestral-memory-risk-v1";
   signature: string;
+}
+
+export interface AgentMemoryResponseExercise {
+  id: string;
+  agent_id: string;
+  scenario: "full";
+  status: "passed" | "failed";
+  checks: Record<string, boolean>;
+  requested_by_user_id: string;
+  created_at: string;
 }
 
 export function useAgents(enabled = true) {

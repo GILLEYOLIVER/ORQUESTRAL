@@ -298,12 +298,20 @@ class AgentTaskMemoryIncidentRevoke(StrictSchema):
     incident_reference: str = Field(min_length=3, max_length=160)
     reason: str = Field(min_length=3, max_length=160)
     quarantine_minutes: int = Field(default=60, ge=5, le=1440)
+    severity: Literal["low", "medium", "high", "critical"] = "high"
+    required_review_quorum: int = Field(default=1, ge=1, le=5)
     idempotency_key: UUID
 
     @field_validator("incident_reference", "reason")
     @classmethod
     def trim_incident_value(cls, value: str) -> str:
         return value.strip()
+
+    @model_validator(mode="after")
+    def validate_incident_quorum(self) -> Self:
+        if self.severity == "critical" and self.required_review_quorum < 2:
+            raise ValueError("Incidentes críticos exigem quorum mínimo de duas pessoas.")
+        return self
 
 
 class AgentTaskMemoryIncidentResponse(StrictSchema):
@@ -314,6 +322,9 @@ class AgentTaskMemoryIncidentResponse(StrictSchema):
     quarantine_until: datetime
     quarantined: bool
     review_status: Literal["pending", "confirmed", "dismissed"]
+    severity: Literal["low", "medium", "high", "critical"]
+    required_review_quorum: int
+    review_count: int
     triggered_by_user_id: UUID
     reviewed_by_user_id: UUID | None
     reviewed_at: datetime | None
@@ -346,6 +357,8 @@ class AgentMemoryRiskReportPayload(StrictSchema):
     report_id: UUID
     agent_id: UUID
     generated_at: datetime
+    sequence: int
+    previous_signature: str | None
     risk_summary: AgentMemoryRiskSummary
     pending_incident_ids: list[UUID]
 
@@ -360,6 +373,20 @@ class AgentMemoryRiskReport(StrictSchema):
 class AgentMemoryRiskReportVerification(StrictSchema):
     valid: bool
     reason: str
+
+
+class AgentMemoryResponseExerciseCreate(StrictSchema):
+    scenario: Literal["full"] = "full"
+
+
+class AgentMemoryResponseExerciseResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    scenario: Literal["full"]
+    status: Literal["passed", "failed"]
+    checks: dict[str, bool]
+    requested_by_user_id: UUID
+    created_at: datetime
 
 
 class AgentTaskMemoryContextRequest(StrictSchema):

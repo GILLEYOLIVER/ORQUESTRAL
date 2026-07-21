@@ -306,6 +306,16 @@ class AgentTaskMemoryAccessIncident(Base):
             name="ck_agent_task_memory_incident_review_status",
         ),
         CheckConstraint(
+            "severity IN ('low', 'medium', 'high', 'critical')",
+            name="ck_agent_task_memory_incident_severity",
+        ),
+        CheckConstraint(
+            "required_review_quorum BETWEEN 1 AND 5 "
+            "AND (severity <> 'critical' OR required_review_quorum >= 2) "
+            "AND review_count >= 0",
+            name="ck_agent_task_memory_incident_quorum",
+        ),
+        CheckConstraint(
             "(review_status = 'pending' AND reviewed_by_user_id IS NULL "
             "AND reviewed_at IS NULL) OR "
             "(review_status IN ('confirmed', 'dismissed') AND reviewed_by_user_id IS NOT NULL "
@@ -332,6 +342,9 @@ class AgentTaskMemoryAccessIncident(Base):
     review_status: Mapped[str] = mapped_column(
         String(16), default="pending", server_default="pending", index=True
     )
+    severity: Mapped[str] = mapped_column(String(16), default="high", server_default="high")
+    required_review_quorum: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    review_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     triggered_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -342,6 +355,102 @@ class AgentTaskMemoryAccessIncident(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentTaskMemoryIncidentReviewRecord(Base):
+    __tablename__ = "agent_task_memory_incident_reviews"
+    __table_args__ = (
+        UniqueConstraint(
+            "incident_id",
+            "reviewer_user_id",
+            name="uq_agent_task_memory_incident_reviewer",
+        ),
+        CheckConstraint(
+            "decision IN ('confirmed', 'dismissed')",
+            name="ck_agent_task_memory_incident_review_decision",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    incident_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_task_memory_access_incidents.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    reviewer_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    decision: Mapped[str] = mapped_column(String(16), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+
+
+class AgentMemoryRiskReportRecord(Base):
+    __tablename__ = "agent_memory_risk_report_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "agent_id",
+            "sequence",
+            name="uq_agent_memory_risk_report_sequence",
+        ),
+        CheckConstraint("sequence >= 1", name="ck_agent_memory_risk_report_sequence"),
+        CheckConstraint(
+            "char_length(signature) = 64 AND "
+            "(previous_signature IS NULL OR char_length(previous_signature) = 64)",
+            name="ck_agent_memory_risk_report_signatures",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    sequence: Mapped[int] = mapped_column(Integer)
+    signature: Mapped[str] = mapped_column(String(64), index=True)
+    previous_signature: Mapped[str | None] = mapped_column(String(64))
+    generated_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+
+
+class AgentMemoryResponseExercise(Base):
+    __tablename__ = "agent_memory_response_exercises"
+    __table_args__ = (
+        CheckConstraint("scenario = 'full'", name="ck_agent_memory_exercise_scenario"),
+        CheckConstraint(
+            "status IN ('passed', 'failed')",
+            name="ck_agent_memory_exercise_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    scenario: Mapped[str] = mapped_column(String(16), default="full", server_default="full")
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    checks: Mapped[dict[str, bool]] = mapped_column(JSONB)
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
 
 
 class AgentTaskMemoryAccessGrant(Base):

@@ -28,6 +28,7 @@ import {
   type AgentMemoryMetadataExport,
   type AgentMemoryRiskSummary,
   type AgentMemoryRiskReport,
+  type AgentMemoryResponseExercise,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -173,6 +174,8 @@ export function AgentsPage() {
   const [memoryIncidentReason, setMemoryIncidentReason] = useState("");
   const [memoryIncidentQuarantineMinutes, setMemoryIncidentQuarantineMinutes] =
     useState("60");
+  const [memoryIncidentSeverity, setMemoryIncidentSeverity] = useState("high");
+  const [memoryIncidentQuorum, setMemoryIncidentQuorum] = useState("1");
   const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
     useState(() => crypto.randomUUID());
   const [memoryIncidentFeedback, setMemoryIncidentFeedback] = useState<
@@ -239,6 +242,14 @@ export function AgentsPage() {
     queryFn: () =>
       request<AgentTaskMemoryIncidentResponse[]>(
         `/agents/${selectedId}/memory-access-incidents`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryExercises = useQuery({
+    queryKey: ["agent-memory-exercises", selectedId],
+    queryFn: () =>
+      request<AgentMemoryResponseExercise[]>(
+        `/agents/${selectedId}/memory-response-exercises`,
       ),
     enabled: canConfigure && Boolean(selectedId),
   });
@@ -358,6 +369,9 @@ export function AgentsPage() {
     });
     void queryClient.invalidateQueries({
       queryKey: ["agent-memory-incidents", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memory-exercises", selectedId],
     });
   };
   const create = useMutation({
@@ -555,6 +569,8 @@ export function AgentsPage() {
             incident_reference: memoryIncidentReference,
             reason: memoryIncidentReason,
             quarantine_minutes: Number(memoryIncidentQuarantineMinutes),
+            severity: memoryIncidentSeverity,
+            required_review_quorum: Number(memoryIncidentQuorum),
             idempotency_key: memoryIncidentIdempotencyKey,
           },
         },
@@ -598,6 +614,7 @@ export function AgentsPage() {
     mutationFn: () =>
       request<AgentMemoryRiskReport>(
         `/agents/${selectedId}/memory-risk-report`,
+        { method: "POST" },
       ),
     onSuccess: (result) => {
       const url = URL.createObjectURL(
@@ -611,6 +628,22 @@ export function AgentsPage() {
       link.click();
       URL.revokeObjectURL(url);
       setMemoryIncidentFeedback("Relatório assinado exportado com sucesso.");
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const runMemoryResponseExercise = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryResponseExercise>(
+        `/agents/${selectedId}/memory-response-exercises`,
+        { method: "POST", body: { scenario: "full" } },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.status === "passed"
+          ? "Exercício concluído: todos os controles responderam corretamente."
+          : "Exercício encontrou um controle que exige revisão.",
+      );
+      refresh();
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
   });
@@ -1424,6 +1457,14 @@ export function AgentsPage() {
                   >
                     <Download size={16} /> Exportar relatório assinado
                   </Button>
+                  <Button
+                    loading={runMemoryResponseExercise.isPending}
+                    onClick={() => runMemoryResponseExercise.mutate()}
+                    type="button"
+                    variant="secondary"
+                  >
+                    <ShieldAlert size={16} /> Executar exercício de resposta
+                  </Button>
                 </div>
                 <form
                   className="agent-policy-form"
@@ -1461,6 +1502,36 @@ export function AgentsPage() {
                     type="number"
                     value={memoryIncidentQuarantineMinutes}
                   />
+                  <label className="native-field">
+                    <span>Severidade</span>
+                    <select
+                      onChange={(event) => {
+                        setMemoryIncidentSeverity(event.target.value);
+                        if (event.target.value === "critical") {
+                          setMemoryIncidentQuorum((current) =>
+                            Number(current) < 2 ? "2" : current,
+                          );
+                        }
+                      }}
+                      value={memoryIncidentSeverity}
+                    >
+                      <option value="low">Baixa</option>
+                      <option value="medium">Média</option>
+                      <option value="high">Alta</option>
+                      <option value="critical">Crítica</option>
+                    </select>
+                  </label>
+                  <TextField
+                    label="Quorum de revisão"
+                    max={5}
+                    min={memoryIncidentSeverity === "critical" ? 2 : 1}
+                    onChange={(event) =>
+                      setMemoryIncidentQuorum(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryIncidentQuorum}
+                  />
                   <Button
                     loading={revokeMemoryAccessForIncident.isPending}
                     type="submit"
@@ -1486,6 +1557,7 @@ export function AgentsPage() {
                             {incident.revoked_grants} acesso(s) revogado(s) ·
                             quarentena{" "}
                             {incident.quarantined ? "ativa" : "encerrada"}
+                            {` · severidade ${incident.severity} · votos ${incident.review_count}/${incident.required_review_quorum}`}
                           </small>
                         </div>
                         {incident.review_status === "pending" ? (
@@ -1520,6 +1592,35 @@ export function AgentsPage() {
                     ))
                   ) : (
                     <p>Nenhum incidente de memória registrado.</p>
+                  )}
+                </div>
+                <div className="agent-policy-list">
+                  <strong>Exercícios recentes</strong>
+                  {memoryExercises.data?.length ? (
+                    memoryExercises.data.slice(0, 3).map((exercise) => (
+                      <article className="agent-policy-row" key={exercise.id}>
+                        <div>
+                          <strong>
+                            {exercise.status === "passed"
+                              ? "Controles aprovados"
+                              : "Revisão necessária"}
+                          </strong>
+                          <small>
+                            {
+                              Object.values(exercise.checks).filter(Boolean)
+                                .length
+                            }
+                            /{Object.keys(exercise.checks).length} verificações
+                            ·{" "}
+                            {new Date(exercise.created_at).toLocaleString(
+                              "pt-BR",
+                            )}
+                          </small>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p>Nenhum exercício executado.</p>
                   )}
                 </div>
               </Card>
