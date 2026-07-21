@@ -36,6 +36,18 @@ async def get_entity_definition(
     return entity
 
 
+async def get_entity_definition_by_key(
+    database: AsyncSession, company_id: UUID, key: str
+) -> MetadataEntityDefinition | None:
+    entity: MetadataEntityDefinition | None = await database.scalar(
+        select(MetadataEntityDefinition).where(
+            MetadataEntityDefinition.company_id == company_id,
+            MetadataEntityDefinition.key == key,
+        )
+    )
+    return entity
+
+
 async def entity_key_exists(database: AsyncSession, company_id: UUID, key: str) -> bool:
     return (
         await database.scalar(

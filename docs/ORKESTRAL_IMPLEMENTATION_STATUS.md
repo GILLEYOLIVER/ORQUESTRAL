@@ -865,3 +865,15 @@ Data: 21 de julho de 2026.
 - Tipos de registro versionados selecionam layouts condicionais e acompanham o registro e seu historico de revisoes.
 - O Orkestral Studio configura e opera os tres recursos sem expor JSON ou codigo executavel ao usuario.
 - Migracao `20260721_0075`, contratos OpenAPI, testes multiempresa e documentacao correspondentes.
+
+## Ciclo 55 - visualizacoes, filtros, paginacao e pacotes portateis
+
+- multiplas visualizacoes configuraveis e selecionaveis no Studio;
+- filtros e ordenacao persistidos, validados por tipo e executados no backend;
+- paginacao real dos registros personalizados;
+- exportacao e importacao de schema sem dados de clientes ou identificadores de tenant;
+- checksum de integridade, auditoria e eventos de importacao/exportacao;
+- testes unitarios e integrados entre duas empresas.
+
+Proximo recorte: versionamento formal de pacotes, dependencias, dry-run de instalacao e promocao
+controlada de metadados entre ambientes.

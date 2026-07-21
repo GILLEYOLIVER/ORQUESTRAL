@@ -10,6 +10,10 @@ import {
   Layers3,
   ListChecks,
   Calculator,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Filter,
   Network,
   Tags,
   Pencil,
@@ -17,6 +21,7 @@ import {
   Rocket,
   ShieldCheck,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import { Alert, Button, Card } from "@orkestral/ui-components";
@@ -27,6 +32,7 @@ import {
   type MetadataComparisonOperator,
   type MetadataDesignResponse,
   type MetadataEntityDetail,
+  type MetadataEntityPackage,
   type MetadataEntitySummary,
   type MetadataFieldInput,
   type MetadataRecordResponse,
@@ -36,6 +42,7 @@ import {
   type MetadataValidationResponse,
   type MetadataValidationRuleInput,
   type MetadataValue,
+  type MetadataViewInput,
   useMetadataEntities,
   useMetadataEntity,
   useMetadataDesign,
@@ -76,6 +83,8 @@ const RULE_OPERATORS: Array<{
   { value: "is_empty", label: "Está vazio" },
   { value: "is_not_empty", label: "Não está vazio" },
 ];
+
+const RECORD_PAGE_SIZE = 20;
 
 function blankField(position: number): MetadataFieldInput {
   return {
@@ -149,6 +158,17 @@ function blankRecordType(index: number): MetadataRecordTypeInput {
   };
 }
 
+function blankView(index: number, fieldKey: string): MetadataViewInput {
+  return {
+    key: `view_${Date.now()}_${index}`,
+    label: "Nova visualização",
+    columns: fieldKey ? [fieldKey] : [],
+    filters: [],
+    sorting: [],
+    is_default: false,
+  };
+}
+
 function errorMessage(error: unknown) {
   return error instanceof ApiClientError
     ? error.message
@@ -173,9 +193,14 @@ export function MetadataStudioPage() {
   const selectedQuery = useMetadataEntity(selectedId);
   const selected = selectedQuery.data;
   const design = useMetadataDesign(selectedId);
+  const [activeViewKey, setActiveViewKey] = useState<string | null>(null);
+  const [recordPage, setRecordPage] = useState(1);
   const records = useMetadataRecords(
     selectedId,
     Boolean(selected?.published_version),
+    selected?.version.status === "published" ? activeViewKey : null,
+    recordPage,
+    RECORD_PAGE_SIZE,
   );
   const canConfigure = me?.permissions.includes("metadata.configure") ?? false;
   const canPublish = me?.permissions.includes("metadata.publish") ?? false;
@@ -203,8 +228,8 @@ export function MetadataStudioPage() {
   const [layoutLabel, setLayoutLabel] = useState("Formulário principal");
   const [sectionLabel, setSectionLabel] = useState("Informações principais");
   const [layoutFieldKeys, setLayoutFieldKeys] = useState<string[]>([]);
-  const [viewLabel, setViewLabel] = useState("Lista principal");
-  const [viewFieldKeys, setViewFieldKeys] = useState<string[]>([]);
+  const [views, setViews] = useState<MetadataViewInput[]>([]);
+  const [editingViewKey, setEditingViewKey] = useState<string | null>(null);
   const [validationRules, setValidationRules] = useState<
     MetadataValidationRuleInput[]
   >([]);
@@ -238,8 +263,14 @@ export function MetadataStudioPage() {
     setLayoutFieldKeys(
       defaultLayout?.sections.flatMap((section) => section.fields) ?? [],
     );
-    setViewLabel(defaultView?.label ?? "Lista principal");
-    setViewFieldKeys(defaultView?.columns ?? []);
+    setViews(design.data.views);
+    setEditingViewKey(defaultView?.key ?? null);
+    setActiveViewKey((current) =>
+      design.data?.views.some((item) => item.key === current)
+        ? current
+        : (defaultView?.key ?? null),
+    );
+    setRecordPage(1);
     setValidationRules(design.data.validation_rules);
     setRelationships(design.data.relationships);
     setFormulas(design.data.formulas);
@@ -390,22 +421,33 @@ export function MetadataStudioPage() {
           },
         ],
       }));
+      const normalizedViews = views.map((view) => ({
+        ...view,
+        filters: view.filters.map((filter) => {
+          if (filter.operator.startsWith("is_")) {
+            return { ...filter, value: null };
+          }
+          const field = (selected?.version.fields ?? []).find(
+            (candidate) => candidate.key === filter.field_key,
+          );
+          if (!field) return filter;
+          const raw =
+            typeof filter.value === "boolean"
+              ? filter.value
+              : String(filter.value ?? "");
+          return {
+            ...filter,
+            value: coerceMetadataInput(field.data_type, raw) ?? null,
+          };
+        }),
+      }));
       return request<MetadataDesignResponse>(
         `/metadata/entities/${selectedId}/design`,
         {
           method: "PUT",
           body: {
             layouts,
-            views: [
-              {
-                key: "default_view",
-                label: viewLabel,
-                columns: viewFieldKeys,
-                filters: [],
-                sorting: [],
-                is_default: true,
-              },
-            ],
+            views: normalizedViews,
             validation_rules: validationRules,
             relationships,
             formulas,
@@ -417,6 +459,36 @@ export function MetadataStudioPage() {
     onSuccess: () => {
       setDesignOpen(false);
       refresh();
+    },
+  });
+
+  const exportPackage = useMutation({
+    mutationFn: () =>
+      request<MetadataEntityPackage>(
+        `/metadata/entities/${selectedId}/package`,
+      ),
+    onSuccess: (data) => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${data.definition.key}.orkestral.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    },
+  });
+
+  const importPackage = useMutation({
+    mutationFn: (packageData: MetadataEntityPackage) =>
+      request<MetadataEntityDetail>("/metadata/packages/import", {
+        method: "POST",
+        body: { package: packageData },
+      }),
+    onSuccess: (entity) => {
+      setSelectedId(entity.id);
+      refresh(entity.id);
     },
   });
 
@@ -483,6 +555,8 @@ export function MetadataStudioPage() {
     createRecord.error ??
     updateRecord.error ??
     deleteRecord.error;
+  const operationError =
+    mutationError ?? exportPackage.error ?? importPackage.error;
 
   const selectedFields = useMemo(
     () => selected?.version.fields ?? [],
@@ -522,13 +596,20 @@ export function MetadataStudioPage() {
     );
   }, [activeLayoutFieldKeys, selectedFields]);
   const visibleFields = useMemo(() => {
-    const allowed = new Set(viewFieldKeys);
+    const activeView =
+      design.data?.views.find((item) => item.key === activeViewKey) ??
+      design.data?.views.find((item) => item.is_default);
+    const allowed = new Set(activeView?.columns ?? []);
     const configured = runtimeFields.filter((field) => allowed.has(field.key));
     return configured.length ? configured : runtimeFields;
-  }, [runtimeFields, viewFieldKeys]);
+  }, [activeViewKey, design.data, runtimeFields]);
   const primaryField = useMemo(
-    () => runtimeFields.find((field) => field.required) ?? runtimeFields[0],
-    [runtimeFields],
+    () => visibleFields.find((field) => field.required) ?? visibleFields[0],
+    [visibleFields],
+  );
+  const editingView = useMemo(
+    () => views.find((item) => item.key === editingViewKey) ?? views[0],
+    [editingViewKey, views],
   );
 
   const submitSchema = (event: FormEvent) => {
@@ -569,7 +650,11 @@ export function MetadataStudioPage() {
   const submitDesign = (event: FormEvent) => {
     event.preventDefault();
     setLocalError(null);
-    if (!layoutFieldKeys.length || !viewFieldKeys.length) {
+    if (
+      !layoutFieldKeys.length ||
+      !views.length ||
+      views.some((view) => !view.label.trim() || !view.columns.length)
+    ) {
       setLocalError(
         "Escolha pelo menos um campo para o formulário e para a lista.",
       );
@@ -590,6 +675,30 @@ export function MetadataStudioPage() {
       return;
     }
     saveDesign.mutate();
+  };
+
+  const updateEditingView = (
+    updater: (view: MetadataViewInput) => MetadataViewInput,
+  ) => {
+    if (!editingView) return;
+    setViews((current) =>
+      current.map((item) =>
+        item.key === editingView.key ? updater(item) : item,
+      ),
+    );
+  };
+
+  const handlePackageFile = async (file: File | undefined) => {
+    if (!file) return;
+    setLocalError(null);
+    try {
+      const packageData = JSON.parse(
+        await file.text(),
+      ) as MetadataEntityPackage;
+      importPackage.mutate(packageData);
+    } catch {
+      setLocalError("O arquivo selecionado não contém um pacote válido.");
+    }
   };
 
   const editRecord = (record: MetadataRecordResponse) => {
@@ -621,14 +730,36 @@ export function MetadataStudioPage() {
           </p>
         </div>
         <PermissionGuard all={["metadata.configure"]}>
-          <Button
-            onClick={() => {
-              resetSchema();
-              setSchemaOpen(true);
-            }}
-          >
-            <CirclePlus size={18} /> Nova entidade
-          </Button>
+          <div className="metadata-hero-actions">
+            {selectedId ? (
+              <Button
+                loading={exportPackage.isPending}
+                onClick={() => exportPackage.mutate()}
+                variant="ghost"
+              >
+                <Download size={17} /> Exportar pacote
+              </Button>
+            ) : null}
+            <label className="metadata-import-button">
+              <Upload size={17} /> Importar pacote
+              <input
+                accept="application/json,.json"
+                onChange={(event) => {
+                  void handlePackageFile(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+                type="file"
+              />
+            </label>
+            <Button
+              onClick={() => {
+                resetSchema();
+                setSchemaOpen(true);
+              }}
+            >
+              <CirclePlus size={18} /> Nova entidade
+            </Button>
+          </div>
         </PermissionGuard>
       </header>
 
@@ -637,9 +768,9 @@ export function MetadataStudioPage() {
           Não foi possível carregar todas as informações do Studio.
         </Alert>
       ) : null}
-      {mutationError || localError ? (
+      {operationError || localError ? (
         <Alert variant="error">
-          {localError || errorMessage(mutationError)}
+          {localError || errorMessage(operationError)}
         </Alert>
       ) : null}
 
@@ -950,6 +1081,7 @@ export function MetadataStudioPage() {
                         <Pencil size={16} /> Editar schema
                       </Button>
                       <Button
+                        disabled={designOpen || saveDesign.isPending}
                         loading={validateSchema.isPending}
                         onClick={() => validateSchema.mutate()}
                       >
@@ -1049,15 +1181,338 @@ export function MetadataStudioPage() {
                           value={sectionLabel}
                         />
                       </label>
-                      <label>
-                        <span>Nome da lista</span>
-                        <input
-                          onChange={(event) => setViewLabel(event.target.value)}
-                          required
-                          value={viewLabel}
-                        />
-                      </label>
                     </div>
+                    <section className="metadata-view-builder">
+                      <div className="metadata-rule-heading">
+                        <div>
+                          <strong>Visualizações da lista</strong>
+                          <small>
+                            Colunas, filtros e ordenação são persistidos na
+                            versão.
+                          </small>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            const next = blankView(
+                              views.length,
+                              selectedFields[0]?.key ?? "",
+                            );
+                            setViews((current) => [...current, next]);
+                            setEditingViewKey(next.key);
+                          }}
+                          type="button"
+                          variant="ghost"
+                        >
+                          <Plus size={16} /> Nova visualização
+                        </Button>
+                      </div>
+                      {editingView ? (
+                        <>
+                          <div className="metadata-view-toolbar">
+                            <label>
+                              <span>Editar visualização</span>
+                              <select
+                                onChange={(event) =>
+                                  setEditingViewKey(event.target.value)
+                                }
+                                value={editingView.key}
+                              >
+                                {views.map((view) => (
+                                  <option key={view.key} value={view.key}>
+                                    {view.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              <span>Nome da visualização</span>
+                              <input
+                                onChange={(event) =>
+                                  updateEditingView((view) => ({
+                                    ...view,
+                                    label: event.target.value,
+                                  }))
+                                }
+                                required
+                                value={editingView.label}
+                              />
+                            </label>
+                            <label className="metadata-inline-check">
+                              <input
+                                checked={editingView.is_default}
+                                onChange={() =>
+                                  setViews((current) =>
+                                    current.map((view) => ({
+                                      ...view,
+                                      is_default: view.key === editingView.key,
+                                    })),
+                                  )
+                                }
+                                type="checkbox"
+                              />
+                              Visualização padrão
+                            </label>
+                            <button
+                              aria-label="Excluir visualização"
+                              className="metadata-icon-button"
+                              disabled={
+                                editingView.is_default || views.length === 1
+                              }
+                              onClick={() => {
+                                const remaining = views.filter(
+                                  (view) => view.key !== editingView.key,
+                                );
+                                setViews(remaining);
+                                setEditingViewKey(remaining[0]?.key ?? null);
+                              }}
+                              type="button"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                          <fieldset className="metadata-view-columns">
+                            <legend>Colunas visíveis</legend>
+                            {selectedFields.map((field) => (
+                              <label
+                                key={`view-${editingView.key}-${field.id}`}
+                              >
+                                <input
+                                  checked={editingView.columns.includes(
+                                    field.key,
+                                  )}
+                                  onChange={(event) =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      columns: event.target.checked
+                                        ? [...view.columns, field.key]
+                                        : view.columns.filter(
+                                            (key) => key !== field.key,
+                                          ),
+                                    }))
+                                  }
+                                  type="checkbox"
+                                />
+                                {field.label}
+                              </label>
+                            ))}
+                          </fieldset>
+                          <div className="metadata-view-section-heading">
+                            <strong>
+                              <Filter size={15} /> Filtros persistentes
+                            </strong>
+                            <button
+                              onClick={() =>
+                                updateEditingView((view) => ({
+                                  ...view,
+                                  filters: [
+                                    ...view.filters,
+                                    {
+                                      field_key: selectedFields[0]?.key ?? "",
+                                      operator: "is_not_empty",
+                                      value: null,
+                                    },
+                                  ],
+                                }))
+                              }
+                              type="button"
+                            >
+                              <Plus size={14} /> Adicionar filtro
+                            </button>
+                          </div>
+                          <div className="metadata-view-rules">
+                            {editingView.filters.map((filter, index) => (
+                              <div
+                                className="metadata-view-rule"
+                                key={`${filter.field_key}-${index}`}
+                              >
+                                <select
+                                  aria-label={`Campo do filtro ${index + 1}`}
+                                  onChange={(event) =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      filters: view.filters.map(
+                                        (item, itemIndex) =>
+                                          itemIndex === index
+                                            ? {
+                                                ...item,
+                                                field_key: event.target.value,
+                                              }
+                                            : item,
+                                      ),
+                                    }))
+                                  }
+                                  value={filter.field_key}
+                                >
+                                  {selectedFields.map((field) => (
+                                    <option key={field.id} value={field.key}>
+                                      {field.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <select
+                                  aria-label={`Operador do filtro ${index + 1}`}
+                                  onChange={(event) =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      filters: view.filters.map(
+                                        (item, itemIndex) =>
+                                          itemIndex === index
+                                            ? {
+                                                ...item,
+                                                operator: event.target
+                                                  .value as MetadataComparisonOperator,
+                                                value:
+                                                  event.target.value.startsWith(
+                                                    "is_",
+                                                  )
+                                                    ? null
+                                                    : item.value,
+                                              }
+                                            : item,
+                                      ),
+                                    }))
+                                  }
+                                  value={filter.operator}
+                                >
+                                  {RULE_OPERATORS.map((operator) => (
+                                    <option
+                                      key={operator.value}
+                                      value={operator.value}
+                                    >
+                                      {operator.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  aria-label={`Valor do filtro ${index + 1}`}
+                                  disabled={filter.operator.startsWith("is_")}
+                                  onChange={(event) =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      filters: view.filters.map(
+                                        (item, itemIndex) =>
+                                          itemIndex === index
+                                            ? {
+                                                ...item,
+                                                value: event.target.value,
+                                              }
+                                            : item,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder="Valor"
+                                  value={String(filter.value ?? "")}
+                                />
+                                <button
+                                  aria-label={`Excluir filtro ${index + 1}`}
+                                  onClick={() =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      filters: view.filters.filter(
+                                        (_, itemIndex) => itemIndex !== index,
+                                      ),
+                                    }))
+                                  }
+                                  type="button"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="metadata-view-section-heading">
+                            <strong>Ordenação</strong>
+                            <button
+                              disabled={editingView.sorting.length >= 5}
+                              onClick={() =>
+                                updateEditingView((view) => ({
+                                  ...view,
+                                  sorting: [
+                                    ...view.sorting,
+                                    {
+                                      field_key: selectedFields[0]?.key ?? "",
+                                      direction: "asc",
+                                    },
+                                  ],
+                                }))
+                              }
+                              type="button"
+                            >
+                              <Plus size={14} /> Adicionar ordem
+                            </button>
+                          </div>
+                          <div className="metadata-view-rules">
+                            {editingView.sorting.map((sorting, index) => (
+                              <div
+                                className="metadata-view-rule metadata-view-rule--sort"
+                                key={`${sorting.field_key}-${index}`}
+                              >
+                                <select
+                                  aria-label={`Campo da ordenação ${index + 1}`}
+                                  onChange={(event) =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      sorting: view.sorting.map(
+                                        (item, itemIndex) =>
+                                          itemIndex === index
+                                            ? {
+                                                ...item,
+                                                field_key: event.target.value,
+                                              }
+                                            : item,
+                                      ),
+                                    }))
+                                  }
+                                  value={sorting.field_key}
+                                >
+                                  {selectedFields.map((field) => (
+                                    <option key={field.id} value={field.key}>
+                                      {field.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <select
+                                  aria-label={`Direção da ordenação ${index + 1}`}
+                                  onChange={(event) =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      sorting: view.sorting.map(
+                                        (item, itemIndex) =>
+                                          itemIndex === index
+                                            ? {
+                                                ...item,
+                                                direction: event.target
+                                                  .value as "asc" | "desc",
+                                              }
+                                            : item,
+                                      ),
+                                    }))
+                                  }
+                                  value={sorting.direction}
+                                >
+                                  <option value="asc">Crescente</option>
+                                  <option value="desc">Decrescente</option>
+                                </select>
+                                <button
+                                  aria-label={`Excluir ordenação ${index + 1}`}
+                                  onClick={() =>
+                                    updateEditingView((view) => ({
+                                      ...view,
+                                      sorting: view.sorting.filter(
+                                        (_, itemIndex) => itemIndex !== index,
+                                      ),
+                                    }))
+                                  }
+                                  type="button"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : null}
+                    </section>
                     <div className="metadata-field-selection">
                       <fieldset>
                         <legend>Campos e ordem do formulário</legend>
@@ -1067,27 +1522,6 @@ export function MetadataStudioPage() {
                               checked={layoutFieldKeys.includes(field.key)}
                               onChange={(event) =>
                                 setLayoutFieldKeys((current) =>
-                                  event.target.checked
-                                    ? [...current, field.key]
-                                    : current.filter(
-                                        (key) => key !== field.key,
-                                      ),
-                                )
-                              }
-                              type="checkbox"
-                            />
-                            {field.label}
-                          </label>
-                        ))}
-                      </fieldset>
-                      <fieldset>
-                        <legend>Colunas visíveis na lista</legend>
-                        {selectedFields.map((field) => (
-                          <label key={`view-${field.id}`}>
-                            <input
-                              checked={viewFieldKeys.includes(field.key)}
-                              onChange={(event) =>
-                                setViewFieldKeys((current) =>
                                   event.target.checked
                                     ? [...current, field.key]
                                     : current.filter(
@@ -1821,9 +2255,31 @@ export function MetadataStudioPage() {
                         <span className="eyebrow">Dados publicados</span>
                         <h2>{selected.plural_label}</h2>
                       </div>
-                      <span className="metadata-record-count">
-                        {records.data?.total ?? 0} registros
-                      </span>
+                      <div className="metadata-record-list-tools">
+                        {(design.data?.views.length ?? 0) > 0 &&
+                        selected.version.status === "published" ? (
+                          <label>
+                            <span>Visualização</span>
+                            <select
+                              aria-label="Visualização de registros"
+                              onChange={(event) => {
+                                setActiveViewKey(event.target.value);
+                                setRecordPage(1);
+                              }}
+                              value={activeViewKey ?? ""}
+                            >
+                              {design.data?.views.map((view) => (
+                                <option key={view.key} value={view.key}>
+                                  {view.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
+                        <span className="metadata-record-count">
+                          {records.data?.total ?? 0} registros
+                        </span>
+                      </div>
                     </div>
                     {records.isLoading ? <p>Carregando registros…</p> : null}
                     {records.data?.items.length === 0 ? (
@@ -1893,6 +2349,35 @@ export function MetadataStudioPage() {
                         </article>
                       ))}
                     </div>
+                    {(records.data?.pages ?? 0) > 1 ? (
+                      <div className="metadata-pagination">
+                        <button
+                          disabled={recordPage <= 1 || records.isFetching}
+                          onClick={() =>
+                            setRecordPage((current) => current - 1)
+                          }
+                          type="button"
+                        >
+                          <ChevronLeft size={16} /> Anterior
+                        </button>
+                        <span>
+                          Página {records.data?.page ?? recordPage} de{" "}
+                          {records.data?.pages}
+                        </span>
+                        <button
+                          disabled={
+                            recordPage >= (records.data?.pages ?? 1) ||
+                            records.isFetching
+                          }
+                          onClick={() =>
+                            setRecordPage((current) => current + 1)
+                          }
+                          type="button"
+                        >
+                          Próxima <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    ) : null}
                   </Card>
                 </div>
               ) : (

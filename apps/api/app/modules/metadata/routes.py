@@ -8,6 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 
 from app.core.dependencies import DatabaseSession
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.metadata.package_schemas import (
+    MetadataEntityPackage,
+    MetadataPackageImportRequest,
+)
+from app.modules.metadata.package_service import (
+    export_entity_package,
+    import_entity_package,
+)
 from app.modules.metadata.record_schemas import (
     MetadataRecordCreate,
     MetadataRecordPage,
@@ -245,6 +253,10 @@ async def list_metadata_records(
     database: DatabaseSession,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    view_key: Annotated[
+        str | None,
+        Query(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_]*$"),
+    ] = None,
 ) -> MetadataRecordPage:
     return await _run(
         list_custom_records(
@@ -254,6 +266,48 @@ async def list_metadata_records(
             _correlation_id(request),
             page=page,
             page_size=page_size,
+            view_key=view_key,
+        )
+    )
+
+
+@router.get(
+    "/entities/{definition_id}/package",
+    response_model=MetadataEntityPackage,
+)
+async def export_metadata_package(
+    definition_id: UUID,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataEntityPackage:
+    return await _run(
+        export_entity_package(
+            database,
+            get_request_context(principal),
+            definition_id,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.post(
+    "/packages/import",
+    response_model=MetadataEntityDetail,
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_metadata_package(
+    payload: MetadataPackageImportRequest,
+    request: Request,
+    principal: CanConfigureMetadata,
+    database: DatabaseSession,
+) -> MetadataEntityDetail:
+    return await _run(
+        import_entity_package(
+            database,
+            get_request_context(principal),
+            payload,
+            _correlation_id(request),
         )
     )
 

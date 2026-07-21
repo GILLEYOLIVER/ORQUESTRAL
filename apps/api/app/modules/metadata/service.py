@@ -60,6 +60,7 @@ from app.modules.metadata.schemas import (
     MetadataValidationRuleInput,
     MetadataViewInput,
 )
+from app.modules.metadata.view_engine import validate_view_contract
 
 RESERVED_FIELD_KEYS = frozenset({"id", "company_id", "created_at", "updated_at", "deleted_at"})
 
@@ -168,6 +169,7 @@ def validate_design_contracts(
 ) -> list[str]:
     errors: list[str] = []
     field_keys = {field.key for field in fields}
+    field_types = {field.key: field.data_type for field in fields}
     for layout in payload.layouts:
         referenced = {field_key for section in layout.sections for field_key in section.fields}
         unknown = sorted(referenced - field_keys)
@@ -184,6 +186,7 @@ def validate_design_contracts(
             errors.append(
                 f"A visualizacao '{view.key}' usa campos desconhecidos: {', '.join(unknown)}."
             )
+        errors.extend(validate_view_contract(view, field_types))
     for rule in payload.validation_rules:
         if rule.field_key not in field_keys:
             errors.append(f"A regra '{rule.key}' usa o campo desconhecido '{rule.field_key}'.")
@@ -1265,3 +1268,18 @@ async def published_version(
         )
     )
     return entity_version
+
+
+async def views_for_version(
+    database: AsyncSession, company_id: UUID, version_id: UUID
+) -> list[MetadataViewDefinition]:
+    return list(
+        await database.scalars(
+            select(MetadataViewDefinition)
+            .where(
+                MetadataViewDefinition.company_id == company_id,
+                MetadataViewDefinition.version_id == version_id,
+            )
+            .order_by(MetadataViewDefinition.is_default.desc(), MetadataViewDefinition.key)
+        )
+    )
