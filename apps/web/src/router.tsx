@@ -22,6 +22,7 @@ import { InventoryPage } from "./pages/InventoryPage";
 import { HRPage } from "./pages/HRPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MarketingPage } from "./pages/MarketingPage";
+import { MetadataStudioPage } from "./pages/MetadataStudioPage";
 import { ModulesPage } from "./pages/ModulesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { PluginsPage } from "./pages/PluginsPage";
@@ -177,6 +178,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute permission="modules.view">
             <ModulesPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "studio",
+        element: (
+          <PermissionRoute permission="metadata.view">
+            <MetadataStudioPage />
           </PermissionRoute>
         ),
       },

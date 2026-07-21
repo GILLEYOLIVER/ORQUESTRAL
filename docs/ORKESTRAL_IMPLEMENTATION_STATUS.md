@@ -276,3 +276,26 @@ Data: 21 de julho de 2026.
 - Migracao: `0031 -> 0030 -> 0031` aprovada; banco em `20260721_0031 (head)`.
 - Privacidade: exclusao remove registro e revisoes; eventos nao contem valores empresariais.
 - Confiabilidade: repeticao idempotente e atualizacao com versao obsoleta validadas.
+
+## Ciclo empresarial 9 - Orkestral Metadata Studio
+
+Data: 21 de julho de 2026.
+
+- Navegacao: Studio permissionado e acessivel pelo menu lateral.
+- Construtor: entidades e campos configuraveis sem editar codigo.
+- Publicacao: validacao, publicacao e criacao de nova versao na interface.
+- Runtime visual: formulario e lista gerados pelos tipos do schema publicado.
+- Operacao: criacao, edicao e exclusao de registros com versao otimista.
+- Experiencia: interface responsiva, em portugues e sem exposicao de JSON interno.
+- Proximo passo exato: validar frontend e integrar layouts e visualizacoes salvas ao backend.
+
+### Evidencia de validacao do ciclo 9
+
+- ESLint: aprovado sem avisos.
+- TypeScript: typecheck aprovado.
+- Frontend: 12 testes aprovados em 5 arquivos.
+- Build: artefato de producao gerado com `VITE_AUTH_PREVIEW_ENABLED=false`.
+- E2E: 6 cenarios aprovados e 2 cenarios extensos ignorados pela configuracao local.
+- Studio E2E: login, schema, validacao, publicacao, registro e exclusao aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Divida tecnica: bundle principal possui aviso de 853 kB; aplicar code splitting em ciclo futuro.
