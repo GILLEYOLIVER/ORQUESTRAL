@@ -20,6 +20,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
+    AgentMemoryReencryptionJob,
     AgentMemoryResponseExercise,
     AgentMemoryRiskReportRecord,
     AgentMemoryRiskSigningKeyVersion,
@@ -27,6 +28,7 @@ from app.modules.agents.memory_models import (
     AgentTaskMemoryAccessGrant,
     AgentTaskMemoryAccessIncident,
     AgentTaskMemoryAccessTrace,
+    AgentTaskMemoryIncidentAssignee,
     AgentTaskMemoryIncidentReviewRecord,
 )
 from app.modules.agents.memory_schemas import (
@@ -46,6 +48,8 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurgeRequest,
     AgentMemoryPurgeResponse,
     AgentMemoryPurposePolicyInput,
+    AgentMemoryReencryptionJobCreate,
+    AgentMemoryReencryptionJobResponse,
     AgentMemoryResponse,
     AgentMemoryResponseExerciseCreate,
     AgentMemoryResponseExerciseResponse,
@@ -54,6 +58,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryRiskReportVerification,
     AgentMemoryRiskSigningKeyResponse,
     AgentMemoryRiskSummary,
+    AgentMemorySchedulerMetricsResponse,
     AgentMemoryScopePolicyInput,
     AgentTaskMemoryAccessDecision,
     AgentTaskMemoryAccessGrantCreate,
@@ -116,11 +121,20 @@ async def _notify_memory_incident_reviewers(
     incident: AgentTaskMemoryAccessIncident,
     escalated: bool,
 ) -> None:
-    recipients = [
-        user_id
-        for user_id in await company_approver_user_ids(database, incident.company_id)
-        if user_id != incident.triggered_by_user_id
-    ]
+    recipients = list(
+        await database.scalars(
+            select(AgentTaskMemoryIncidentAssignee.responsible_user_id).where(
+                AgentTaskMemoryIncidentAssignee.company_id == incident.company_id,
+                AgentTaskMemoryIncidentAssignee.incident_id == incident.id,
+            )
+        )
+    )
+    if not recipients:
+        recipients = [
+            user_id
+            for user_id in await company_approver_user_ids(database, incident.company_id)
+            if user_id != incident.triggered_by_user_id
+        ]
     if not recipients:
         recipients = [incident.triggered_by_user_id]
     for recipient_user_id in recipients:
@@ -355,7 +369,10 @@ def _task_memory_trace_response(
 
 
 def _task_memory_incident_response(
-    incident: AgentTaskMemoryAccessIncident, *, already_processed: bool = False
+    incident: AgentTaskMemoryAccessIncident,
+    *,
+    responsible_user_ids: list[UUID],
+    already_processed: bool = False,
 ) -> AgentTaskMemoryIncidentResponse:
     return AgentTaskMemoryIncidentResponse(
         id=incident.id,
@@ -374,6 +391,7 @@ def _task_memory_incident_response(
         escalation_count=incident.escalation_count,
         escalated_at=incident.escalated_at,
         triggered_by_user_id=incident.triggered_by_user_id,
+        responsible_user_ids=responsible_user_ids,
         reviewed_by_user_id=incident.reviewed_by_user_id,
         reviewed_at=incident.reviewed_at,
         already_processed=already_processed,
@@ -1143,7 +1161,32 @@ async def list_agent_task_memory_access_incidents(
             .limit(100)
         )
     )
-    return [_task_memory_incident_response(incident) for incident in incidents]
+    incident_ids = [incident.id for incident in incidents]
+    assignee_rows = (
+        (
+            await database.execute(
+                select(
+                    AgentTaskMemoryIncidentAssignee.incident_id,
+                    AgentTaskMemoryIncidentAssignee.responsible_user_id,
+                ).where(
+                    AgentTaskMemoryIncidentAssignee.company_id == context.company_id,
+                    AgentTaskMemoryIncidentAssignee.incident_id.in_(incident_ids),
+                )
+            )
+        ).all()
+        if incident_ids
+        else []
+    )
+    responsible_by_incident: dict[UUID, list[UUID]] = {}
+    for incident_id, responsible_user_id in assignee_rows:
+        responsible_by_incident.setdefault(incident_id, []).append(responsible_user_id)
+    return [
+        _task_memory_incident_response(
+            incident,
+            responsible_user_ids=responsible_by_incident.get(incident.id, []),
+        )
+        for incident in incidents
+    ]
 
 
 @router.post(
@@ -1174,6 +1217,16 @@ async def review_agent_task_memory_access_incident(
         raise HTTPException(status_code=409, detail="O incidente já foi revisado.")
     if incident.triggered_by_user_id == context.user_id:
         raise HTTPException(status_code=409, detail="A revisão exige outra pessoa responsável.")
+    responsible_user_ids = list(
+        await database.scalars(
+            select(AgentTaskMemoryIncidentAssignee.responsible_user_id).where(
+                AgentTaskMemoryIncidentAssignee.company_id == context.company_id,
+                AgentTaskMemoryIncidentAssignee.incident_id == incident.id,
+            )
+        )
+    )
+    if responsible_user_ids and context.user_id not in responsible_user_ids:
+        raise HTTPException(status_code=403, detail="A revisão foi atribuída a outra pessoa.")
     existing_review = await database.scalar(
         select(AgentTaskMemoryIncidentReviewRecord.id).where(
             AgentTaskMemoryIncidentReviewRecord.company_id == context.company_id,
@@ -1252,7 +1305,7 @@ async def review_agent_task_memory_access_incident(
     )
     await database.commit()
     await database.refresh(incident)
-    return _task_memory_incident_response(incident)
+    return _task_memory_incident_response(incident, responsible_user_ids=responsible_user_ids)
 
 
 @router.post(
@@ -1514,6 +1567,8 @@ async def list_agent_memory_response_exercises(
             scenario=exercise.scenario,
             status=exercise.status,
             checks=exercise.checks,
+            source=exercise.source,
+            duration_ms=exercise.duration_ms,
             requested_by_user_id=exercise.requested_by_user_id,
             created_at=exercise.created_at,
         )
@@ -1549,6 +1604,8 @@ async def run_agent_memory_response_exercise(
         scenario=exercise.scenario,
         status=exercise.status,
         checks=exercise.checks,
+        source=exercise.source,
+        duration_ms=exercise.duration_ms,
         requested_by_user_id=exercise.requested_by_user_id,
         created_at=exercise.created_at,
     )
@@ -1586,6 +1643,75 @@ async def get_agent_memory_exercise_schedule(
         )
     )
     return _exercise_schedule_response(schedule, agent_id=agent_id)
+
+
+@router.get(
+    "/{agent_id}/memory-response-exercise-scheduler-metrics",
+    response_model=AgentMemorySchedulerMetricsResponse,
+)
+async def get_agent_memory_scheduler_metrics(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemorySchedulerMetricsResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    common_filters = (
+        AgentMemoryResponseExercise.company_id == context.company_id,
+        AgentMemoryResponseExercise.agent_id == agent_id,
+        AgentMemoryResponseExercise.source == "worker_schedule",
+    )
+    worker_exercises = int(
+        await database.scalar(
+            select(func.count(AgentMemoryResponseExercise.id)).where(*common_filters)
+        )
+        or 0
+    )
+    worker_passed = int(
+        await database.scalar(
+            select(func.count(AgentMemoryResponseExercise.id)).where(
+                *common_filters, AgentMemoryResponseExercise.status == "passed"
+            )
+        )
+        or 0
+    )
+    worker_failed = int(
+        await database.scalar(
+            select(func.count(AgentMemoryResponseExercise.id)).where(
+                *common_filters, AgentMemoryResponseExercise.status == "failed"
+            )
+        )
+        or 0
+    )
+    average_duration_ms = float(
+        await database.scalar(
+            select(func.avg(AgentMemoryResponseExercise.duration_ms)).where(*common_filters)
+        )
+        or 0
+    )
+    last_worker_run_at = await database.scalar(
+        select(func.max(AgentMemoryResponseExercise.created_at)).where(*common_filters)
+    )
+    schedule = await database.scalar(
+        select(AgentMemoryExerciseSchedule).where(
+            AgentMemoryExerciseSchedule.company_id == context.company_id,
+            AgentMemoryExerciseSchedule.agent_id == agent_id,
+        )
+    )
+    overdue_seconds = 0
+    if schedule and schedule.enabled and schedule.next_run_at and schedule.next_run_at < utc_now():
+        overdue_seconds = max(0, int((utc_now() - schedule.next_run_at).total_seconds()))
+    return AgentMemorySchedulerMetricsResponse(
+        agent_id=agent_id,
+        worker_exercises=worker_exercises,
+        worker_passed=worker_passed,
+        worker_failed=worker_failed,
+        average_duration_ms=average_duration_ms,
+        last_worker_run_at=last_worker_run_at,
+        schedule_enabled=bool(schedule and schedule.enabled),
+        next_run_at=schedule.next_run_at if schedule else None,
+        overdue_seconds=overdue_seconds,
+    )
 
 
 @router.put(
@@ -1674,6 +1800,8 @@ async def run_due_agent_memory_exercise(
         scenario=exercise_record.scenario,
         status=exercise_record.status,
         checks=exercise_record.checks,
+        source=exercise_record.source,
+        duration_ms=exercise_record.duration_ms,
         requested_by_user_id=exercise_record.requested_by_user_id,
         created_at=exercise_record.created_at,
     )
@@ -1698,6 +1826,18 @@ async def revoke_agent_task_memory_access_for_incident(
 ) -> AgentTaskMemoryIncidentResponse:
     context = get_request_context(principal)
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    authorized_responsibles = set(await company_approver_user_ids(database, context.company_id))
+    requested_responsibles = set(payload.responsible_user_ids)
+    if context.user_id in requested_responsibles:
+        raise HTTPException(
+            status_code=422,
+            detail="Quem abriu o incidente não pode revisar a própria ocorrência.",
+        )
+    if not requested_responsibles.issubset(authorized_responsibles):
+        raise HTTPException(
+            status_code=422,
+            detail="Todos os responsáveis devem ser revisores autorizados da empresa.",
+        )
     reference_fingerprint = memory_incident_value_fingerprint(
         secret=settings.encryption_key,
         company_id=context.company_id,
@@ -1719,6 +1859,14 @@ async def revoke_agent_task_memory_access_for_incident(
         )
     )
     if existing is not None:
+        existing_responsibles = set(
+            await database.scalars(
+                select(AgentTaskMemoryIncidentAssignee.responsible_user_id).where(
+                    AgentTaskMemoryIncidentAssignee.company_id == context.company_id,
+                    AgentTaskMemoryIncidentAssignee.incident_id == existing.id,
+                )
+            )
+        )
         if (
             existing.owner_agent_id != agent_id
             or existing.incident_reference_fingerprint != reference_fingerprint
@@ -1727,11 +1875,16 @@ async def revoke_agent_task_memory_access_for_incident(
             or existing.severity != payload.severity
             or existing.required_review_quorum != payload.required_review_quorum
             or existing.review_sla_minutes != payload.review_sla_minutes
+            or existing_responsibles != requested_responsibles
         ):
             raise HTTPException(
                 status_code=409, detail="Chave idempotente usada por outro incidente."
             )
-        return _task_memory_incident_response(existing, already_processed=True)
+        return _task_memory_incident_response(
+            existing,
+            responsible_user_ids=list(payload.responsible_user_ids),
+            already_processed=True,
+        )
     now = utc_now()
     incident = AgentTaskMemoryAccessIncident(
         company_id=context.company_id,
@@ -1752,6 +1905,17 @@ async def revoke_agent_task_memory_access_for_incident(
         triggered_by_user_id=context.user_id,
     )
     database.add(incident)
+    await database.flush()
+    for responsible_user_id in payload.responsible_user_ids:
+        database.add(
+            AgentTaskMemoryIncidentAssignee(
+                company_id=context.company_id,
+                incident_id=incident.id,
+                agent_id=agent_id,
+                responsible_user_id=responsible_user_id,
+                assigned_by_user_id=context.user_id,
+            )
+        )
     await database.flush()
     grants = list(
         await database.scalars(
@@ -1803,7 +1967,130 @@ async def revoke_agent_task_memory_access_for_incident(
     await _notify_memory_incident_reviewers(database, incident=incident, escalated=False)
     await database.commit()
     await database.refresh(incident)
-    return _task_memory_incident_response(incident)
+    return _task_memory_incident_response(
+        incident, responsible_user_ids=list(payload.responsible_user_ids)
+    )
+
+
+def _memory_reencryption_job_response(
+    job: AgentMemoryReencryptionJob,
+) -> AgentMemoryReencryptionJobResponse:
+    return AgentMemoryReencryptionJobResponse(
+        id=job.id,
+        agent_id=job.agent_id,
+        status=cast(Literal["pending", "running", "completed", "failed"], job.status),
+        target_master_key_id=job.target_master_key_id,
+        batch_size=job.batch_size,
+        total_count=job.total_count,
+        scanned_count=job.scanned_count,
+        rotated_count=job.rotated_count,
+        failed_count=job.failed_count,
+        error_code=job.error_code,
+        requested_by_user_id=job.requested_by_user_id,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        updated_at=job.updated_at,
+    )
+
+
+@router.get(
+    "/{agent_id}/memory-reencryption-jobs",
+    response_model=list[AgentMemoryReencryptionJobResponse],
+)
+async def list_agent_memory_reencryption_jobs(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryReencryptionJobResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    jobs = list(
+        await database.scalars(
+            select(AgentMemoryReencryptionJob)
+            .where(
+                AgentMemoryReencryptionJob.company_id == context.company_id,
+                AgentMemoryReencryptionJob.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryReencryptionJob.created_at.desc())
+            .limit(50)
+        )
+    )
+    return [_memory_reencryption_job_response(job) for job in jobs]
+
+
+@router.post(
+    "/{agent_id}/memory-reencryption-jobs",
+    response_model=AgentMemoryReencryptionJobResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_memory_reencryption_job(
+    agent_id: UUID,
+    payload: AgentMemoryReencryptionJobCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryReencryptionJobResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    if not settings.encryption_previous_keys:
+        raise HTTPException(
+            status_code=409,
+            detail="Configure ao menos uma chave anterior antes da recriptografia.",
+        )
+    active_job_id = await database.scalar(
+        select(AgentMemoryReencryptionJob.id)
+        .where(
+            AgentMemoryReencryptionJob.company_id == context.company_id,
+            AgentMemoryReencryptionJob.agent_id == agent_id,
+            AgentMemoryReencryptionJob.status.in_(("pending", "running")),
+        )
+        .limit(1)
+    )
+    if active_job_id is not None:
+        raise HTTPException(status_code=409, detail="Já existe uma recriptografia em andamento.")
+    total_count = int(
+        await database.scalar(
+            select(func.count(AgentMemoryEntry.id)).where(
+                AgentMemoryEntry.company_id == context.company_id,
+                AgentMemoryEntry.agent_id == agent_id,
+            )
+        )
+        or 0
+    )
+    job = AgentMemoryReencryptionJob(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        status="pending",
+        target_master_key_id=memory_master_key_id(settings.encryption_key),
+        batch_size=payload.batch_size,
+        total_count=total_count,
+        requested_by_user_id=context.user_id,
+    )
+    database.add(job)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_reencryption.requested",
+        target_type="agent_memory_reencryption_job",
+        target_id=job.id,
+        details={"agent_id": str(agent_id), "total_count": total_count},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_reencryption.requested",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={"job_id": str(job.id), "agent_id": str(agent_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(job)
+    return _memory_reencryption_job_response(job)
 
 
 @router.post(

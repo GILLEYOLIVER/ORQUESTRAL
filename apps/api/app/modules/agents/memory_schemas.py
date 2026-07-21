@@ -301,6 +301,7 @@ class AgentTaskMemoryIncidentRevoke(StrictSchema):
     severity: Literal["low", "medium", "high", "critical"] = "high"
     required_review_quorum: int = Field(default=1, ge=1, le=5)
     review_sla_minutes: int = Field(default=60, ge=5, le=1440)
+    responsible_user_ids: list[UUID] = Field(min_length=1, max_length=5)
     idempotency_key: UUID
 
     @field_validator("incident_reference", "reason")
@@ -312,6 +313,8 @@ class AgentTaskMemoryIncidentRevoke(StrictSchema):
     def validate_incident_quorum(self) -> Self:
         if self.severity == "critical" and self.required_review_quorum < 2:
             raise ValueError("Incidentes críticos exigem quorum mínimo de duas pessoas.")
+        if len(set(self.responsible_user_ids)) != len(self.responsible_user_ids):
+            raise ValueError("Cada responsável pode ser selecionado somente uma vez.")
         return self
 
 
@@ -332,6 +335,7 @@ class AgentTaskMemoryIncidentResponse(StrictSchema):
     escalation_count: int
     escalated_at: datetime | None
     triggered_by_user_id: UUID
+    responsible_user_ids: list[UUID]
     reviewed_by_user_id: UUID | None
     reviewed_at: datetime | None
     already_processed: bool
@@ -393,6 +397,8 @@ class AgentMemoryResponseExerciseResponse(StrictSchema):
     scenario: Literal["full"]
     status: Literal["passed", "failed"]
     checks: dict[str, bool]
+    source: Literal["manual", "manual_schedule", "worker_schedule"]
+    duration_ms: int
     requested_by_user_id: UUID
     created_at: datetime
 
@@ -429,6 +435,40 @@ class AgentMemoryExerciseDueResponse(StrictSchema):
     executed: bool
     next_run_at: datetime | None
     exercise: AgentMemoryResponseExerciseResponse | None
+
+
+class AgentMemorySchedulerMetricsResponse(StrictSchema):
+    agent_id: UUID
+    worker_exercises: int
+    worker_passed: int
+    worker_failed: int
+    average_duration_ms: float
+    last_worker_run_at: datetime | None
+    schedule_enabled: bool
+    next_run_at: datetime | None
+    overdue_seconds: int
+
+
+class AgentMemoryReencryptionJobCreate(StrictSchema):
+    batch_size: int = Field(default=100, ge=1, le=500)
+
+
+class AgentMemoryReencryptionJobResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    status: Literal["pending", "running", "completed", "failed"]
+    target_master_key_id: str
+    batch_size: int
+    total_count: int
+    scanned_count: int
+    rotated_count: int
+    failed_count: int
+    error_code: str | None
+    requested_by_user_id: UUID
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    updated_at: datetime
 
 
 class AgentTaskMemoryContextRequest(StrictSchema):

@@ -644,6 +644,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-reencryption-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Reencryption Jobs */
+        get: operations["list_agent_memory_reencryption_jobs_agents__agent_id__memory_reencryption_jobs_get"];
+        put?: never;
+        /** Create Agent Memory Reencryption Job */
+        post: operations["create_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-response-exercise-schedule": {
         parameters: {
             query?: never;
@@ -673,6 +691,23 @@ export interface paths {
         put?: never;
         /** Run Due Agent Memory Exercise */
         post: operations["run_due_agent_memory_exercise_agents__agent_id__memory_response_exercise_schedule_run_due_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-response-exercise-scheduler-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Scheduler Metrics */
+        get: operations["get_agent_memory_scheduler_metrics_agents__agent_id__memory_response_exercise_scheduler_metrics_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5052,6 +5087,65 @@ export interface components {
             /** Retention Days */
             retention_days: number;
         };
+        /** AgentMemoryReencryptionJobCreate */
+        AgentMemoryReencryptionJobCreate: {
+            /**
+             * Batch Size
+             * @default 100
+             */
+            batch_size: number;
+        };
+        /** AgentMemoryReencryptionJobResponse */
+        AgentMemoryReencryptionJobResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Batch Size */
+            batch_size: number;
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code: string | null;
+            /** Failed Count */
+            failed_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /** Rotated Count */
+            rotated_count: number;
+            /** Scanned Count */
+            scanned_count: number;
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "completed" | "failed";
+            /** Target Master Key Id */
+            target_master_key_id: string;
+            /** Total Count */
+            total_count: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** AgentMemoryResponse */
         AgentMemoryResponse: {
             /**
@@ -5130,6 +5224,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Duration Ms */
+            duration_ms: number;
             /**
              * Id
              * Format: uuid
@@ -5145,6 +5241,11 @@ export interface components {
              * @constant
              */
             scenario: "full";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "manual" | "manual_schedule" | "worker_schedule";
             /**
              * Status
              * @enum {string}
@@ -5269,6 +5370,30 @@ export interface components {
              * @enum {string}
              */
             risk_level: "low" | "elevated" | "high" | "critical";
+        };
+        /** AgentMemorySchedulerMetricsResponse */
+        AgentMemorySchedulerMetricsResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /** Average Duration Ms */
+            average_duration_ms: number;
+            /** Last Worker Run At */
+            last_worker_run_at: string | null;
+            /** Next Run At */
+            next_run_at: string | null;
+            /** Overdue Seconds */
+            overdue_seconds: number;
+            /** Schedule Enabled */
+            schedule_enabled: boolean;
+            /** Worker Exercises */
+            worker_exercises: number;
+            /** Worker Failed */
+            worker_failed: number;
+            /** Worker Passed */
+            worker_passed: number;
         };
         /** AgentMemoryScopePolicyInput */
         AgentMemoryScopePolicyInput: {
@@ -5865,6 +5990,8 @@ export interface components {
             quarantined: boolean;
             /** Required Review Quorum */
             required_review_quorum: number;
+            /** Responsible User Ids */
+            responsible_user_ids: string[];
             /** Review Count */
             review_count: number;
             /**
@@ -5927,6 +6054,8 @@ export interface components {
              * @default 1
              */
             required_review_quorum: number;
+            /** Responsible User Ids */
+            responsible_user_ids: string[];
             /**
              * Review Sla Minutes
              * @default 60
@@ -13374,6 +13503,108 @@ export interface operations {
             };
         };
     };
+    list_agent_memory_reencryption_jobs_agents__agent_id__memory_reencryption_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryReencryptionJobCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     get_agent_memory_exercise_schedule_agents__agent_id__memory_response_exercise_schedule_get: {
         parameters: {
             query?: never;
@@ -13494,6 +13725,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryExerciseDueResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_memory_scheduler_metrics_agents__agent_id__memory_response_exercise_scheduler_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemorySchedulerMetricsResponse"];
                 };
             };
             /** @description Solicitação inválida */

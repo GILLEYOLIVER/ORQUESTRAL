@@ -28,8 +28,9 @@ from app.modules.agents.memory_models import (
 from app.modules.agents.memory_service import (
     AuthorizedMemoryContext,
     SharedTaskMemoryContext,
-    memory_access_revocation_fingerprint,
+    maintain_agent_memory_reencryption_jobs,
     maintain_due_agent_memory_response_exercises,
+    memory_access_revocation_fingerprint,
     retrieve_authorized_memories,
     retrieve_shared_task_memories,
 )
@@ -429,6 +430,7 @@ def test_critical_memory_incident_requires_independent_quorum() -> None:
                     "quarantine_minutes": 5,
                     "severity": "critical",
                     "required_review_quorum": 2,
+                    "responsible_user_ids": [str(identity.user_ids[2])],
                     "idempotency_key": str(uuid4()),
                 },
             )
@@ -660,8 +662,41 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 )
             )
             assert keyring_retrieval.contents == (sensitive_memory,)
-            settings.encryption_key = original_encryption_key
+            reencryption_job = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={"batch_size": 1},
+            )
+            assert reencryption_job.status_code == 201
+            assert reencryption_job.json()["total_count"] >= 2
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs",
+                    headers=headers_a,
+                    json={"batch_size": 1},
+                ).status_code
+                == 404
+            )
+            for _ in range(3):
+                asyncio.run(maintain_agent_memory_reencryption_jobs(settings=settings))
+            reencryption_jobs = client.get(
+                f"/agents/{agent_id}/memory-reencryption-jobs", headers=headers_b
+            )
+            assert reencryption_jobs.status_code == 200
+            assert reencryption_jobs.json()[0]["status"] == "completed"
+            assert reencryption_jobs.json()[0]["rotated_count"] >= 2
             settings.encryption_previous_keys = []
+            rotated_only_retrieval = asyncio.run(
+                _retrieve_memory_context(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                    user_id=identity.user_ids[1],
+                )
+            )
+            assert rotated_only_retrieval.contents == (sensitive_memory,)
+            settings.encryption_key = original_encryption_key
+            settings.encryption_previous_keys = [rotated_encryption_key]
             other_user_retrieval = asyncio.run(
                 _retrieve_memory_context(
                     settings,
@@ -1445,6 +1480,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 "severity": "high",
                 "required_review_quorum": 1,
                 "review_sla_minutes": 5,
+                "responsible_user_ids": [str(identity.user_ids[2])],
                 "idempotency_key": str(uuid4()),
             }
             invalid_critical_incident = client.post(
@@ -1473,6 +1509,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert incident.status_code == 201
             assert incident.json()["revoked_grants"] >= 1
+            assert incident.json()["responsible_user_ids"] == [str(identity.user_ids[2])]
             assert "incident_reference" not in incident.json()
             assert (
                 asyncio.run(
@@ -1543,14 +1580,13 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert incident_queue.status_code == 200
             assert incident_queue.json()[0]["review_status"] == "pending"
+            assert incident_queue.json()[0]["responsible_user_ids"] == [str(identity.user_ids[2])]
             monkeypatch.setattr(
                 memory_routes_module,
                 "utc_now",
                 lambda: current_memory_route_time() + timedelta(minutes=6),
             )
-            overdue_risk = client.get(
-                f"/agents/{agent_id}/memory-risk-summary", headers=headers_b
-            )
+            overdue_risk = client.get(f"/agents/{agent_id}/memory-risk-summary", headers=headers_b)
             assert overdue_risk.status_code == 200
             assert overdue_risk.json()["overdue_incident_reviews"] >= 1
             escalated = client.post(
@@ -1684,7 +1720,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert unavailable_history.status_code == 200
             assert unavailable_history.json()["valid"] is False
             settings.encryption_key = original_encryption_key
-            settings.encryption_previous_keys = []
+            settings.encryption_previous_keys = [rotated_encryption_key]
             tampered_report = risk_report.json()
             tampered_report["payload"]["risk_summary"]["active_grants"] += 1
             rejected_report = client.post(
@@ -1701,6 +1737,8 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert response_exercise.status_code == 201
             assert response_exercise.json()["status"] == "passed"
+            assert response_exercise.json()["source"] == "manual"
+            assert response_exercise.json()["duration_ms"] >= 0
             assert all(response_exercise.json()["checks"].values())
             listed_exercises = client.get(
                 f"/agents/{agent_id}/memory-response-exercises",
@@ -1738,6 +1776,22 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 maintain_due_agent_memory_response_exercises(settings=settings)
             )
             assert scheduled_result == {"processed": 1, "passed": 1, "failed": 0}
+            scheduler_metrics = client.get(
+                f"/agents/{agent_id}/memory-response-exercise-scheduler-metrics",
+                headers=headers_b,
+            )
+            assert scheduler_metrics.status_code == 200
+            assert scheduler_metrics.json()["worker_exercises"] >= 1
+            assert scheduler_metrics.json()["worker_passed"] >= 1
+            assert scheduler_metrics.json()["worker_failed"] == 0
+            assert scheduler_metrics.json()["last_worker_run_at"] is not None
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/memory-response-exercise-scheduler-metrics",
+                    headers=headers_a,
+                ).status_code
+                == 404
+            )
             monkeypatch.setattr(memory_service_module, "utc_now", current_memory_service_time)
             monkeypatch.setattr(
                 memory_routes_module,

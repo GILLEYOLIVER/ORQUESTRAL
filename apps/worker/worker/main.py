@@ -42,6 +42,10 @@ celery_app.conf.update(
             "task": "orkestral.agents.run_due_memory_response_exercises",
             "schedule": 300.0,
         },
+        "maintain-agent-memory-reencryption-every-minute": {
+            "task": "orkestral.agents.maintain_memory_reencryption",
+            "schedule": 60.0,
+        },
     },
 )
 

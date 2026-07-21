@@ -246,6 +246,7 @@ export interface AgentTaskMemoryIncidentResponse {
   escalation_count: number;
   escalated_at: string | null;
   triggered_by_user_id: string;
+  responsible_user_ids: string[];
   reviewed_by_user_id: string | null;
   reviewed_at: string | null;
   already_processed: boolean;
@@ -274,6 +275,8 @@ export interface AgentMemoryResponseExercise {
   scenario: "full";
   status: "passed" | "failed";
   checks: Record<string, boolean>;
+  source: "manual" | "manual_schedule" | "worker_schedule";
+  duration_ms: number;
   requested_by_user_id: string;
   created_at: string;
 }
@@ -300,6 +303,36 @@ export interface AgentMemoryExerciseDue {
   executed: boolean;
   next_run_at: string | null;
   exercise: AgentMemoryResponseExercise | null;
+}
+
+export interface AgentMemorySchedulerMetrics {
+  agent_id: string;
+  worker_exercises: number;
+  worker_passed: number;
+  worker_failed: number;
+  average_duration_ms: number;
+  last_worker_run_at: string | null;
+  schedule_enabled: boolean;
+  next_run_at: string | null;
+  overdue_seconds: number;
+}
+
+export interface AgentMemoryReencryptionJob {
+  id: string;
+  agent_id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  target_master_key_id: string;
+  batch_size: number;
+  total_count: number;
+  scanned_count: number;
+  rotated_count: number;
+  failed_count: number;
+  error_code: string | null;
+  requested_by_user_id: string;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  updated_at: string;
 }
 
 export function useAgents(enabled = true) {

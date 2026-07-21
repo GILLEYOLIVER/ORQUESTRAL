@@ -5,6 +5,7 @@ import hmac
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from time import perf_counter
 from typing import cast
 from uuid import UUID
 
@@ -21,6 +22,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
+    AgentMemoryReencryptionJob,
     AgentMemoryResponseExercise,
     AgentMemoryRiskReportRecord,
     AgentMemoryScopePolicy,
@@ -234,6 +236,7 @@ async def record_agent_memory_response_exercise(
     requested_by_user_id: UUID,
     source: str,
 ) -> AgentMemoryResponseExercise:
+    started = perf_counter()
     checks = await memory_response_exercise_checks(
         database, company_id=company_id, agent_id=agent_id
     )
@@ -243,6 +246,8 @@ async def record_agent_memory_response_exercise(
         scenario="full",
         status="passed" if all(checks.values()) else "failed",
         checks=checks,
+        source=source,
+        duration_ms=max(0, round((perf_counter() - started) * 1000)),
         requested_by_user_id=requested_by_user_id,
     )
     database.add(exercise)
@@ -666,3 +671,140 @@ def maintain_due_agent_memory_response_exercises_sync() -> dict[str, int]:
     import asyncio
 
     return asyncio.run(maintain_due_agent_memory_response_exercises(settings=get_settings()))
+
+
+async def process_agent_memory_reencryption_jobs(
+    database: AsyncSession, *, settings: Settings, limit: int = 10
+) -> dict[str, int]:
+    jobs = list(
+        await database.scalars(
+            select(AgentMemoryReencryptionJob)
+            .where(AgentMemoryReencryptionJob.status.in_(("pending", "running")))
+            .order_by(AgentMemoryReencryptionJob.created_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    completed = failed = rotated = 0
+    vault = memory_credential_vault(settings)
+    active_key_id = memory_master_key_id(settings.encryption_key)
+    for job in jobs:
+        now = utc_now()
+        if job.target_master_key_id != active_key_id:
+            job.status = "failed"
+            job.failed_count += 1
+            job.error_code = "target_key_changed"
+            job.completed_at = now
+            failed += 1
+            continue
+        if job.status == "pending":
+            job.status = "running"
+            job.started_at = now
+        checkpoint_conditions = []
+        if job.checkpoint_created_at is not None and job.checkpoint_memory_id is not None:
+            checkpoint_conditions.append(
+                or_(
+                    AgentMemoryEntry.created_at > job.checkpoint_created_at,
+                    and_(
+                        AgentMemoryEntry.created_at == job.checkpoint_created_at,
+                        AgentMemoryEntry.id > job.checkpoint_memory_id,
+                    ),
+                )
+            )
+        rows = list(
+            await database.scalars(
+                select(AgentMemoryEntry)
+                .where(
+                    AgentMemoryEntry.company_id == job.company_id,
+                    AgentMemoryEntry.agent_id == job.agent_id,
+                    *checkpoint_conditions,
+                )
+                .order_by(AgentMemoryEntry.created_at, AgentMemoryEntry.id)
+                .limit(job.batch_size)
+                .with_for_update(skip_locked=True)
+            )
+        )
+        job_failed = False
+        for memory in rows:
+            job.scanned_count += 1
+            try:
+                memory.encrypted_content = vault.rotate(memory.encrypted_content)
+            except CredentialVaultError:
+                job.failed_count += 1
+                job.status = "failed"
+                job.error_code = "memory_decryption_failed"
+                job.completed_at = utc_now()
+                failed += 1
+                job_failed = True
+                break
+            job.rotated_count += 1
+            rotated += 1
+            job.checkpoint_created_at = memory.created_at
+            job.checkpoint_memory_id = memory.id
+        if job_failed:
+            continue
+        if not rows or len(rows) < job.batch_size or job.scanned_count >= job.total_count:
+            job.status = "completed"
+            job.completed_at = utc_now()
+            completed += 1
+            record_authorization_audit(
+                database,
+                company_id=job.company_id,
+                actor_user_id=job.requested_by_user_id,
+                action="agent.memory_reencryption.completed",
+                target_type="agent_memory_reencryption_job",
+                target_id=job.id,
+                details={
+                    "agent_id": str(job.agent_id),
+                    "rotated_count": job.rotated_count,
+                    "failed_count": job.failed_count,
+                },
+            )
+            enqueue_domain_event(
+                database,
+                DomainEventCreate(
+                    event_type="agent.memory_reencryption.completed",
+                    company_id=job.company_id,
+                    actor_user_id=job.requested_by_user_id,
+                    classification="internal",
+                    payload={
+                        "job_id": str(job.id),
+                        "agent_id": str(job.agent_id),
+                        "rotated_count": job.rotated_count,
+                    },
+                ),
+            )
+            await create_notification(
+                database,
+                company_id=job.company_id,
+                recipient_user_id=job.requested_by_user_id,
+                event_type="agent.memory_reencryption.completed",
+                title="Recriptografia de memória concluída",
+                message="As memórias do agente foram protegidas pela chave ativa.",
+                severity="info",
+                resource_type="agent_memory_reencryption_job",
+                resource_id=job.id,
+                data={"agent_id": str(job.agent_id), "rotated_count": job.rotated_count},
+            )
+    await database.commit()
+    return {
+        "processed": len(jobs),
+        "completed": completed,
+        "failed": failed,
+        "rotated": rotated,
+    }
+
+
+async def maintain_agent_memory_reencryption_jobs(*, settings: Settings) -> dict[str, int]:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            return await process_agent_memory_reencryption_jobs(database, settings=settings)
+    finally:
+        await resources.close()
+
+
+def maintain_agent_memory_reencryption_jobs_sync() -> dict[str, int]:
+    import asyncio
+
+    return asyncio.run(maintain_agent_memory_reencryption_jobs(settings=get_settings()))

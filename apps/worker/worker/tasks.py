@@ -9,6 +9,7 @@ from app.modules.agents.coordination_execution import (
     process_delegation_sync,
 )
 from app.modules.agents.memory_service import (
+    maintain_agent_memory_reencryption_jobs_sync,
     maintain_due_agent_memory_response_exercises_sync,
     purge_expired_agent_memories_sync,
 )
@@ -70,3 +71,8 @@ def purge_expired_agent_memories_task() -> dict[str, int | str]:
 @celery_app.task(name="orkestral.agents.run_due_memory_response_exercises")
 def run_due_agent_memory_response_exercises_task() -> dict[str, int | str]:
     return {"status": "ok", **maintain_due_agent_memory_response_exercises_sync()}
+
+
+@celery_app.task(name="orkestral.agents.maintain_memory_reencryption")
+def maintain_agent_memory_reencryption_task() -> dict[str, int | str]:
+    return {"status": "ok", **maintain_agent_memory_reencryption_jobs_sync()}

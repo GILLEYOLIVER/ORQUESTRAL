@@ -32,6 +32,8 @@ import {
   type AgentMemoryRiskSigningKey,
   type AgentMemoryExerciseSchedule,
   type AgentMemoryExerciseDue,
+  type AgentMemoryReencryptionJob,
+  type AgentMemorySchedulerMetrics,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -181,10 +183,16 @@ export function AgentsPage() {
   const [memoryIncidentQuorum, setMemoryIncidentQuorum] = useState("1");
   const [memoryIncidentReviewSlaMinutes, setMemoryIncidentReviewSlaMinutes] =
     useState("60");
+  const [
+    memoryIncidentResponsibleUserIds,
+    setMemoryIncidentResponsibleUserIds,
+  ] = useState<string[]>([]);
   const [memoryExerciseScheduleEnabled, setMemoryExerciseScheduleEnabled] =
     useState(false);
   const [memoryExerciseCadenceHours, setMemoryExerciseCadenceHours] =
     useState("168");
+  const [memoryReencryptionBatchSize, setMemoryReencryptionBatchSize] =
+    useState("100");
   const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
     useState(() => crypto.randomUUID());
   const [memoryIncidentFeedback, setMemoryIncidentFeedback] = useState<
@@ -267,6 +275,22 @@ export function AgentsPage() {
     queryFn: () =>
       request<AgentMemoryExerciseSchedule>(
         `/agents/${selectedId}/memory-response-exercise-schedule`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memorySchedulerMetrics = useQuery({
+    queryKey: ["agent-memory-scheduler-metrics", selectedId],
+    queryFn: () =>
+      request<AgentMemorySchedulerMetrics>(
+        `/agents/${selectedId}/memory-response-exercise-scheduler-metrics`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryReencryptionJobs = useQuery({
+    queryKey: ["agent-memory-reencryption-jobs", selectedId],
+    queryFn: () =>
+      request<AgentMemoryReencryptionJob[]>(
+        `/agents/${selectedId}/memory-reencryption-jobs`,
       ),
     enabled: canConfigure && Boolean(selectedId),
   });
@@ -399,6 +423,12 @@ export function AgentsPage() {
     });
     void queryClient.invalidateQueries({
       queryKey: ["agent-memory-exercise-schedule", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memory-scheduler-metrics", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memory-reencryption-jobs", selectedId],
     });
   };
   const create = useMutation({
@@ -599,6 +629,7 @@ export function AgentsPage() {
             severity: memoryIncidentSeverity,
             required_review_quorum: Number(memoryIncidentQuorum),
             review_sla_minutes: Number(memoryIncidentReviewSlaMinutes),
+            responsible_user_ids: memoryIncidentResponsibleUserIds,
             idempotency_key: memoryIncidentIdempotencyKey,
           },
         },
@@ -611,6 +642,7 @@ export function AgentsPage() {
       );
       setMemoryIncidentReference("");
       setMemoryIncidentReason("");
+      setMemoryIncidentResponsibleUserIds([]);
       setMemoryIncidentIdempotencyKey(crypto.randomUUID());
       refresh();
     },
@@ -737,6 +769,25 @@ export function AgentsPage() {
         result.executed
           ? "Exercício agendado executado e registrado."
           : "A agenda ainda não atingiu o próximo horário de execução.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const startMemoryReencryption = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryReencryptionJob>(
+        `/agents/${selectedId}/memory-reencryption-jobs`,
+        {
+          method: "POST",
+          body: { batch_size: Number(memoryReencryptionBatchSize) },
+        },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.total_count
+          ? `Recriptografia iniciada para ${result.total_count} memória(s).`
+          : "Job criado; não há memórias para recriptografar.",
       );
       refresh();
     },
@@ -1587,6 +1638,12 @@ export function AgentsPage() {
                   className="agent-policy-form"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    if (!memoryIncidentResponsibleUserIds.length) {
+                      setMemoryIncidentFeedback(
+                        "Selecione ao menos uma pessoa responsável pela revisão.",
+                      );
+                      return;
+                    }
                     revokeMemoryAccessForIncident.mutate();
                   }}
                 >
@@ -1660,6 +1717,47 @@ export function AgentsPage() {
                     type="number"
                     value={memoryIncidentReviewSlaMinutes}
                   />
+                  <fieldset className="agent-policy-list">
+                    <legend>Responsáveis independentes pela revisão</legend>
+                    {companyUsers.data
+                      ?.filter(
+                        (user) =>
+                          user.user_id !== me?.user.id &&
+                          user.user_status === "active" &&
+                          user.membership_status === "active",
+                      )
+                      .map((user) => (
+                        <label className="native-field" key={user.user_id}>
+                          <input
+                            checked={memoryIncidentResponsibleUserIds.includes(
+                              user.user_id,
+                            )}
+                            onChange={(event) =>
+                              setMemoryIncidentResponsibleUserIds((current) =>
+                                event.target.checked
+                                  ? [...current, user.user_id]
+                                  : current.filter((id) => id !== user.user_id),
+                              )
+                            }
+                            type="checkbox"
+                          />
+                          <span>
+                            {user.name} · {user.email}
+                          </span>
+                        </label>
+                      ))}
+                    {!companyUsers.data?.some(
+                      (user) =>
+                        user.user_id !== me?.user.id &&
+                        user.user_status === "active" &&
+                        user.membership_status === "active",
+                    ) ? (
+                      <small>
+                        Cadastre outra pessoa autorizada para realizar a revisão
+                        independente.
+                      </small>
+                    ) : null}
+                  </fieldset>
                   <Button
                     loading={revokeMemoryAccessForIncident.isPending}
                     type="submit"
@@ -1691,6 +1789,19 @@ export function AgentsPage() {
                             {incident.escalation_count
                               ? ` · escalonado ${incident.escalation_count} vez(es)`
                               : ""}
+                          </small>
+                          <small>
+                            Responsáveis:{" "}
+                            {incident.responsible_user_ids.length
+                              ? incident.responsible_user_ids
+                                  .map(
+                                    (userId) =>
+                                      companyUsers.data?.find(
+                                        (user) => user.user_id === userId,
+                                      )?.name ?? userId.slice(0, 8),
+                                  )
+                                  .join(", ")
+                              : "fila autorizada legada"}
                           </small>
                         </div>
                         {incident.review_status === "pending" ? (
@@ -1780,6 +1891,19 @@ export function AgentsPage() {
                         ).toLocaleString("pt-BR")
                       : "não agendada"}
                   </small>
+                  <small>
+                    Worker: {memorySchedulerMetrics.data?.worker_passed ?? 0}
+                    aprovado(s),{" "}
+                    {memorySchedulerMetrics.data?.worker_failed ?? 0}
+                    falho(s) · média{" "}
+                    {Math.round(
+                      memorySchedulerMetrics.data?.average_duration_ms ?? 0,
+                    )}
+                    ms
+                    {(memorySchedulerMetrics.data?.overdue_seconds ?? 0) > 0
+                      ? ` · atraso ${memorySchedulerMetrics.data?.overdue_seconds}s`
+                      : " · sem atraso"}
+                  </small>
                 </form>
                 <div className="agent-policy-list">
                   <strong>Exercícios recentes</strong>
@@ -1798,7 +1922,13 @@ export function AgentsPage() {
                                 .length
                             }
                             /{Object.keys(exercise.checks).length} verificações
-                            ·{" "}
+                            {` · ${exercise.duration_ms}ms · ${
+                              exercise.source === "worker_schedule"
+                                ? "worker"
+                                : exercise.source === "manual_schedule"
+                                  ? "agenda manual"
+                                  : "manual"
+                            } · `}
                             {new Date(exercise.created_at).toLocaleString(
                               "pt-BR",
                             )}
@@ -1810,6 +1940,50 @@ export function AgentsPage() {
                     <p>Nenhum exercício executado.</p>
                   )}
                 </div>
+                <form
+                  className="agent-policy-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    startMemoryReencryption.mutate();
+                  }}
+                >
+                  <strong>Rotação protegida das memórias</strong>
+                  <p>
+                    Depois de configurar a chave ativa e manter a anterior no
+                    keyring, mova os dados em lotes antes de remover a chave
+                    antiga.
+                  </p>
+                  <TextField
+                    label="Memórias por lote"
+                    max={500}
+                    min={1}
+                    onChange={(event) =>
+                      setMemoryReencryptionBatchSize(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryReencryptionBatchSize}
+                  />
+                  <Button
+                    loading={startMemoryReencryption.isPending}
+                    type="submit"
+                    variant="secondary"
+                  >
+                    <LockKeyhole size={16} /> Iniciar recriptografia
+                  </Button>
+                  {memoryReencryptionJobs.data?.[0] ? (
+                    <small>
+                      Último job: {memoryReencryptionJobs.data[0].status} ·{" "}
+                      {memoryReencryptionJobs.data[0].rotated_count}/
+                      {memoryReencryptionJobs.data[0].total_count} protegida(s)
+                      {memoryReencryptionJobs.data[0].error_code
+                        ? ` · erro ${memoryReencryptionJobs.data[0].error_code}`
+                        : ""}
+                    </small>
+                  ) : (
+                    <small>Nenhuma recriptografia solicitada.</small>
+                  )}
+                </form>
               </Card>
             </PermissionGuard>
             <PermissionGuard all={["agents.execute"]}>

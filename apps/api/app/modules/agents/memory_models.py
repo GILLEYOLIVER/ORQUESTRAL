@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     LargeBinary,
     String,
@@ -399,6 +400,37 @@ class AgentTaskMemoryIncidentReviewRecord(Base):
     )
 
 
+class AgentTaskMemoryIncidentAssignee(Base):
+    __tablename__ = "agent_task_memory_incident_assignees"
+    __table_args__ = (
+        UniqueConstraint(
+            "incident_id",
+            "responsible_user_id",
+            name="uq_agent_task_memory_incident_assignee",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    incident_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_task_memory_access_incidents.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    responsible_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    assigned_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+
+
 class AgentMemoryRiskReportRecord(Base):
     __tablename__ = "agent_memory_risk_report_records"
     __table_args__ = (
@@ -447,6 +479,14 @@ class AgentMemoryResponseExercise(Base):
             "status IN ('passed', 'failed')",
             name="ck_agent_memory_exercise_status",
         ),
+        CheckConstraint(
+            "source IN ('manual', 'manual_schedule', 'worker_schedule')",
+            name="ck_agent_memory_exercise_source",
+        ),
+        CheckConstraint(
+            "duration_ms >= 0",
+            name="ck_agent_memory_exercise_duration",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -459,6 +499,8 @@ class AgentMemoryResponseExercise(Base):
     scenario: Mapped[str] = mapped_column(String(16), default="full", server_default="full")
     status: Mapped[str] = mapped_column(String(16), index=True)
     checks: Mapped[dict[str, bool]] = mapped_column(JSONB)
+    source: Mapped[str] = mapped_column(String(24), default="manual", server_default="manual")
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     requested_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -527,6 +569,72 @@ class AgentMemoryExerciseSchedule(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AgentMemoryReencryptionJob(Base):
+    __tablename__ = "agent_memory_reencryption_jobs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'running', 'completed', 'failed')",
+            name="ck_agent_memory_reencryption_job_status",
+        ),
+        CheckConstraint(
+            "batch_size BETWEEN 1 AND 500",
+            name="ck_agent_memory_reencryption_job_batch_size",
+        ),
+        CheckConstraint(
+            "total_count >= 0 AND scanned_count >= 0 AND rotated_count >= 0 "
+            "AND failed_count >= 0 AND scanned_count <= total_count "
+            "AND rotated_count + failed_count <= scanned_count",
+            name="ck_agent_memory_reencryption_job_counts",
+        ),
+        CheckConstraint(
+            "(checkpoint_created_at IS NULL AND checkpoint_memory_id IS NULL) OR "
+            "(checkpoint_created_at IS NOT NULL AND checkpoint_memory_id IS NOT NULL)",
+            name="ck_agent_memory_reencryption_job_checkpoint",
+        ),
+        Index(
+            "uq_agent_memory_reencryption_job_active",
+            "company_id",
+            "agent_id",
+            unique=True,
+            postgresql_where=text("status IN ('pending', 'running')"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending", index=True
+    )
+    target_master_key_id: Mapped[str] = mapped_column(String(64), index=True)
+    batch_size: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
+    total_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    scanned_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    rotated_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    failed_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    checkpoint_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    checkpoint_memory_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=func.now(),

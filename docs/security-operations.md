@@ -32,8 +32,15 @@ devem preservar o SHA completo e registrar a versão legível em comentário.
    `ENCRYPTION_PREVIOUS_KEYS`. Novos dados usam somente a chave ativa; memórias, campos e
    relatórios históricos procuram a chave anterior pelo keyring protegido.
 6. Execute os exercícios de resposta e verifique relatórios antigos antes de remover uma chave.
-7. Remova chaves anteriores somente depois da recriptografia e da janela de retenção aprovada.
-8. Nunca registre valores de segredo em tickets, logs, PRs ou comandos versionados.
+7. Para cada agente, inicie um job em `POST /agents/{agent_id}/memory-reencryption-jobs` e
+   acompanhe `GET /agents/{agent_id}/memory-reencryption-jobs`. O worker processa lotes com
+   checkpoint, isolamento por empresa e bloqueio contra execução duplicada.
+8. Aguarde todos os jobs alcançarem `completed`, confirme `failed_count = 0` e execute uma leitura
+   controlada sem a chave antiga antes de retirá-la do gerenciador de segredos.
+9. Não remova a chave anterior enquanto existir job `pending`, `running` ou `failed`; corrija a
+   causa e preserve o keyring para impedir perda definitiva de dados criptografados.
+10. Remova chaves anteriores somente depois da recriptografia e da janela de retenção aprovada.
+11. Nunca registre valores de segredo em tickets, logs, PRs ou comandos versionados.
 
 ## Backup
 

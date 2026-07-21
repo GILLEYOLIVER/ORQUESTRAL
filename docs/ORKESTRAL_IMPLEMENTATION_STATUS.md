@@ -631,3 +631,20 @@ Data: 21 de julho de 2026.
 - Exercícios agendados usam o mesmo avaliador dos exercícios manuais, geram auditoria/evento e notificam o responsável quando algum controle falha.
 - Migração: `20260721_0057_agent_memory_keyring.py`.
 - Próximo passo: recriptografia controlada de memórias com checkpoint, destinatários responsáveis explícitos por incidente e métricas operacionais do scheduler.
+
+## Ciclo 37 - recriptografia, responsáveis e métricas do scheduler
+
+- Incidentes passam a registrar responsáveis independentes em tabela relacional, com validação de empresa, autorização e separação entre abertura e revisão.
+- Notificações novas e atrasadas são enviadas somente aos responsáveis explícitos; incidentes legados mantêm fallback para a fila autorizada.
+- Revisões por pessoas não atribuídas são bloqueadas no back-end, sem depender de ocultação de botões na interface.
+- A rotação do segredo mestre possui job persistente por agente, lote configurável, checkpoint ordenado, progresso, falha segura e exclusão mútua por empresa/agente.
+- O worker recriptografa somente com o keyring ativo, nunca persiste material secreto e interrompe o job se a chave-alvo mudar ou um ciphertext não puder ser aberto.
+- Conclusões produzem auditoria, evento e notificação sem conteúdo de memória; a chave anterior só pode ser removida depois da verificação operacional documentada.
+- Exercícios registram origem e duração; a API consolida aprovações, falhas, média de duração, última execução e atraso do scheduler.
+- A interface permite selecionar responsáveis, acompanhar telemetria do worker e iniciar/monitorar a recriptografia em linguagem clara.
+- Migração: `20260721_0058_agent_memory_reencryption_ownership_metrics.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos de produção; ESLint, TypeScript e Prettier aprovados; 142 testes da API/worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança sem bloqueios.
+- Migração reversível `0058 -> 0057 -> 0058` aprovada; banco em `20260721_0058 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; E2E com 7 cenários aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: outra empresa recebe `404`, responsável não atribuído é bloqueado, ciphertext permanece legível somente com a chave ativa depois da recriptografia e nenhum segredo é exposto por API, auditoria ou evento.
+- Próximo passo: retomada operacional de jobs falhos, reatribuição auditada de responsáveis e alerta automático de heartbeat/SLO do scheduler.

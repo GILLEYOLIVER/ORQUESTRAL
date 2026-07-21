@@ -2772,6 +2772,138 @@
         "title": "AgentMemoryPurposePolicyInput",
         "type": "object"
       },
+      "AgentMemoryReencryptionJobCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_size": {
+            "default": 100,
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "type": "integer"
+          }
+        },
+        "title": "AgentMemoryReencryptionJobCreate",
+        "type": "object"
+      },
+      "AgentMemoryReencryptionJobResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "batch_size": {
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "failed_count": {
+            "title": "Failed Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_by_user_id": {
+            "format": "uuid",
+            "title": "Requested By User Id",
+            "type": "string"
+          },
+          "rotated_count": {
+            "title": "Rotated Count",
+            "type": "integer"
+          },
+          "scanned_count": {
+            "title": "Scanned Count",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_master_key_id": {
+            "title": "Target Master Key Id",
+            "type": "string"
+          },
+          "total_count": {
+            "title": "Total Count",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "status",
+          "target_master_key_id",
+          "batch_size",
+          "total_count",
+          "scanned_count",
+          "rotated_count",
+          "failed_count",
+          "error_code",
+          "requested_by_user_id",
+          "created_at",
+          "started_at",
+          "completed_at",
+          "updated_at"
+        ],
+        "title": "AgentMemoryReencryptionJobResponse",
+        "type": "object"
+      },
       "AgentMemoryResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2932,6 +3064,10 @@
             "title": "Created At",
             "type": "string"
           },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -2945,6 +3081,15 @@
           "scenario": {
             "const": "full",
             "title": "Scenario",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "manual",
+              "manual_schedule",
+              "worker_schedule"
+            ],
+            "title": "Source",
             "type": "string"
           },
           "status": {
@@ -2962,6 +3107,8 @@
           "scenario",
           "status",
           "checks",
+          "source",
+          "duration_ms",
           "requested_by_user_id",
           "created_at"
         ],
@@ -3217,6 +3364,77 @@
           "overdue_incident_reviews"
         ],
         "title": "AgentMemoryRiskSummary",
+        "type": "object"
+      },
+      "AgentMemorySchedulerMetricsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "average_duration_ms": {
+            "title": "Average Duration Ms",
+            "type": "number"
+          },
+          "last_worker_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Worker Run At"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "overdue_seconds": {
+            "title": "Overdue Seconds",
+            "type": "integer"
+          },
+          "schedule_enabled": {
+            "title": "Schedule Enabled",
+            "type": "boolean"
+          },
+          "worker_exercises": {
+            "title": "Worker Exercises",
+            "type": "integer"
+          },
+          "worker_failed": {
+            "title": "Worker Failed",
+            "type": "integer"
+          },
+          "worker_passed": {
+            "title": "Worker Passed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "worker_exercises",
+          "worker_passed",
+          "worker_failed",
+          "average_duration_ms",
+          "last_worker_run_at",
+          "schedule_enabled",
+          "next_run_at",
+          "overdue_seconds"
+        ],
+        "title": "AgentMemorySchedulerMetricsResponse",
         "type": "object"
       },
       "AgentMemoryScopePolicyInput": {
@@ -4539,6 +4757,14 @@
             "title": "Required Review Quorum",
             "type": "integer"
           },
+          "responsible_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Responsible User Ids",
+            "type": "array"
+          },
           "review_count": {
             "title": "Review Count",
             "type": "integer"
@@ -4626,6 +4852,7 @@
           "escalation_count",
           "escalated_at",
           "triggered_by_user_id",
+          "responsible_user_ids",
           "reviewed_by_user_id",
           "reviewed_at",
           "already_processed",
@@ -4686,6 +4913,16 @@
             "title": "Required Review Quorum",
             "type": "integer"
           },
+          "responsible_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Responsible User Ids",
+            "type": "array"
+          },
           "review_sla_minutes": {
             "default": 60,
             "maximum": 1440.0,
@@ -4708,6 +4945,7 @@
         "required": [
           "incident_reference",
           "reason",
+          "responsible_user_ids",
           "idempotency_key"
         ],
         "title": "AgentTaskMemoryIncidentRevoke",
@@ -21983,6 +22221,154 @@
         ]
       }
     },
+    "/agents/{agent_id}/memory-reencryption-jobs": {
+      "get": {
+        "operationId": "list_agent_memory_reencryption_jobs_agents__agent_id__memory_reencryption_jobs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryReencryptionJobResponse"
+                  },
+                  "title": "Response List Agent Memory Reencryption Jobs Agents  Agent Id  Memory Reencryption Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Memory Reencryption Jobs",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "operationId": "create_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryReencryptionJobCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryReencryptionJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Agent Memory Reencryption Job",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/agents/{agent_id}/memory-response-exercise-schedule": {
       "get": {
         "operationId": "get_agent_memory_exercise_schedule_agents__agent_id__memory_response_exercise_schedule_get",
@@ -22190,6 +22576,74 @@
           }
         ],
         "summary": "Run Due Agent Memory Exercise",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-response-exercise-scheduler-metrics": {
+      "get": {
+        "operationId": "get_agent_memory_scheduler_metrics_agents__agent_id__memory_response_exercise_scheduler_metrics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemorySchedulerMetricsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Agent Memory Scheduler Metrics",
         "tags": [
           "agents"
         ]
