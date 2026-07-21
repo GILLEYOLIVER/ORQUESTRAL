@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -28,13 +28,27 @@ DEFAULT_CLASSIFICATIONS = ["public", "internal"]
 @dataclass(frozen=True, slots=True)
 class AuthorizedMemoryContext:
     contents: tuple[str, ...]
+    retrieved_fingerprints: tuple[str, ...]
     blocked_fingerprints: tuple[str, ...]
 
 
 def memory_content_fingerprint(
-    *, secret: str, company_id: UUID, agent_id: UUID, content: str
+    *,
+    secret: str,
+    company_id: UUID,
+    agent_id: UUID,
+    scope: str,
+    subject_user_id: UUID | None,
+    content: str,
 ) -> str:
-    payload = f"{company_id}:{agent_id}:{content}".encode()
+    payload = f"{company_id}:{agent_id}:{scope}:{subject_user_id or '-'}:{content}".encode()
+    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
+def memory_consent_fingerprint(
+    *, secret: str, company_id: UUID, agent_id: UUID, subject_user_id: UUID, reference: str
+) -> str:
+    payload = f"{company_id}:{agent_id}:{subject_user_id}:{reference}".encode()
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
@@ -70,12 +84,13 @@ async def retrieve_authorized_memories(
     settings: Settings,
     company_id: UUID,
     agent_id: UUID,
+    user_id: UUID,
     provider: str,
     memory_policy: AgentMemoryPolicy | None,
     data_policy: AgentDataPolicy,
 ) -> AuthorizedMemoryContext:
     if memory_policy is None or not memory_policy.retrieval_enabled:
-        return AuthorizedMemoryContext((), ())
+        return AuthorizedMemoryContext((), (), ())
     maximum_rank = CLASSIFICATION_RANK[data_policy.max_data_classification]
     allowed = [
         classification
@@ -83,7 +98,7 @@ async def retrieve_authorized_memories(
         if CLASSIFICATION_RANK[classification] <= maximum_rank
     ]
     if not allowed:
-        return AuthorizedMemoryContext((), ())
+        return AuthorizedMemoryContext((), (), ())
     rows = list(
         await database.scalars(
             select(AgentMemoryEntry)
@@ -92,6 +107,10 @@ async def retrieve_authorized_memories(
                 AgentMemoryEntry.agent_id == agent_id,
                 AgentMemoryEntry.expires_at > utc_now(),
                 AgentMemoryEntry.classification.in_(allowed),
+                or_(
+                    AgentMemoryEntry.scope != "user",
+                    AgentMemoryEntry.subject_user_id == user_id,
+                ),
             )
             .order_by(AgentMemoryEntry.created_at.desc())
             .limit(memory_policy.max_retrieval_entries)
@@ -99,6 +118,7 @@ async def retrieve_authorized_memories(
     )
     vault = CredentialVault(settings.encryption_key)
     contents: list[str] = []
+    retrieved: list[str] = []
     blocked: list[str] = []
     for row in rows:
         try:
@@ -114,7 +134,8 @@ async def retrieve_authorized_memories(
             blocked.append(row.content_fingerprint)
             continue
         contents.append(protect_provider_text(data_policy, provider=provider, text=content)[0])
-    return AuthorizedMemoryContext(tuple(contents), tuple(blocked))
+        retrieved.append(row.content_fingerprint)
+    return AuthorizedMemoryContext(tuple(contents), tuple(retrieved), tuple(blocked))
 
 
 async def purge_expired_agent_memories(database: AsyncSession, *, limit: int = 1_000) -> int:

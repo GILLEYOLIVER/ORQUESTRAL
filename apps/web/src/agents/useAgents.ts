@@ -167,10 +167,17 @@ export interface AgentMemoryResponse {
   classification: "public" | "internal" | "confidential" | "restricted";
   source_type: "manual" | "conversation" | "task" | "tool";
   source_id: string | null;
-  consent_reference: string | null;
+  subject_user_id: string | null;
+  consent_recorded: boolean;
   expires_at: string;
   expired: boolean;
   created_at: string;
+}
+
+export interface AgentMemoryConsentRevocationResponse {
+  revocation_id: string;
+  deleted_count: number;
+  already_revoked: boolean;
 }
 
 export function useAgents(enabled = true) {

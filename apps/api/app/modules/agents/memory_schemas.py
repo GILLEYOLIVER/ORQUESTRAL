@@ -53,6 +53,7 @@ class AgentMemoryCreate(StrictSchema):
     retention_days: int | None = Field(default=None, ge=1, le=3650)
     source_type: MemorySource = "manual"
     source_id: str | None = Field(default=None, max_length=160)
+    subject_user_id: UUID | None = None
     consent_reference: str | None = Field(default=None, max_length=160)
 
     @field_validator("content")
@@ -68,7 +69,8 @@ class AgentMemoryResponse(StrictSchema):
     classification: MemoryClassification
     source_type: MemorySource
     source_id: str | None
-    consent_reference: str | None
+    subject_user_id: UUID | None
+    consent_recorded: bool
     expires_at: datetime
     expired: bool
     created_at: datetime
@@ -87,3 +89,19 @@ class AgentMemoryPurgeRequest(StrictSchema):
 
 class AgentMemoryPurgeResponse(StrictSchema):
     deleted_count: int
+
+
+class AgentMemoryConsentRevoke(StrictSchema):
+    subject_user_id: UUID
+    consent_reference: str = Field(min_length=1, max_length=160)
+
+    @field_validator("consent_reference")
+    @classmethod
+    def trim_consent_reference(cls, value: str) -> str:
+        return value.strip()
+
+
+class AgentMemoryConsentRevocationResponse(StrictSchema):
+    revocation_id: UUID
+    deleted_count: int
+    already_revoked: bool

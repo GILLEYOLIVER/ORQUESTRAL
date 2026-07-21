@@ -94,8 +94,12 @@ class AgentMemoryEntry(Base):
         ),
         CheckConstraint("expires_at > created_at", name="ck_agent_memory_expiration"),
         CheckConstraint(
-            "scope <> 'user' OR consent_reference IS NOT NULL",
-            name="ck_agent_memory_user_consent",
+            "scope <> 'user' OR (subject_user_id IS NOT NULL AND subject_membership_id IS NOT NULL)",
+            name="ck_agent_memory_user_subject",
+        ),
+        CheckConstraint(
+            "scope = 'user' OR (subject_user_id IS NULL AND subject_membership_id IS NULL AND consent_fingerprint IS NULL)",
+            name="ck_agent_memory_non_user_subject",
         ),
     )
 
@@ -115,8 +119,48 @@ class AgentMemoryEntry(Base):
     content_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
     source_type: Mapped[str] = mapped_column(String(24), default="manual", server_default="manual")
     source_id: Mapped[str | None] = mapped_column(String(160))
-    consent_reference: Mapped[str | None] = mapped_column(String(160))
+    subject_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    subject_membership_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("company_users.id", ondelete="CASCADE"), index=True
+    )
+    consent_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+
+
+class AgentMemoryConsentRevocation(Base):
+    __tablename__ = "agent_memory_consent_revocations"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "agent_id",
+            "subject_user_id",
+            "consent_fingerprint",
+            name="uq_agent_memory_consent_revocation",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    subject_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    subject_membership_id: Mapped[UUID] = mapped_column(
+        ForeignKey("company_users.id", ondelete="CASCADE"), index=True
+    )
+    consent_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    revoked_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    revoked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )

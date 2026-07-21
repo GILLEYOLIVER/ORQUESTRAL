@@ -10,8 +10,14 @@ from sqlalchemy import select
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
-from app.modules.agents.memory_models import AgentMemoryEntry, AgentMemoryPolicy
+from app.modules.agents.memory_models import (
+    AgentMemoryConsentRevocation,
+    AgentMemoryEntry,
+    AgentMemoryPolicy,
+)
 from app.modules.agents.memory_schemas import (
+    AgentMemoryConsentRevocationResponse,
+    AgentMemoryConsentRevoke,
     AgentMemoryCreate,
     AgentMemoryPolicyResponse,
     AgentMemoryPolicyUpdate,
@@ -23,6 +29,7 @@ from app.modules.agents.memory_schemas import (
     MemorySource,
 )
 from app.modules.agents.memory_service import (
+    memory_consent_fingerprint,
     memory_content_fingerprint,
     memory_is_expired,
     memory_policy_values,
@@ -32,6 +39,7 @@ from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.plugins.crypto import CredentialVault
+from app.modules.users.models import CompanyUser
 
 router = APIRouter()
 CanConfigureAgentMemory = Annotated[Principal, Depends(require_permission("agents.configure"))]
@@ -58,6 +66,21 @@ async def _memory_policy(
     return policy
 
 
+async def _active_company_user(
+    database: DatabaseSession, *, company_id: UUID, user_id: UUID
+) -> CompanyUser:
+    membership = await database.scalar(
+        select(CompanyUser).where(
+            CompanyUser.company_id == company_id,
+            CompanyUser.user_id == user_id,
+            CompanyUser.status == "active",
+        )
+    )
+    if membership is None:
+        raise HTTPException(status_code=422, detail="O titular não pertence à empresa ativa.")
+    return membership
+
+
 def _policy_response(agent_id: UUID, policy: AgentMemoryPolicy | None) -> AgentMemoryPolicyResponse:
     values = memory_policy_values(policy)
     return AgentMemoryPolicyResponse(
@@ -82,7 +105,8 @@ def _memory_response(memory: AgentMemoryEntry) -> AgentMemoryResponse:
         classification=cast(MemoryClassification, memory.classification),
         source_type=cast(MemorySource, memory.source_type),
         source_id=memory.source_id,
-        consent_reference=memory.consent_reference,
+        subject_user_id=memory.subject_user_id,
+        consent_recorded=memory.consent_fingerprint is not None,
         expires_at=memory.expires_at,
         expired=memory_is_expired(memory),
         created_at=memory.created_at,
@@ -187,6 +211,17 @@ async def create_agent_memory(
         raise HTTPException(
             status_code=422, detail="Esta classificação não é permitida pela política."
         )
+    if payload.scope == "user" and payload.subject_user_id is None:
+        raise HTTPException(status_code=422, detail="Memórias pessoais exigem um titular.")
+    if payload.scope != "user" and payload.subject_user_id is not None:
+        raise HTTPException(
+            status_code=422, detail="Somente memórias pessoais podem possuir titular."
+        )
+    subject_membership = None
+    if payload.subject_user_id is not None:
+        subject_membership = await _active_company_user(
+            database, company_id=context.company_id, user_id=payload.subject_user_id
+        )
     if (
         payload.scope == "user"
         and cast(bool, values["require_consent_for_user_scope"])
@@ -203,8 +238,32 @@ async def create_agent_memory(
         secret=settings.encryption_key,
         company_id=context.company_id,
         agent_id=agent_id,
+        scope=payload.scope,
+        subject_user_id=payload.subject_user_id,
         content=payload.content,
     )
+    consent_fingerprint = (
+        memory_consent_fingerprint(
+            secret=settings.encryption_key,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            subject_user_id=payload.subject_user_id,
+            reference=payload.consent_reference,
+        )
+        if payload.subject_user_id is not None and payload.consent_reference
+        else None
+    )
+    if consent_fingerprint is not None:
+        revoked = await database.scalar(
+            select(AgentMemoryConsentRevocation.id).where(
+                AgentMemoryConsentRevocation.company_id == context.company_id,
+                AgentMemoryConsentRevocation.agent_id == agent_id,
+                AgentMemoryConsentRevocation.subject_user_id == payload.subject_user_id,
+                AgentMemoryConsentRevocation.consent_fingerprint == consent_fingerprint,
+            )
+        )
+        if revoked is not None:
+            raise HTTPException(status_code=409, detail="Este consentimento foi revogado.")
     existing = await database.scalar(
         select(AgentMemoryEntry).where(
             AgentMemoryEntry.company_id == context.company_id,
@@ -229,7 +288,9 @@ async def create_agent_memory(
         content_fingerprint=fingerprint,
         source_type=payload.source_type,
         source_id=payload.source_id,
-        consent_reference=payload.consent_reference,
+        subject_user_id=payload.subject_user_id,
+        subject_membership_id=subject_membership.id if subject_membership else None,
+        consent_fingerprint=consent_fingerprint,
         expires_at=utc_now() + timedelta(days=retention_days),
     )
     database.add(memory)
@@ -261,6 +322,94 @@ async def create_agent_memory(
     await database.commit()
     await database.refresh(memory)
     return _memory_response(memory)
+
+
+@router.post(
+    "/{agent_id}/memory-consent-revocations",
+    response_model=AgentMemoryConsentRevocationResponse,
+)
+async def revoke_agent_memory_consent(
+    agent_id: UUID,
+    payload: AgentMemoryConsentRevoke,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryConsentRevocationResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    subject_membership = await _active_company_user(
+        database, company_id=context.company_id, user_id=payload.subject_user_id
+    )
+    fingerprint = memory_consent_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        subject_user_id=payload.subject_user_id,
+        reference=payload.consent_reference,
+    )
+    revocation = await database.scalar(
+        select(AgentMemoryConsentRevocation).where(
+            AgentMemoryConsentRevocation.company_id == context.company_id,
+            AgentMemoryConsentRevocation.agent_id == agent_id,
+            AgentMemoryConsentRevocation.subject_user_id == payload.subject_user_id,
+            AgentMemoryConsentRevocation.consent_fingerprint == fingerprint,
+        )
+    )
+    already_revoked = revocation is not None
+    if revocation is None:
+        revocation = AgentMemoryConsentRevocation(
+            company_id=context.company_id,
+            agent_id=agent_id,
+            subject_user_id=payload.subject_user_id,
+            subject_membership_id=subject_membership.id,
+            consent_fingerprint=fingerprint,
+            revoked_by_user_id=context.user_id,
+        )
+        database.add(revocation)
+        await database.flush()
+    memories = list(
+        await database.scalars(
+            select(AgentMemoryEntry)
+            .where(
+                AgentMemoryEntry.company_id == context.company_id,
+                AgentMemoryEntry.agent_id == agent_id,
+                AgentMemoryEntry.subject_user_id == payload.subject_user_id,
+                AgentMemoryEntry.consent_fingerprint == fingerprint,
+            )
+            .with_for_update()
+        )
+    )
+    for memory in memories:
+        await database.delete(memory)
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_consent.revoked",
+        target_type="agent_memory_consent_revocation",
+        target_id=revocation.id,
+        details={"agent_id": str(agent_id), "deleted_count": len(memories)},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_consent.revoked",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "agent_id": str(agent_id),
+                "revocation_id": str(revocation.id),
+                "deleted_count": len(memories),
+            },
+        ),
+    )
+    await database.commit()
+    return AgentMemoryConsentRevocationResponse(
+        revocation_id=revocation.id,
+        deleted_count=len(memories),
+        already_revoked=already_revoked,
+    )
 
 
 @router.delete("/{agent_id}/memories/{memory_id}", status_code=status.HTTP_204_NO_CONTENT)

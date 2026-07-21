@@ -1921,6 +1921,53 @@
         "title": "AgentHandoffResponse",
         "type": "object"
       },
+      "AgentMemoryConsentRevocationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "already_revoked": {
+            "title": "Already Revoked",
+            "type": "boolean"
+          },
+          "deleted_count": {
+            "title": "Deleted Count",
+            "type": "integer"
+          },
+          "revocation_id": {
+            "format": "uuid",
+            "title": "Revocation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revocation_id",
+          "deleted_count",
+          "already_revoked"
+        ],
+        "title": "AgentMemoryConsentRevocationResponse",
+        "type": "object"
+      },
+      "AgentMemoryConsentRevoke": {
+        "additionalProperties": false,
+        "properties": {
+          "consent_reference": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Consent Reference",
+            "type": "string"
+          },
+          "subject_user_id": {
+            "format": "uuid",
+            "title": "Subject User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_user_id",
+          "consent_reference"
+        ],
+        "title": "AgentMemoryConsentRevoke",
+        "type": "object"
+      },
       "AgentMemoryCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1999,6 +2046,18 @@
             ],
             "title": "Source Type",
             "type": "string"
+          },
+          "subject_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject User Id"
           }
         },
         "required": [
@@ -2225,16 +2284,9 @@
             "title": "Classification",
             "type": "string"
           },
-          "consent_reference": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Consent Reference"
+          "consent_recorded": {
+            "title": "Consent Recorded",
+            "type": "boolean"
           },
           "created_at": {
             "format": "date-time",
@@ -2286,6 +2338,18 @@
             ],
             "title": "Source Type",
             "type": "string"
+          },
+          "subject_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject User Id"
           }
         },
         "required": [
@@ -2295,7 +2359,8 @@
           "classification",
           "source_type",
           "source_id",
-          "consent_reference",
+          "subject_user_id",
+          "consent_recorded",
           "expires_at",
           "expired",
           "created_at"
@@ -2740,7 +2805,8 @@
             "enum": [
               "prompt_injection",
               "data_egress",
-              "sensitive_data"
+              "sensitive_data",
+              "memory_access"
             ],
             "title": "Category",
             "type": "string"
@@ -2780,6 +2846,7 @@
             "enum": [
               "user",
               "knowledge",
+              "memory",
               "provider",
               "system"
             ],
@@ -18732,6 +18799,84 @@
           }
         ],
         "summary": "Delete Agent Memory",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-consent-revocations": {
+      "post": {
+        "operationId": "revoke_agent_memory_consent_agents__agent_id__memory_consent_revocations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryConsentRevoke"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryConsentRevocationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Agent Memory Consent",
         "tags": [
           "agents"
         ]

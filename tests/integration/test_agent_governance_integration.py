@@ -208,6 +208,7 @@ async def _retrieve_memory_context(
     *,
     company_id: UUID,
     agent_id: UUID,
+    user_id: UUID,
 ) -> AuthorizedMemoryContext:
     resources = create_resources(settings)
     try:
@@ -231,6 +232,7 @@ async def _retrieve_memory_context(
                 settings=settings,
                 company_id=company_id,
                 agent_id=agent_id,
+                user_id=user_id,
                 provider="local",
                 memory_policy=memory_policy,
                 data_policy=data_policy,
@@ -259,9 +261,7 @@ def test_approval_absence_delegation_is_tenant_scoped_and_revocable() -> None:
             assert identity.user_ids[2] not in {
                 UUID(item["user_id"]) for item in candidates_a.json()
             }
-            assert identity.user_ids[2] in {
-                UUID(item["user_id"]) for item in candidates_b.json()
-            }
+            assert identity.user_ids[2] in {UUID(item["user_id"]) for item in candidates_b.json()}
 
             now = datetime.now(UTC)
             created = client.post(
@@ -380,6 +380,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     "content": sensitive_memory,
                     "scope": "user",
                     "classification": "confidential",
+                    "subject_user_id": str(identity.user_ids[1]),
                 },
             )
             assert missing_consent.status_code == 422
@@ -390,11 +391,15 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     "content": sensitive_memory,
                     "scope": "user",
                     "classification": "confidential",
+                    "subject_user_id": str(identity.user_ids[1]),
                     "consent_reference": "consent-test-2026",
                 },
             )
             assert stored_memory.status_code == 201
             assert sensitive_memory not in str(stored_memory.json())
+            assert "consent-test-2026" not in str(stored_memory.json())
+            assert stored_memory.json()["subject_user_id"] == str(identity.user_ids[1])
+            assert stored_memory.json()["consent_recorded"] is True
             memory_id = UUID(stored_memory.json()["id"])
             asyncio.run(
                 _assert_memory_storage(
@@ -412,6 +417,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     "content": sensitive_memory,
                     "scope": "user",
                     "classification": "confidential",
+                    "subject_user_id": str(identity.user_ids[1]),
                     "consent_reference": "consent-test-2026",
                 },
             )
@@ -431,14 +437,43 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     settings,
                     company_id=identity.company_ids[1],
                     agent_id=UUID(agent_id),
+                    user_id=identity.user_ids[1],
                 )
             )
             assert retrieved.contents == (sensitive_memory,)
+            assert len(retrieved.retrieved_fingerprints) == 1
             assert len(retrieved.blocked_fingerprints) == 1
-            removed_memory = client.delete(
-                f"/agents/{agent_id}/memories/{memory_id}", headers=headers_b
+            other_user_retrieval = asyncio.run(
+                _retrieve_memory_context(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                    user_id=identity.user_ids[2],
+                )
             )
-            assert removed_memory.status_code == 204
+            assert sensitive_memory not in other_user_retrieval.contents
+            revoked = client.post(
+                f"/agents/{agent_id}/memory-consent-revocations",
+                headers=headers_b,
+                json={
+                    "subject_user_id": str(identity.user_ids[1]),
+                    "consent_reference": "consent-test-2026",
+                },
+            )
+            assert revoked.status_code == 200
+            assert revoked.json()["deleted_count"] == 1
+            assert revoked.json()["already_revoked"] is False
+            repeated_revocation = client.post(
+                f"/agents/{agent_id}/memory-consent-revocations",
+                headers=headers_b,
+                json={
+                    "subject_user_id": str(identity.user_ids[1]),
+                    "consent_reference": "consent-test-2026",
+                },
+            )
+            assert repeated_revocation.status_code == 200
+            assert repeated_revocation.json()["deleted_count"] == 0
+            assert repeated_revocation.json()["already_revoked"] is True
             asyncio.run(
                 _assert_memory_storage(
                     settings,
@@ -448,6 +483,18 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     exists=False,
                 )
             )
+            blocked_reuse = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": sensitive_memory,
+                    "scope": "user",
+                    "classification": "confidential",
+                    "subject_user_id": str(identity.user_ids[1]),
+                    "consent_reference": "consent-test-2026",
+                },
+            )
+            assert blocked_reuse.status_code == 409
 
             versions = client.get(f"/agents/{agent_id}/versions", headers=headers_b)
             assert versions.status_code == 200
@@ -644,9 +691,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             )
             assert approval_delegation.status_code == 201
             waiting = asyncio.run(
-                process_delegation(
-                    UUID(approval_delegation.json()["id"]), settings=settings
-                )
+                process_delegation(UUID(approval_delegation.json()["id"]), settings=settings)
             )
             assert waiting["status"] == "awaiting_approval"
             approvals_b = client.get("/notifications/approvals", headers=headers_b)
@@ -666,9 +711,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             )
             assert decision.status_code == 200
             resumed = asyncio.run(
-                process_delegation(
-                    UUID(approval_delegation.json()["id"]), settings=settings
-                )
+                process_delegation(UUID(approval_delegation.json()["id"]), settings=settings)
             )
             assert resumed["status"] == "completed"
             approved_state = client.get(
@@ -706,6 +749,17 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                 ).status_code
                 == 200
             )
+            traced_memory_content = "Preferência operacional segura para rastreamento"
+            traced_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": traced_memory_content,
+                    "scope": "conversation",
+                    "classification": "internal",
+                },
+            )
+            assert traced_memory.status_code == 201
             shadow = client.post(
                 f"/agents/{agent_id}/chat",
                 headers=headers_b,
@@ -738,8 +792,10 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             assert attack.status_code == 422
             security_events = client.get(f"/agents/{agent_id}/security-events", headers=headers_b)
             assert security_events.status_code == 200
-            assert security_events.json()[0]["category"] == "prompt_injection"
+            assert any(event["category"] == "prompt_injection" for event in security_events.json())
+            assert any(event["category"] == "memory_access" for event in security_events.json())
             assert "Ignore todas" not in str(security_events.json())
+            assert traced_memory_content not in str(security_events.json())
             assert (
                 client.get(f"/agents/{agent_id}/security-events", headers=headers_a).status_code
                 == 404

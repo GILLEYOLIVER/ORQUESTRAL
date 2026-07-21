@@ -386,6 +386,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-consent-revocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Agent Memory Consent */
+        post: operations["revoke_agent_memory_consent_agents__agent_id__memory_consent_revocations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-policy": {
         parameters: {
             query?: never;
@@ -4328,6 +4345,28 @@ export interface components {
              */
             to_agent_id: string;
         };
+        /** AgentMemoryConsentRevocationResponse */
+        AgentMemoryConsentRevocationResponse: {
+            /** Already Revoked */
+            already_revoked: boolean;
+            /** Deleted Count */
+            deleted_count: number;
+            /**
+             * Revocation Id
+             * Format: uuid
+             */
+            revocation_id: string;
+        };
+        /** AgentMemoryConsentRevoke */
+        AgentMemoryConsentRevoke: {
+            /** Consent Reference */
+            consent_reference: string;
+            /**
+             * Subject User Id
+             * Format: uuid
+             */
+            subject_user_id: string;
+        };
         /** AgentMemoryCreate */
         AgentMemoryCreate: {
             /**
@@ -4355,6 +4394,8 @@ export interface components {
              * @enum {string}
              */
             source_type: "manual" | "conversation" | "task" | "tool";
+            /** Subject User Id */
+            subject_user_id?: string | null;
         };
         /** AgentMemoryPolicyResponse */
         AgentMemoryPolicyResponse: {
@@ -4444,8 +4485,8 @@ export interface components {
              * @enum {string}
              */
             classification: "public" | "internal" | "confidential" | "restricted";
-            /** Consent Reference */
-            consent_reference: string | null;
+            /** Consent Recorded */
+            consent_recorded: boolean;
             /**
              * Created At
              * Format: date-time
@@ -4475,6 +4516,8 @@ export interface components {
              * @enum {string}
              */
             source_type: "manual" | "conversation" | "task" | "tool";
+            /** Subject User Id */
+            subject_user_id: string | null;
         };
         /** AgentMessageResponse */
         AgentMessageResponse: {
@@ -4656,7 +4699,7 @@ export interface components {
              * Category
              * @enum {string}
              */
-            category: "prompt_injection" | "data_egress" | "sensitive_data";
+            category: "prompt_injection" | "data_egress" | "sensitive_data" | "memory_access";
             /** Content Fingerprint */
             content_fingerprint: string;
             /**
@@ -4680,7 +4723,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "user" | "knowledge" | "provider" | "system";
+            source: "user" | "knowledge" | "memory" | "provider" | "system";
         };
         /** AgentTaskContractCreate */
         AgentTaskContractCreate: {
@@ -11217,6 +11260,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    revoke_agent_memory_consent_agents__agent_id__memory_consent_revocations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryConsentRevoke"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryConsentRevocationResponse"];
+                };
             };
             /** @description Solicitação inválida */
             400: {

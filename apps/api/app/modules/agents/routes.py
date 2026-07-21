@@ -1971,6 +1971,7 @@ async def chat_with_agent(
         settings=settings,
         company_id=context.company_id,
         agent_id=agent.id,
+        user_id=context.user_id,
         provider=version.provider,
         memory_policy=memory_policy,
         data_policy=data_policy,
@@ -1987,6 +1988,20 @@ async def chat_with_agent(
                 action="blocked",
                 content_fingerprint=fingerprint,
                 indicators=["unsafe_memory_blocked"],
+            )
+        )
+    for fingerprint in memory_context.retrieved_fingerprints:
+        database.add(
+            AgentSecurityEvent(
+                company_id=context.company_id,
+                agent_id=agent.id,
+                agent_run_id=agent_run.id,
+                category="memory_access",
+                source="memory",
+                severity="low",
+                action="reported",
+                content_fingerprint=fingerprint,
+                indicators=["authorized_memory_retrieved"],
             )
         )
     authorized_memory_context = "\n".join(

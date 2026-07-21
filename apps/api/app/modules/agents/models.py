@@ -275,7 +275,7 @@ class AgentSecurityEvent(Base):
     __tablename__ = "agent_security_events"
     __table_args__ = (
         CheckConstraint(
-            "category IN ('prompt_injection', 'data_egress', 'sensitive_data')",
+            "category IN ('prompt_injection', 'data_egress', 'sensitive_data', 'memory_access')",
             name="ck_agent_security_event_category",
         ),
         CheckConstraint(

@@ -293,13 +293,28 @@ def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
     agent_id = UUID("00000000-0000-0000-0000-000000000060")
     test_secret = UUID("00000000-0000-0000-0000-000000000061").hex
     first = memory_content_fingerprint(
-        secret=test_secret, company_id=company_a, agent_id=agent_id, content="dado sensível"
+        secret=test_secret,
+        company_id=company_a,
+        agent_id=agent_id,
+        scope="user",
+        subject_user_id=company_a,
+        content="dado sensível",
     )
     repeated = memory_content_fingerprint(
-        secret=test_secret, company_id=company_a, agent_id=agent_id, content="dado sensível"
+        secret=test_secret,
+        company_id=company_a,
+        agent_id=agent_id,
+        scope="user",
+        subject_user_id=company_a,
+        content="dado sensível",
     )
     other_tenant = memory_content_fingerprint(
-        secret=test_secret, company_id=company_b, agent_id=agent_id, content="dado sensível"
+        secret=test_secret,
+        company_id=company_b,
+        agent_id=agent_id,
+        scope="user",
+        subject_user_id=company_a,
+        content="dado sensível",
     )
     assert first == repeated
     assert first != other_tenant

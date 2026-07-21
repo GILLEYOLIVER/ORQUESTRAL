@@ -481,3 +481,20 @@ Data: 21 de julho de 2026.
 - Dívida técnica preexistente: o lint global ainda alcança 28 migrações históricas com ordenação antiga de imports; nenhuma foi alterada neste ciclo para preservar o histórico Alembic.
 - Riscos conhecidos: bundle web acima de 500 kB e aviso de depreciação do `TestClient`/`httpx` permanecem sem regressão.
 - Próximo passo: ciclo 24, memória por usuário, revogação de consentimento e rastreabilidade de recuperação por execução.
+
+## Ciclo 24 - Titularidade, revogação e rastreabilidade da memória
+
+- Memórias pessoais exigem titular explícito e associação ativa à mesma empresa; memórias de outro usuário não entram no contexto do modelo.
+- Banco mantém FKs independentes para usuário e associação empresarial, com exclusão em cascata quando a pessoa deixa a empresa, sem enfraquecer o contrato de `company_id`.
+- Referências de consentimento deixaram de ser persistidas ou retornadas em texto; somente HMAC contextualizado por empresa, agente e titular é armazenado.
+- Migração expira memórias pessoais legadas antes de remover a coluna textual, permitindo eliminação automática segura.
+- Revogação é idempotente, elimina fisicamente todos os ciphertexts vinculados e bloqueia reutilização posterior da mesma autorização.
+- Auditoria e evento de revogação não contêm titular, referência de consentimento nem conteúdo da memória.
+- Cada memória recuperada gera `memory_access` vinculado à execução usando apenas fingerprint e metadados operacionais.
+- Interface administrativa permite selecionar o titular, revogar a referência e acompanhar a quantidade eliminada sem exibir o conteúdo protegido.
+- Migração: `20260721_0045_agent_memory_consent.py`.
+- Validação local: Ruff e MyPy aprovados em 196 arquivos de produção; 137 testes da API, 3 do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança concluídos sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0045 -> 0044 -> 0045` aprovada; banco em `20260721_0045 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`.
+- Segurança comprovada: teste real impede recuperação por outro usuário da mesma empresa, remove memória ao revogar, torna a revogação repetível e bloqueia recriação com consentimento revogado.
+- Próximo passo: ciclo 25, políticas de memória por escopo, limites de contexto por tokens e expiração de memória de conversa ao encerrar a sessão.

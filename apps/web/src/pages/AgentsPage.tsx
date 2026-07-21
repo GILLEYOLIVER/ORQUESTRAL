@@ -22,6 +22,7 @@ import {
   type AgentMessageResponse,
   type AgentMemoryPolicyResponse,
   type AgentMemoryResponse,
+  type AgentMemoryConsentRevocationResponse,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -140,6 +141,9 @@ export function AgentsPage() {
   const [memoryConsentRequired, setMemoryConsentRequired] = useState(true);
   const [memoryRetrievalEnabled, setMemoryRetrievalEnabled] = useState(false);
   const [memoryRetrievalLimit, setMemoryRetrievalLimit] = useState("5");
+  const [memoryConsentSubjectUserId, setMemoryConsentSubjectUserId] =
+    useState("");
+  const [memoryConsentReference, setMemoryConsentReference] = useState("");
   const [memoryFeedback, setMemoryFeedback] = useState<string | null>(null);
   const selected = agents.data?.find((agent) => agent.id === selectedId);
 
@@ -400,6 +404,29 @@ export function AgentsPage() {
       }),
     onSuccess: () => {
       setMemoryFeedback("Memória eliminada do banco ativo.");
+      refresh();
+    },
+    onError: (caught) => setMemoryFeedback(errorMessage(caught)),
+  });
+  const revokeMemoryConsent = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryConsentRevocationResponse>(
+        `/agents/${selectedId}/memory-consent-revocations`,
+        {
+          method: "POST",
+          body: {
+            subject_user_id: memoryConsentSubjectUserId,
+            consent_reference: memoryConsentReference,
+          },
+        },
+      ),
+    onSuccess: (result) => {
+      setMemoryConsentReference("");
+      setMemoryFeedback(
+        result.already_revoked
+          ? "Consentimento já estava revogado; nenhuma memória voltou a ser utilizada."
+          : `${result.deleted_count} memória(s) pessoal(is) eliminada(s) e consentimento revogado.`,
+      );
       refresh();
     },
     onError: (caught) => setMemoryFeedback(errorMessage(caught)),
@@ -837,6 +864,53 @@ export function AgentsPage() {
                     </Button>
                   </div>
                 </form>
+                {canViewUsers ? (
+                  <form
+                    className="agent-policy-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      revokeMemoryConsent.mutate();
+                    }}
+                  >
+                    <label>
+                      <span>Titular da memória pessoal</span>
+                      <select
+                        onChange={(event) =>
+                          setMemoryConsentSubjectUserId(event.target.value)
+                        }
+                        required
+                        value={memoryConsentSubjectUserId}
+                      >
+                        <option value="">Selecione uma pessoa</option>
+                        {companyUsers.data
+                          ?.filter(
+                            (user) => user.membership_status === "active",
+                          )
+                          .map((user) => (
+                            <option key={user.user_id} value={user.user_id}>
+                              {user.name} · {user.email}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <TextField
+                      label="Referência do consentimento a revogar"
+                      maxLength={160}
+                      onChange={(event) =>
+                        setMemoryConsentReference(event.target.value)
+                      }
+                      required
+                      value={memoryConsentReference}
+                    />
+                    <Button
+                      loading={revokeMemoryConsent.isPending}
+                      type="submit"
+                      variant="secondary"
+                    >
+                      <ShieldAlert size={16} /> Revogar e eliminar memórias
+                    </Button>
+                  </form>
+                ) : null}
                 <div className="agent-policy-list">
                   {memories.data?.length ? (
                     memories.data.map((memory) => (
@@ -846,7 +920,19 @@ export function AgentsPage() {
                             {memory.scope} · {memory.classification}
                           </strong>
                           <small>
-                            Conteúdo protegido · expira em{" "}
+                            Conteúdo protegido
+                            {memory.subject_user_id
+                              ? ` · titular ${
+                                  companyUsers.data?.find(
+                                    (user) =>
+                                      user.user_id === memory.subject_user_id,
+                                  )?.name ?? "identificado"
+                                }`
+                              : ""}
+                            {memory.consent_recorded
+                              ? " · consentimento registrado"
+                              : ""}
+                            {" · expira em "}
                             {new Date(memory.expires_at).toLocaleString(
                               "pt-BR",
                             )}

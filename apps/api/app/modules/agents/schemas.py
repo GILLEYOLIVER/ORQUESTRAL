@@ -221,7 +221,7 @@ class AgentSecurityEventResponse(StrictSchema):
     id: UUID
     agent_id: UUID
     agent_run_id: UUID | None
-    category: Literal["prompt_injection", "data_egress", "sensitive_data"]
+    category: Literal["prompt_injection", "data_egress", "sensitive_data", "memory_access"]
     source: Literal["user", "knowledge", "memory", "provider", "system"]
     severity: Literal["low", "medium", "high", "critical"]
     action: Literal["blocked", "redacted", "reported"]
