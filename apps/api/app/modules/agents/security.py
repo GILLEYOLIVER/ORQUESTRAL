@@ -72,6 +72,7 @@ def assert_provider_data_policy(
     *,
     provider: str,
     includes_knowledge: bool,
+    includes_memory: bool = False,
     classification: str = "confidential",
 ) -> None:
     if provider not in policy.allowed_provider_keys:
@@ -86,6 +87,8 @@ def assert_provider_data_policy(
         raise AgentDataPolicyViolation(
             "O envio de conhecimento ao provedor externo está desativado."
         )
+    if includes_memory and not policy.allow_memory_egress:
+        raise AgentDataPolicyViolation("O envio de memória ao provedor externo está desativado.")
     if CLASSIFICATION_RANK[classification] > CLASSIFICATION_RANK[policy.max_data_classification]:
         raise AgentDataPolicyViolation("A classificação dos dados excede a política do agente.")
 

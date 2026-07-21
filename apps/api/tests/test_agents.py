@@ -37,10 +37,15 @@ from app.modules.agents.governance import (
 )
 from app.modules.agents.memory_schemas import AgentMemoryPolicyUpdate, AgentMemoryPurgeRequest
 from app.modules.agents.memory_service import memory_content_fingerprint
-from app.modules.agents.models import AgentTool
+from app.modules.agents.models import AgentDataPolicy, AgentTool
 from app.modules.agents.providers.base import ModelMessage, ToolDefinition
 from app.modules.agents.providers.local import LocalLanguageModelProvider
-from app.modules.agents.security import redact_sensitive_text, scan_prompt_injection
+from app.modules.agents.security import (
+    AgentDataPolicyViolation,
+    assert_provider_data_policy,
+    redact_sensitive_text,
+    scan_prompt_injection,
+)
 from app.modules.agents.tools import (
     ToolAccessError,
     ToolArgumentsError,
@@ -308,6 +313,33 @@ def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
         )
     with pytest.raises(ValueError, match="Confirme"):
         AgentMemoryPurgeRequest(expired_only=False)
+
+
+def test_external_memory_egress_requires_explicit_authorization() -> None:
+    policy = AgentDataPolicy(
+        allowed_provider_keys=["openai_compatible"],
+        external_processing_enabled=True,
+        allow_message_egress=True,
+        allow_knowledge_egress=False,
+        allow_memory_egress=False,
+        redact_sensitive_data=True,
+        require_evaluation_for_publish=True,
+        max_data_classification="confidential",
+    )
+    with pytest.raises(AgentDataPolicyViolation, match="memória"):
+        assert_provider_data_policy(
+            policy,
+            provider="openai_compatible",
+            includes_knowledge=False,
+            includes_memory=True,
+        )
+    policy.allow_memory_egress = True
+    assert_provider_data_policy(
+        policy,
+        provider="openai_compatible",
+        includes_knowledge=False,
+        includes_memory=True,
+    )
 
 
 def test_approval_policy_rejects_invalid_escalation_chain() -> None:

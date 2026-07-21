@@ -19,6 +19,8 @@ class AgentMemoryPolicyUpdate(StrictSchema):
     allowed_scopes: list[MemoryScope] = Field(min_length=1, max_length=5)
     allowed_classifications: list[MemoryClassification] = Field(min_length=1, max_length=4)
     require_consent_for_user_scope: bool = True
+    retrieval_enabled: bool = False
+    max_retrieval_entries: int = Field(default=5, ge=1, le=20)
 
     @model_validator(mode="after")
     def validate_policy(self) -> Self:
@@ -39,6 +41,8 @@ class AgentMemoryPolicyResponse(StrictSchema):
     allowed_scopes: list[MemoryScope]
     allowed_classifications: list[MemoryClassification]
     require_consent_for_user_scope: bool
+    retrieval_enabled: bool
+    max_retrieval_entries: int
     updated_at: datetime | None
 
 

@@ -138,6 +138,8 @@ export function AgentsPage() {
     "internal",
   ]);
   const [memoryConsentRequired, setMemoryConsentRequired] = useState(true);
+  const [memoryRetrievalEnabled, setMemoryRetrievalEnabled] = useState(false);
+  const [memoryRetrievalLimit, setMemoryRetrievalLimit] = useState("5");
   const [memoryFeedback, setMemoryFeedback] = useState<string | null>(null);
   const selected = agents.data?.find((agent) => agent.id === selectedId);
 
@@ -226,6 +228,8 @@ export function AgentsPage() {
     setMemoryScopes(memoryPolicy.data.allowed_scopes);
     setMemoryClassifications(memoryPolicy.data.allowed_classifications);
     setMemoryConsentRequired(memoryPolicy.data.require_consent_for_user_scope);
+    setMemoryRetrievalEnabled(memoryPolicy.data.retrieval_enabled);
+    setMemoryRetrievalLimit(String(memoryPolicy.data.max_retrieval_entries));
   }, [memoryPolicy.data]);
 
   const refresh = () => {
@@ -362,6 +366,8 @@ export function AgentsPage() {
             allowed_scopes: memoryScopes,
             allowed_classifications: memoryClassifications,
             require_consent_for_user_scope: memoryConsentRequired,
+            retrieval_enabled: memoryRetrievalEnabled,
+            max_retrieval_entries: Number(memoryRetrievalLimit),
           },
         },
       ),
@@ -796,6 +802,27 @@ export function AgentsPage() {
                     />
                     Exigir referência de consentimento para memória pessoal
                   </label>
+                  <label className="agent-memory-consent">
+                    <input
+                      checked={memoryRetrievalEnabled}
+                      onChange={(event) =>
+                        setMemoryRetrievalEnabled(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    Permitir recuperação das memórias autorizadas pelo modelo
+                  </label>
+                  <TextField
+                    label="Máximo por consulta"
+                    max={20}
+                    min={1}
+                    onChange={(event) =>
+                      setMemoryRetrievalLimit(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryRetrievalLimit}
+                  />
                   <div className="form-actions">
                     <Button loading={saveMemoryPolicy.isPending} type="submit">
                       <BrainCircuit size={16} /> Salvar política

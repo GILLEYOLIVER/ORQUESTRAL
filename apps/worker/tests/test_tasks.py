@@ -4,6 +4,7 @@ from worker.tasks import (
     diagnostic_ping,
     maintain_agent_delegations_task,
     process_agent_delegation_task,
+    purge_expired_agent_memories_task,
 )
 
 
@@ -27,3 +28,10 @@ def test_delegation_tasks_delegate_to_domain_services(monkeypatch) -> None:
     assert processed.successful()
     assert processed.result == {"status": "completed", "delegation_id": "delegation-id"}
     assert maintained.result == {"status": "ok", "expired": 1, "recovered": 2}
+
+
+def test_memory_maintenance_delegates_to_domain_service(monkeypatch) -> None:
+    monkeypatch.setattr("worker.tasks.purge_expired_agent_memories_sync", lambda: 3)
+    result = purge_expired_agent_memories_task.apply()
+    assert result.successful()
+    assert result.result == {"status": "ok", "deleted": 3}

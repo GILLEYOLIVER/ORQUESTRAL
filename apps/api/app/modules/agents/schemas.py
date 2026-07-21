@@ -186,6 +186,7 @@ class AgentDataPolicyUpdate(StrictSchema):
     external_processing_enabled: bool = False
     allow_message_egress: bool = False
     allow_knowledge_egress: bool = False
+    allow_memory_egress: bool = False
     redact_sensitive_data: bool = True
     require_evaluation_for_publish: bool = True
     max_data_classification: Literal["public", "internal", "confidential", "restricted"] = (
@@ -208,6 +209,7 @@ class AgentDataPolicyResponse(StrictSchema):
     external_processing_enabled: bool
     allow_message_egress: bool
     allow_knowledge_egress: bool
+    allow_memory_egress: bool
     redact_sensitive_data: bool
     require_evaluation_for_publish: bool
     max_data_classification: Literal["public", "internal", "confidential", "restricted"]
@@ -220,7 +222,7 @@ class AgentSecurityEventResponse(StrictSchema):
     agent_id: UUID
     agent_run_id: UUID | None
     category: Literal["prompt_injection", "data_egress", "sensitive_data"]
-    source: Literal["user", "knowledge", "provider", "system"]
+    source: Literal["user", "knowledge", "memory", "provider", "system"]
     severity: Literal["low", "medium", "high", "critical"]
     action: Literal["blocked", "redacted", "reported"]
     content_fingerprint: str

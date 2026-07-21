@@ -68,6 +68,8 @@ def _policy_response(agent_id: UUID, policy: AgentMemoryPolicy | None) -> AgentM
         allowed_scopes=cast(list[MemoryScope], values["allowed_scopes"]),
         allowed_classifications=cast(list[MemoryClassification], values["allowed_classifications"]),
         require_consent_for_user_scope=cast(bool, values["require_consent_for_user_scope"]),
+        retrieval_enabled=cast(bool, values["retrieval_enabled"]),
+        max_retrieval_entries=cast(int, values["max_retrieval_entries"]),
         updated_at=policy.updated_at if policy else None,
     )
 

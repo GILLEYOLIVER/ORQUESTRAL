@@ -8,6 +8,7 @@ from app.modules.agents.coordination_execution import (
     maintain_delegations_sync,
     process_delegation_sync,
 )
+from app.modules.agents.memory_service import purge_expired_agent_memories_sync
 from app.modules.knowledge.processing import process_document_sync
 from app.modules.metrics.aggregation import aggregate_metrics_sync
 from app.modules.notifications.service import run_notification_maintenance_sync
@@ -56,3 +57,8 @@ def process_agent_delegation_task(delegation_id: str) -> dict[str, str | int]:
 @celery_app.task(name="orkestral.agents.maintain_delegations")
 def maintain_agent_delegations_task() -> dict[str, int | str]:
     return {"status": "ok", **maintain_delegations_sync()}
+
+
+@celery_app.task(name="orkestral.agents.purge_expired_memories")
+def purge_expired_agent_memories_task() -> dict[str, int | str]:
+    return {"status": "ok", "deleted": purge_expired_agent_memories_sync()}

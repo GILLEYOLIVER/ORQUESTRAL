@@ -189,6 +189,9 @@ class AgentDataPolicy(Base):
     allow_knowledge_egress: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false"
     )
+    allow_memory_egress: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     redact_sensitive_data: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true"
     )
@@ -276,7 +279,7 @@ class AgentSecurityEvent(Base):
             name="ck_agent_security_event_category",
         ),
         CheckConstraint(
-            "source IN ('user', 'knowledge', 'provider', 'system')",
+            "source IN ('user', 'knowledge', 'memory', 'provider', 'system')",
             name="ck_agent_security_event_source",
         ),
         CheckConstraint(

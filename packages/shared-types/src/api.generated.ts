@@ -3980,6 +3980,8 @@ export interface components {
             agent_id: string;
             /** Allow Knowledge Egress */
             allow_knowledge_egress: boolean;
+            /** Allow Memory Egress */
+            allow_memory_egress: boolean;
             /** Allow Message Egress */
             allow_message_egress: boolean;
             /** Allowed Provider Keys */
@@ -4018,6 +4020,11 @@ export interface components {
              * @default false
              */
             allow_knowledge_egress: boolean;
+            /**
+             * Allow Memory Egress
+             * @default false
+             */
+            allow_memory_egress: boolean;
             /**
              * Allow Message Egress
              * @default false
@@ -4366,8 +4373,12 @@ export interface components {
             id: string | null;
             /** Max Retention Days */
             max_retention_days: number;
+            /** Max Retrieval Entries */
+            max_retrieval_entries: number;
             /** Require Consent For User Scope */
             require_consent_for_user_scope: boolean;
+            /** Retrieval Enabled */
+            retrieval_enabled: boolean;
             /** Updated At */
             updated_at: string | null;
         };
@@ -4388,10 +4399,20 @@ export interface components {
              */
             max_retention_days: number;
             /**
+             * Max Retrieval Entries
+             * @default 5
+             */
+            max_retrieval_entries: number;
+            /**
              * Require Consent For User Scope
              * @default true
              */
             require_consent_for_user_scope: boolean;
+            /**
+             * Retrieval Enabled
+             * @default false
+             */
+            retrieval_enabled: boolean;
         };
         /** AgentMemoryPurgeRequest */
         AgentMemoryPurgeRequest: {

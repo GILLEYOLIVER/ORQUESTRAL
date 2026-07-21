@@ -1160,6 +1160,10 @@
             "title": "Allow Knowledge Egress",
             "type": "boolean"
           },
+          "allow_memory_egress": {
+            "title": "Allow Memory Egress",
+            "type": "boolean"
+          },
           "allow_message_egress": {
             "title": "Allow Message Egress",
             "type": "boolean"
@@ -1216,6 +1220,7 @@
           "external_processing_enabled",
           "allow_message_egress",
           "allow_knowledge_egress",
+          "allow_memory_egress",
           "redact_sensitive_data",
           "require_evaluation_for_publish",
           "max_data_classification",
@@ -1231,6 +1236,11 @@
           "allow_knowledge_egress": {
             "default": false,
             "title": "Allow Knowledge Egress",
+            "type": "boolean"
+          },
+          "allow_memory_egress": {
+            "default": false,
+            "title": "Allow Memory Egress",
             "type": "boolean"
           },
           "allow_message_egress": {
@@ -2053,8 +2063,16 @@
             "title": "Max Retention Days",
             "type": "integer"
           },
+          "max_retrieval_entries": {
+            "title": "Max Retrieval Entries",
+            "type": "integer"
+          },
           "require_consent_for_user_scope": {
             "title": "Require Consent For User Scope",
+            "type": "boolean"
+          },
+          "retrieval_enabled": {
+            "title": "Retrieval Enabled",
             "type": "boolean"
           },
           "updated_at": {
@@ -2078,6 +2096,8 @@
           "allowed_scopes",
           "allowed_classifications",
           "require_consent_for_user_scope",
+          "retrieval_enabled",
+          "max_retrieval_entries",
           "updated_at"
         ],
         "title": "AgentMemoryPolicyResponse",
@@ -2131,9 +2151,21 @@
             "title": "Max Retention Days",
             "type": "integer"
           },
+          "max_retrieval_entries": {
+            "default": 5,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Retrieval Entries",
+            "type": "integer"
+          },
           "require_consent_for_user_scope": {
             "default": true,
             "title": "Require Consent For User Scope",
+            "type": "boolean"
+          },
+          "retrieval_enabled": {
+            "default": false,
+            "title": "Retrieval Enabled",
             "type": "boolean"
           }
         },

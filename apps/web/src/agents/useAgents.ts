@@ -155,6 +155,8 @@ export interface AgentMemoryPolicyResponse {
     "public" | "internal" | "confidential" | "restricted"
   >;
   require_consent_for_user_scope: boolean;
+  retrieval_enabled: boolean;
+  max_retrieval_entries: number;
   updated_at: string | null;
 }
 

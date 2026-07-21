@@ -465,3 +465,19 @@ Data: 21 de julho de 2026.
 - Segurança comprovada: teste real confirma isolamento multiempresa, exigência de consentimento, idempotência, ausência do segredo na API e no armazenamento em texto simples, e remoção física do registro.
 - Limite consciente: memórias ainda não são enviadas ao modelo; a recuperação será ligada somente após aplicar política de egress e filtragem de classificação.
 - Próximo passo: ciclo 23, recuperação autorizada de memória, expurgo automático e proteção de egress por provedor.
+
+## Ciclo 23 - Recuperação segura e expurgo automático de memória
+
+- Recuperação de memória desativada por padrão e limitada por agente, empresa, classificação, expiração e quantidade máxima por consulta.
+- Conteúdo só é decifrado depois da autorização; memórias não autorizadas nunca entram no contexto do modelo.
+- Memórias com indícios de prompt injection são bloqueadas e geram evento de segurança contendo somente fingerprint e metadados.
+- Envio de memória a provedor externo exige autorização independente `allow_memory_egress`; permitir egress geral não libera memória implicitamente.
+- Dados sensíveis autorizados seguem mascaramento antes de sair para um provedor externo.
+- Worker elimina periodicamente ciphertexts expirados em lotes bloqueados por transação, evitando concorrência entre consumidores.
+- Migração: `20260721_0044_agent_memory_runtime.py`, incluindo a origem auditável `memory` no contrato de eventos de segurança.
+- Validação local: formato e Ruff aprovados nos arquivos do ciclo; MyPy aprovado em 196 arquivos; 137 testes da API, 3 testes do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança concluídos sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0044 -> 0043 -> 0044` aprovada; banco em `20260721_0044 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; PostgreSQL e Redis prontos.
+- Dívida técnica preexistente: o lint global ainda alcança 28 migrações históricas com ordenação antiga de imports; nenhuma foi alterada neste ciclo para preservar o histórico Alembic.
+- Riscos conhecidos: bundle web acima de 500 kB e aviso de depreciação do `TestClient`/`httpx` permanecem sem regressão.
+- Próximo passo: ciclo 24, memória por usuário, revogação de consentimento e rastreabilidade de recuperação por execução.

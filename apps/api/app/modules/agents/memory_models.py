@@ -33,6 +33,10 @@ class AgentMemoryPolicy(Base):
             "max_retention_days BETWEEN default_retention_days AND 3650",
             name="ck_agent_memory_policy_max_retention",
         ),
+        CheckConstraint(
+            "max_retrieval_entries BETWEEN 1 AND 20",
+            name="ck_agent_memory_policy_retrieval_limit",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -57,6 +61,8 @@ class AgentMemoryPolicy(Base):
     require_consent_for_user_scope: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true"
     )
+    retrieval_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    max_retrieval_entries: Mapped[int] = mapped_column(Integer, default=5, server_default="5")
     updated_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
