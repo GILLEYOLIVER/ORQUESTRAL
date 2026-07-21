@@ -87,3 +87,14 @@ Limites conscientes deste ciclo:
 - destinos externos de relacionamentos devem existir na empresa receptora;
 - filtros livres enviados pelo cliente nao sao aceitos: somente visualizacoes publicadas podem
   controlar a consulta.
+
+## Ciclo 56 - releases, instalacao e promocao controlada
+
+- Pacotes possuem catalogo e versoes SemVer persistidas por empresa.
+- Cada release congela artefato, dependencias e checksum SHA-256 verificavel.
+- Dependencias obrigatorias precisam estar publicadas na origem e instaladas no destino.
+- A instalacao exige previa vinculada ao tenant, ambiente, bundle e acoes planejadas.
+- Promocoes respeitam `local/testing -> development -> staging -> production`.
+- Preparar promocao gera bundle verificavel; nao existe falsa indicacao de deploy remoto.
+- Releases, validacoes, publicacoes, instalacoes e promocoes geram auditoria e eventos.
+- O pacote legado 1.0 permanece compativel para migracao gradual.
