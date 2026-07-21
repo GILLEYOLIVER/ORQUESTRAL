@@ -329,8 +329,9 @@ export interface AgentMemorySchedulerMetrics {
 export interface AgentMemoryReencryptionJob {
   id: string;
   agent_id: string;
-  status: "pending" | "running" | "completed" | "failed";
+  status: "pending" | "running" | "completed" | "failed" | "closed";
   target_master_key_id: string;
+  key_provider: "environment" | "external";
   batch_size: number;
   total_count: number;
   scanned_count: number;
@@ -343,6 +344,9 @@ export interface AgentMemoryReencryptionJob {
   recovery_status: "not_assessed" | "ready" | "blocked";
   last_recovery_assessment_at: string | null;
   recovery_assessed_by_user_id: string | null;
+  closure_code: string | null;
+  closed_at: string | null;
+  closed_by_user_id: string | null;
   error_code: string | null;
   requested_by_user_id: string;
   created_at: string;

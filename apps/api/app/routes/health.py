@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
@@ -13,10 +15,40 @@ from app.modules.agents.memory_models import AgentMemoryExerciseSchedule
 from app.services.readiness import ReadinessService
 
 router = APIRouter(tags=["system"])
+_MEMORY_MONITOR_PATH = "/health/agent-memory-scheduler"
+_MEMORY_MONITOR_MAX_CLOCK_SKEW_SECONDS = 300
 
 
 def get_readiness_service(request: Request) -> ReadinessService:
     return ReadinessService(request.app.state.resources, request.app.state.settings)
+
+
+def verify_agent_memory_monitor(request: Request) -> None:
+    timestamp = request.headers.get("X-Orkestral-Monitor-Timestamp", "")
+    signature = request.headers.get("X-Orkestral-Monitor-Signature", "")
+    try:
+        timestamp_value = int(timestamp)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Assinatura do monitor inválida.",
+        ) from exc
+    if abs(int(utc_now().timestamp()) - timestamp_value) > _MEMORY_MONITOR_MAX_CLOCK_SKEW_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Assinatura do monitor expirada.",
+        )
+    message = f"GET\n{_MEMORY_MONITOR_PATH}\n{timestamp}".encode()
+    expected = hmac.new(
+        request.app.state.settings.agent_memory_monitor_secret.encode(),
+        message,
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Assinatura do monitor inválida.",
+        )
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -37,6 +69,7 @@ async def health(request: Request) -> HealthResponse:
 )
 async def agent_memory_scheduler_health(
     request: Request,
+    _: Annotated[None, Depends(verify_agent_memory_monitor)],
 ) -> WorkerHealthResponse | JSONResponse:
     async with request.app.state.resources.sessions() as database:
         schedules = list(

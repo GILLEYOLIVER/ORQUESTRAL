@@ -94,9 +94,11 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 
 # Monitor externo e recuperação assistida da memória
 
-- Monitore `GET /health/agent-memory-scheduler` fora do worker. A resposta é genérica, não exige credencial e nunca revela empresa, agente, horários ou quantidade de agendas.
-- Execute `ORKESTRAL_BASE_URL=https://seu-ambiente bash scripts/monitor-agent-memory-worker.sh` em um monitor independente. Código de saída diferente de zero exige investigação do worker e do Celery Beat.
+- Monitore `GET /health/agent-memory-scheduler` fora do worker. A resposta é genérica e nunca revela empresa, agente, horários ou quantidade de agendas, mas exige uma assinatura HMAC válida por no máximo cinco minutos.
+- Guarde `AGENT_MEMORY_MONITOR_SECRET` e `ORKESTRAL_MONITOR_SECRET` em cofres separados da aplicação e do monitor. Execute `ORKESTRAL_BASE_URL=https://seu-ambiente ORKESTRAL_MONITOR_SECRET=... bash scripts/monitor-agent-memory-worker.sh`; código diferente de zero exige investigação do worker e do Celery Beat.
+- Em produção, configure `ENCRYPTION_KEY_PROVIDER=external`, uma referência exclusiva em `ENCRYPTION_KEY_REFERENCE` e uma referência correspondente para cada item de `ENCRYPTION_PREVIOUS_KEYS`. O banco registra somente a impressão digital da referência, nunca sua URI nem o material da chave.
 - Cada job de recriptografia recebe um limite imutável de retomadas entre 1 e 10. O banco impede que a contagem ultrapasse esse orçamento.
 - Antes de uma retomada, execute o diagnóstico assistido na interface. Ele verifica estado falho, keyring histórico, identificação da chave, snapshot, exclusividade e orçamento sem retornar material secreto.
+- Quando a recuperação for impossível ou o orçamento acabar, encerre o job pela interface. Código técnico, autor e horário permanecem auditáveis; a justificativa é preservada somente como HMAC e o job encerrado não pode ser retomado.
 - Um diagnóstico aprovado expira em 15 minutos. Mudanças no keyring ou em jobs concorrentes bloqueiam a retomada e exigem nova avaliação.
 - Nunca cole chaves no motivo, na interface, em logs ou em tickets. Restaure-as exclusivamente no gerenciador de segredos do ambiente.

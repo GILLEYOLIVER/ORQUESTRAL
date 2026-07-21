@@ -592,7 +592,7 @@ class AgentMemoryReencryptionJob(Base):
     __tablename__ = "agent_memory_reencryption_jobs"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'running', 'completed', 'failed')",
+            "status IN ('pending', 'running', 'completed', 'failed', 'closed')",
             name="ck_agent_memory_reencryption_job_status",
         ),
         CheckConstraint(
@@ -623,8 +623,7 @@ class AgentMemoryReencryptionJob(Base):
             name="ck_agent_memory_reencryption_job_retry",
         ),
         CheckConstraint(
-            "max_retry_attempts BETWEEN 1 AND 100 "
-            "AND retry_count <= max_retry_attempts",
+            "max_retry_attempts BETWEEN 1 AND 100 AND retry_count <= max_retry_attempts",
             name="ck_agent_memory_reencryption_job_retry_budget",
         ),
         CheckConstraint(
@@ -635,6 +634,20 @@ class AgentMemoryReencryptionJob(Base):
             "AND last_recovery_assessment_at IS NOT NULL "
             "AND recovery_assessed_by_user_id IS NOT NULL)",
             name="ck_agent_memory_reencryption_job_recovery",
+        ),
+        CheckConstraint(
+            "key_provider IN ('environment', 'external') "
+            "AND char_length(target_key_reference_fingerprint) = 64",
+            name="ck_agent_memory_reencryption_job_key_provider",
+        ),
+        CheckConstraint(
+            "(status = 'closed' AND closure_code IS NOT NULL "
+            "AND char_length(closure_reason_fingerprint) = 64 "
+            "AND closed_at IS NOT NULL AND closed_by_user_id IS NOT NULL) OR "
+            "(status <> 'closed' AND closure_code IS NULL "
+            "AND closure_reason_fingerprint IS NULL "
+            "AND closed_at IS NULL AND closed_by_user_id IS NULL)",
+            name="ck_agent_memory_reencryption_job_closure",
         ),
         Index(
             "uq_agent_memory_reencryption_job_active",
@@ -656,6 +669,10 @@ class AgentMemoryReencryptionJob(Base):
         String(16), default="pending", server_default="pending", index=True
     )
     target_master_key_id: Mapped[str] = mapped_column(String(64), index=True)
+    key_provider: Mapped[str] = mapped_column(
+        String(24), default="environment", server_default="environment"
+    )
+    target_key_reference_fingerprint: Mapped[str] = mapped_column(String(64))
     batch_size: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
     total_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     scanned_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -673,10 +690,14 @@ class AgentMemoryReencryptionJob(Base):
     recovery_status: Mapped[str] = mapped_column(
         String(24), default="not_assessed", server_default="not_assessed", index=True
     )
-    last_recovery_assessment_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    last_recovery_assessment_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recovery_assessed_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    closure_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    closure_reason_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_by_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     requested_by_user_id: Mapped[UUID] = mapped_column(

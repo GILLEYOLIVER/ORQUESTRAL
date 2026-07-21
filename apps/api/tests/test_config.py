@@ -26,6 +26,9 @@ def production_settings(
         cors_origins=["https://app.orkestral.com.br"],
         jwt_secret="production-jwt-secret-with-at-least-32-characters",  # noqa: S106
         encryption_key="production-encryption-key-at-least-32-characters",
+        encryption_key_provider="external",
+        encryption_key_reference="vault://orkestral/production/active",
+        agent_memory_monitor_secret="production-monitor-secret-with-at-least-32-characters",  # noqa: S106
         n8n_api_key="production-n8n-key-with-at-least-32-characters",
         storage_access_key="production-storage-access-key-32-characters",
         storage_secret_key="production-storage-secret-key-32-characters",  # noqa: S106
@@ -70,3 +73,13 @@ def test_production_rejects_local_embedding_fallback() -> None:
 def test_production_requires_billing_enforcement() -> None:
     with pytest.raises(ValidationError, match="BILLING_ENFORCEMENT_ENABLED"):
         production_settings(billing_enforcement_enabled=False)
+
+
+def test_external_key_provider_requires_coordinated_previous_references() -> None:
+    with pytest.raises(ValidationError):
+        Settings(
+            encryption_key_provider="external",
+            encryption_key_reference="vault://orkestral/development/active",
+            encryption_previous_keys=["historical-key-material-with-32-characters"],
+            encryption_previous_key_references=[],
+        )

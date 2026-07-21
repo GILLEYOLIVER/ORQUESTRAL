@@ -682,3 +682,19 @@ Data: 21 de julho de 2026.
 - Runtime local: Nginx validado e recarregado; `/health`, `/ready`, `/app` e o probe externo responderam `200`; worker saudável; E2E com 7 aprovados e 2 explicitamente ignorados.
 - Segurança comprovada: probe sem dados de tenant, acesso cruzado ao diagnóstico retorna `404`, retry sem avaliação ou acima do orçamento retorna `409` e nenhum segredo aparece na resposta assistida.
 - Próximo passo: monitoramento autenticado por ambiente, cofre externo com rotação coordenada e política de encerramento definitivo de jobs irrecuperáveis.
+
+## Ciclo 40 - autenticação do monitor, cofre externo e encerramento terminal
+
+- O probe do scheduler exige assinatura HMAC-SHA256 com timestamp de curta duração; segredos ausentes, assinaturas inválidas e replay fora da janela falham de forma fechada.
+- O script de monitoramento calcula a assinatura a partir do ambiente do processo, sem enviar o segredo em argumento de linha de comando.
+- Produção exige provedor de chaves externo; referências ativas e históricas são coordenadas com o keyring e persistidas nos jobs somente por impressão digital SHA-256.
+- O diagnóstico de recuperação verifica também provedor e referência antes de liberar uma retomada.
+- Jobs bloqueados ou sem orçamento podem ser encerrados definitivamente com código técnico, usuário, horário, auditoria, evento e notificação; a justificativa nunca é armazenada nem retornada em texto.
+- Jobs encerrados não podem ser retomados e continuam isolados por empresa.
+- Migração: `20260721_0061_agent_memory_monitor_auth_vault_terminal.py`.
+- Validação local: Ruff e MyPy aprovados em 198 arquivos; 139 testes da API, 5 do worker, 12 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria sem vulnerabilidades conhecidas.
+- Migração reversível `0061 -> 0060 -> 0061` aprovada; banco em `20260721_0061 (head)`.
+- Runtime local: `/health`, `/ready`, `/app` e monitor HMAC responderam `200`; API, worker e gateway saudáveis; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: acesso sem assinatura ou com timestamp expirado retorna `401`, fechamento cruzado retorna `404`, job encerrado não pode ser retomado e justificativas não aparecem nas respostas.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
+- Próximo passo: gestão de referências de cofre por credencial vinculada, rotação automatizada do segredo do monitor e política de retenção dos registros terminais.

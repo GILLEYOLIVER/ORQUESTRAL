@@ -2815,6 +2815,33 @@
         "title": "AgentMemoryPurposePolicyInput",
         "type": "object"
       },
+      "AgentMemoryReencryptionJobClose": {
+        "additionalProperties": false,
+        "properties": {
+          "closure_code": {
+            "enum": [
+              "missing_key",
+              "corrupted_material",
+              "budget_exhausted",
+              "other"
+            ],
+            "title": "Closure Code",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "closure_code",
+          "reason"
+        ],
+        "title": "AgentMemoryReencryptionJobClose",
+        "type": "object"
+      },
       "AgentMemoryReencryptionJobCreate": {
         "additionalProperties": false,
         "properties": {
@@ -2847,6 +2874,41 @@
           "batch_size": {
             "title": "Batch Size",
             "type": "integer"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "closed_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed By User Id"
+          },
+          "closure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closure Code"
           },
           "completed_at": {
             "anyOf": [
@@ -2883,6 +2945,14 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "key_provider": {
+            "enum": [
+              "environment",
+              "external"
+            ],
+            "title": "Key Provider",
             "type": "string"
           },
           "last_recovery_assessment_at": {
@@ -2972,7 +3042,8 @@
               "pending",
               "running",
               "completed",
-              "failed"
+              "failed",
+              "closed"
             ],
             "title": "Status",
             "type": "string"
@@ -2996,6 +3067,7 @@
           "agent_id",
           "status",
           "target_master_key_id",
+          "key_provider",
           "batch_size",
           "total_count",
           "scanned_count",
@@ -3008,6 +3080,9 @@
           "recovery_status",
           "last_recovery_assessment_at",
           "recovery_assessed_by_user_id",
+          "closure_code",
+          "closed_at",
+          "closed_by_user_id",
           "error_code",
           "requested_by_user_id",
           "created_at",
@@ -22746,6 +22821,94 @@
           }
         ],
         "summary": "Create Agent Memory Reencryption Job",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/close": {
+      "post": {
+        "operationId": "close_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryReencryptionJobClose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryReencryptionJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Agent Memory Reencryption Job",
         "tags": [
           "agents"
         ]

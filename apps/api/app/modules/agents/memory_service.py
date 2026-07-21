@@ -121,6 +121,10 @@ def memory_master_key_id(secret: str) -> str:
     return hashlib.sha256(f"orkestral-memory-master:{secret}".encode()).hexdigest()[:32]
 
 
+def memory_key_reference_fingerprint(reference: str) -> str:
+    return hashlib.sha256(f"orkestral-memory-key-reference:{reference}".encode()).hexdigest()
+
+
 def memory_signing_secrets(settings: Settings, master_key_id: str) -> tuple[str, ...]:
     candidates = tuple(dict.fromkeys((settings.encryption_key, *settings.encryption_previous_keys)))
     if master_key_id == "legacy":

@@ -49,6 +49,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurgeRequest,
     AgentMemoryPurgeResponse,
     AgentMemoryPurposePolicyInput,
+    AgentMemoryReencryptionJobClose,
     AgentMemoryReencryptionJobCreate,
     AgentMemoryReencryptionJobResponse,
     AgentMemoryReencryptionJobRetry,
@@ -90,6 +91,7 @@ from app.modules.agents.memory_service import (
     memory_content_fingerprint,
     memory_incident_value_fingerprint,
     memory_is_expired,
+    memory_key_reference_fingerprint,
     memory_legal_reference_fingerprint,
     memory_master_key_id,
     memory_policy_values,
@@ -2151,8 +2153,9 @@ def _memory_reencryption_job_response(
     return AgentMemoryReencryptionJobResponse(
         id=job.id,
         agent_id=job.agent_id,
-        status=cast(Literal["pending", "running", "completed", "failed"], job.status),
+        status=cast(Literal["pending", "running", "completed", "failed", "closed"], job.status),
         target_master_key_id=job.target_master_key_id,
+        key_provider=cast(Literal["environment", "external"], job.key_provider),
         batch_size=job.batch_size,
         total_count=job.total_count,
         scanned_count=job.scanned_count,
@@ -2162,11 +2165,12 @@ def _memory_reencryption_job_response(
         max_retry_attempts=job.max_retry_attempts,
         retry_attempts_remaining=max(0, job.max_retry_attempts - job.retry_count),
         last_retry_at=job.last_retry_at,
-        recovery_status=cast(
-            Literal["not_assessed", "ready", "blocked"], job.recovery_status
-        ),
+        recovery_status=cast(Literal["not_assessed", "ready", "blocked"], job.recovery_status),
         last_recovery_assessment_at=job.last_recovery_assessment_at,
         recovery_assessed_by_user_id=job.recovery_assessed_by_user_id,
+        closure_code=job.closure_code,
+        closed_at=job.closed_at,
+        closed_by_user_id=job.closed_by_user_id,
         error_code=job.error_code,
         requested_by_user_id=job.requested_by_user_id,
         created_at=job.created_at,
@@ -2187,6 +2191,13 @@ async def _memory_reencryption_recovery_assessment(
         active_key_id,
         *(memory_master_key_id(secret) for secret in settings.encryption_previous_keys),
     }
+    available_reference_fingerprints = {
+        memory_key_reference_fingerprint(settings.encryption_key_reference),
+        *(
+            memory_key_reference_fingerprint(reference)
+            for reference in settings.encryption_previous_key_references
+        ),
+    }
     competing_job_id = await database.scalar(
         select(AgentMemoryReencryptionJob.id)
         .where(
@@ -2201,6 +2212,14 @@ async def _memory_reencryption_recovery_assessment(
         "job_failed": job.status == "failed",
         "historical_keyring_configured": bool(settings.encryption_previous_keys),
         "target_key_available": job.target_master_key_id in available_key_ids,
+        "key_provider_matches": job.key_provider == settings.encryption_key_provider,
+        "key_reference_available": (
+            job.key_provider == "environment" and job.target_key_reference_fingerprint == "0" * 64
+        )
+        or job.target_key_reference_fingerprint in available_reference_fingerprints,
+        "external_keyring_coordinated": settings.encryption_key_provider == "environment"
+        or len(settings.encryption_previous_key_references)
+        == len(settings.encryption_previous_keys),
         "snapshot_intact": job.total_count == 0
         or (job.snapshot_created_at is not None and job.snapshot_memory_id is not None),
         "retry_budget_available": job.retry_count < job.max_retry_attempts,
@@ -2213,6 +2232,15 @@ async def _memory_reencryption_recovery_assessment(
         ),
         "target_key_available": (
             "Inclua no keyring a chave identificada pelo job, sem registrar o segredo no sistema."
+        ),
+        "key_provider_matches": (
+            "Use o mesmo provedor de chaves configurado quando o job foi criado."
+        ),
+        "key_reference_available": (
+            "Restaure no cofre a referência identificada pelo job antes da recuperação."
+        ),
+        "external_keyring_coordinated": (
+            "Associe uma referência externa a cada chave histórica antes de continuar."
         ),
         "snapshot_intact": (
             "Não retome: o snapshot está incompleto e exige investigação operacional."
@@ -2312,6 +2340,10 @@ async def create_agent_memory_reencryption_job(
         agent_id=agent_id,
         status="pending",
         target_master_key_id=memory_master_key_id(settings.encryption_key),
+        key_provider=settings.encryption_key_provider,
+        target_key_reference_fingerprint=memory_key_reference_fingerprint(
+            settings.encryption_key_reference
+        ),
         batch_size=payload.batch_size,
         max_retry_attempts=payload.max_retry_attempts,
         total_count=total_count,
@@ -2414,6 +2446,90 @@ async def assess_agent_memory_reencryption_recovery(
 
 
 @router.post(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/close",
+    response_model=AgentMemoryReencryptionJobResponse,
+)
+async def close_agent_memory_reencryption_job(
+    agent_id: UUID,
+    job_id: UUID,
+    payload: AgentMemoryReencryptionJobClose,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryReencryptionJobResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    job = await database.scalar(
+        select(AgentMemoryReencryptionJob)
+        .where(
+            AgentMemoryReencryptionJob.id == job_id,
+            AgentMemoryReencryptionJob.company_id == context.company_id,
+            AgentMemoryReencryptionJob.agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job de recriptografia não encontrado.")
+    if job.status != "failed":
+        raise HTTPException(status_code=409, detail="Somente jobs falhos podem ser encerrados.")
+    if job.recovery_status != "blocked" and job.retry_count < job.max_retry_attempts:
+        raise HTTPException(
+            status_code=409,
+            detail="Execute o diagnóstico e esgote as alternativas seguras antes de encerrar.",
+        )
+    now = utc_now()
+    job.status = "closed"
+    job.closure_code = payload.closure_code
+    job.closure_reason_fingerprint = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="reencryption_closure",
+        value=payload.reason,
+    )
+    job.closed_at = now
+    job.closed_by_user_id = context.user_id
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_reencryption.closed",
+        target_type="agent_memory_reencryption_job",
+        target_id=job.id,
+        details={"agent_id": str(agent_id), "closure_code": payload.closure_code},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_reencryption.closed",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={
+                "job_id": str(job.id),
+                "agent_id": str(agent_id),
+                "closure_code": payload.closure_code,
+            },
+        ),
+    )
+    await create_notification(
+        database,
+        company_id=context.company_id,
+        recipient_user_id=job.requested_by_user_id,
+        event_type="agent.memory_reencryption.closed",
+        title="Recriptografia encerrada para investigação",
+        message="O job foi encerrado sem nova tentativa e permanece disponível para auditoria.",
+        severity="error",
+        resource_type="agent_memory_reencryption_job",
+        resource_id=job.id,
+        data={"agent_id": str(agent_id), "closure_code": payload.closure_code},
+    )
+    await database.commit()
+    await database.refresh(job)
+    return _memory_reencryption_job_response(job)
+
+
+@router.post(
     "/{agent_id}/memory-reencryption-jobs/{job_id}/retry",
     response_model=AgentMemoryReencryptionJobResponse,
 )
@@ -2486,6 +2602,10 @@ async def retry_agent_memory_reencryption_job(
     now = utc_now()
     job.status = "pending"
     job.target_master_key_id = memory_master_key_id(settings.encryption_key)
+    job.key_provider = settings.encryption_key_provider
+    job.target_key_reference_fingerprint = memory_key_reference_fingerprint(
+        settings.encryption_key_reference
+    )
     job.scanned_count = job.rotated_count
     job.failed_count = 0
     job.error_code = None

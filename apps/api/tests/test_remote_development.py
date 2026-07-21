@@ -19,6 +19,7 @@ def remote_settings(**overrides: Any) -> Settings:
         "celery_result_backend": "rediss://default:password@redis.example:6379/2",
         "jwt_secret": "j" * 48,
         "encryption_key": "e" * 48,
+        "agent_memory_monitor_secret": "m" * 48,
         "cors_origins": [],
         "development_expose_tokens": False,
         "bootstrap_enabled": False,

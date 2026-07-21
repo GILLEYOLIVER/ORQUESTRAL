@@ -679,6 +679,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close Agent Memory Reencryption Job */
+        post: operations["close_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/recovery-assessment": {
         parameters: {
             query?: never;
@@ -5168,6 +5185,16 @@ export interface components {
             /** Retention Days */
             retention_days: number;
         };
+        /** AgentMemoryReencryptionJobClose */
+        AgentMemoryReencryptionJobClose: {
+            /**
+             * Closure Code
+             * @enum {string}
+             */
+            closure_code: "missing_key" | "corrupted_material" | "budget_exhausted" | "other";
+            /** Reason */
+            reason: string;
+        };
         /** AgentMemoryReencryptionJobCreate */
         AgentMemoryReencryptionJobCreate: {
             /**
@@ -5190,6 +5217,12 @@ export interface components {
             agent_id: string;
             /** Batch Size */
             batch_size: number;
+            /** Closed At */
+            closed_at: string | null;
+            /** Closed By User Id */
+            closed_by_user_id: string | null;
+            /** Closure Code */
+            closure_code: string | null;
             /** Completed At */
             completed_at: string | null;
             /**
@@ -5206,6 +5239,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Key Provider
+             * @enum {string}
+             */
+            key_provider: "environment" | "external";
             /** Last Recovery Assessment At */
             last_recovery_assessment_at: string | null;
             /** Last Retry At */
@@ -5238,7 +5276,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "running" | "completed" | "failed";
+            status: "pending" | "running" | "completed" | "failed" | "closed";
             /** Target Master Key Id */
             target_master_key_id: string;
             /** Total Count */
@@ -13797,6 +13835,60 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    close_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryReencryptionJobClose"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

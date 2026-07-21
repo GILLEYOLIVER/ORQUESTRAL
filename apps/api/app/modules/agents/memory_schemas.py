@@ -490,11 +490,22 @@ class AgentMemoryReencryptionJobRetry(StrictSchema):
         return value.strip()
 
 
+class AgentMemoryReencryptionJobClose(StrictSchema):
+    closure_code: Literal["missing_key", "corrupted_material", "budget_exhausted", "other"]
+    reason: str = Field(min_length=3, max_length=160)
+
+    @field_validator("reason")
+    @classmethod
+    def trim_closure_reason(cls, value: str) -> str:
+        return value.strip()
+
+
 class AgentMemoryReencryptionJobResponse(StrictSchema):
     id: UUID
     agent_id: UUID
-    status: Literal["pending", "running", "completed", "failed"]
+    status: Literal["pending", "running", "completed", "failed", "closed"]
     target_master_key_id: str
+    key_provider: Literal["environment", "external"]
     batch_size: int
     total_count: int
     scanned_count: int
@@ -507,6 +518,9 @@ class AgentMemoryReencryptionJobResponse(StrictSchema):
     recovery_status: Literal["not_assessed", "ready", "blocked"]
     last_recovery_assessment_at: datetime | None
     recovery_assessed_by_user_id: UUID | None
+    closure_code: str | None
+    closed_at: datetime | None
+    closed_by_user_id: UUID | None
     error_code: str | None
     requested_by_user_id: UUID
     created_at: datetime

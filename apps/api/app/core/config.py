@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     celery_result_backend: RedisDsn = RedisDsn("redis://localhost:6379/2")
     jwt_secret: str = "development-only-change-me-jwt-secret-32-chars"  # noqa: S105
     encryption_key: str = "development-only-change-me-encryption-key-32"
+    encryption_key_provider: Literal["environment", "external"] = "environment"
+    encryption_key_reference: str = "environment://orkestral/local/active"
+    encryption_previous_key_references: list[str] = Field(default_factory=list)
+    agent_memory_monitor_secret: str = (
+        "development-only-change-me-agent-memory-monitor-secret-32"  # noqa: S105
+    )
     n8n_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:5678")
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
     n8n_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
@@ -112,12 +118,32 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
+        if self.encryption_key_provider == "external":
+            references = (
+                self.encryption_key_reference,
+                *self.encryption_previous_key_references,
+            )
+            if (
+                not self.encryption_key_reference.strip()
+                or any(
+                    marker in value.lower()
+                    for value in references
+                    for marker in _PLACEHOLDER_MARKERS
+                )
+                or len(set(references)) != len(references)
+                or len(self.encryption_previous_key_references)
+                != len(self.encryption_previous_keys)
+            ):
+                raise ValueError(
+                    "Referências do cofre externo devem ser únicas, seguras e corresponder ao keyring"
+                )
         if self.remote_development_enabled:
             if self.app_env != "development":
                 raise ValueError("REMOTE_DEVELOPMENT_ENABLED exige APP_ENV=development")
             remote_secrets = {
                 "JWT_SECRET": self.jwt_secret,
                 "ENCRYPTION_KEY": self.encryption_key,
+                "AGENT_MEMORY_MONITOR_SECRET": self.agent_memory_monitor_secret,
             }
             unsafe_remote_secrets = [
                 name
@@ -166,6 +192,7 @@ class Settings(BaseSettings):
         secrets = {
             "JWT_SECRET": self.jwt_secret,
             "ENCRYPTION_KEY": self.encryption_key,
+            "AGENT_MEMORY_MONITOR_SECRET": self.agent_memory_monitor_secret,
             "N8N_API_KEY": self.n8n_api_key,
             "STORAGE_ACCESS_KEY": self.storage_access_key,
             "STORAGE_SECRET_KEY": self.storage_secret_key,
@@ -178,6 +205,8 @@ class Settings(BaseSettings):
         if unsafe:
             joined = ", ".join(sorted(unsafe))
             raise ValueError(f"Valores inseguros para produção: {joined}")
+        if self.encryption_key_provider != "external":
+            raise ValueError("ENCRYPTION_KEY_PROVIDER deve utilizar cofre external em produção")
 
         configurations = {
             "DATABASE_URL": self.database_url,

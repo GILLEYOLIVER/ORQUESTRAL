@@ -40,11 +40,11 @@ SELF_SERVICE_MUTATIONS = frozenset(
 )
 
 SIGNED_WEBHOOKS = frozenset({"/webhooks/workflows/{public_key}"})
+SIGNED_MONITOR_READS = frozenset({"/health/agent-memory-scheduler"})
 PUBLIC_READ_ROUTES = frozenset(
     {
         "/auth/development-access",
         "/health",
-        "/health/agent-memory-scheduler",
         "/ready",
         "/system/capabilities",
         "/system/features",
@@ -156,6 +156,9 @@ def test_non_public_reads_require_an_authenticated_principal() -> None:
 
     for route in _application_routes():
         if "GET" not in set(route.methods or set()) or route.path in PUBLIC_READ_ROUTES:
+            continue
+        if route.path in SIGNED_MONITOR_READS:
+            assert "verify_agent_memory_monitor" in _dependency_names(route)
             continue
         if "get_current_principal" not in _dependency_names(route):
             failures.append(f"GET {route.path}: sem usuario autenticado")

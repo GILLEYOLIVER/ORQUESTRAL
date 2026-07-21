@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -50,6 +52,20 @@ class AgentGovernanceIdentity:
     user_ids: tuple[UUID, UUID, UUID, UUID]
     emails: tuple[str, str, str, str]
     password: str
+
+
+def _monitor_headers(settings: Settings) -> dict[str, str]:
+    timestamp = str(int(datetime.now(UTC).timestamp()))
+    message = f"GET\n/health/agent-memory-scheduler\n{timestamp}"
+    signature = hmac.new(
+        settings.agent_memory_monitor_secret.encode(),
+        message.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return {
+        "X-Orkestral-Monitor-Timestamp": timestamp,
+        "X-Orkestral-Monitor-Signature": signature,
+    }
 
 
 async def _seed(settings: Settings) -> AgentGovernanceIdentity:
@@ -803,6 +819,38 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/retry",
                     headers=headers_b,
                     json={"reason": "Tentativa acima do limite."},
+                ).status_code
+                == 409
+            )
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/close",
+                    headers=headers_a,
+                    json={
+                        "closure_code": "budget_exhausted",
+                        "reason": "Encerramento solicitado pela empresa incorreta.",
+                    },
+                ).status_code
+                == 404
+            )
+            closed_rotation = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/close",
+                headers=headers_b,
+                json={
+                    "closure_code": "budget_exhausted",
+                    "reason": "Orçamento esgotado após diagnóstico operacional.",
+                },
+            )
+            assert closed_rotation.status_code == 200
+            assert closed_rotation.json()["status"] == "closed"
+            assert closed_rotation.json()["closure_code"] == "budget_exhausted"
+            assert closed_rotation.json()["closed_by_user_id"] == str(identity.user_ids[1])
+            assert "reason" not in closed_rotation.json()
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/retry",
+                    headers=headers_b,
+                    json={"reason": "Job encerrado não pode ser retomado."},
                 ).status_code
                 == 409
             )
@@ -1967,7 +2015,9 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     agent_id=UUID(agent_id),
                 )
             )
-            external_probe = client.get("/health/agent-memory-scheduler")
+            external_probe = client.get(
+                "/health/agent-memory-scheduler", headers=_monitor_headers(settings)
+            )
             assert external_probe.status_code == 503
             assert external_probe.json()["state"] == "overdue"
             assert set(external_probe.json()) == {
@@ -1977,7 +2027,9 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 "request_id",
             }
             asyncio.run(maintain_due_agent_memory_response_exercises(settings=settings))
-            recovered_probe = client.get("/health/agent-memory-scheduler")
+            recovered_probe = client.get(
+                "/health/agent-memory-scheduler", headers=_monitor_headers(settings)
+            )
             assert recovered_probe.status_code == 200
             assert recovered_probe.json()["state"] == "healthy"
             monkeypatch.setattr(memory_service_module, "utc_now", current_memory_service_time)

@@ -206,6 +206,12 @@ export function AgentsPage() {
     useState("3");
   const [memoryReencryptionRetryReason, setMemoryReencryptionRetryReason] =
     useState("");
+  const [memoryReencryptionClosureCode, setMemoryReencryptionClosureCode] =
+    useState<
+      "missing_key" | "corrupted_material" | "budget_exhausted" | "other"
+    >("budget_exhausted");
+  const [memoryReencryptionClosureReason, setMemoryReencryptionClosureReason] =
+    useState("");
   const [memoryRecoveryAssessment, setMemoryRecoveryAssessment] =
     useState<AgentMemoryReencryptionRecoveryAssessment | null>(null);
   const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
@@ -873,6 +879,28 @@ export function AgentsPage() {
         "Job retomado a partir do último checkpoint seguro.",
       );
       setMemoryReencryptionRetryReason("");
+      setMemoryRecoveryAssessment(null);
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const closeMemoryReencryption = useMutation({
+    mutationFn: (jobId: string) =>
+      request<AgentMemoryReencryptionJob>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${jobId}/close`,
+        {
+          method: "POST",
+          body: {
+            closure_code: memoryReencryptionClosureCode,
+            reason: memoryReencryptionClosureReason,
+          },
+        },
+      ),
+    onSuccess: () => {
+      setMemoryIncidentFeedback(
+        "Job encerrado definitivamente com auditoria e material sensível protegido.",
+      );
+      setMemoryReencryptionClosureReason("");
       setMemoryRecoveryAssessment(null);
       refresh();
     },
@@ -2131,6 +2159,7 @@ export function AgentsPage() {
                       {latestMemoryReencryptionJob.error_code
                         ? ` · erro ${latestMemoryReencryptionJob.error_code}`
                         : ""}
+                      {` · chaves ${latestMemoryReencryptionJob.key_provider}`}
                       {` · retomadas ${latestMemoryReencryptionJob.retry_count}/${latestMemoryReencryptionJob.max_retry_attempts}`}
                     </small>
                   ) : (
@@ -2193,6 +2222,69 @@ export function AgentsPage() {
                       >
                         Retomar do checkpoint
                       </Button>
+                      {memoryRecoveryAssessment?.status === "blocked" ||
+                      latestMemoryReencryptionJob.retry_attempts_remaining ===
+                        0 ? (
+                        <div className="agent-policy-list">
+                          <strong>Encerramento definitivo</strong>
+                          <small>
+                            Use somente quando a chave não puder ser recuperada
+                            ou o orçamento de retomadas tiver acabado.
+                          </small>
+                          <label className="native-field">
+                            <span>Motivo técnico</span>
+                            <select
+                              className="agent-native-select"
+                              onChange={(event) =>
+                                setMemoryReencryptionClosureCode(
+                                  event.target.value as
+                                    | "missing_key"
+                                    | "corrupted_material"
+                                    | "budget_exhausted"
+                                    | "other",
+                                )
+                              }
+                              value={memoryReencryptionClosureCode}
+                            >
+                              <option value="budget_exhausted">
+                                Limite de retomadas esgotado
+                              </option>
+                              <option value="missing_key">
+                                Chave histórica indisponível
+                              </option>
+                              <option value="corrupted_material">
+                                Material criptográfico corrompido
+                              </option>
+                              <option value="other">Outro motivo</option>
+                            </select>
+                          </label>
+                          <TextField
+                            label="Justificativa para encerrar"
+                            maxLength={160}
+                            onChange={(event) =>
+                              setMemoryReencryptionClosureReason(
+                                event.target.value,
+                              )
+                            }
+                            value={memoryReencryptionClosureReason}
+                          />
+                          <Button
+                            disabled={
+                              memoryReencryptionClosureReason.trim().length < 3
+                            }
+                            loading={closeMemoryReencryption.isPending}
+                            onClick={() =>
+                              closeMemoryReencryption.mutate(
+                                latestMemoryReencryptionJob.id,
+                              )
+                            }
+                            type="button"
+                            variant="secondary"
+                          >
+                            Encerrar job com auditoria
+                          </Button>
+                        </div>
+                      ) : null}
                     </>
                   ) : null}
                 </form>
