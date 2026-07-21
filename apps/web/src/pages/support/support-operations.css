@@ -1,0 +1,308 @@
+.support-operations {
+  overflow: hidden;
+  margin-bottom: 22px;
+  border: 1px solid #d4e2dd;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 93% 0%, rgba(235, 164, 75, 0.2), transparent 27%),
+    #f8fbf9;
+  box-shadow: 0 16px 45px rgba(18, 61, 53, 0.08);
+}
+.support-operations > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 27px 17px;
+}
+.support-operations > header h2 {
+  margin: 5px 0;
+  color: #153b34;
+  font-size: 1.6rem;
+}
+.support-operations > header p {
+  margin: 0;
+  color: #687a75;
+}
+.support-operation-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  border-top: 1px solid #dce7e3;
+  background: #dce7e3;
+}
+.support-operation-metrics article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 2px 9px;
+  padding: 17px 19px;
+  background: #fff;
+}
+.support-operation-metrics svg {
+  grid-row: 1 / 3;
+  color: #2d7062;
+}
+.support-operation-metrics span {
+  color: #74827e;
+  font-size: 0.74rem;
+}
+.support-operation-metrics strong {
+  color: #153c34;
+  font-size: 1.12rem;
+}
+.support-operation-metrics article.danger {
+  background: #fff0eb;
+}
+.support-operation-metrics article.danger svg,
+.support-operation-metrics article.danger strong {
+  color: #ae4935;
+}
+.support-operations-body {
+  display: grid;
+  gap: 16px;
+  padding: 21px 24px 26px;
+  border-top: 1px solid #dce7e3;
+}
+.support-queue-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 15px;
+}
+.support-queue-heading h3 {
+  margin: 0 0 4px;
+  color: #173e36;
+}
+.support-queue-heading p {
+  margin: 0;
+  color: #71817c;
+}
+.support-config-actions {
+  display: flex;
+  gap: 7px;
+}
+.support-config-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #bdd1ca;
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #225c50;
+  cursor: pointer;
+}
+.support-config-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 11px;
+}
+.support-config-form label,
+.support-ticket-controls label {
+  display: grid;
+  gap: 5px;
+  color: #365a52;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.support-config-form input,
+.support-ticket-controls select,
+.support-satisfaction textarea {
+  width: 100%;
+  border: 1px solid #c8d9d3;
+  border-radius: 10px;
+  padding: 10px 11px;
+  background: #fff;
+  color: #17362f;
+  font: inherit;
+}
+.support-queue-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.support-queue-grid > article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  padding: 16px;
+  border: 1px solid #d5e1dd;
+  border-radius: 15px;
+  background: #fff;
+}
+.support-queue-grid > article > i {
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--queue-color);
+}
+.support-queue-grid > article > div span {
+  display: block;
+  margin-top: 4px;
+  color: #72807c;
+  font-size: 0.75rem;
+}
+.support-queue-grid dl {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 10px 0 0;
+}
+.support-queue-grid dl div {
+  padding: 8px;
+  border-radius: 9px;
+  background: #f2f6f4;
+}
+.support-queue-grid dt {
+  color: #75827e;
+  font-size: 0.66rem;
+}
+.support-queue-grid dd {
+  margin: 3px 0 0;
+  color: #19453b;
+  font-weight: 800;
+}
+.support-ticket-operations {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 13px;
+  align-items: start;
+}
+.support-ticket-operations > :first-child {
+  grid-row: span 2;
+}
+.support-ticket-operations h3 {
+  margin-top: 0;
+  color: #173e36;
+}
+.support-ticket-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+.support-deadlines {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 15px;
+}
+.support-deadlines article {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 11px;
+  background: #edf3f0;
+}
+.support-deadlines span {
+  color: #6e7d78;
+  font-size: 0.72rem;
+}
+.support-deadlines strong {
+  color: #2b5b51;
+}
+.support-deadlines article.met {
+  background: #e0f1e9;
+}
+.support-deadlines article.breached {
+  background: #f9e1d9;
+}
+.support-deadlines article.breached strong {
+  color: #aa432f;
+}
+.support-event-list {
+  display: grid;
+  gap: 8px;
+  max-height: 310px;
+  overflow-y: auto;
+}
+.support-event-list article {
+  display: flex;
+  gap: 9px;
+  padding: 9px;
+  border-radius: 10px;
+  background: #f4f7f6;
+}
+.support-event-list svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #2f7062;
+}
+.support-event-list article div {
+  display: grid;
+  gap: 2px;
+}
+.support-event-list span,
+.support-event-list time {
+  color: #72807c;
+  font-size: 0.72rem;
+}
+.support-satisfaction {
+  display: grid;
+  gap: 10px;
+}
+.support-stars {
+  display: flex;
+  gap: 4px;
+}
+.support-stars button {
+  border: 0;
+  padding: 3px;
+  background: transparent;
+  color: #b6c2be;
+  cursor: pointer;
+}
+.support-stars button.active {
+  color: #d99b31;
+}
+.support-stars button.active svg {
+  fill: currentColor;
+}
+.support-satisfaction textarea {
+  min-height: 75px;
+  resize: vertical;
+}
+.support-select-hint {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed #b9cec7;
+  border-radius: 13px;
+  color: #637771;
+  text-align: center;
+}
+@media (max-width: 1050px) {
+  .support-operation-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .support-queue-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .support-ticket-operations {
+    grid-template-columns: 1fr;
+  }
+  .support-ticket-operations > :first-child {
+    grid-row: auto;
+  }
+}
+@media (max-width: 680px) {
+  .support-operations > header,
+  .support-queue-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .support-operation-metrics,
+  .support-queue-grid,
+  .support-ticket-controls,
+  .support-deadlines {
+    grid-template-columns: 1fr;
+  }
+  .support-config-form {
+    grid-template-columns: 1fr;
+  }
+  .support-config-actions {
+    flex-wrap: wrap;
+  }
+}

@@ -46,6 +46,24 @@ PERMISSION_CATALOG = (
         "crm.contacts.delete", "crm", "contacts.delete", "Excluir contatos do CRM"
     ),
     PermissionDefinition(
+        "crm.pipeline.view", "crm", "pipeline.view", "Visualizar funis comerciais"
+    ),
+    PermissionDefinition(
+        "crm.pipeline.manage", "crm", "pipeline.manage", "Gerenciar funis comerciais"
+    ),
+    PermissionDefinition(
+        "crm.opportunities.create", "crm", "opportunities.create", "Criar oportunidades"
+    ),
+    PermissionDefinition(
+        "crm.opportunities.update", "crm", "opportunities.update", "Alterar oportunidades"
+    ),
+    PermissionDefinition(
+        "crm.opportunities.delete", "crm", "opportunities.delete", "Excluir oportunidades"
+    ),
+    PermissionDefinition(
+        "crm.activities.manage", "crm", "activities.manage", "Registrar atividades comerciais"
+    ),
+    PermissionDefinition(
         "support.tickets.view", "support", "tickets.view", "Visualizar chamados de suporte"
     ),
     PermissionDefinition(

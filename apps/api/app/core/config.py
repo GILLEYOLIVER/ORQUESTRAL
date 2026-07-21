@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     storage_access_key: str = "development-only"
     storage_secret_key: str = "development-only-change-me-storage-secret"  # noqa: S105
     storage_bucket: str = "orkestral"
+    object_storage_sse_enabled: bool = False
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost", "http://localhost:5173"]
     )
@@ -71,6 +72,10 @@ class Settings(BaseSettings):
     security_rate_limit_window_seconds: int = Field(default=60, ge=10, le=3_600)
     request_max_body_bytes: int = Field(default=26_214_400, ge=1_024, le=104_857_600)
     security_hsts_seconds: int = Field(default=31_536_000, ge=0, le=63_072_000)
+    security_trusted_proxy_ips: list[str] = Field(default_factory=list)
+    security_enforce_origin: bool = True
+    security_enforce_json_content_type: bool = True
+    encryption_previous_keys: list[str] = Field(default_factory=list)
     audit_capture_enabled: bool = True
     audit_retention_days: int = Field(default=365, ge=30, le=3_650)
     billing_enforcement_enabled: bool = False
@@ -212,6 +217,31 @@ class Settings(BaseSettings):
         ]
         if unsafe_previous_secrets:
             raise ValueError("JWT_PREVIOUS_SECRETS contém valores inseguros para produção")
+        return self
+
+    @model_validator(mode="after")
+    def enforce_encrypted_transports(self) -> Settings:
+        remote = self.remote_development_enabled or self.app_env in {"staging", "production"}
+        if not remote:
+            return self
+        database_value = self.database_url.lower()
+        if "sslmode=require" not in database_value and "ssl=require" not in database_value:
+            raise ValueError("DATABASE_URL remota deve exigir TLS com sslmode=require")
+        if not str(self.redis_url).lower().startswith("rediss://"):
+            raise ValueError("REDIS_URL remota deve utilizar TLS com rediss://")
+        if self.object_storage_enabled and not str(self.storage_endpoint).lower().startswith(
+            "https://"
+        ):
+            raise ValueError("STORAGE_ENDPOINT remoto deve utilizar HTTPS")
+        if self.object_storage_enabled and not self.object_storage_sse_enabled:
+            raise ValueError("OBJECT_STORAGE_SSE_ENABLED deve permanecer habilitado remotamente")
+        unsafe_previous = [
+            key
+            for key in self.encryption_previous_keys
+            if len(key) < 32 or any(marker in key.lower() for marker in _PLACEHOLDER_MARKERS)
+        ]
+        if unsafe_previous:
+            raise ValueError("ENCRYPTION_PREVIOUS_KEYS contém chaves inseguras")
         return self
 
     @property

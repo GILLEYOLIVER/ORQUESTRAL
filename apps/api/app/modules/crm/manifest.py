@@ -5,18 +5,24 @@ from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 
 crm_module = ModuleDefinition(
     code="crm",
-    name="CRM",
-    version="1.0.0",
+    name="CRM e Vendas",
+    version="0.5.0",
     permissions=(
         "crm.contacts.view",
         "crm.contacts.create",
         "crm.contacts.update",
         "crm.contacts.delete",
+        "crm.pipeline.view",
+        "crm.pipeline.manage",
+        "crm.opportunities.create",
+        "crm.opportunities.update",
+        "crm.opportunities.delete",
+        "crm.activities.manage",
     ),
     routers=(router,),
     menus=(
         ModuleMenu(
-            label="Contatos",
+            label="CRM e Vendas",
             path="/app/crm/contatos",
             required_permission="crm.contacts.view",
         ),
@@ -26,6 +32,12 @@ crm_module = ModuleDefinition(
         "crm.contact.created",
         "crm.contact.updated",
         "crm.contact.deleted",
+        "crm.pipeline.created",
+        "crm.pipeline.stage.updated",
+        "crm.opportunity.created",
+        "crm.opportunity.updated",
+        "crm.opportunity.deleted",
+        "crm.opportunity.activity.created",
     ),
-    migrations=("20260716_0004",),
+    migrations=("20260716_0004", "20260720_0024"),
 )

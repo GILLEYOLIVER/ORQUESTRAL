@@ -12,6 +12,10 @@ import {
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
 import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
+import {
+  SupportOperationsPanel,
+  type SupportOperationalTicket,
+} from "./support/SupportOperationsPanel";
 
 type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
 type TicketPriority = "low" | "normal" | "high" | "urgent";
@@ -30,6 +34,14 @@ interface SupportTicket {
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
+  queue_id: string | null;
+  sla_policy_id: string | null;
+  first_response_due_at: string | null;
+  resolution_due_at: string | null;
+  first_responded_at: string | null;
+  breached_at: string | null;
+  satisfaction_score: number | null;
+  satisfaction_comment: string | null;
 }
 
 interface SupportInteraction {
@@ -115,7 +127,7 @@ export function SupportPage() {
   });
   const update = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TicketStatus }) =>
-      request<SupportTicket>(`/support/tickets/${id}`, {
+      request<SupportTicket>(`/support/tickets/${id}/operations`, {
         method: "PATCH",
         body: { status },
       }),
@@ -126,13 +138,10 @@ export function SupportPage() {
   });
   const comment = useMutation({
     mutationFn: () =>
-      request<SupportInteraction>(
-        `/support/tickets/${selected?.id}/interactions`,
-        {
-          method: "POST",
-          body: { message, is_internal: false },
-        },
-      ),
+      request<SupportInteraction>(`/support/tickets/${selected?.id}/response`, {
+        method: "POST",
+        body: { message, is_internal: false },
+      }),
     onSuccess: async () => {
       setMessage("");
       await queryClient.invalidateQueries({
@@ -164,6 +173,15 @@ export function SupportPage() {
           </Button>
         </PermissionGuard>
       </div>
+
+      <SupportOperationsPanel
+        ticket={selected}
+        onTicketUpdated={(ticket: SupportOperationalTicket) =>
+          setSelected((current) =>
+            current ? { ...current, ...ticket } : current,
+          )
+        }
+      />
 
       {tickets.isError ? (
         <Alert variant="error">

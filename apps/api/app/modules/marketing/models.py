@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -181,4 +182,129 @@ class MarketingJourneyStep(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class MarketingCampaignMetric(Base):
+    __tablename__ = "marketing_campaign_metrics"
+    __table_args__ = (
+        CheckConstraint(
+            "impressions >= 0 AND reach >= 0 AND clicks >= 0 AND leads >= 0 "
+            "AND conversions >= 0 AND spend_cents >= 0 AND revenue_cents >= 0",
+            name="ck_marketing_campaign_metrics_nonnegative",
+        ),
+        UniqueConstraint(
+            "campaign_id",
+            "observed_on",
+            "channel",
+            "variant_key",
+            name="uq_marketing_campaign_metric_slice",
+        ),
+        Index("ix_marketing_campaign_metrics_company_date", "company_id", "observed_on"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    campaign_id: Mapped[UUID] = mapped_column(
+        ForeignKey("marketing_campaigns.id", ondelete="CASCADE"), index=True
+    )
+    observed_on: Mapped[date] = mapped_column(Date, index=True)
+    channel: Mapped[str] = mapped_column(String(30), default="multi_channel")
+    variant_key: Mapped[str] = mapped_column(String(80), default="all", server_default="all")
+    impressions: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    reach: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    clicks: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    leads: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    conversions: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    spend_cents: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    revenue_cents: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class MarketingExperiment(Base):
+    __tablename__ = "marketing_experiments"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('draft', 'running', 'completed', 'cancelled')",
+            name="ck_marketing_experiments_status",
+        ),
+        CheckConstraint(
+            "success_metric IN ('click_rate', 'lead_rate', 'conversion_rate', 'revenue')",
+            name="ck_marketing_experiments_metric",
+        ),
+        Index("ix_marketing_experiments_company_status", "company_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    campaign_id: Mapped[UUID] = mapped_column(
+        ForeignKey("marketing_campaigns.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(180))
+    hypothesis: Mapped[str] = mapped_column(Text)
+    success_metric: Mapped[str] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft")
+    variants: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    winner_key: Mapped[str | None] = mapped_column(String(80))
+    start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class MarketingAttribution(Base):
+    __tablename__ = "marketing_attributions"
+    __table_args__ = (
+        CheckConstraint("value_cents >= 0", name="ck_marketing_attributions_value"),
+        CheckConstraint(
+            "touchpoint IN ('first_touch', 'lead_creation', 'influenced', 'last_touch', 'conversion')",
+            name="ck_marketing_attributions_touchpoint",
+        ),
+        Index("ix_marketing_attributions_company_campaign", "company_id", "campaign_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    campaign_id: Mapped[UUID] = mapped_column(
+        ForeignKey("marketing_campaigns.id", ondelete="CASCADE"), index=True
+    )
+    contact_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_contacts.id", ondelete="SET NULL"), index=True
+    )
+    opportunity_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_opportunities.id", ondelete="SET NULL"), index=True
+    )
+    touchpoint: Mapped[str] = mapped_column(String(30))
+    source: Mapped[str | None] = mapped_column(String(120))
+    medium: Mapped[str | None] = mapped_column(String(120))
+    value_cents: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
     )

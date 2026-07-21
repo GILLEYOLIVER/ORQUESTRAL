@@ -1,0 +1,266 @@
+.project-portfolio-panel {
+  overflow: hidden;
+  border: 1px solid #d4e2dd;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 94% 0, rgba(231, 172, 73, 0.2), transparent 27%),
+    #f8fbf9;
+  box-shadow: 0 17px 45px rgba(18, 61, 53, 0.08);
+}
+.project-portfolio-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 27px 17px;
+}
+.project-portfolio-panel > header h2 {
+  margin: 5px 0;
+  color: #153b34;
+  font-size: 1.6rem;
+}
+.project-portfolio-panel > header p {
+  margin: 0;
+  color: #687a75;
+}
+.project-portfolio-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  border-top: 1px solid #dce7e3;
+  background: #dce7e3;
+}
+.project-portfolio-metrics article {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 2px 9px;
+  padding: 17px 20px;
+  background: #fff;
+}
+.project-portfolio-metrics svg {
+  grid-row: 1 / 3;
+  color: #2c7061;
+}
+.project-portfolio-metrics span {
+  color: #74827e;
+  font-size: 0.74rem;
+}
+.project-portfolio-metrics strong {
+  color: #153c34;
+  font-size: 1.12rem;
+}
+.project-portfolio-metrics article.danger {
+  background: #fff0eb;
+}
+.project-portfolio-metrics article.danger svg,
+.project-portfolio-metrics article.danger strong {
+  color: #a94734;
+}
+.project-portfolio-body {
+  display: grid;
+  gap: 15px;
+  padding: 20px 24px 26px;
+  border-top: 1px solid #dce7e3;
+}
+.project-security-banner {
+  display: flex;
+  gap: 10px;
+  padding: 13px 15px;
+  border: 1px solid #b9d7cc;
+  border-radius: 12px;
+  background: #eaf5f1;
+  color: #215e50;
+}
+.project-security-banner div {
+  display: grid;
+  gap: 3px;
+}
+.project-security-banner span {
+  color: #58756d;
+  font-size: 0.78rem;
+}
+.project-governance-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.project-governance-controls nav {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  background: #e7efec;
+}
+.project-governance-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: transparent;
+  color: #476c63;
+  cursor: pointer;
+}
+.project-governance-controls button.active,
+.project-governance-controls > button {
+  background: #fff;
+  color: #19594b;
+  box-shadow: 0 4px 12px rgba(20, 64, 55, 0.09);
+}
+.project-deep-form {
+  display: grid;
+  gap: 11px;
+  align-content: start;
+}
+.project-deep-form h3 {
+  margin: 0;
+  color: #173d35;
+}
+.project-deep-form label {
+  display: grid;
+  gap: 5px;
+  color: #365a52;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.project-deep-form input,
+.project-deep-form select,
+.project-deep-form textarea {
+  width: 100%;
+  border: 1px solid #c8d9d3;
+  border-radius: 10px;
+  padding: 10px 11px;
+  background: #fff;
+  color: #17362f;
+  font: inherit;
+}
+.project-deep-form textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+.project-governance-grid,
+.project-milestone-layout,
+.project-risk-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 14px;
+  align-items: start;
+}
+.portfolio-list,
+.project-milestone-list,
+.project-risk-list {
+  display: grid;
+  gap: 9px;
+}
+.portfolio-list article,
+.project-milestone-list article,
+.project-risk-list article {
+  padding: 15px;
+  border: 1px solid #d5e1dd;
+  border-radius: 14px;
+  background: #fff;
+}
+.portfolio-list article > span {
+  display: block;
+  margin: 4px 0 10px;
+  color: #70807b;
+  font-size: 0.78rem;
+}
+.portfolio-list dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 0;
+}
+.portfolio-list dl div {
+  padding: 7px;
+  border-radius: 8px;
+  background: #f2f6f4;
+}
+.portfolio-list dt {
+  color: #75827e;
+  font-size: 0.65rem;
+}
+.portfolio-list dd {
+  margin: 3px 0 0;
+  color: #19463b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.project-milestone-list article {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+}
+.project-milestone-list span {
+  display: block;
+  margin-top: 3px;
+  color: #75827e;
+  font-size: 0.74rem;
+}
+.project-milestone-list button,
+.project-risk-list button {
+  border: 1px solid #bcd3ca;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #f4f8f6;
+  color: #286353;
+  cursor: pointer;
+}
+.project-risk-list article.critical {
+  border-color: #e4a18e;
+  background: #fff7f3;
+}
+.project-risk-list header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  color: #9d4432;
+}
+.project-risk-list p {
+  color: #344f48;
+  line-height: 1.5;
+}
+.project-risk-list > article > span {
+  display: block;
+  margin-bottom: 10px;
+  color: #6e7d78;
+  font-size: 0.78rem;
+}
+.project-risk-scales {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.project-panel-hint {
+  padding: 20px;
+  border: 1px dashed #bad0c8;
+  border-radius: 13px;
+  color: #687c75;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .project-governance-grid,
+  .project-milestone-layout,
+  .project-risk-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 680px) {
+  .project-portfolio-panel > header,
+  .project-governance-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .project-portfolio-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .project-governance-controls nav {
+    overflow-x: auto;
+  }
+}

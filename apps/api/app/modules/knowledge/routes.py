@@ -17,7 +17,7 @@ from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeDocument
-from app.modules.knowledge.processing import search_knowledge, storage
+from app.modules.knowledge.processing import search_knowledge, storage, storage_sse
 from app.modules.knowledge.schemas import (
     BaseCreate,
     BaseResponse,
@@ -140,7 +140,13 @@ async def _store(
         )
     )
     await asyncio.to_thread(
-        client.put_object, settings.storage_bucket, key, BytesIO(data), len(data), content_type=mime
+        client.put_object,
+        settings.storage_bucket,
+        key,
+        BytesIO(data),
+        len(data),
+        content_type=mime,
+        sse=storage_sse(settings),
     )
     doc = KnowledgeDocument(
         id=doc_id,

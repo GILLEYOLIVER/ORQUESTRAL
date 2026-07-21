@@ -24,7 +24,15 @@ from app.modules.authorization.models import (
 )
 from app.modules.billing.models import Plan, Subscription, UsageRecord
 from app.modules.companies.models import Company
-from app.modules.crm.models import CRMContact, CRMContactTag, CRMTag
+from app.modules.crm.models import (
+    CRMContact,
+    CRMContactTag,
+    CRMOpportunity,
+    CRMOpportunityActivity,
+    CRMPipeline,
+    CRMPipelineStage,
+    CRMTag,
+)
 from app.modules.finance.models import FinancialAccount, FinancialCategory, FinancialEntry
 from app.modules.hr.models import HRDepartment, HREmployee, HRLeaveRequest
 from app.modules.inventory.models import (
@@ -36,8 +44,11 @@ from app.modules.inventory.models import (
 )
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
 from app.modules.marketing.models import (
+    MarketingAttribution,
     MarketingCampaign,
     MarketingCampaignContact,
+    MarketingCampaignMetric,
+    MarketingExperiment,
     MarketingJourney,
     MarketingJourneyStep,
 )
@@ -55,8 +66,22 @@ from app.modules.plugins.models import (
     Plugin,
     PluginConnectionTest,
 )
-from app.modules.projects.models import Project, ProjectTask
-from app.modules.support.models import SupportInteraction, SupportTicket
+from app.modules.projects.models import (
+    Project,
+    ProjectMember,
+    ProjectMilestone,
+    ProjectPortfolio,
+    ProjectRisk,
+    ProjectTask,
+    ProjectTaskDependency,
+)
+from app.modules.support.models import (
+    SupportInteraction,
+    SupportQueue,
+    SupportSLAPolicy,
+    SupportTicket,
+    SupportTicketEvent,
+)
 from app.modules.users.models import CompanyUser, User
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 
@@ -77,6 +102,10 @@ __all__ = [
     "AuthorizationAuditEvent",
     "CRMContact",
     "CRMContactTag",
+    "CRMOpportunity",
+    "CRMOpportunityActivity",
+    "CRMPipeline",
+    "CRMPipelineStage",
     "CRMTag",
     "Company",
     "CompanyInvitation",
@@ -98,8 +127,11 @@ __all__ = [
     "KnowledgeBase",
     "KnowledgeChunk",
     "KnowledgeDocument",
+    "MarketingAttribution",
     "MarketingCampaign",
     "MarketingCampaignContact",
+    "MarketingCampaignMetric",
+    "MarketingExperiment",
     "MarketingJourney",
     "MarketingJourneyStep",
     "MetricAggregationRun",
@@ -113,12 +145,20 @@ __all__ = [
     "Plugin",
     "PluginConnectionTest",
     "Project",
+    "ProjectMember",
+    "ProjectMilestone",
+    "ProjectPortfolio",
+    "ProjectRisk",
     "ProjectTask",
+    "ProjectTaskDependency",
     "Role",
     "RolePermission",
     "Subscription",
     "SupportInteraction",
+    "SupportQueue",
+    "SupportSLAPolicy",
     "SupportTicket",
+    "SupportTicketEvent",
     "UsageRecord",
     "User",
     "Workflow",
