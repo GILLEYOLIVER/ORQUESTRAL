@@ -160,6 +160,34 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             )
             assert blocked.status_code == 402
             assert "orçamento" in blocked.json()["detail"].lower()
+            assert (
+                client.put(
+                    f"/agents/{agent_id}/budget",
+                    headers=headers_b,
+                    json={"limit_microunits": 1000, "hard_limit": True},
+                ).status_code
+                == 200
+            )
+            shadow = client.post(
+                f"/agents/{agent_id}/chat",
+                headers=headers_b,
+                json={
+                    "message": "/ferramenta orkestral.company.summary {}",
+                    "execution_mode": "shadow",
+                },
+            )
+            assert shadow.status_code == 200
+            assert shadow.json()["run"]["status"] == "simulated"
+            assert shadow.json()["run"]["planned_tool_keys"] == ["orkestral.company.summary"]
+            assert shadow.json()["pending_actions"] == []
+            run_id = shadow.json()["run"]["id"]
+            assert (
+                client.get(f"/agents/{agent_id}/runs/{run_id}", headers=headers_a).status_code
+                == 404
+            )
+            own_run = client.get(f"/agents/{agent_id}/runs/{run_id}", headers=headers_b)
+            assert own_run.status_code == 200
+            assert "SEGREDO-DO-AGENTE" not in str(own_run.json())
         asyncio.run(_assert_safe_events(settings, identity.company_ids[1]))
     finally:
         asyncio.run(_remove(settings, identity))

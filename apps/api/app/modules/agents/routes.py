@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from time import perf_counter
 from typing import Annotated, Literal, cast
 from uuid import UUID
@@ -14,7 +15,9 @@ from app.modules.agents.approvals import decide_agent_tool_run
 from app.modules.agents.governance import (
     AgentBudgetExceededError,
     active_agent_version,
+    agent_request_fingerprint,
     agent_version_payload,
+    evaluate_run_limits,
     evaluate_tool_autonomy,
     reserve_agent_budget,
     settle_agent_budget,
@@ -25,6 +28,7 @@ from app.modules.agents.models import (
     AgentBudget,
     AgentConversation,
     AgentMessage,
+    AgentRun,
     AgentTool,
     AgentToolRun,
     AgentUsageRecord,
@@ -47,6 +51,7 @@ from app.modules.agents.schemas import (
     AgentMessageResponse,
     AgentProviderStatusResponse,
     AgentResponse,
+    AgentRunResponse,
     AgentToolCatalogResponse,
     AgentToolDecision,
     AgentToolResponse,
@@ -105,6 +110,10 @@ def _version_response(version: AgentVersion) -> AgentVersionResponse:
 
 def _budget_response(budget: AgentBudget) -> AgentBudgetResponse:
     return AgentBudgetResponse.model_validate(budget, from_attributes=True)
+
+
+def _run_response(run: AgentRun) -> AgentRunResponse:
+    return AgentRunResponse.model_validate(run, from_attributes=True)
 
 
 async def _budget(database: DatabaseSession, *, agent_id: UUID, company_id: UUID) -> AgentBudget:
@@ -774,6 +783,43 @@ async def update_agent_budget(
     return _budget_response(budget)
 
 
+@router.get("/{agent_id}/runs", response_model=list[AgentRunResponse])
+async def list_agent_runs(
+    agent_id: UUID,
+    principal: CanViewAgents,
+    database: DatabaseSession,
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[AgentRunResponse]:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    runs = (
+        await database.scalars(
+            select(AgentRun)
+            .where(AgentRun.agent_id == agent_id, AgentRun.company_id == context.company_id)
+            .order_by(AgentRun.started_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    return [_run_response(run) for run in runs]
+
+
+@router.get("/{agent_id}/runs/{run_id}", response_model=AgentRunResponse)
+async def get_agent_run(
+    agent_id: UUID, run_id: UUID, principal: CanViewAgents, database: DatabaseSession
+) -> AgentRunResponse:
+    context = get_request_context(principal)
+    run = await database.scalar(
+        select(AgentRun).where(
+            AgentRun.id == run_id,
+            AgentRun.agent_id == agent_id,
+            AgentRun.company_id == context.company_id,
+        )
+    )
+    if run is None:
+        raise HTTPException(status_code=404, detail="Execução do agente não encontrada.")
+    return _run_response(run)
+
+
 @router.get("/{agent_id}/conversations", response_model=list[AgentConversationResponse])
 async def list_conversations(
     agent_id: UUID, principal: CanViewAgents, database: DatabaseSession
@@ -873,7 +919,6 @@ async def chat_with_agent(
             agent_id=agent.id,
             requested_microunits=version.max_cost_per_run_microunits,
         )
-        await database.commit()
     except AgentBudgetExceededError as exc:
         await database.rollback()
         raise HTTPException(status_code=402, detail=str(exc)) from exc
@@ -903,6 +948,23 @@ async def chat_with_agent(
     )
     database.add(user_message)
     await database.flush()
+    agent_run = AgentRun(
+        company_id=context.company_id,
+        agent_id=agent.id,
+        agent_version_id=version.id,
+        conversation_id=conversation.id,
+        requested_by_user_id=context.user_id,
+        execution_mode=payload.execution_mode,
+        status="running",
+        request_fingerprint=agent_request_fingerprint(
+            company_id=context.company_id, agent_id=agent.id, message=payload.message
+        ),
+        max_steps=version.max_steps,
+        max_runtime_seconds=version.max_runtime_seconds,
+    )
+    database.add(agent_run)
+    await database.flush()
+    await database.commit()
     history = list(
         await database.scalars(
             select(AgentMessage)
@@ -972,16 +1034,22 @@ async def chat_with_agent(
     started = perf_counter()
     try:
         provider = create_language_model_provider(version.provider, settings)
-        result = await provider.generate(
-            messages=provider_messages,
-            tools=provider_tools,
-            model=version.model,
-            temperature=version.temperature,
-            max_output_tokens=version.max_output_tokens,
+        async with asyncio.timeout(version.max_runtime_seconds):
+            result = await provider.generate(
+                messages=provider_messages,
+                tools=provider_tools,
+                model=version.model,
+                temperature=version.temperature,
+                max_output_tokens=version.max_output_tokens,
+            )
+            usage = await provider.calculate_usage(result)
+    except (LanguageModelProviderError, TimeoutError) as exc:
+        agent_run.status = "timed_out" if isinstance(exc, TimeoutError) else "failed"
+        agent_run.error_code = (
+            "provider_timeout" if isinstance(exc, TimeoutError) else "provider_error"
         )
-        usage = await provider.calculate_usage(result)
-    except LanguageModelProviderError as exc:
-        await database.rollback()
+        agent_run.finished_at = utc_now()
+        agent_run.duration_ms = max(0, round((perf_counter() - started) * 1_000))
         await settle_agent_budget(
             database,
             company_id=context.company_id,
@@ -990,7 +1058,17 @@ async def chat_with_agent(
             consumed_microunits=0,
         )
         await database.commit()
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        detail = (
+            "O provedor de IA excedeu o tempo permitido."
+            if isinstance(exc, TimeoutError)
+            else str(exc)
+        )
+        raise HTTPException(
+            status_code=504 if isinstance(exc, TimeoutError) else 502, detail=detail
+        ) from exc
+    agent_run.planned_tool_keys = [call.key for call in result.tool_calls]
+    agent_run.total_tokens = usage.total_tokens
+    agent_run.cost_microunits = usage.cost_microunits
     await settle_agent_budget(
         database,
         company_id=context.company_id,
@@ -998,16 +1076,31 @@ async def chat_with_agent(
         reserved_microunits=budget_reservation,
         consumed_microunits=usage.cost_microunits,
     )
-    await database.flush()
+    await database.commit()
     tool_by_key = {tool.tool_key: tool for tool in tools}
     created_runs: list[AgentToolRun] = []
     result_messages: list[str] = []
     result_status = "completed"
     tool_keys: list[str] = []
-    for call in result.tool_calls:
+    completed_tool_keys: list[str] = []
+    denied_tool_keys: list[str] = []
+    for call_index, call in enumerate(result.tool_calls):
         tool_keys.append(call.key)
+        limit_decision = evaluate_run_limits(
+            tool_call_index=call_index,
+            max_steps=version.max_steps,
+            elapsed_seconds=perf_counter() - started,
+            max_runtime_seconds=version.max_runtime_seconds,
+        )
+        if not limit_decision.allowed:
+            denied_tool_keys.append(call.key)
+            agent_run.error_code = limit_decision.error_code
+            result_status = "failed"
+            result_messages.append(f"Ferramenta bloqueada: {limit_decision.reason}")
+            continue
         tool = tool_by_key.get(call.key)
         if tool is None:
+            denied_tool_keys.append(call.key)
             result_status = "failed"
             result_messages.append(f"Ferramenta bloqueada: {call.key} não está autorizada.")
             continue
@@ -1015,6 +1108,7 @@ async def chat_with_agent(
             assert_tool_access(tool, principal.permissions)
             validate_tool_arguments(tool.input_schema, call.arguments)
         except (ToolAccessError, ToolArgumentsError) as exc:
+            denied_tool_keys.append(call.key)
             result_status = "failed"
             result_messages.append(f"Ferramenta bloqueada: {exc}")
             continue
@@ -1022,13 +1116,22 @@ async def chat_with_agent(
             autonomy_level=version.autonomy_level, risk_level=tool.risk_level
         )
         if not autonomy.allowed:
+            denied_tool_keys.append(call.key)
             result_status = "failed"
             result_messages.append(f"Ferramenta bloqueada: {autonomy.reason}")
+            continue
+        if payload.execution_mode != "live":
+            completed_tool_keys.append(call.key)
+            result_status = "simulated"
+            result_messages.append(
+                f"Simulação segura: a ferramenta {tool.name} seria executada, sem alterar dados."
+            )
             continue
         run = AgentToolRun(
             company_id=context.company_id,
             agent_id=agent.id,
             agent_version_id=version.id,
+            agent_run_id=agent_run.id,
             conversation_id=conversation.id,
             tool_id=tool.id,
             requested_by_user_id=context.user_id,
@@ -1071,6 +1174,7 @@ async def chat_with_agent(
             )
             run.result_summary = as_summary_object(tool_result)
             run.state = "completed"
+            completed_tool_keys.append(tool.tool_key)
             result_messages.append(f"Ferramenta {tool.name} executada com sucesso.")
         except (ToolArgumentsError, ToolExecutionError) as exc:
             run.state = "failed"
@@ -1115,6 +1219,7 @@ async def chat_with_agent(
             user_id=context.user_id,
             agent_id=agent.id,
             agent_version_id=version.id,
+            agent_run_id=agent_run.id,
             conversation_id=conversation.id,
             provider=version.provider,
             model=version.model,
@@ -1139,10 +1244,57 @@ async def chat_with_agent(
         },
         idempotency_key=f"agent-message:{assistant_message.id}",
     )
+    agent_run.completed_tool_keys = completed_tool_keys
+    agent_run.denied_tool_keys = denied_tool_keys
+    agent_run.step_count = min(len(result.tool_calls), version.max_steps)
+    agent_run.duration_ms = duration_ms
+    agent_run.finished_at = utc_now()
+    if payload.execution_mode != "live":
+        agent_run.status = "simulated"
+    elif any(run.state == "awaiting_confirmation" for run in created_runs):
+        agent_run.status = "awaiting_approval"
+    elif result_status == "failed":
+        agent_run.status = "failed"
+    else:
+        agent_run.status = "completed"
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.run.{agent_run.status}",
+        target_type="agent_run",
+        target_id=agent_run.id,
+        details={
+            "agent_id": str(agent.id),
+            "agent_version_id": str(version.id),
+            "execution_mode": agent_run.execution_mode,
+            "step_count": agent_run.step_count,
+            "error_code": agent_run.error_code,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.run.{agent_run.status}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "agent_id": str(agent.id),
+                "agent_version_id": str(version.id),
+                "agent_run_id": str(agent_run.id),
+                "status": agent_run.status,
+                "execution_mode": agent_run.execution_mode,
+                "step_count": agent_run.step_count,
+                "cost_microunits": agent_run.cost_microunits,
+            },
+        ),
+    )
     await database.commit()
     await database.refresh(conversation)
     await database.refresh(user_message)
     await database.refresh(assistant_message)
+    await database.refresh(agent_run)
     for run in created_runs:
         await database.refresh(run)
     pending = [
@@ -1155,4 +1307,5 @@ async def chat_with_agent(
         user_message=_message_response(user_message),
         assistant_message=_message_response(assistant_message),
         pending_actions=pending,
+        run=_run_response(agent_run),
     )

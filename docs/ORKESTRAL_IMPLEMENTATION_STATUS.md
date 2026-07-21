@@ -309,3 +309,12 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 119 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0032_agent_governance.py`.
 - Próximo passo: ciclo 11, trace de execuções, limites de passos/tempo e modo sombra.
+## Ciclo 11 - Observabilidade e modo sombra de agentes
+
+- Trace seguro por execução, sem persistir prompt ou raciocínio interno.
+- Limites de passos e tempo aplicados no back-end.
+- Modos `live`, `shadow` e `simulation`, com ações externas bloqueadas fora do modo real.
+- Endpoints de histórico de execuções isolados por empresa.
+- Validação concluída: Ruff e MyPy aprovados; 121 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0033_agent_run_observability.py`.
+- Próximo passo: ciclo 12, políticas de dados por provedor e defesa contra prompt injection.

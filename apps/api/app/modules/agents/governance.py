@@ -24,6 +24,13 @@ class ToolAutonomyDecision:
     reason: str
 
 
+@dataclass(frozen=True, slots=True)
+class RunLimitDecision:
+    allowed: bool
+    error_code: str | None
+    reason: str
+
+
 def evaluate_tool_autonomy(*, autonomy_level: int, risk_level: str) -> ToolAutonomyDecision:
     if autonomy_level <= 0:
         return ToolAutonomyDecision(False, False, "Agente configurado somente para consulta.")
@@ -34,6 +41,21 @@ def evaluate_tool_autonomy(*, autonomy_level: int, risk_level: str) -> ToolAuton
     if risk_level in {"high", "critical"}:
         return ToolAutonomyDecision(True, True, "Ação de alto risco exige aprovação humana.")
     return ToolAutonomyDecision(True, False, "Ação autorizada pela política de autonomia.")
+
+
+def evaluate_run_limits(
+    *, tool_call_index: int, max_steps: int, elapsed_seconds: float, max_runtime_seconds: int
+) -> RunLimitDecision:
+    if tool_call_index >= max_steps:
+        return RunLimitDecision(False, "max_steps_exceeded", "Limite de passos atingido.")
+    if elapsed_seconds >= max_runtime_seconds:
+        return RunLimitDecision(False, "max_runtime_exceeded", "Limite de tempo atingido.")
+    return RunLimitDecision(True, None, "Execução dentro dos limites configurados.")
+
+
+def agent_request_fingerprint(*, company_id: UUID, agent_id: UUID, message: str) -> str:
+    value = f"{company_id}:{agent_id}:{message}".encode()
+    return hashlib.sha256(value).hexdigest()
 
 
 def agent_version_payload(agent: Agent, **overrides: Any) -> dict[str, Any]:

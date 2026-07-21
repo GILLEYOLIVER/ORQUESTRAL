@@ -2,11 +2,17 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from typing import cast
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.modules.agents.governance import evaluate_tool_autonomy, version_checksum
+from app.modules.agents.governance import (
+    agent_request_fingerprint,
+    evaluate_run_limits,
+    evaluate_tool_autonomy,
+    version_checksum,
+)
 from app.modules.agents.models import AgentTool
 from app.modules.agents.providers.base import ModelMessage, ToolDefinition
 from app.modules.agents.providers.local import LocalLanguageModelProvider
@@ -112,3 +118,30 @@ def test_agent_version_checksum_is_stable_and_sensitive_to_changes() -> None:
     assert first == reordered
     assert first != changed
     assert len(first) == 64
+
+
+def test_agent_run_limits_block_excess_steps_and_runtime() -> None:
+    assert evaluate_run_limits(
+        tool_call_index=1, max_steps=2, elapsed_seconds=2, max_runtime_seconds=10
+    ).allowed
+    steps = evaluate_run_limits(
+        tool_call_index=2, max_steps=2, elapsed_seconds=2, max_runtime_seconds=10
+    )
+    timeout = evaluate_run_limits(
+        tool_call_index=0, max_steps=2, elapsed_seconds=10, max_runtime_seconds=10
+    )
+    assert steps.error_code == "max_steps_exceeded"
+    assert timeout.error_code == "max_runtime_exceeded"
+
+
+def test_agent_request_fingerprint_is_tenant_scoped_and_does_not_expose_message() -> None:
+    first_company = UUID("00000000-0000-0000-0000-000000000001")
+    second_company = UUID("00000000-0000-0000-0000-000000000002")
+    agent_id = UUID("00000000-0000-0000-0000-000000000003")
+    message = "conteúdo confidencial"
+    first = agent_request_fingerprint(company_id=first_company, agent_id=agent_id, message=message)
+    second = agent_request_fingerprint(
+        company_id=second_company, agent_id=agent_id, message=message
+    )
+    assert first != second
+    assert message not in first

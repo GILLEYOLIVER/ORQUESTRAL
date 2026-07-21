@@ -48,8 +48,18 @@ Todos os acessos são filtrados por `company_id` e exigem `agents.configure`. A 
 
 ## Próximos incrementos
 
-- rastreamento de passos e tempo máximo por execução;
-- modo sombra e simulação;
 - políticas de dados por provedor;
 - suites de avaliação e testes de prompt injection;
 - coordenação multiagente com contratos de tarefa.
+
+## Observabilidade e execução segura
+
+O ciclo 11 adiciona `agent_runs`, um trace operacional sem prompt e sem raciocínio interno. Cada execução registra versão, modo, impressão da solicitação, ferramentas planejadas, concluídas e bloqueadas, métricas, limites e erro padronizado.
+
+Os modos oficiais são:
+
+- `live`: permite ações autorizadas e mantém aprovação humana para risco elevado;
+- `shadow`: consulta o modelo e registra o que ele tentaria fazer, sem alterar dados;
+- `simulation`: executa o mesmo contrato seguro do modo sombra para testes automatizados.
+
+O runtime interrompe o provedor ao atingir `max_runtime_seconds`, bloqueia chamadas além de `max_steps` e vincula ferramentas e consumo ao trace e à versão exata. Os endpoints `GET /agents/{agent_id}/runs` e `GET /agents/{agent_id}/runs/{run_id}` aplicam isolamento por empresa.

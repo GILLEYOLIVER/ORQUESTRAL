@@ -12,6 +12,7 @@ AgentProvider = Literal["local", "openai_compatible"]
 AgentStatus = Literal["active", "inactive"]
 AgentVersionStatus = Literal["draft", "published", "retired"]
 AgentRiskLevel = Literal["low", "medium", "high", "critical"]
+AgentExecutionMode = Literal["live", "shadow", "simulation"]
 ToolRunState = Literal[
     "requested", "awaiting_confirmation", "approved", "rejected", "executing", "completed", "failed"
 ]
@@ -123,6 +124,7 @@ class AgentMessageResponse(StrictSchema):
 class AgentChatRequest(StrictSchema):
     message: str = Field(min_length=1, max_length=20_000)
     conversation_id: UUID | None = None
+    execution_mode: AgentExecutionMode = "live"
 
     @field_validator("message")
     @classmethod
@@ -149,6 +151,7 @@ class AgentChatResponse(StrictSchema):
     user_message: AgentMessageResponse
     assistant_message: AgentMessageResponse
     pending_actions: list[AgentToolRunResponse]
+    run: AgentRunResponse
 
 
 class AgentToolDecision(StrictSchema):
@@ -176,6 +179,28 @@ class AgentProviderStatusResponse(StrictSchema):
     provider: AgentProvider
     configured: bool
     message: str
+
+
+class AgentRunResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    agent_version_id: UUID
+    conversation_id: UUID | None
+    execution_mode: AgentExecutionMode
+    status: Literal["running", "completed", "failed", "timed_out", "awaiting_approval", "simulated"]
+    request_fingerprint: str
+    planned_tool_keys: list[str]
+    completed_tool_keys: list[str]
+    denied_tool_keys: list[str]
+    error_code: str | None
+    step_count: int
+    total_tokens: int
+    cost_microunits: int
+    duration_ms: int
+    max_steps: int
+    max_runtime_seconds: int
+    started_at: datetime
+    finished_at: datetime | None
 
 
 class AgentVersionCreate(StrictSchema):

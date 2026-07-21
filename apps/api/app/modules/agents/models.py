@@ -160,6 +160,68 @@ class AgentBudget(Base):
     )
 
 
+class AgentRun(Base):
+    __tablename__ = "agent_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "execution_mode IN ('live', 'shadow', 'simulation')",
+            name="ck_agent_runs_execution_mode",
+        ),
+        CheckConstraint(
+            "status IN ('running', 'completed', 'failed', 'timed_out', 'awaiting_approval', 'simulated')",
+            name="ck_agent_runs_status",
+        ),
+        CheckConstraint(
+            "step_count >= 0 AND total_tokens >= 0 AND cost_microunits >= 0 AND duration_ms >= 0",
+            name="ck_agent_runs_metrics",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    agent_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_versions.id", ondelete="RESTRICT"), index=True
+    )
+    conversation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_conversations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    requested_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    execution_mode: Mapped[str] = mapped_column(
+        String(16), default="live", server_default="live", index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(24), default="running", server_default="running", index=True
+    )
+    request_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    planned_tool_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    completed_tool_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    denied_tool_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    step_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    cost_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    max_steps: Mapped[int] = mapped_column(Integer)
+    max_runtime_seconds: Mapped[int] = mapped_column(Integer)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class AgentTool(Base):
     __tablename__ = "agent_tools"
     __table_args__ = (UniqueConstraint("agent_id", "tool_key", name="uq_agent_tools_agent_key"),)
@@ -277,6 +339,9 @@ class AgentToolRun(Base):
     agent_version_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("agent_versions.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     conversation_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("agent_conversations.id", ondelete="SET NULL"), index=True
     )
@@ -343,6 +408,9 @@ class AgentUsageRecord(Base):
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     agent_version_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("agent_versions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True
     )
     conversation_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("agent_conversations.id", ondelete="SET NULL"), index=True
