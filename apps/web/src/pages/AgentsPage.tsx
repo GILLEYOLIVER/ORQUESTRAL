@@ -15,6 +15,8 @@ import {
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
 import {
   type AgentChatResponse,
+  type AgentApprovalPolicyEvaluationResponse,
+  type AgentApprovalPolicyResponse,
   type AgentMessageResponse,
   type AgentResponse,
   type AgentToolCatalog,
@@ -32,6 +34,33 @@ function errorMessage(error: unknown) {
   return error instanceof ApiClientError
     ? error.message
     : "A operação do agente não pôde ser concluída.";
+}
+
+function parseContextValue(value: string): string | number | boolean | null {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (
+      parsed === null ||
+      typeof parsed === "string" ||
+      typeof parsed === "number" ||
+      typeof parsed === "boolean"
+    ) {
+      return parsed;
+    }
+  } catch {
+    return trimmed;
+  }
+  return trimmed;
+}
+
+function parseArguments(value: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(value);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Os argumentos devem formar um objeto JSON.");
+  }
+  return parsed as Record<string, unknown>;
 }
 
 export function AgentsPage() {
@@ -52,6 +81,24 @@ export function AgentsPage() {
   const [model, setModel] = useState("orkestral-local");
   const [message, setMessage] = useState("");
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [policyName, setPolicyName] = useState("Operação supervisionada");
+  const [policyKey, setPolicyKey] = useState("operacao.supervisionada");
+  const [policyEffect, setPolicyEffect] = useState<
+    "allow" | "require_approval" | "deny"
+  >("require_approval");
+  const [policyPriority, setPolicyPriority] = useState("500");
+  const [policyToolKey, setPolicyToolKey] = useState("");
+  const [policyAmountField, setPolicyAmountField] = useState("");
+  const [policyMinAmount, setPolicyMinAmount] = useState("");
+  const [policyMaxAmount, setPolicyMaxAmount] = useState("");
+  const [policyCurrency, setPolicyCurrency] = useState("");
+  const [policyContextPath, setPolicyContextPath] = useState("");
+  const [policyContextValue, setPolicyContextValue] = useState("");
+  const [simulationToolKey, setSimulationToolKey] = useState("");
+  const [simulationArguments, setSimulationArguments] = useState("{}");
+  const [policyDecision, setPolicyDecision] =
+    useState<AgentApprovalPolicyEvaluationResponse | null>(null);
+  const [policyFormError, setPolicyFormError] = useState<string | null>(null);
   const selected = agents.data?.find((agent) => agent.id === selectedId);
 
   useEffect(() => {
@@ -76,6 +123,14 @@ export function AgentsPage() {
     queryFn: () => request<AgentToolResponse[]>(`/agents/${selectedId}/tools`),
     enabled: Boolean(selectedId),
   });
+  const policies = useQuery({
+    queryKey: ["agent-approval-policies", selectedId],
+    queryFn: () =>
+      request<AgentApprovalPolicyResponse[]>(
+        `/agents/${selectedId}/approval-policies`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
   const messages = useQuery({
     queryKey: ["agent-messages", selectedId, conversationId],
     queryFn: () =>
@@ -99,6 +154,14 @@ export function AgentsPage() {
         tools.data.filter((tool) => tool.enabled).map((tool) => tool.tool_key),
       );
   }, [tools.data]);
+  useEffect(() => {
+    const firstTool = catalog.data?.[0]?.key;
+    if (!simulationToolKey && firstTool) setSimulationToolKey(firstTool);
+  }, [catalog.data, simulationToolKey]);
+  useEffect(() => {
+    setPolicyDecision(null);
+    setPolicyFormError(null);
+  }, [selectedId]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["agents"] });
@@ -110,6 +173,9 @@ export function AgentsPage() {
     });
     void queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] });
     void queryClient.invalidateQueries({ queryKey: ["agent-usage"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-approval-policies", selectedId],
+    });
   };
   const create = useMutation({
     mutationFn: () =>
@@ -179,6 +245,40 @@ export function AgentsPage() {
       }),
     onSuccess: refresh,
   });
+  const createPolicy = useMutation({
+    mutationFn: (body: Record<string, unknown>) =>
+      request<AgentApprovalPolicyResponse>(
+        `/agents/${selectedId}/approval-policies`,
+        { method: "POST", body },
+      ),
+    onSuccess: () => {
+      setPolicyFormError(null);
+      setPolicyDecision(null);
+      refresh();
+    },
+  });
+  const publishPolicy = useMutation({
+    mutationFn: (policyId: string) =>
+      request<AgentApprovalPolicyResponse>(
+        `/agents/${selectedId}/approval-policies/${policyId}/publish`,
+        { method: "POST" },
+      ),
+    onSuccess: refresh,
+  });
+  const evaluatePolicy = useMutation({
+    mutationFn: (body: {
+      tool_key: string;
+      arguments: Record<string, unknown>;
+    }) =>
+      request<AgentApprovalPolicyEvaluationResponse>(
+        `/agents/${selectedId}/approval-policies/evaluate`,
+        { method: "POST", body },
+      ),
+    onSuccess: (decision) => {
+      setPolicyFormError(null);
+      setPolicyDecision(decision);
+    },
+  });
   const submitAgent = (event: FormEvent) => {
     event.preventDefault();
     create.mutate();
@@ -186,6 +286,55 @@ export function AgentsPage() {
   const submitMessage = (event: FormEvent) => {
     event.preventDefault();
     if (message.trim() && selectedId) chat.mutate();
+  };
+  const submitPolicy = (event: FormEvent) => {
+    event.preventDefault();
+    setPolicyFormError(null);
+    const priority = Number(policyPriority);
+    const minAmount = policyMinAmount ? Number(policyMinAmount) : null;
+    const maxAmount = policyMaxAmount ? Number(policyMaxAmount) : null;
+    if (!Number.isInteger(priority)) {
+      setPolicyFormError("A prioridade deve ser um número inteiro.");
+      return;
+    }
+    if (
+      (minAmount !== null && !Number.isInteger(minAmount)) ||
+      (maxAmount !== null && !Number.isInteger(maxAmount))
+    ) {
+      setPolicyFormError("Os valores devem ser inteiros em microunidades.");
+      return;
+    }
+    createPolicy.mutate({
+      policy_key: policyKey,
+      name: policyName,
+      effect: policyEffect,
+      priority,
+      tool_key: policyToolKey || null,
+      amount_field: policyAmountField || null,
+      min_amount_microunits: minAmount,
+      max_amount_microunits: maxAmount,
+      currency: policyCurrency || null,
+      context_conditions: policyContextPath
+        ? { [policyContextPath]: parseContextValue(policyContextValue) }
+        : {},
+      approval_ttl_minutes: 30,
+      assigned_user_id: null,
+    });
+  };
+  const simulatePolicy = () => {
+    setPolicyFormError(null);
+    try {
+      evaluatePolicy.mutate({
+        tool_key: simulationToolKey,
+        arguments: parseArguments(simulationArguments),
+      });
+    } catch (error) {
+      setPolicyFormError(
+        error instanceof Error
+          ? error.message
+          : "Argumentos de teste inválidos.",
+      );
+    }
   };
   const activeCount = useMemo(
     () => agents.data?.filter((agent) => agent.status === "active").length ?? 0,
@@ -200,7 +349,10 @@ export function AgentsPage() {
     remove.error ??
     configureTools.error ??
     chat.error ??
-    decide.error;
+    decide.error ??
+    createPolicy.error ??
+    publishPolicy.error ??
+    evaluatePolicy.error;
 
   return (
     <div className="management-page agents-page">
@@ -220,6 +372,9 @@ export function AgentsPage() {
         </div>
       </div>
       {failure ? <Alert variant="error">{errorMessage(failure)}</Alert> : null}
+      {policyFormError ? (
+        <Alert variant="error">{policyFormError}</Alert>
+      ) : null}
       <PermissionGuard all={["agents.create"]}>
         <Card
           eyebrow="Novo especialista"
@@ -387,6 +542,226 @@ export function AgentsPage() {
                 >
                   Salvar ferramentas
                 </Button>
+              </Card>
+            </PermissionGuard>
+            <PermissionGuard all={["agents.configure"]}>
+              <Card
+                className="agent-policy-card"
+                eyebrow="Governança contextual"
+                title="Políticas de aprovação"
+              >
+                <p>
+                  Defina quando uma ferramenta pode executar, precisa de uma
+                  pessoa ou deve ser bloqueada. Publique somente depois de
+                  simular a decisão.
+                </p>
+                <form className="agent-policy-form" onSubmit={submitPolicy}>
+                  <TextField
+                    label="Nome da política"
+                    onChange={(event) => setPolicyName(event.target.value)}
+                    required
+                    value={policyName}
+                  />
+                  <TextField
+                    label="Chave da política"
+                    onChange={(event) => setPolicyKey(event.target.value)}
+                    required
+                    value={policyKey}
+                  />
+                  <label className="native-field">
+                    <span>Efeito da política</span>
+                    <select
+                      className="agent-native-select"
+                      onChange={(event) =>
+                        setPolicyEffect(
+                          event.target.value as
+                            "allow" | "require_approval" | "deny",
+                        )
+                      }
+                      value={policyEffect}
+                    >
+                      <option value="allow">Permitir</option>
+                      <option value="require_approval">Exigir aprovação</option>
+                      <option value="deny">Bloquear</option>
+                    </select>
+                  </label>
+                  <TextField
+                    label="Prioridade"
+                    onChange={(event) => setPolicyPriority(event.target.value)}
+                    required
+                    type="number"
+                    value={policyPriority}
+                  />
+                  <label className="native-field">
+                    <span>Ferramenta da política</span>
+                    <select
+                      className="agent-native-select"
+                      onChange={(event) => setPolicyToolKey(event.target.value)}
+                      value={policyToolKey}
+                    >
+                      <option value="">Todas as ferramentas</option>
+                      {catalog.data?.map((tool) => (
+                        <option key={tool.key} value={tool.key}>
+                          {tool.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <TextField
+                    label="Campo de valor (microunidades)"
+                    onChange={(event) =>
+                      setPolicyAmountField(event.target.value)
+                    }
+                    placeholder="amount_microunits"
+                    value={policyAmountField}
+                  />
+                  <TextField
+                    label="Valor mínimo"
+                    onChange={(event) => setPolicyMinAmount(event.target.value)}
+                    type="number"
+                    value={policyMinAmount}
+                  />
+                  <TextField
+                    label="Valor máximo"
+                    onChange={(event) => setPolicyMaxAmount(event.target.value)}
+                    type="number"
+                    value={policyMaxAmount}
+                  />
+                  <TextField
+                    label="Moeda"
+                    maxLength={3}
+                    onChange={(event) =>
+                      setPolicyCurrency(event.target.value.toUpperCase())
+                    }
+                    placeholder="BRL"
+                    value={policyCurrency}
+                  />
+                  <TextField
+                    label="Caminho de contexto"
+                    onChange={(event) =>
+                      setPolicyContextPath(event.target.value)
+                    }
+                    placeholder="customer.region"
+                    value={policyContextPath}
+                  />
+                  <TextField
+                    label="Valor esperado"
+                    onChange={(event) =>
+                      setPolicyContextValue(event.target.value)
+                    }
+                    placeholder="sudeste"
+                    value={policyContextValue}
+                  />
+                  <Button loading={createPolicy.isPending} type="submit">
+                    Criar rascunho
+                  </Button>
+                </form>
+
+                <div className="agent-policy-list">
+                  {policies.data?.length === 0 ? (
+                    <div className="empty-state">
+                      <LockKeyhole />
+                      <span>
+                        Nenhuma política configurada para este agente.
+                      </span>
+                    </div>
+                  ) : null}
+                  {policies.data?.map((policy) => (
+                    <article className="agent-policy-row" key={policy.id}>
+                      <div>
+                        <strong>{policy.name}</strong>
+                        <small>
+                          {policy.policy_key} · versão {policy.version} ·
+                          prioridade {policy.priority}
+                        </small>
+                        <small>
+                          {policy.tool_key || "Todas as ferramentas"} ·{" "}
+                          {policy.effect === "allow"
+                            ? "Permitir"
+                            : policy.effect === "deny"
+                              ? "Bloquear"
+                              : "Exigir aprovação"}
+                        </small>
+                      </div>
+                      <div className="agent-policy-row__actions">
+                        <span
+                          className={`status-chip status-chip--${policy.status === "published" ? "active" : "inactive"}`}
+                        >
+                          {policy.status === "published"
+                            ? "Publicada"
+                            : policy.status === "draft"
+                              ? "Rascunho"
+                              : "Substituída"}
+                        </span>
+                        {policy.status === "draft" ? (
+                          <Button
+                            loading={publishPolicy.isPending}
+                            onClick={() => publishPolicy.mutate(policy.id)}
+                            variant="secondary"
+                          >
+                            Publicar
+                          </Button>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="agent-policy-simulator">
+                  <div>
+                    <span className="eyebrow">Teste antes de executar</span>
+                    <h3>Simular decisão</h3>
+                  </div>
+                  <label className="native-field">
+                    <span>Ferramenta para simular</span>
+                    <select
+                      className="agent-native-select"
+                      onChange={(event) =>
+                        setSimulationToolKey(event.target.value)
+                      }
+                      value={simulationToolKey}
+                    >
+                      {catalog.data?.map((tool) => (
+                        <option key={tool.key} value={tool.key}>
+                          {tool.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="native-field">
+                    <span>Argumentos de teste (JSON)</span>
+                    <textarea
+                      aria-label="Argumentos de teste (JSON)"
+                      onChange={(event) =>
+                        setSimulationArguments(event.target.value)
+                      }
+                      rows={4}
+                      value={simulationArguments}
+                    />
+                  </label>
+                  <Button
+                    disabled={!simulationToolKey}
+                    loading={evaluatePolicy.isPending}
+                    onClick={simulatePolicy}
+                    variant="secondary"
+                  >
+                    Simular decisão
+                  </Button>
+                  {policyDecision ? (
+                    <div
+                      className={`agent-policy-decision agent-policy-decision--${!policyDecision.allowed ? "deny" : policyDecision.requires_approval ? "approval" : "allow"}`}
+                    >
+                      <strong>
+                        {!policyDecision.allowed
+                          ? "Bloqueada"
+                          : policyDecision.requires_approval
+                            ? "Exige aprovação"
+                            : "Permitida"}
+                      </strong>
+                      <span>{policyDecision.reason}</span>
+                    </div>
+                  ) : null}
+                </div>
               </Card>
             </PermissionGuard>
             <PermissionGuard all={["agents.execute"]}>

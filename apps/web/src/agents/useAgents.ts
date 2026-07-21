@@ -99,6 +99,37 @@ export interface AgentUsageResponse {
   created_at: string;
 }
 
+export interface AgentApprovalPolicyResponse {
+  id: string;
+  agent_id: string;
+  policy_key: string;
+  version: number;
+  name: string;
+  status: "draft" | "published" | "retired";
+  effect: "allow" | "require_approval" | "deny";
+  priority: number;
+  tool_key: string | null;
+  amount_field: string | null;
+  min_amount_microunits: number | null;
+  max_amount_microunits: number | null;
+  currency: string | null;
+  context_conditions: Record<string, string | number | boolean | null>;
+  approval_ttl_minutes: number;
+  assigned_user_id: string | null;
+  created_at: string;
+  published_at: string | null;
+}
+
+export interface AgentApprovalPolicyEvaluationResponse {
+  allowed: boolean;
+  requires_approval: boolean;
+  policy_version_id: string | null;
+  policy_key: string | null;
+  reason: string;
+  approval_ttl_minutes: number;
+  assigned_user_id: string | null;
+}
+
 export function useAgents(enabled = true) {
   const { me, status } = useSession();
   return useQuery({

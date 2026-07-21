@@ -54,11 +54,19 @@ def _matches(policy: AgentApprovalPolicyVersion, arguments: Mapping[str, Any]) -
 def evaluate_published_policies(
     policies: Sequence[AgentApprovalPolicyVersion],
     *,
+    company_id: UUID,
+    agent_id: UUID,
     arguments: Mapping[str, Any],
 ) -> ApprovalPolicyDecision:
     effect_precedence = {"allow": 0, "require_approval": 1, "deny": 2}
     ordered = sorted(
-        (policy for policy in policies if policy.status == "published"),
+        (
+            policy
+            for policy in policies
+            if policy.status == "published"
+            and policy.company_id == company_id
+            and policy.agent_id == agent_id
+        ),
         key=lambda policy: (
             policy.priority,
             effect_precedence.get(policy.effect, -1),
@@ -121,4 +129,9 @@ async def evaluate_agent_approval_policy(
             )
         )
     ).all()
-    return evaluate_published_policies(policies, arguments=arguments)
+    return evaluate_published_policies(
+        policies,
+        company_id=company_id,
+        agent_id=agent_id,
+        arguments=arguments,
+    )

@@ -390,3 +390,18 @@ Data: 21 de julho de 2026.
   integrações, 2 testes do worker e 12 testes do front-end aprovados; build,
   contratos gerados, migração reversível e auditoria de segurança aprovados.
 - Próximo passo: ciclo 18, testes de isolamento da política e experiência administrativa.
+
+## Ciclo 18 - Estúdio de políticas e validação operacional
+
+- Painel em português dentro do agente para criar, revisar e publicar políticas.
+- Configuração guiada de efeito, prioridade, ferramenta, valor, moeda e contexto.
+- Simulador de decisão antes da publicação e da execução real.
+- Estados visuais claros para rascunho, publicada e substituída.
+- Layout responsivo e protegido pela permissão `agents.configure`.
+- Defesa em profundidade descarta políticas de outra empresa ou agente mesmo
+  diante de uma coleção de dados misturada.
+- E2E cobrindo criação de agente, política, publicação, simulação e limpeza.
+- Validação local: 131 testes da API, 11 integrações, 2 testes do worker, 12
+  testes do front-end e E2E com 7 aprovados e 2 cenários explicitamente
+  ignorados; MyPy, lint, Prettier, build e auditoria de segurança aprovados.
+- Próximo passo: ciclo 19, aprovação por alçada e escalonamento.

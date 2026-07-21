@@ -174,12 +174,102 @@
   display: flex;
   gap: 0.45rem;
 }
+.agent-policy-card {
+  background:
+    linear-gradient(145deg, rgb(223 243 231 / 65%), transparent 42%), #fffdf7;
+}
+.agent-policy-form {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.agent-policy-list {
+  border-top: 1px solid #d9dfd6;
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 1rem;
+}
+.agent-policy-row {
+  align-items: center;
+  background: #f8f5eb;
+  border: 1px solid #d7ddcf;
+  border-radius: 16px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.85rem;
+}
+.agent-policy-row small {
+  color: #6e766d;
+  display: block;
+  margin-top: 0.2rem;
+}
+.agent-policy-row__actions {
+  align-items: flex-end;
+  display: grid;
+  gap: 0.45rem;
+  justify-items: end;
+}
+.agent-policy-simulator {
+  background: #17322d;
+  border-radius: 20px;
+  color: #fff9ea;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+.agent-policy-simulator .eyebrow,
+.agent-policy-simulator .native-field > span {
+  color: #b9ddc9;
+}
+.agent-policy-simulator h3 {
+  margin: 0.2rem 0 0;
+}
+.agent-policy-simulator textarea {
+  background: #fffdf7;
+  border: 1px solid #87a99a;
+  border-radius: 14px;
+  color: #17322d;
+  font: inherit;
+  padding: 0.8rem;
+}
+.agent-policy-decision {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem;
+}
+.agent-policy-decision--allow {
+  background: #dff3e7;
+  border-color: #72a78c;
+  color: #17322d;
+}
+.agent-policy-decision--approval {
+  background: #fff0cf;
+  border-color: #dcae50;
+  color: #5f430e;
+}
+.agent-policy-decision--deny {
+  background: #ffe5df;
+  border-color: #d98471;
+  color: #772f21;
+}
 @media (max-width: 900px) {
   .agent-studio,
   .agent-config-grid,
+  .agent-policy-form,
   .agent-tool-grid,
   .agent-composer {
     grid-template-columns: 1fr;
+  }
+  .agent-policy-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .agent-policy-row__actions {
+    align-items: stretch;
+    justify-items: stretch;
   }
   .agent-message {
     max-width: 94%;

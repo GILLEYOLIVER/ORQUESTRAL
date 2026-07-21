@@ -167,6 +167,8 @@ def test_enterprise_approval_policy_prioritizes_deny_by_value_and_context() -> N
     )
     decision = evaluate_published_policies(
         [allow, deny],
+        company_id=company_id,
+        agent_id=agent_id,
         arguments={
             "amount_microunits": 200_000,
             "customer": {"region": "restricted"},
@@ -190,10 +192,67 @@ def test_enterprise_approval_policy_requires_human_for_matching_context() -> Non
         context_conditions={"environment": "production"},
         approval_ttl_minutes=15,
     )
-    decision = evaluate_published_policies([policy], arguments={"environment": "production"})
+    decision = evaluate_published_policies(
+        [policy],
+        company_id=policy.company_id,
+        agent_id=policy.agent_id,
+        arguments={"environment": "production"},
+    )
     assert decision.allowed
     assert decision.requires_approval
     assert decision.approval_ttl_minutes == 15
+
+
+def test_enterprise_approval_policy_ignores_other_tenants_and_agents() -> None:
+    company_id = UUID("00000000-0000-0000-0000-000000000041")
+    agent_id = UUID("00000000-0000-0000-0000-000000000042")
+    local = AgentApprovalPolicyVersion(
+        id=UUID("00000000-0000-0000-0000-000000000043"),
+        company_id=company_id,
+        agent_id=agent_id,
+        policy_key="local.allow",
+        version=1,
+        name="Regra local",
+        status="published",
+        effect="allow",
+        priority=100,
+        context_conditions={},
+        approval_ttl_minutes=30,
+    )
+    foreign = AgentApprovalPolicyVersion(
+        id=UUID("00000000-0000-0000-0000-000000000044"),
+        company_id=UUID("00000000-0000-0000-0000-000000000045"),
+        agent_id=agent_id,
+        policy_key="foreign.deny",
+        version=1,
+        name="Regra de outra empresa",
+        status="published",
+        effect="deny",
+        priority=1000,
+        context_conditions={},
+        approval_ttl_minutes=30,
+    )
+    other_agent = AgentApprovalPolicyVersion(
+        id=UUID("00000000-0000-0000-0000-000000000046"),
+        company_id=company_id,
+        agent_id=UUID("00000000-0000-0000-0000-000000000047"),
+        policy_key="other-agent.deny",
+        version=1,
+        name="Regra de outro agente",
+        status="published",
+        effect="deny",
+        priority=1000,
+        context_conditions={},
+        approval_ttl_minutes=30,
+    )
+    decision = evaluate_published_policies(
+        [foreign, other_agent, local],
+        company_id=company_id,
+        agent_id=agent_id,
+        arguments={},
+    )
+    assert decision.allowed
+    assert decision.policy_key == "local.allow"
 
 
 def test_agent_version_checksum_is_stable_and_sensitive_to_changes() -> None:
