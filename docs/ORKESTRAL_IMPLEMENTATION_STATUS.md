@@ -591,3 +591,12 @@ Data: 21 de julho de 2026.
 - O painel do agente consolida acessos ativos, aprovações, bloqueios, incidentes e revogações em linguagem clara.
 - Migração: `20260721_0053`.
 - Próximo passo: criar fila de revisão de incidentes, política de quarentena temporária e exportação assinada do relatório de risco.
+
+## Ciclo 33 - revisão independente, quarentena e relatório assinado
+
+- Cada incidente entra em fila e somente outra pessoa da mesma empresa pode confirmá-lo ou descartá-lo; decisões cruzadas entre empresas e autorrevisão são bloqueadas.
+- A abertura ativa quarentena de 5 minutos a 24 horas, impede novos grants e só é liberada pelo prazo ou por descarte independente.
+- O relatório de risco é serializado de forma canônica, assinado por HMAC-SHA256 e pode ser verificado pela API; conteúdo e texto do incidente não são exportados.
+- A interface exibe quarentena, revisões pendentes, fila de incidentes e download do relatório assinado.
+- Migração: `20260721_0054`.
+- Próximo passo: exigir quorum configurável para incidentes críticos, adicionar cadeia de custódia dos relatórios e criar exercícios automatizados de resposta.

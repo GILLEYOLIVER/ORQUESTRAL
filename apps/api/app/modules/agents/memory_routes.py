@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import timedelta
+from hmac import compare_digest
 from typing import Annotated, Literal, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, func, or_, select
@@ -36,6 +38,9 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurgeResponse,
     AgentMemoryPurposePolicyInput,
     AgentMemoryResponse,
+    AgentMemoryRiskReport,
+    AgentMemoryRiskReportPayload,
+    AgentMemoryRiskReportVerification,
     AgentMemoryRiskSummary,
     AgentMemoryScopePolicyInput,
     AgentTaskMemoryAccessDecision,
@@ -47,6 +52,7 @@ from app.modules.agents.memory_schemas import (
     AgentTaskMemoryContextRequest,
     AgentTaskMemoryContextResponse,
     AgentTaskMemoryIncidentResponse,
+    AgentTaskMemoryIncidentReview,
     AgentTaskMemoryIncidentRevoke,
     LegalHoldStatus,
     MemoryClassification,
@@ -285,6 +291,34 @@ def _task_memory_trace_response(
         blocked_items=trace.blocked_items,
         estimated_cost_microunits=trace.estimated_cost_microunits,
         created_at=trace.created_at,
+    )
+
+
+def _task_memory_incident_response(
+    incident: AgentTaskMemoryAccessIncident, *, already_processed: bool = False
+) -> AgentTaskMemoryIncidentResponse:
+    return AgentTaskMemoryIncidentResponse(
+        id=incident.id,
+        agent_id=incident.owner_agent_id,
+        revoked_grants=incident.revoked_grants,
+        quarantine_minutes=incident.quarantine_minutes,
+        quarantine_until=incident.quarantine_until,
+        quarantined=incident.quarantine_until > utc_now(),
+        review_status=incident.review_status,
+        triggered_by_user_id=incident.triggered_by_user_id,
+        reviewed_by_user_id=incident.reviewed_by_user_id,
+        reviewed_at=incident.reviewed_at,
+        already_processed=already_processed,
+        created_at=incident.created_at,
+    )
+
+
+def _canonical_risk_report(payload: AgentMemoryRiskReportPayload) -> str:
+    return json.dumps(
+        payload.model_dump(mode="json"),
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
     )
 
 
@@ -912,8 +946,26 @@ async def get_agent_memory_risk_summary(
     ).one()
     incidents = int(incident_metrics[0])
     incident_revocations = int(incident_metrics[1])
+    pending_incident_reviews = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessIncident.id)).where(
+                AgentTaskMemoryAccessIncident.company_id == context.company_id,
+                AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessIncident.review_status == "pending",
+            )
+        )
+        or 0
+    )
+    quarantine_until = await database.scalar(
+        select(func.max(AgentTaskMemoryAccessIncident.quarantine_until)).where(
+            AgentTaskMemoryAccessIncident.company_id == context.company_id,
+            AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+            AgentTaskMemoryAccessIncident.quarantine_until > now,
+        )
+    )
+    quarantined = quarantine_until is not None
     risk_level: Literal["low", "elevated", "high", "critical"] = "low"
-    if incidents and restricted_active_grants:
+    if quarantined or (incidents and restricted_active_grants):
         risk_level = "critical"
     elif incidents or expired_approvals:
         risk_level = "high"
@@ -931,6 +983,159 @@ async def get_agent_memory_risk_summary(
         cost_denials_last_24h=cost_denials,
         incidents_last_30_days=incidents,
         revoked_grants_last_30_days=incident_revocations,
+        pending_incident_reviews=pending_incident_reviews,
+        quarantined=quarantined,
+        quarantine_until=quarantine_until,
+    )
+
+
+@router.get(
+    "/{agent_id}/memory-access-incidents",
+    response_model=list[AgentTaskMemoryIncidentResponse],
+)
+async def list_agent_task_memory_access_incidents(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentTaskMemoryIncidentResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    incidents = list(
+        await database.scalars(
+            select(AgentTaskMemoryAccessIncident)
+            .where(
+                AgentTaskMemoryAccessIncident.company_id == context.company_id,
+                AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+            )
+            .order_by(AgentTaskMemoryAccessIncident.created_at.desc())
+            .limit(100)
+        )
+    )
+    return [_task_memory_incident_response(incident) for incident in incidents]
+
+
+@router.post(
+    "/{agent_id}/memory-access-incidents/{incident_id}/review",
+    response_model=AgentTaskMemoryIncidentResponse,
+)
+async def review_agent_task_memory_access_incident(
+    agent_id: UUID,
+    incident_id: UUID,
+    payload: AgentTaskMemoryIncidentReview,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentTaskMemoryIncidentResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    incident = await database.scalar(
+        select(AgentTaskMemoryAccessIncident)
+        .where(
+            AgentTaskMemoryAccessIncident.id == incident_id,
+            AgentTaskMemoryAccessIncident.company_id == context.company_id,
+            AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incidente de memória não encontrado.")
+    if incident.review_status != "pending":
+        raise HTTPException(status_code=409, detail="O incidente já foi revisado.")
+    if incident.triggered_by_user_id == context.user_id:
+        raise HTTPException(status_code=409, detail="A revisão exige outra pessoa responsável.")
+    now = utc_now()
+    incident.review_status = payload.decision
+    incident.reviewed_by_user_id = context.user_id
+    incident.reviewed_at = now
+    if payload.decision == "dismissed":
+        incident.quarantine_until = now
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.task_memory_incident.{payload.decision}",
+        target_type="agent_task_memory_access_incident",
+        target_id=incident.id,
+        details={"agent_id": str(agent_id), "revoked_grants": incident.revoked_grants},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.task_memory_incident.{payload.decision}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"incident_id": str(incident.id), "agent_id": str(agent_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(incident)
+    return _task_memory_incident_response(incident)
+
+
+@router.get(
+    "/{agent_id}/memory-risk-report",
+    response_model=AgentMemoryRiskReport,
+)
+async def export_agent_memory_risk_report(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryRiskReport:
+    context = get_request_context(principal)
+    risk_summary = await get_agent_memory_risk_summary(agent_id, principal, database)
+    pending_incident_ids = list(
+        await database.scalars(
+            select(AgentTaskMemoryAccessIncident.id).where(
+                AgentTaskMemoryAccessIncident.company_id == context.company_id,
+                AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessIncident.review_status == "pending",
+            )
+        )
+    )
+    payload = AgentMemoryRiskReportPayload(
+        report_id=uuid4(),
+        agent_id=agent_id,
+        generated_at=utc_now(),
+        risk_summary=risk_summary,
+        pending_incident_ids=pending_incident_ids,
+    )
+    signature = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="risk_report_v1",
+        value=_canonical_risk_report(payload),
+    )
+    return AgentMemoryRiskReport(payload=payload, signature=signature)
+
+
+@router.post(
+    "/{agent_id}/memory-risk-report/verify",
+    response_model=AgentMemoryRiskReportVerification,
+)
+async def verify_agent_memory_risk_report(
+    agent_id: UUID,
+    payload: AgentMemoryRiskReport,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryRiskReportVerification:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    if payload.payload.agent_id != agent_id:
+        return AgentMemoryRiskReportVerification(valid=False, reason="Relatório de outro agente.")
+    expected = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="risk_report_v1",
+        value=_canonical_risk_report(payload.payload),
+    )
+    valid = compare_digest(expected, payload.signature)
+    return AgentMemoryRiskReportVerification(
+        valid=valid,
+        reason="Assinatura válida." if valid else "Relatório alterado ou assinatura inválida.",
     )
 
 
@@ -973,17 +1178,13 @@ async def revoke_agent_task_memory_access_for_incident(
             existing.owner_agent_id != agent_id
             or existing.incident_reference_fingerprint != reference_fingerprint
             or existing.reason_fingerprint != reason_fingerprint
+            or existing.quarantine_minutes != payload.quarantine_minutes
         ):
             raise HTTPException(
                 status_code=409, detail="Chave idempotente usada por outro incidente."
             )
-        return AgentTaskMemoryIncidentResponse(
-            id=existing.id,
-            agent_id=existing.owner_agent_id,
-            revoked_grants=existing.revoked_grants,
-            already_processed=True,
-            created_at=existing.created_at,
-        )
+        return _task_memory_incident_response(existing, already_processed=True)
+    now = utc_now()
     incident = AgentTaskMemoryAccessIncident(
         company_id=context.company_id,
         owner_agent_id=agent_id,
@@ -991,11 +1192,13 @@ async def revoke_agent_task_memory_access_for_incident(
         incident_reference_fingerprint=reference_fingerprint,
         reason_fingerprint=reason_fingerprint,
         revoked_grants=0,
+        quarantine_minutes=payload.quarantine_minutes,
+        quarantine_until=now + timedelta(minutes=payload.quarantine_minutes),
+        review_status="pending",
         triggered_by_user_id=context.user_id,
     )
     database.add(incident)
     await database.flush()
-    now = utc_now()
     grants = list(
         await database.scalars(
             select(AgentTaskMemoryAccessGrant)
@@ -1045,13 +1248,7 @@ async def revoke_agent_task_memory_access_for_incident(
     )
     await database.commit()
     await database.refresh(incident)
-    return AgentTaskMemoryIncidentResponse(
-        id=incident.id,
-        agent_id=agent_id,
-        revoked_grants=incident.revoked_grants,
-        already_processed=False,
-        created_at=incident.created_at,
-    )
+    return _task_memory_incident_response(incident)
 
 
 @router.post(
@@ -1144,6 +1341,20 @@ async def create_agent_task_memory_access_grant(
             )
         return _task_memory_access_response(existing)
     now = utc_now()
+    quarantine_id = await database.scalar(
+        select(AgentTaskMemoryAccessIncident.id)
+        .where(
+            AgentTaskMemoryAccessIncident.company_id == context.company_id,
+            AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+            AgentTaskMemoryAccessIncident.quarantine_until > now,
+        )
+        .limit(1)
+    )
+    if quarantine_id is not None:
+        raise HTTPException(
+            status_code=423,
+            detail="O agente está em quarentena temporária para revisão de segurança.",
+        )
     expires_at = min(now + timedelta(minutes=payload.expires_in_minutes), delegation.due_at)
     if expires_at <= now:
         raise HTTPException(

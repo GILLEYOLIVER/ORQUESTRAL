@@ -4,6 +4,7 @@ import {
   Bot,
   BrainCircuit,
   Check,
+  Download,
   Gauge,
   LockKeyhole,
   MessageSquare,
@@ -26,6 +27,7 @@ import {
   type AgentMemoryConsentRevocationResponse,
   type AgentMemoryMetadataExport,
   type AgentMemoryRiskSummary,
+  type AgentMemoryRiskReport,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -169,6 +171,8 @@ export function AgentsPage() {
   const [memoryFeedback, setMemoryFeedback] = useState<string | null>(null);
   const [memoryIncidentReference, setMemoryIncidentReference] = useState("");
   const [memoryIncidentReason, setMemoryIncidentReason] = useState("");
+  const [memoryIncidentQuarantineMinutes, setMemoryIncidentQuarantineMinutes] =
+    useState("60");
   const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
     useState(() => crypto.randomUUID());
   const [memoryIncidentFeedback, setMemoryIncidentFeedback] = useState<
@@ -227,6 +231,14 @@ export function AgentsPage() {
     queryFn: () =>
       request<AgentMemoryRiskSummary>(
         `/agents/${selectedId}/memory-risk-summary`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryIncidents = useQuery({
+    queryKey: ["agent-memory-incidents", selectedId],
+    queryFn: () =>
+      request<AgentTaskMemoryIncidentResponse[]>(
+        `/agents/${selectedId}/memory-access-incidents`,
       ),
     enabled: canConfigure && Boolean(selectedId),
   });
@@ -343,6 +355,9 @@ export function AgentsPage() {
     });
     void queryClient.invalidateQueries({
       queryKey: ["agent-memory-risk", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-memory-incidents", selectedId],
     });
   };
   const create = useMutation({
@@ -539,6 +554,7 @@ export function AgentsPage() {
           body: {
             incident_reference: memoryIncidentReference,
             reason: memoryIncidentReason,
+            quarantine_minutes: Number(memoryIncidentQuarantineMinutes),
             idempotency_key: memoryIncidentIdempotencyKey,
           },
         },
@@ -553,6 +569,48 @@ export function AgentsPage() {
       setMemoryIncidentReason("");
       setMemoryIncidentIdempotencyKey(crypto.randomUUID());
       refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const reviewMemoryIncident = useMutation({
+    mutationFn: ({
+      incidentId,
+      decision,
+    }: {
+      incidentId: string;
+      decision: "confirmed" | "dismissed";
+    }) =>
+      request<AgentTaskMemoryIncidentResponse>(
+        `/agents/${selectedId}/memory-access-incidents/${incidentId}/review`,
+        { method: "POST", body: { decision } },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.review_status === "confirmed"
+          ? "Incidente confirmado por revisão independente."
+          : "Incidente descartado e quarentena liberada.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const exportMemoryRiskReport = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryRiskReport>(
+        `/agents/${selectedId}/memory-risk-report`,
+      ),
+    onSuccess: (result) => {
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(result, null, 2)], {
+          type: "application/json",
+        }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orkestral-risco-memoria-${selectedId}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setMemoryIncidentFeedback("Relatório assinado exportado com sucesso.");
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
   });
@@ -1344,6 +1402,28 @@ export function AgentsPage() {
                       {memoryRisk.data?.revoked_grants_last_30_days ?? 0}
                     </strong>
                   </article>
+                  <article>
+                    <small>Revisões pendentes</small>
+                    <strong>
+                      {memoryRisk.data?.pending_incident_reviews ?? 0}
+                    </strong>
+                  </article>
+                  <article>
+                    <small>Quarentena</small>
+                    <strong>
+                      {memoryRisk.data?.quarantined ? "Ativa" : "Livre"}
+                    </strong>
+                  </article>
+                </div>
+                <div className="form-actions">
+                  <Button
+                    loading={exportMemoryRiskReport.isPending}
+                    onClick={() => exportMemoryRiskReport.mutate()}
+                    type="button"
+                    variant="secondary"
+                  >
+                    <Download size={16} /> Exportar relatório assinado
+                  </Button>
                 </div>
                 <form
                   className="agent-policy-form"
@@ -1370,6 +1450,17 @@ export function AgentsPage() {
                     required
                     value={memoryIncidentReason}
                   />
+                  <TextField
+                    label="Quarentena (minutos)"
+                    max={1440}
+                    min={5}
+                    onChange={(event) =>
+                      setMemoryIncidentQuarantineMinutes(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryIncidentQuarantineMinutes}
+                  />
                   <Button
                     loading={revokeMemoryAccessForIncident.isPending}
                     type="submit"
@@ -1378,6 +1469,59 @@ export function AgentsPage() {
                     <ShieldAlert size={16} /> Revogar acessos por incidente
                   </Button>
                 </form>
+                <div className="agent-policy-list">
+                  {memoryIncidents.data?.length ? (
+                    memoryIncidents.data.map((incident) => (
+                      <article className="agent-policy-row" key={incident.id}>
+                        <div>
+                          <strong>
+                            Incidente {incident.id.slice(0, 8)} ·{" "}
+                            {incident.review_status === "pending"
+                              ? "aguardando revisão"
+                              : incident.review_status === "confirmed"
+                                ? "confirmado"
+                                : "descartado"}
+                          </strong>
+                          <small>
+                            {incident.revoked_grants} acesso(s) revogado(s) ·
+                            quarentena{" "}
+                            {incident.quarantined ? "ativa" : "encerrada"}
+                          </small>
+                        </div>
+                        {incident.review_status === "pending" ? (
+                          <div className="agent-policy-row__actions">
+                            <Button
+                              loading={reviewMemoryIncident.isPending}
+                              onClick={() =>
+                                reviewMemoryIncident.mutate({
+                                  incidentId: incident.id,
+                                  decision: "confirmed",
+                                })
+                              }
+                              variant="secondary"
+                            >
+                              Confirmar
+                            </Button>
+                            <Button
+                              loading={reviewMemoryIncident.isPending}
+                              onClick={() =>
+                                reviewMemoryIncident.mutate({
+                                  incidentId: incident.id,
+                                  decision: "dismissed",
+                                })
+                              }
+                              variant="ghost"
+                            >
+                              Descartar
+                            </Button>
+                          </div>
+                        ) : null}
+                      </article>
+                    ))
+                  ) : (
+                    <p>Nenhum incidente de memória registrado.</p>
+                  )}
+                </div>
               </Card>
             </PermissionGuard>
             <PermissionGuard all={["agents.execute"]}>

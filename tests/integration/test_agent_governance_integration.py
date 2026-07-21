@@ -1359,6 +1359,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             incident_payload = {
                 "incident_reference": "INC-MEM-2026-001",
                 "reason": "Possível exposição de credencial operacional.",
+                "quarantine_minutes": 5,
                 "idempotency_key": str(uuid4()),
             }
             assert (
@@ -1389,6 +1390,98 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert incident_risk.status_code == 200
             assert incident_risk.json()["incidents_last_30_days"] >= 1
             assert incident_risk.json()["revoked_grants_last_30_days"] >= 1
+            assert incident_risk.json()["quarantined"] is True
+            quarantine_delegation = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json={
+                    "contract_id": contract.json()["id"],
+                    "objective": "Validar bloqueio temporário por incidente.",
+                    "context_keys": ["customer_id"],
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert quarantine_delegation.status_code == 201
+            quarantined_grant_payload = {
+                "recipient_agent_id": worker_id,
+                "purpose": "coordination",
+                "allowed_classifications": ["internal"],
+                "allowed_tool_keys": ["orkestral.company.summary"],
+                "max_entries": 1,
+                "max_content_characters": 64,
+                "expires_in_minutes": 30,
+                "idempotency_key": str(uuid4()),
+            }
+            quarantined_grant_path = (
+                f"/agents/{agent_id}/delegations/{quarantine_delegation.json()['id']}"
+                "/memory-access-grants"
+            )
+            assert (
+                client.post(
+                    quarantined_grant_path,
+                    headers=headers_b,
+                    json=quarantined_grant_payload,
+                ).status_code
+                == 423
+            )
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/memory-access-incidents",
+                    headers=headers_a,
+                ).status_code
+                == 404
+            )
+            incident_queue = client.get(
+                f"/agents/{agent_id}/memory-access-incidents",
+                headers=headers_b,
+            )
+            assert incident_queue.status_code == 200
+            assert incident_queue.json()[0]["review_status"] == "pending"
+            incident_review_path = (
+                f"/agents/{agent_id}/memory-access-incidents/{incident.json()['id']}/review"
+            )
+            assert (
+                client.post(
+                    incident_review_path,
+                    headers=headers_b,
+                    json={"decision": "dismissed"},
+                ).status_code
+                == 409
+            )
+            dismissed_incident = client.post(
+                incident_review_path,
+                headers=headers_reviewer,
+                json={"decision": "dismissed"},
+            )
+            assert dismissed_incident.status_code == 200
+            assert dismissed_incident.json()["review_status"] == "dismissed"
+            assert dismissed_incident.json()["quarantined"] is False
+            released_grant = client.post(
+                quarantined_grant_path,
+                headers=headers_b,
+                json=quarantined_grant_payload,
+            )
+            assert released_grant.status_code == 201
+            risk_report = client.get(f"/agents/{agent_id}/memory-risk-report", headers=headers_b)
+            assert risk_report.status_code == 200
+            assert risk_report.json()["signature_algorithm"] == "HMAC-SHA256"
+            assert len(risk_report.json()["signature"]) == 64
+            verified_report = client.post(
+                f"/agents/{agent_id}/memory-risk-report/verify",
+                headers=headers_b,
+                json=risk_report.json(),
+            )
+            assert verified_report.status_code == 200
+            assert verified_report.json()["valid"] is True
+            tampered_report = risk_report.json()
+            tampered_report["payload"]["risk_summary"]["active_grants"] += 1
+            rejected_report = client.post(
+                f"/agents/{agent_id}/memory-risk-report/verify",
+                headers=headers_b,
+                json=tampered_report,
+            )
+            assert rejected_report.status_code == 200
+            assert rejected_report.json()["valid"] is False
             for attempt in range(2):
                 blocked_delegation = client.post(
                     f"/agents/{agent_id}/delegations",

@@ -297,6 +297,21 @@ class AgentTaskMemoryAccessIncident(Base):
             "revoked_grants >= 0",
             name="ck_agent_task_memory_incident_revoked_grants",
         ),
+        CheckConstraint(
+            "quarantine_minutes BETWEEN 5 AND 1440 AND quarantine_until >= created_at",
+            name="ck_agent_task_memory_incident_quarantine",
+        ),
+        CheckConstraint(
+            "review_status IN ('pending', 'confirmed', 'dismissed')",
+            name="ck_agent_task_memory_incident_review_status",
+        ),
+        CheckConstraint(
+            "(review_status = 'pending' AND reviewed_by_user_id IS NULL "
+            "AND reviewed_at IS NULL) OR "
+            "(review_status IN ('confirmed', 'dismissed') AND reviewed_by_user_id IS NOT NULL "
+            "AND reviewed_at IS NOT NULL AND reviewed_by_user_id <> triggered_by_user_id)",
+            name="ck_agent_task_memory_incident_review",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -312,12 +327,21 @@ class AgentTaskMemoryAccessIncident(Base):
     incident_reference_fingerprint: Mapped[str] = mapped_column(String(64))
     reason_fingerprint: Mapped[str] = mapped_column(String(64))
     revoked_grants: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    quarantine_minutes: Mapped[int] = mapped_column(Integer, default=60, server_default="60")
+    quarantine_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    review_status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending", index=True
+    )
     triggered_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    reviewed_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AgentTaskMemoryAccessGrant(Base):

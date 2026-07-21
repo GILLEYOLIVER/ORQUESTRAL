@@ -2743,6 +2743,97 @@
         "title": "AgentMemoryResponse",
         "type": "object"
       },
+      "AgentMemoryRiskReport": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/AgentMemoryRiskReportPayload"
+          },
+          "signature": {
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Signature",
+            "type": "string"
+          },
+          "signature_algorithm": {
+            "const": "HMAC-SHA256",
+            "default": "HMAC-SHA256",
+            "title": "Signature Algorithm",
+            "type": "string"
+          },
+          "signature_key_id": {
+            "const": "orkestral-memory-risk-v1",
+            "default": "orkestral-memory-risk-v1",
+            "title": "Signature Key Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payload",
+          "signature"
+        ],
+        "title": "AgentMemoryRiskReport",
+        "type": "object"
+      },
+      "AgentMemoryRiskReportPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "pending_incident_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Pending Incident Ids",
+            "type": "array"
+          },
+          "report_id": {
+            "format": "uuid",
+            "title": "Report Id",
+            "type": "string"
+          },
+          "risk_summary": {
+            "$ref": "#/components/schemas/AgentMemoryRiskSummary"
+          }
+        },
+        "required": [
+          "report_id",
+          "agent_id",
+          "generated_at",
+          "risk_summary",
+          "pending_incident_ids"
+        ],
+        "title": "AgentMemoryRiskReportPayload",
+        "type": "object"
+      },
+      "AgentMemoryRiskReportVerification": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "reason"
+        ],
+        "title": "AgentMemoryRiskReportVerification",
+        "type": "object"
+      },
       "AgentMemoryRiskSummary": {
         "additionalProperties": false,
         "properties": {
@@ -2780,6 +2871,26 @@
             "title": "Pending Approvals",
             "type": "integer"
           },
+          "pending_incident_reviews": {
+            "title": "Pending Incident Reviews",
+            "type": "integer"
+          },
+          "quarantine_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantine Until"
+          },
+          "quarantined": {
+            "title": "Quarantined",
+            "type": "boolean"
+          },
           "restricted_active_grants": {
             "title": "Restricted Active Grants",
             "type": "integer"
@@ -2810,7 +2921,10 @@
           "blocked_events_last_24h",
           "cost_denials_last_24h",
           "incidents_last_30_days",
-          "revoked_grants_last_30_days"
+          "revoked_grants_last_30_days",
+          "pending_incident_reviews",
+          "quarantined",
+          "quarantine_until"
         ],
         "title": "AgentMemoryRiskSummary",
         "type": "object"
@@ -4102,19 +4216,95 @@
             "title": "Id",
             "type": "string"
           },
+          "quarantine_minutes": {
+            "title": "Quarantine Minutes",
+            "type": "integer"
+          },
+          "quarantine_until": {
+            "format": "date-time",
+            "title": "Quarantine Until",
+            "type": "string"
+          },
+          "quarantined": {
+            "title": "Quarantined",
+            "type": "boolean"
+          },
+          "review_status": {
+            "enum": [
+              "pending",
+              "confirmed",
+              "dismissed"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By User Id"
+          },
           "revoked_grants": {
             "title": "Revoked Grants",
             "type": "integer"
+          },
+          "triggered_by_user_id": {
+            "format": "uuid",
+            "title": "Triggered By User Id",
+            "type": "string"
           }
         },
         "required": [
           "id",
           "agent_id",
           "revoked_grants",
+          "quarantine_minutes",
+          "quarantine_until",
+          "quarantined",
+          "review_status",
+          "triggered_by_user_id",
+          "reviewed_by_user_id",
+          "reviewed_at",
           "already_processed",
           "created_at"
         ],
         "title": "AgentTaskMemoryIncidentResponse",
+        "type": "object"
+      },
+      "AgentTaskMemoryIncidentReview": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "confirmed",
+              "dismissed"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "AgentTaskMemoryIncidentReview",
         "type": "object"
       },
       "AgentTaskMemoryIncidentRevoke": {
@@ -4130,6 +4320,13 @@
             "minLength": 3,
             "title": "Incident Reference",
             "type": "string"
+          },
+          "quarantine_minutes": {
+            "default": 60,
+            "maximum": 1440.0,
+            "minimum": 5.0,
+            "title": "Quarantine Minutes",
+            "type": "integer"
           },
           "reason": {
             "maxLength": 160,
@@ -20810,6 +21007,78 @@
         ]
       }
     },
+    "/agents/{agent_id}/memory-access-incidents": {
+      "get": {
+        "operationId": "list_agent_task_memory_access_incidents_agents__agent_id__memory_access_incidents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentTaskMemoryIncidentResponse"
+                  },
+                  "title": "Response List Agent Task Memory Access Incidents Agents  Agent Id  Memory Access Incidents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Task Memory Access Incidents",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/agents/{agent_id}/memory-access-incidents/revoke": {
       "post": {
         "operationId": "revoke_agent_task_memory_access_for_incident_agents__agent_id__memory_access_incidents_revoke_post",
@@ -20883,6 +21152,94 @@
           }
         ],
         "summary": "Revoke Agent Task Memory Access For Incident",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-access-incidents/{incident_id}/review": {
+      "post": {
+        "operationId": "review_agent_task_memory_access_incident_agents__agent_id__memory_access_incidents__incident_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTaskMemoryIncidentReview"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTaskMemoryIncidentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Review Agent Task Memory Access Incident",
         "tags": [
           "agents"
         ]
@@ -21183,6 +21540,152 @@
           }
         ],
         "summary": "Purge Agent Memories",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-risk-report": {
+      "get": {
+        "operationId": "export_agent_memory_risk_report_agents__agent_id__memory_risk_report_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryRiskReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Agent Memory Risk Report",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-risk-report/verify": {
+      "post": {
+        "operationId": "verify_agent_memory_risk_report_agents__agent_id__memory_risk_report_verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryRiskReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryRiskReportVerification"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Verify Agent Memory Risk Report",
         "tags": [
           "agents"
         ]

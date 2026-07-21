@@ -223,14 +223,37 @@ export interface AgentMemoryRiskSummary {
   cost_denials_last_24h: number;
   incidents_last_30_days: number;
   revoked_grants_last_30_days: number;
+  pending_incident_reviews: number;
+  quarantined: boolean;
+  quarantine_until: string | null;
 }
 
 export interface AgentTaskMemoryIncidentResponse {
   id: string;
   agent_id: string;
   revoked_grants: number;
+  quarantine_minutes: number;
+  quarantine_until: string;
+  quarantined: boolean;
+  review_status: "pending" | "confirmed" | "dismissed";
+  triggered_by_user_id: string;
+  reviewed_by_user_id: string | null;
+  reviewed_at: string | null;
   already_processed: boolean;
   created_at: string;
+}
+
+export interface AgentMemoryRiskReport {
+  payload: {
+    report_id: string;
+    agent_id: string;
+    generated_at: string;
+    risk_summary: AgentMemoryRiskSummary;
+    pending_incident_ids: string[];
+  };
+  signature_algorithm: "HMAC-SHA256";
+  signature_key_id: "orkestral-memory-risk-v1";
+  signature: string;
 }
 
 export function useAgents(enabled = true) {

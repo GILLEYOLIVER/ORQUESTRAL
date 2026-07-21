@@ -297,6 +297,7 @@ class AgentTaskMemoryAccessDecision(StrictSchema):
 class AgentTaskMemoryIncidentRevoke(StrictSchema):
     incident_reference: str = Field(min_length=3, max_length=160)
     reason: str = Field(min_length=3, max_length=160)
+    quarantine_minutes: int = Field(default=60, ge=5, le=1440)
     idempotency_key: UUID
 
     @field_validator("incident_reference", "reason")
@@ -309,8 +310,19 @@ class AgentTaskMemoryIncidentResponse(StrictSchema):
     id: UUID
     agent_id: UUID
     revoked_grants: int
+    quarantine_minutes: int
+    quarantine_until: datetime
+    quarantined: bool
+    review_status: Literal["pending", "confirmed", "dismissed"]
+    triggered_by_user_id: UUID
+    reviewed_by_user_id: UUID | None
+    reviewed_at: datetime | None
     already_processed: bool
     created_at: datetime
+
+
+class AgentTaskMemoryIncidentReview(StrictSchema):
+    decision: Literal["confirmed", "dismissed"]
 
 
 class AgentMemoryRiskSummary(StrictSchema):
@@ -325,6 +337,29 @@ class AgentMemoryRiskSummary(StrictSchema):
     cost_denials_last_24h: int
     incidents_last_30_days: int
     revoked_grants_last_30_days: int
+    pending_incident_reviews: int
+    quarantined: bool
+    quarantine_until: datetime | None
+
+
+class AgentMemoryRiskReportPayload(StrictSchema):
+    report_id: UUID
+    agent_id: UUID
+    generated_at: datetime
+    risk_summary: AgentMemoryRiskSummary
+    pending_incident_ids: list[UUID]
+
+
+class AgentMemoryRiskReport(StrictSchema):
+    payload: AgentMemoryRiskReportPayload
+    signature_algorithm: Literal["HMAC-SHA256"] = "HMAC-SHA256"
+    signature_key_id: Literal["orkestral-memory-risk-v1"] = "orkestral-memory-risk-v1"
+    signature: str = Field(min_length=64, max_length=64)
+
+
+class AgentMemoryRiskReportVerification(StrictSchema):
+    valid: bool
+    reason: str
 
 
 class AgentTaskMemoryContextRequest(StrictSchema):
