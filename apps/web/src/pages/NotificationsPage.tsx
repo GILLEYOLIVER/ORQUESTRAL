@@ -1,22 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BellRing,
+  CalendarClock,
   Check,
   CheckCheck,
   Clock3,
   Mail,
   MessageCircle,
   ShieldCheck,
+  Trash2,
+  UserRoundCheck,
   X,
 } from "lucide-react";
 import { Alert, Button, Card } from "@orkestral/ui-components";
 import { ApiClientError, request } from "../lib/http";
 import {
+  type ApprovalDelegation,
   type ApprovalRequest,
   type NotificationItem,
   type NotificationPreference,
   useApprovals,
+  useApprovalDelegations,
   useNotificationPreferences,
   useNotifications,
   useNotificationSummary,
@@ -30,6 +35,12 @@ type PreferenceDraft = {
   whatsapp_enabled: boolean;
   whatsapp_recipient: string;
   reminders_enabled: boolean;
+};
+
+type CompanyUserOption = {
+  user_id: string;
+  name: string;
+  email: string;
 };
 
 const defaultPreference: PreferenceDraft = {
@@ -66,10 +77,23 @@ export function NotificationsPage() {
   const canDecideApprovals =
     me?.permissions.includes("approvals.decide") ?? false;
   const approvals = useApprovals(canViewApprovals);
+  const delegations = useApprovalDelegations(canDecideApprovals);
+  const companyUsers = useQuery({
+    queryKey: ["approval-delegate-candidates"],
+    queryFn: () =>
+      request<CompanyUserOption[]>(
+        "/notifications/approval-delegations/candidates",
+      ),
+    enabled: canDecideApprovals,
+  });
   const preferences = useNotificationPreferences();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<PreferenceDraft>(defaultPreference);
+  const [delegateUserId, setDelegateUserId] = useState("");
+  const [delegationStartsAt, setDelegationStartsAt] = useState("");
+  const [delegationEndsAt, setDelegationEndsAt] = useState("");
+  const [delegationReason, setDelegationReason] = useState("");
 
   const globalPreference = useMemo(
     () => preferences.data?.find((item) => item.event_type === "*"),
@@ -92,6 +116,7 @@ export function NotificationsPage() {
       queryClient.invalidateQueries({ queryKey: ["notifications"] }),
       queryClient.invalidateQueries({ queryKey: ["notification-summary"] }),
       queryClient.invalidateQueries({ queryKey: ["approvals"] }),
+      queryClient.invalidateQueries({ queryKey: ["approval-delegations"] }),
     ]);
   };
 
@@ -158,6 +183,54 @@ export function NotificationsPage() {
       );
     },
   });
+
+  const createDelegation = useMutation({
+    mutationFn: () =>
+      request<ApprovalDelegation>("/notifications/approval-delegations", {
+        method: "POST",
+        body: {
+          delegate_user_id: delegateUserId,
+          starts_at: new Date(delegationStartsAt).toISOString(),
+          ends_at: new Date(delegationEndsAt).toISOString(),
+          reason: delegationReason,
+        },
+      }),
+    onSuccess: async () => {
+      setError(null);
+      setFeedback("Cobertura por ausência configurada com segurança.");
+      setDelegateUserId("");
+      setDelegationStartsAt("");
+      setDelegationEndsAt("");
+      setDelegationReason("");
+      await refresh();
+    },
+    onError: (caught) => {
+      setFeedback(null);
+      setError(errorMessage(caught, "Não foi possível criar a cobertura."));
+    },
+  });
+
+  const revokeDelegation = useMutation({
+    mutationFn: (delegationId: string) =>
+      request<ApprovalDelegation>(
+        `/notifications/approval-delegations/${delegationId}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: async () => {
+      setError(null);
+      setFeedback("Cobertura revogada. Novas decisões voltam ao titular.");
+      await refresh();
+    },
+    onError: (caught) => {
+      setFeedback(null);
+      setError(errorMessage(caught, "Não foi possível revogar a cobertura."));
+    },
+  });
+
+  const userLabel = (userId: string) => {
+    const user = companyUsers.data?.find((item) => item.user_id === userId);
+    return user ? `${user.name} · ${user.email}` : "Aprovador da empresa";
+  };
 
   return (
     <div className="attention-page">
@@ -326,6 +399,134 @@ export function NotificationsPage() {
           )}
         </Card>
       </section>
+
+      {canDecideApprovals ? (
+        <Card className="delegation-panel">
+          <div className="attention-panel__heading">
+            <div>
+              <span className="eyebrow">Continuidade de decisões</span>
+              <h2>Cobertura por ausência</h2>
+            </div>
+            <UserRoundCheck size={24} />
+          </div>
+          <p className="delegation-panel__intro">
+            Autorize temporariamente outro aprovador da sua empresa. O sistema
+            mantém seu lugar na cadeia, registra quem decidiu e impede voto em
+            duplicidade.
+          </p>
+          <form
+            className="delegation-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setError(null);
+              if (
+                !delegateUserId ||
+                !delegationStartsAt ||
+                !delegationEndsAt ||
+                delegationReason.trim().length < 3
+              ) {
+                setError(
+                  "Preencha a pessoa, o período e o motivo da cobertura.",
+                );
+                return;
+              }
+              createDelegation.mutate();
+            }}
+          >
+            <label className="delegation-field delegation-field--wide">
+              <span>Aprovador substituto</span>
+              <select
+                onChange={(event) => setDelegateUserId(event.target.value)}
+                required
+                value={delegateUserId}
+              >
+                <option value="">Selecione uma pessoa autorizada</option>
+                {companyUsers.data?.map((user) => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.name} · {user.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="delegation-field">
+              <span>Início</span>
+              <input
+                onChange={(event) => setDelegationStartsAt(event.target.value)}
+                required
+                type="datetime-local"
+                value={delegationStartsAt}
+              />
+            </label>
+            <label className="delegation-field">
+              <span>Fim</span>
+              <input
+                onChange={(event) => setDelegationEndsAt(event.target.value)}
+                required
+                type="datetime-local"
+                value={delegationEndsAt}
+              />
+            </label>
+            <label className="delegation-field delegation-field--wide">
+              <span>Motivo operacional</span>
+              <input
+                maxLength={500}
+                onChange={(event) => setDelegationReason(event.target.value)}
+                placeholder="Ex.: férias programadas"
+                required
+                value={delegationReason}
+              />
+            </label>
+            <Button loading={createDelegation.isPending} type="submit">
+              <CalendarClock size={16} /> Programar cobertura
+            </Button>
+          </form>
+          <div className="delegation-list">
+            {delegations.data?.length ? (
+              delegations.data.map((delegation) => (
+                <article className="delegation-row" key={delegation.id}>
+                  <div>
+                    <strong>
+                      {userLabel(delegation.delegator_user_id)} →{" "}
+                      {userLabel(delegation.delegate_user_id)}
+                    </strong>
+                    <span>
+                      {formatDate(delegation.starts_at)} até{" "}
+                      {formatDate(delegation.ends_at)}
+                    </span>
+                    <small>{delegation.reason}</small>
+                  </div>
+                  <div className="delegation-row__actions">
+                    <span
+                      className={`delegation-status delegation-status--${delegation.effective ? "effective" : delegation.status}`}
+                    >
+                      {delegation.status === "revoked"
+                        ? "Revogada"
+                        : delegation.effective
+                          ? "Em vigor"
+                          : "Programada"}
+                    </span>
+                    {delegation.status === "active" ? (
+                      <Button
+                        aria-label="Revogar cobertura"
+                        loading={
+                          revokeDelegation.isPending &&
+                          revokeDelegation.variables === delegation.id
+                        }
+                        onClick={() => revokeDelegation.mutate(delegation.id)}
+                        variant="ghost"
+                      >
+                        <Trash2 size={16} /> Revogar
+                      </Button>
+                    ) : null}
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className="delegation-empty">Nenhuma cobertura configurada.</p>
+            )}
+          </div>
+        </Card>
+      ) : null}
 
       <Card className="preference-panel">
         <div className="attention-panel__heading">

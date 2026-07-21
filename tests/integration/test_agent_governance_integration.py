@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -17,13 +18,15 @@ from app.modules.agents.coordination_models import AgentDelegationPayload
 from app.modules.authorization.service import ensure_company_system_roles
 from app.modules.companies.models import Company
 from app.modules.events.models import OutboxEvent
+from app.modules.notifications.service import represented_approver_user_id
 from app.modules.users.models import CompanyUser, User
 
 
 @dataclass(frozen=True, slots=True)
 class AgentGovernanceIdentity:
     company_ids: tuple[UUID, UUID]
-    emails: tuple[str, str]
+    user_ids: tuple[UUID, UUID, UUID]
+    emails: tuple[str, str, str]
     password: str
 
 
@@ -52,9 +55,17 @@ async def _seed(settings: Settings) -> AgentGovernanceIdentity:
                 )
                 for label in ("A", "B")
             ]
+            users.append(
+                User(
+                    name="Aprovador substituto",
+                    email=f"agent-governance-substitute-{suffix}@example.com",
+                    password_hash=hash_password(password),
+                    status="active",
+                )
+            )
             database.add_all((*companies, *users))
             await database.flush()
-            for company, user in zip(companies, users, strict=True):
+            for company, user in zip(companies, users[:2], strict=True):
                 owner, _ = await ensure_company_system_roles(database, company.id)
                 database.add(
                     CompanyUser(
@@ -65,10 +76,21 @@ async def _seed(settings: Settings) -> AgentGovernanceIdentity:
                         is_owner=True,
                     )
                 )
+            owner_b, _ = await ensure_company_system_roles(database, companies[1].id)
+            database.add(
+                CompanyUser(
+                    company_id=companies[1].id,
+                    user_id=users[2].id,
+                    role_id=owner_b.id,
+                    status="active",
+                    is_owner=False,
+                )
+            )
             await database.commit()
             return AgentGovernanceIdentity(
                 company_ids=(companies[0].id, companies[1].id),
-                emails=(users[0].email, users[1].email),
+                user_ids=(users[0].id, users[1].id, users[2].id),
+                emails=(users[0].email, users[1].email, users[2].email),
                 password=password,
             )
     finally:
@@ -126,6 +148,117 @@ async def _assert_delegation_payload_destroyed(
             assert payload.destroyed_at is not None
     finally:
         await resources.close()
+
+
+async def _represented_approver(
+    settings: Settings,
+    *,
+    company_id: UUID,
+    actor_user_id: UUID,
+    allowed_user_id: UUID,
+) -> UUID | None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            return await represented_approver_user_id(
+                database,
+                company_id=company_id,
+                actor_user_id=actor_user_id,
+                allowed_user_ids=[allowed_user_id],
+            )
+    finally:
+        await resources.close()
+
+
+@pytest.mark.integration
+def test_approval_absence_delegation_is_tenant_scoped_and_revocable() -> None:
+    settings = Settings(app_env="testing")
+    identity = asyncio.run(_seed(settings))
+    try:
+        with TestClient(create_app(settings)) as client:
+            headers_a = _login(client, identity.emails[0], identity.password)
+            headers_b = _login(client, identity.emails[1], identity.password)
+            substitute_headers = _login(client, identity.emails[2], identity.password)
+            candidates_a = client.get(
+                "/notifications/approval-delegations/candidates", headers=headers_a
+            )
+            candidates_b = client.get(
+                "/notifications/approval-delegations/candidates", headers=headers_b
+            )
+            assert candidates_a.status_code == 200
+            assert candidates_b.status_code == 200
+            assert identity.user_ids[2] not in {
+                UUID(item["user_id"]) for item in candidates_a.json()
+            }
+            assert identity.user_ids[2] in {
+                UUID(item["user_id"]) for item in candidates_b.json()
+            }
+
+            now = datetime.now(UTC)
+            created = client.post(
+                "/notifications/approval-delegations",
+                headers=headers_b,
+                json={
+                    "delegate_user_id": str(identity.user_ids[2]),
+                    "starts_at": (now - timedelta(minutes=1)).isoformat(),
+                    "ends_at": (now + timedelta(days=7)).isoformat(),
+                    "reason": "Ausência programada para teste",
+                },
+            )
+            assert created.status_code == 201
+            assert created.json()["effective"] is True
+            delegation_id = created.json()["id"]
+
+            substitute_view = client.get(
+                "/notifications/approval-delegations", headers=substitute_headers
+            )
+            assert substitute_view.status_code == 200
+            assert [item["id"] for item in substitute_view.json()] == [delegation_id]
+            assert (
+                asyncio.run(
+                    _represented_approver(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        actor_user_id=identity.user_ids[2],
+                        allowed_user_id=identity.user_ids[1],
+                    )
+                )
+                == identity.user_ids[1]
+            )
+            assert (
+                asyncio.run(
+                    _represented_approver(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        actor_user_id=identity.user_ids[0],
+                        allowed_user_id=identity.user_ids[1],
+                    )
+                )
+                is None
+            )
+            forbidden_revoke = client.delete(
+                f"/notifications/approval-delegations/{delegation_id}",
+                headers=substitute_headers,
+            )
+            assert forbidden_revoke.status_code == 404
+            revoked = client.delete(
+                f"/notifications/approval-delegations/{delegation_id}", headers=headers_b
+            )
+            assert revoked.status_code == 200
+            assert revoked.json()["status"] == "revoked"
+            assert (
+                asyncio.run(
+                    _represented_approver(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        actor_user_id=identity.user_ids[2],
+                        allowed_user_id=identity.user_ids[1],
+                    )
+                )
+                is None
+            )
+    finally:
+        asyncio.run(_remove(settings, identity))
 
 
 @pytest.mark.integration

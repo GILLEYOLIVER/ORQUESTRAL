@@ -223,7 +223,7 @@ class AgentDelegationApprovalVote(Base):
         UniqueConstraint(
             "delegation_approval_id",
             "policy_stage_id",
-            "user_id",
+            "represented_user_id",
             name="uq_agent_delegation_approval_vote",
         ),
         CheckConstraint(
@@ -245,6 +245,9 @@ class AgentDelegationApprovalVote(Base):
         ForeignKey("agent_approval_policy_stages.id", ondelete="CASCADE"), index=True
     )
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    represented_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
     decision: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True

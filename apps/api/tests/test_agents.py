@@ -45,6 +45,7 @@ from app.modules.agents.tools import (
     assert_tool_access,
     validate_tool_arguments,
 )
+from app.modules.notifications.schemas import ApprovalDelegationCreate
 
 
 @pytest.mark.asyncio
@@ -215,6 +216,68 @@ def test_enterprise_approval_policy_requires_human_for_matching_context() -> Non
     assert decision.assigned_user_id == primary_user_id
     assert decision.escalation_user_id == escalation_user_id
     assert decision.escalation_after_minutes == 15
+
+
+def test_approval_policy_respects_temporal_validity() -> None:
+    now = datetime(2026, 7, 21, 12, 0, tzinfo=UTC)
+    policy = AgentApprovalPolicyVersion(
+        id=UUID("00000000-0000-0000-0000-000000000054"),
+        company_id=UUID("00000000-0000-0000-0000-000000000055"),
+        agent_id=UUID("00000000-0000-0000-0000-000000000056"),
+        policy_key="finance.temporal",
+        version=1,
+        name="Janela financeira",
+        status="published",
+        effect="deny",
+        priority=800,
+        context_conditions={},
+        approval_ttl_minutes=30,
+        effective_from=now + timedelta(hours=1),
+        effective_until=now + timedelta(hours=3),
+    )
+    before = evaluate_published_policies(
+        [policy],
+        company_id=policy.company_id,
+        agent_id=policy.agent_id,
+        arguments={},
+        evaluated_at=now,
+    )
+    active = evaluate_published_policies(
+        [policy],
+        company_id=policy.company_id,
+        agent_id=policy.agent_id,
+        arguments={},
+        evaluated_at=now + timedelta(hours=2),
+    )
+    expired = evaluate_published_policies(
+        [policy],
+        company_id=policy.company_id,
+        agent_id=policy.agent_id,
+        arguments={},
+        evaluated_at=now + timedelta(hours=3),
+    )
+    assert before.allowed and before.policy_version_id is None
+    assert not active.allowed and active.policy_key == "finance.temporal"
+    assert expired.allowed and expired.policy_version_id is None
+
+
+def test_temporal_approval_contracts_reject_invalid_ranges() -> None:
+    now = datetime(2026, 7, 21, 12, 0, tzinfo=UTC)
+    with pytest.raises(ValueError, match="posterior"):
+        AgentApprovalPolicyCreate(
+            policy_key="finance.invalid-window",
+            name="Janela inválida",
+            effect="deny",
+            effective_from=now,
+            effective_until=now,
+        )
+    with pytest.raises(ValueError, match="90 dias"):
+        ApprovalDelegationCreate(
+            delegate_user_id=UUID("00000000-0000-0000-0000-000000000057"),
+            starts_at=now,
+            ends_at=now + timedelta(days=91),
+            reason="Ausência programada",
+        )
 
 
 def test_approval_policy_rejects_invalid_escalation_chain() -> None:

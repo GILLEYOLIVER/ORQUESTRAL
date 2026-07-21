@@ -18,7 +18,7 @@ from app.modules.agents.coordination_models import (
     AgentDelegationPayload,
 )
 from app.modules.notifications.models import ApprovalRequest
-from app.modules.notifications.service import create_notification, is_company_approver
+from app.modules.notifications.service import create_notification, represented_approver_user_id
 
 
 class ApprovalStageAccessError(ValueError):
@@ -154,9 +154,13 @@ async def decide_delegation_approval(
     if stage is None:
         raise ValueError("A etapa de aprovação vinculada não está disponível.")
     approver_ids = await _stage_approver_ids(database, company_id=company_id, stage_id=stage.id)
-    if actor_user_id not in approver_ids or not await is_company_approver(
-        database, company_id=company_id, user_id=actor_user_id
-    ):
+    represented_user_id = await represented_approver_user_id(
+        database,
+        company_id=company_id,
+        actor_user_id=actor_user_id,
+        allowed_user_ids=approver_ids,
+    )
+    if represented_user_id is None:
         raise ApprovalStageAccessError("Você não participa desta etapa de aprovação.")
     actor_has_voted = bool(
         await database.scalar(
@@ -164,7 +168,7 @@ async def decide_delegation_approval(
                 AgentDelegationApprovalVote.company_id == company_id,
                 AgentDelegationApprovalVote.delegation_approval_id == linked.id,
                 AgentDelegationApprovalVote.policy_stage_id == stage.id,
-                AgentDelegationApprovalVote.user_id == actor_user_id,
+                AgentDelegationApprovalVote.represented_user_id == represented_user_id,
             )
         )
     )
@@ -191,6 +195,7 @@ async def decide_delegation_approval(
             delegation_approval_id=linked.id,
             policy_stage_id=stage.id,
             user_id=actor_user_id,
+            represented_user_id=represented_user_id,
             decision=decision,
         )
     )

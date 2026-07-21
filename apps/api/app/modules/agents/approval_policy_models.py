@@ -71,6 +71,10 @@ class AgentApprovalPolicyVersion(Base):
             "AND escalation_after_minutes IS NULL)",
             name="ck_agent_approval_policy_approvers_effect",
         ),
+        CheckConstraint(
+            "effective_from IS NULL OR effective_until IS NULL OR effective_until > effective_from",
+            name="ck_agent_approval_policy_effective_range",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -97,6 +101,8 @@ class AgentApprovalPolicyVersion(Base):
         JSONB, default=dict, server_default=text("'{}'::jsonb")
     )
     approval_ttl_minutes: Mapped[int] = mapped_column(Integer, default=30, server_default="30")
+    effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    effective_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     assigned_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )

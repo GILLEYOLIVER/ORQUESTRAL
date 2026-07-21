@@ -115,6 +115,8 @@ export interface AgentApprovalPolicyResponse {
   currency: string | null;
   context_conditions: Record<string, string | number | boolean | null>;
   approval_ttl_minutes: number;
+  effective_from: string | null;
+  effective_until: string | null;
   assigned_user_id: string | null;
   escalation_user_id: string | null;
   escalation_after_minutes: number | null;

@@ -47,6 +47,8 @@ class AgentApprovalPolicyCreate(StrictSchema):
     currency: str | None = Field(default=None, pattern=r"^[A-Za-z]{3}$")
     context_conditions: dict[str, JsonScalar] = Field(default_factory=dict, max_length=20)
     approval_ttl_minutes: int = Field(default=30, ge=5, le=10_080)
+    effective_from: datetime | None = None
+    effective_until: datetime | None = None
     assigned_user_id: UUID | None = None
     escalation_user_id: UUID | None = None
     escalation_after_minutes: int | None = Field(default=None, ge=5, le=10_079)
@@ -68,6 +70,12 @@ class AgentApprovalPolicyCreate(StrictSchema):
 
     @model_validator(mode="after")
     def validate_policy(self) -> Self:
+        if (
+            self.effective_from is not None
+            and self.effective_until is not None
+            and self.effective_until <= self.effective_from
+        ):
+            raise ValueError("O fim da vigência deve ser posterior ao início.")
         if (
             self.min_amount_microunits is not None or self.max_amount_microunits is not None
         ) and not self.amount_field:
@@ -135,6 +143,8 @@ class AgentApprovalPolicyResponse(StrictSchema):
     currency: str | None
     context_conditions: dict[str, JsonScalar]
     approval_ttl_minutes: int
+    effective_from: datetime | None
+    effective_until: datetime | None
     assigned_user_id: UUID | None
     escalation_user_id: UUID | None
     escalation_after_minutes: int | None

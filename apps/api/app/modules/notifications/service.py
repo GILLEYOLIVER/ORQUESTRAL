@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
@@ -16,6 +16,7 @@ from app.core.security import utc_now
 from app.modules.authorization.models import Permission, RolePermission
 from app.modules.notifications.models import (
     ApprovalAction,
+    ApprovalDelegation,
     ApprovalRequest,
     Notification,
     NotificationPreference,
@@ -141,6 +142,35 @@ async def company_approver_user_ids(database: AsyncSession, company_id: UUID) ->
 
 async def is_company_approver(database: AsyncSession, *, company_id: UUID, user_id: UUID) -> bool:
     return user_id in await company_approver_user_ids(database, company_id)
+
+
+async def represented_approver_user_id(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    actor_user_id: UUID,
+    allowed_user_ids: Sequence[UUID],
+    at: datetime | None = None,
+) -> UUID | None:
+    allowed = set(allowed_user_ids)
+    if not allowed or not await is_company_approver(
+        database, company_id=company_id, user_id=actor_user_id
+    ):
+        return None
+    if actor_user_id in allowed:
+        return actor_user_id
+    reference_time = at or utc_now()
+    represented_user_id: UUID | None = await database.scalar(
+        select(ApprovalDelegation.delegator_user_id).where(
+            ApprovalDelegation.company_id == company_id,
+            ApprovalDelegation.delegate_user_id == actor_user_id,
+            ApprovalDelegation.delegator_user_id.in_(allowed),
+            ApprovalDelegation.status == "active",
+            ApprovalDelegation.starts_at <= reference_time,
+            ApprovalDelegation.ends_at > reference_time,
+        )
+    )
+    return represented_user_id
 
 
 async def create_approval_request(

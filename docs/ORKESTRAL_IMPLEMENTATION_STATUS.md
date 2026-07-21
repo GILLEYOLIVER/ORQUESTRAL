@@ -436,3 +436,18 @@ Data: 21 de julho de 2026.
   build, migração reversível, auditoria de segurança e E2E com 7 aprovados e 2
   cenários explicitamente ignorados concluídos sem bloqueios.
 - Próximo passo: ciclo 21, políticas temporais, delegação formal e substituição por ausência.
+
+## Ciclo 21 - Vigência e cobertura segura de aprovações
+
+- Políticas versionadas agora possuem início e fim opcionais de vigência e são ignoradas fora da janela publicada.
+- Cobertura formal por ausência limitada a 90 dias, restrita a aprovadores ativos da mesma empresa.
+- Prevenção de autodelegação, sobreposição, ciclos e delegação em cascata no mesmo período.
+- Lista de candidatos dedicada por privilégio mínimo, sem exigir acesso amplo ao cadastro de usuários.
+- Voto registra o ator real e a vaga representada; titular e substituto não conseguem votar duas vezes na mesma etapa.
+- Revogação é exclusiva do titular, auditada e interrompe imediatamente novas decisões representadas.
+- Central de Atenção permite programar, acompanhar e revogar coberturas; Estúdio de Agentes permite configurar a vigência da política.
+- Migração: `20260721_0042_approval_delegations.py`.
+- Validação local: Ruff e MyPy aprovados em 189 arquivos; ESLint, TypeScript e Prettier aprovados; 135 testes da API, 12 integrações, 2 testes do worker e 12 testes do front-end aprovados; build, migração `0042 -> 0041 -> 0042`, auditoria de segurança e E2E com 7 aprovados e 2 cenários explicitamente ignorados concluídos sem bloqueios.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; banco em `20260721_0042 (head)`.
+- Risco conhecido: o bundle web permanece acima de 500 kB e o `TestClient` emite aviso de depreciação do `httpx`.
+- Próximo passo: ciclo 22, memória de agentes com classificação, retenção, expiração e eliminação segura por empresa.

@@ -242,6 +242,103 @@
   background: #fffefa;
 }
 
+.delegation-panel {
+  background: linear-gradient(135deg, #f6fbf8, #fffdfa);
+}
+
+.delegation-panel__intro {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: -0.35rem 0 1rem;
+  max-width: 760px;
+}
+
+.delegation-form {
+  align-items: end;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.delegation-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.delegation-field--wide {
+  grid-column: 1 / -1;
+}
+
+.delegation-field span {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.delegation-field input,
+.delegation-field select {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  color: var(--color-text);
+  min-height: 44px;
+  padding: 0.7rem 0.8rem;
+}
+
+.delegation-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.delegation-row {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+}
+
+.delegation-row > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.delegation-row span,
+.delegation-row small,
+.delegation-empty {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.delegation-row__actions {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.delegation-status {
+  border: 1px solid #c9d5cf;
+  border-radius: 999px;
+  padding: 0.3rem 0.55rem;
+  white-space: nowrap;
+}
+
+.delegation-status--effective {
+  background: #e3f4e9;
+  border-color: #9ec5aa;
+  color: #1e6842;
+}
+
+.delegation-status--revoked {
+  background: #f4f1ed;
+  color: #746b62;
+}
+
 .preference-panel__note {
   color: var(--color-text-muted);
   font-size: 0.72rem;
@@ -323,6 +420,19 @@
 
   .preference-grid {
     grid-template-columns: 1fr;
+  }
+
+  .delegation-form {
+    grid-template-columns: 1fr;
+  }
+
+  .delegation-field--wide {
+    grid-column: auto;
+  }
+
+  .delegation-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .attention-panel__heading {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
@@ -93,6 +93,43 @@ class ApprovalDecision(StrictSchema):
 
 class ApprovalComment(StrictSchema):
     comment: str = Field(min_length=1, max_length=2_000)
+
+
+class ApprovalDelegationCreate(StrictSchema):
+    delegate_user_id: UUID
+    starts_at: datetime
+    ends_at: datetime
+    reason: str = Field(min_length=3, max_length=500)
+
+    @model_validator(mode="after")
+    def validate_delegation(self) -> ApprovalDelegationCreate:
+        if self.starts_at.tzinfo is None or self.ends_at.tzinfo is None:
+            raise ValueError("Início e fim devem incluir o fuso horário.")
+        if self.ends_at <= self.starts_at:
+            raise ValueError("O fim da cobertura deve ser posterior ao início.")
+        if self.ends_at - self.starts_at > timedelta(days=90):
+            raise ValueError("Uma cobertura pode durar no máximo 90 dias.")
+        self.reason = self.reason.strip()
+        return self
+
+
+class ApprovalDelegationResponse(StrictSchema):
+    id: UUID
+    delegator_user_id: UUID
+    delegate_user_id: UUID
+    starts_at: datetime
+    ends_at: datetime
+    reason: str
+    status: Literal["active", "revoked"]
+    effective: bool
+    created_at: datetime
+    revoked_at: datetime | None
+
+
+class ApprovalDelegateCandidateResponse(StrictSchema):
+    user_id: UUID
+    name: str
+    email: str
 
 
 class NotificationMaintenanceResponse(StrictSchema):

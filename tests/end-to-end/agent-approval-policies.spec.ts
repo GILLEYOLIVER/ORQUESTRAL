@@ -69,6 +69,8 @@ test("administrador publica e simula política de aprovação de agente", async 
         name: "Validade da aprovação (minutos)",
       }),
     ).toHaveValue("60");
+    await expect(policyCard.getByLabel("Início da vigência")).toBeVisible();
+    await expect(policyCard.getByLabel("Fim da vigência")).toBeVisible();
     await expect(policyCard.getByLabel("Aprovador substituto")).toBeDisabled();
     await policyCard.getByRole("button", { name: "Adicionar etapa" }).click();
     await expect(

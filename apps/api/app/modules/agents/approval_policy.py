@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -77,7 +77,9 @@ def evaluate_published_policies(
     company_id: UUID,
     agent_id: UUID,
     arguments: Mapping[str, Any],
+    evaluated_at: datetime | None = None,
 ) -> ApprovalPolicyDecision:
+    reference_time = evaluated_at or datetime.now(UTC)
     effect_precedence = {"allow": 0, "require_approval": 1, "deny": 2}
     ordered = sorted(
         (
@@ -86,6 +88,8 @@ def evaluate_published_policies(
             if policy.status == "published"
             and policy.company_id == company_id
             and policy.agent_id == agent_id
+            and (policy.effective_from is None or policy.effective_from <= reference_time)
+            and (policy.effective_until is None or policy.effective_until > reference_time)
         ),
         key=lambda policy: (
             policy.priority,

@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
@@ -18,6 +18,7 @@ from app.modules.agents.coordination_queue import enqueue_delegation
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.notifications.models import (
     ApprovalAction,
+    ApprovalDelegation,
     ApprovalRequest,
     Notification,
     NotificationPreference,
@@ -26,6 +27,9 @@ from app.modules.notifications.schemas import (
     ApprovalActionResponse,
     ApprovalComment,
     ApprovalDecision,
+    ApprovalDelegateCandidateResponse,
+    ApprovalDelegationCreate,
+    ApprovalDelegationResponse,
     ApprovalRequestResponse,
     NotificationMaintenanceResponse,
     NotificationPreferenceResponse,
@@ -34,10 +38,14 @@ from app.modules.notifications.schemas import (
     NotificationSummaryResponse,
 )
 from app.modules.notifications.service import (
+    company_approver_user_ids,
+    is_company_approver,
     process_due_reminders,
+    represented_approver_user_id,
     resolve_approval_request,
 )
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
+from app.modules.users.models import User
 from app.modules.workflows.execution import run_workflow
 from app.modules.workflows.models import Workflow, WorkflowExecution
 
@@ -92,6 +100,24 @@ def _approval_response(
             ApprovalActionResponse.model_validate(action, from_attributes=True)
             for action in actions
         ],
+    )
+
+
+def _delegation_response(delegation: ApprovalDelegation) -> ApprovalDelegationResponse:
+    now = utc_now()
+    return ApprovalDelegationResponse(
+        id=delegation.id,
+        delegator_user_id=delegation.delegator_user_id,
+        delegate_user_id=delegation.delegate_user_id,
+        starts_at=delegation.starts_at,
+        ends_at=delegation.ends_at,
+        reason=delegation.reason,
+        status=delegation.status,
+        effective=(
+            delegation.status == "active" and delegation.starts_at <= now < delegation.ends_at
+        ),
+        created_at=delegation.created_at,
+        revoked_at=delegation.revoked_at,
     )
 
 
@@ -238,6 +264,159 @@ async def mark_all_read(principal: CurrentPrincipal, database: DatabaseSession) 
     await database.commit()
 
 
+@router.get("/approval-delegations", response_model=list[ApprovalDelegationResponse])
+async def list_approval_delegations(
+    principal: CanDecideApprovals,
+    database: DatabaseSession,
+) -> list[ApprovalDelegationResponse]:
+    context = get_request_context(principal)
+    rows = list(
+        await database.scalars(
+            select(ApprovalDelegation)
+            .where(
+                ApprovalDelegation.company_id == context.company_id,
+                or_(
+                    ApprovalDelegation.delegator_user_id == context.user_id,
+                    ApprovalDelegation.delegate_user_id == context.user_id,
+                ),
+            )
+            .order_by(ApprovalDelegation.created_at.desc())
+            .limit(100)
+        )
+    )
+    return [_delegation_response(row) for row in rows]
+
+
+@router.get(
+    "/approval-delegations/candidates",
+    response_model=list[ApprovalDelegateCandidateResponse],
+)
+async def list_approval_delegate_candidates(
+    principal: CanDecideApprovals,
+    database: DatabaseSession,
+) -> list[ApprovalDelegateCandidateResponse]:
+    context = get_request_context(principal)
+    approver_ids = await company_approver_user_ids(database, context.company_id)
+    if not approver_ids:
+        return []
+    rows = list(
+        await database.scalars(
+            select(User).where(User.id.in_(approver_ids)).order_by(User.name, User.email)
+        )
+    )
+    return [
+        ApprovalDelegateCandidateResponse(user_id=row.id, name=row.name, email=row.email)
+        for row in rows
+    ]
+
+
+@router.post(
+    "/approval-delegations",
+    response_model=ApprovalDelegationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_approval_delegation(
+    payload: ApprovalDelegationCreate,
+    principal: CanDecideApprovals,
+    database: DatabaseSession,
+) -> ApprovalDelegationResponse:
+    context = get_request_context(principal)
+    now = utc_now()
+    if payload.delegate_user_id == context.user_id:
+        raise HTTPException(status_code=422, detail="Escolha outra pessoa como substituta.")
+    if payload.ends_at <= now:
+        raise HTTPException(status_code=422, detail="A cobertura precisa terminar no futuro.")
+    if not await is_company_approver(
+        database, company_id=context.company_id, user_id=payload.delegate_user_id
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="A pessoa substituta deve estar ativa e possuir permissão para aprovar.",
+        )
+    overlap = await database.scalar(
+        select(ApprovalDelegation.id).where(
+            ApprovalDelegation.company_id == context.company_id,
+            ApprovalDelegation.status == "active",
+            ApprovalDelegation.starts_at < payload.ends_at,
+            ApprovalDelegation.ends_at > payload.starts_at,
+            or_(
+                ApprovalDelegation.delegator_user_id == context.user_id,
+                ApprovalDelegation.delegator_user_id == payload.delegate_user_id,
+                ApprovalDelegation.delegate_user_id == context.user_id,
+            ),
+        )
+    )
+    if overlap is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Existe uma cobertura incompatível nesse período. Revogue-a ou ajuste as datas.",
+        )
+    delegation = ApprovalDelegation(
+        company_id=context.company_id,
+        delegator_user_id=context.user_id,
+        delegate_user_id=payload.delegate_user_id,
+        starts_at=payload.starts_at,
+        ends_at=payload.ends_at,
+        reason=payload.reason,
+    )
+    database.add(delegation)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="approval.delegation_created",
+        target_type="approval_delegation",
+        target_id=delegation.id,
+        details={
+            "delegate_user_id": str(payload.delegate_user_id),
+            "starts_at": payload.starts_at.isoformat(),
+            "ends_at": payload.ends_at.isoformat(),
+        },
+    )
+    await database.commit()
+    await database.refresh(delegation)
+    return _delegation_response(delegation)
+
+
+@router.delete(
+    "/approval-delegations/{delegation_id}",
+    response_model=ApprovalDelegationResponse,
+)
+async def revoke_approval_delegation(
+    delegation_id: UUID,
+    principal: CanDecideApprovals,
+    database: DatabaseSession,
+) -> ApprovalDelegationResponse:
+    context = get_request_context(principal)
+    delegation = await database.scalar(
+        select(ApprovalDelegation)
+        .where(
+            ApprovalDelegation.id == delegation_id,
+            ApprovalDelegation.company_id == context.company_id,
+            ApprovalDelegation.delegator_user_id == context.user_id,
+        )
+        .with_for_update()
+    )
+    if delegation is None:
+        raise HTTPException(status_code=404, detail="Cobertura não encontrada.")
+    if delegation.status == "active":
+        delegation.status = "revoked"
+        delegation.revoked_at = utc_now()
+        record_authorization_audit(
+            database,
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            action="approval.delegation_revoked",
+            target_type="approval_delegation",
+            target_id=delegation.id,
+            details={"delegate_user_id": str(delegation.delegate_user_id)},
+        )
+        await database.commit()
+        await database.refresh(delegation)
+    return _delegation_response(delegation)
+
+
 @router.post("/{notification_id}/read", response_model=NotificationResponse)
 async def mark_read(
     notification_id: UUID,
@@ -297,8 +476,17 @@ async def decide_approval(
     )
     if approval is None:
         raise HTTPException(status_code=404, detail="Solicitação de aprovação não encontrada.")
-    if approval.assigned_user_id is not None and approval.assigned_user_id != context.user_id:
-        raise HTTPException(status_code=403, detail="Esta decisão foi atribuída a outro usuário.")
+    if approval.assigned_user_id is not None:
+        represented_user_id = await represented_approver_user_id(
+            database,
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            allowed_user_ids=[approval.assigned_user_id],
+        )
+        if represented_user_id is None:
+            raise HTTPException(
+                status_code=403, detail="Esta decisão foi atribuída a outro usuário."
+            )
     if approval.expires_at is not None and approval.expires_at <= utc_now():
         raise HTTPException(status_code=409, detail="Esta solicitação de aprovação expirou.")
     if approval.status != "pending":

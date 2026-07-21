@@ -111,6 +111,8 @@ export function AgentsPage() {
   const [policyContextPath, setPolicyContextPath] = useState("");
   const [policyContextValue, setPolicyContextValue] = useState("");
   const [policyApprovalTtl, setPolicyApprovalTtl] = useState("60");
+  const [policyEffectiveFrom, setPolicyEffectiveFrom] = useState("");
+  const [policyEffectiveUntil, setPolicyEffectiveUntil] = useState("");
   const [policyAssignedUserId, setPolicyAssignedUserId] = useState("");
   const [policyEscalationUserId, setPolicyEscalationUserId] = useState("");
   const [policyEscalationAfter, setPolicyEscalationAfter] = useState("30");
@@ -331,6 +333,20 @@ export function AgentsPage() {
       setPolicyFormError("A validade deve ser de pelo menos 5 minutos.");
       return;
     }
+    const effectiveFrom = policyEffectiveFrom
+      ? new Date(policyEffectiveFrom)
+      : null;
+    const effectiveUntil = policyEffectiveUntil
+      ? new Date(policyEffectiveUntil)
+      : null;
+    if (
+      (effectiveFrom && Number.isNaN(effectiveFrom.getTime())) ||
+      (effectiveUntil && Number.isNaN(effectiveUntil.getTime())) ||
+      (effectiveFrom && effectiveUntil && effectiveUntil <= effectiveFrom)
+    ) {
+      setPolicyFormError("O fim da vigência deve ser posterior ao início.");
+      return;
+    }
     if (policyEscalationUserId && !policyAssignedUserId) {
       setPolicyFormError("Defina o aprovador principal antes do substituto.");
       return;
@@ -390,6 +406,8 @@ export function AgentsPage() {
         ? { [policyContextPath]: parseContextValue(policyContextValue) }
         : {},
       approval_ttl_minutes: approvalTtl,
+      effective_from: effectiveFrom?.toISOString() ?? null,
+      effective_until: effectiveUntil?.toISOString() ?? null,
       assigned_user_id:
         policyEffect === "require_approval" &&
         policyStages.length === 0 &&
@@ -748,6 +766,22 @@ export function AgentsPage() {
                     value={policyContextValue}
                   />
                   <TextField
+                    label="Início da vigência"
+                    onChange={(event) =>
+                      setPolicyEffectiveFrom(event.target.value)
+                    }
+                    type="datetime-local"
+                    value={policyEffectiveFrom}
+                  />
+                  <TextField
+                    label="Fim da vigência"
+                    onChange={(event) =>
+                      setPolicyEffectiveUntil(event.target.value)
+                    }
+                    type="datetime-local"
+                    value={policyEffectiveUntil}
+                  />
+                  <TextField
                     disabled={policyEffect !== "require_approval"}
                     label="Validade da aprovação (minutos)"
                     min={5}
@@ -995,6 +1029,22 @@ export function AgentsPage() {
                               ? "etapa"
                               : "etapas"}{" "}
                             · quórum configurado
+                          </small>
+                        ) : null}
+                        {policy.effective_from || policy.effective_until ? (
+                          <small>
+                            Vigência:{" "}
+                            {policy.effective_from
+                              ? new Date(policy.effective_from).toLocaleString(
+                                  "pt-BR",
+                                )
+                              : "imediata"}{" "}
+                            até{" "}
+                            {policy.effective_until
+                              ? new Date(policy.effective_until).toLocaleString(
+                                  "pt-BR",
+                                )
+                              : "sem prazo final"}
                           </small>
                         ) : null}
                       </div>
