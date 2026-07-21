@@ -181,6 +181,51 @@ class AgentProviderStatusResponse(StrictSchema):
     message: str
 
 
+class AgentDataPolicyUpdate(StrictSchema):
+    allowed_provider_keys: list[str] = Field(min_length=1, max_length=20)
+    external_processing_enabled: bool = False
+    allow_message_egress: bool = False
+    allow_knowledge_egress: bool = False
+    redact_sensitive_data: bool = True
+    max_data_classification: Literal["public", "internal", "confidential", "restricted"] = (
+        "confidential"
+    )
+
+    @field_validator("allowed_provider_keys")
+    @classmethod
+    def normalize_providers(cls, values: list[str]) -> list[str]:
+        normalized = sorted({value.strip().lower() for value in values if value.strip()})
+        if not normalized:
+            raise ValueError("Informe ao menos um provedor autorizado.")
+        return normalized
+
+
+class AgentDataPolicyResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    allowed_provider_keys: list[str]
+    external_processing_enabled: bool
+    allow_message_egress: bool
+    allow_knowledge_egress: bool
+    redact_sensitive_data: bool
+    max_data_classification: Literal["public", "internal", "confidential", "restricted"]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AgentSecurityEventResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    agent_run_id: UUID | None
+    category: Literal["prompt_injection", "data_egress", "sensitive_data"]
+    source: Literal["user", "knowledge", "provider", "system"]
+    severity: Literal["low", "medium", "high", "critical"]
+    action: Literal["blocked", "redacted", "reported"]
+    content_fingerprint: str
+    indicators: list[str]
+    created_at: datetime
+
+
 class AgentRunResponse(StrictSchema):
     id: UUID
     agent_id: UUID

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from time import perf_counter
-from typing import Annotated, Literal, cast
+from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -27,8 +27,10 @@ from app.modules.agents.models import (
     Agent,
     AgentBudget,
     AgentConversation,
+    AgentDataPolicy,
     AgentMessage,
     AgentRun,
+    AgentSecurityEvent,
     AgentTool,
     AgentToolRun,
     AgentUsageRecord,
@@ -48,10 +50,13 @@ from app.modules.agents.schemas import (
     AgentConversationCreate,
     AgentConversationResponse,
     AgentCreate,
+    AgentDataPolicyResponse,
+    AgentDataPolicyUpdate,
     AgentMessageResponse,
     AgentProviderStatusResponse,
     AgentResponse,
     AgentRunResponse,
+    AgentSecurityEventResponse,
     AgentToolCatalogResponse,
     AgentToolDecision,
     AgentToolResponse,
@@ -61,6 +66,12 @@ from app.modules.agents.schemas import (
     AgentUsageResponse,
     AgentVersionCreate,
     AgentVersionResponse,
+)
+from app.modules.agents.security import (
+    AgentDataPolicyViolation,
+    assert_provider_data_policy,
+    protect_provider_text,
+    scan_prompt_injection,
 )
 from app.modules.agents.tools import (
     BUILTIN_TOOLS,
@@ -114,6 +125,27 @@ def _budget_response(budget: AgentBudget) -> AgentBudgetResponse:
 
 def _run_response(run: AgentRun) -> AgentRunResponse:
     return AgentRunResponse.model_validate(run, from_attributes=True)
+
+
+def _data_policy_response(policy: AgentDataPolicy) -> AgentDataPolicyResponse:
+    return AgentDataPolicyResponse.model_validate(policy, from_attributes=True)
+
+
+def _security_event_response(event: AgentSecurityEvent) -> AgentSecurityEventResponse:
+    return AgentSecurityEventResponse.model_validate(event, from_attributes=True)
+
+
+async def _data_policy(
+    database: DatabaseSession, *, agent_id: UUID, company_id: UUID
+) -> AgentDataPolicy:
+    policy = await database.scalar(
+        select(AgentDataPolicy).where(
+            AgentDataPolicy.agent_id == agent_id, AgentDataPolicy.company_id == company_id
+        )
+    )
+    if policy is None:
+        raise HTTPException(status_code=409, detail="Política de dados do agente não configurada.")
+    return policy
 
 
 async def _budget(database: DatabaseSession, *, agent_id: UUID, company_id: UUID) -> AgentBudget:
@@ -368,6 +400,19 @@ async def create_agent(
             agent_id=agent.id,
             cycle_started_at=now,
             cycle_ends_at=next_month,
+        )
+    )
+    is_external = agent.provider != "local"
+    database.add(
+        AgentDataPolicy(
+            company_id=context.company_id,
+            agent_id=agent.id,
+            allowed_provider_keys=[agent.provider],
+            external_processing_enabled=is_external,
+            allow_message_egress=is_external,
+            allow_knowledge_egress=is_external,
+            redact_sensitive_data=True,
+            max_data_classification="confidential",
         )
     )
     definition = TOOL_CATALOG["orkestral.company.summary"]
@@ -820,6 +865,86 @@ async def get_agent_run(
     return _run_response(run)
 
 
+@router.get("/{agent_id}/data-policy", response_model=AgentDataPolicyResponse)
+async def get_agent_data_policy(
+    agent_id: UUID, principal: CanConfigureAgents, database: DatabaseSession
+) -> AgentDataPolicyResponse:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    return _data_policy_response(
+        await _data_policy(database, agent_id=agent_id, company_id=context.company_id)
+    )
+
+
+@router.put("/{agent_id}/data-policy", response_model=AgentDataPolicyResponse)
+async def update_agent_data_policy(
+    agent_id: UUID,
+    payload: AgentDataPolicyUpdate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDataPolicyResponse:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    policy = await _data_policy(database, agent_id=agent_id, company_id=context.company_id)
+    for field, value in payload.model_dump().items():
+        setattr(policy, field, value)
+    policy.updated_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.data_policy.updated",
+        target_type="agent_data_policy",
+        target_id=policy.id,
+        details={
+            "agent_id": str(agent_id),
+            "providers": policy.allowed_provider_keys,
+            "external_processing_enabled": policy.external_processing_enabled,
+            "max_data_classification": policy.max_data_classification,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.data_policy.updated",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "agent_id": str(agent_id),
+                "providers": policy.allowed_provider_keys,
+                "external_processing_enabled": policy.external_processing_enabled,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(policy)
+    return _data_policy_response(policy)
+
+
+@router.get("/{agent_id}/security-events", response_model=list[AgentSecurityEventResponse])
+async def list_agent_security_events(
+    agent_id: UUID,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[AgentSecurityEventResponse]:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    events = (
+        await database.scalars(
+            select(AgentSecurityEvent)
+            .where(
+                AgentSecurityEvent.agent_id == agent_id,
+                AgentSecurityEvent.company_id == context.company_id,
+            )
+            .order_by(AgentSecurityEvent.created_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    return [_security_event_response(event) for event in events]
+
+
 @router.get("/{agent_id}/conversations", response_model=list[AgentConversationResponse])
 async def list_conversations(
     agent_id: UUID, principal: CanViewAgents, database: DatabaseSession
@@ -904,6 +1029,59 @@ async def chat_with_agent(
     version = await active_agent_version(database, agent=agent, company_id=context.company_id)
     if version is None:
         raise HTTPException(status_code=409, detail="Este agente não possui versão publicada.")
+    data_policy = await _data_policy(database, agent_id=agent.id, company_id=context.company_id)
+    try:
+        assert_provider_data_policy(
+            data_policy,
+            provider=version.provider,
+            includes_knowledge=version.knowledge_base_id is not None,
+        )
+    except AgentDataPolicyViolation as exc:
+        fingerprint = agent_request_fingerprint(
+            company_id=context.company_id, agent_id=agent.id, message=version.provider
+        )
+        database.add(
+            AgentSecurityEvent(
+                company_id=context.company_id,
+                agent_id=agent.id,
+                category="data_egress",
+                source="provider",
+                severity="high",
+                action="blocked",
+                content_fingerprint=fingerprint,
+                indicators=["provider_policy_denied"],
+            )
+        )
+        await database.commit()
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    injection = scan_prompt_injection(payload.message)
+    if injection.detected:
+        database.add(
+            AgentSecurityEvent(
+                company_id=context.company_id,
+                agent_id=agent.id,
+                category="prompt_injection",
+                source="user",
+                severity="high",
+                action="blocked",
+                content_fingerprint=injection.fingerprint,
+                indicators=list(injection.indicators),
+            )
+        )
+        record_authorization_audit(
+            database,
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            action="agent.prompt_injection.blocked",
+            target_type="agent",
+            target_id=agent.id,
+            details={"indicators": list(injection.indicators)},
+        )
+        await database.commit()
+        raise HTTPException(
+            status_code=422,
+            detail="A solicitação foi bloqueada pela política de segurança do agente.",
+        )
     projected_tokens = max(1, len(payload.message) // 4) + agent.max_output_tokens
     await enforce_limit(
         database,
@@ -1004,12 +1182,58 @@ async def chat_with_agent(
         if agent.knowledge_base_id
         else []
     )
+    safe_sources: list[dict[str, Any]] = []
+    for source in sources:
+        assessment = scan_prompt_injection(str(source["content"]))
+        if assessment.detected:
+            database.add(
+                AgentSecurityEvent(
+                    company_id=context.company_id,
+                    agent_id=agent.id,
+                    agent_run_id=agent_run.id,
+                    category="prompt_injection",
+                    source="knowledge",
+                    severity="critical",
+                    action="blocked",
+                    content_fingerprint=assessment.fingerprint,
+                    indicators=list(assessment.indicators),
+                )
+            )
+            continue
+        protected_content, redacted = protect_provider_text(
+            data_policy, provider=version.provider, text=str(source["content"])
+        )
+        safe_source = dict(source)
+        safe_source["content"] = protected_content
+        safe_sources.append(safe_source)
+        if redacted:
+            database.add(
+                AgentSecurityEvent(
+                    company_id=context.company_id,
+                    agent_id=agent.id,
+                    agent_run_id=agent_run.id,
+                    category="sensitive_data",
+                    source="knowledge",
+                    severity="medium",
+                    action="redacted",
+                    content_fingerprint=assessment.fingerprint,
+                    indicators=["sensitive_data_redacted"],
+                )
+            )
+    sources = safe_sources
     knowledge_context = "\n\n".join(
         f"[Fonte {item['document_name']} trecho {item['chunk_index']}] {item['content']}"
         for item in sources
     )
     provider_messages = (
-        [ModelMessage(role="system", content=version.instructions)]
+        [
+            ModelMessage(
+                role="system",
+                content=protect_provider_text(
+                    data_policy, provider=version.provider, text=version.instructions
+                )[0],
+            )
+        ]
         + (
             [
                 ModelMessage(
@@ -1026,7 +1250,9 @@ async def chat_with_agent(
                     Literal["system", "user", "assistant", "tool"],
                     message.role,
                 ),
-                content=message.content,
+                content=protect_provider_text(
+                    data_policy, provider=version.provider, text=message.content
+                )[0],
             )
             for message in history
         ]

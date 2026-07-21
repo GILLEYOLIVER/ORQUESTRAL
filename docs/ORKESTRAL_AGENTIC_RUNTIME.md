@@ -48,7 +48,6 @@ Todos os acessos são filtrados por `company_id` e exigem `agents.configure`. A 
 
 ## Próximos incrementos
 
-- políticas de dados por provedor;
 - suites de avaliação e testes de prompt injection;
 - coordenação multiagente com contratos de tarefa.
 
@@ -63,3 +62,11 @@ Os modos oficiais são:
 - `simulation`: executa o mesmo contrato seguro do modo sombra para testes automatizados.
 
 O runtime interrompe o provedor ao atingir `max_runtime_seconds`, bloqueia chamadas além de `max_steps` e vincula ferramentas e consumo ao trace e à versão exata. Os endpoints `GET /agents/{agent_id}/runs` e `GET /agents/{agent_id}/runs/{run_id}` aplicam isolamento por empresa.
+
+## Política de dados e defesa contra prompt injection
+
+O ciclo 12 adiciona uma política individual por agente. Ela define provedores permitidos, autorização para processamento externo, envio de mensagens e conhecimento, classificação máxima e mascaramento obrigatório. O endpoint administrativo é `GET/PUT /agents/{agent_id}/data-policy`.
+
+Antes de chamar um provedor externo, o runtime valida a política e mascara e-mails, CPF, CNPJ, bearer tokens e atribuições comuns de senha, token ou chave. Provedores não autorizados são bloqueados antes de qualquer saída.
+
+Mensagens e trechos de conhecimento são examinados por regras determinísticas contra sobrescrita de políticas, exposição do prompt do sistema, exfiltração de segredos e personificação do sistema. Conteúdo suspeito não chega ao modelo. A ocorrência gera `agent_security_events` contendo somente fingerprint SHA-256 e nomes dos indicadores. O endpoint `GET /agents/{agent_id}/security-events` respeita `company_id` e `agents.configure`.

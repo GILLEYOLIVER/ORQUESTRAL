@@ -318,3 +318,12 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 121 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0033_agent_run_observability.py`.
 - Próximo passo: ciclo 12, políticas de dados por provedor e defesa contra prompt injection.
+## Ciclo 12 - Segurança de dados dos agentes
+
+- Política de saída de dados por agente e provedor, aplicada no back-end.
+- Mascaramento de PII e credenciais antes de processamento externo.
+- Defesa contra prompt injection em mensagens e conhecimento recuperado.
+- Incidentes auditáveis sem armazenamento do conteúdo original.
+- Validação concluída: Ruff e MyPy aprovados; 123 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0034_agent_data_security.py`.
+- Próximo passo: ciclo 13, suites de avaliação, casos adversariais e bloqueio de publicação.

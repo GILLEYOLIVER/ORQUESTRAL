@@ -160,6 +160,49 @@ class AgentBudget(Base):
     )
 
 
+class AgentDataPolicy(Base):
+    __tablename__ = "agent_data_policies"
+    __table_args__ = (
+        UniqueConstraint("agent_id", name="uq_agent_data_policies_agent"),
+        CheckConstraint(
+            "max_data_classification IN ('public', 'internal', 'confidential', 'restricted')",
+            name="ck_agent_data_policy_classification",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    allowed_provider_keys: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[\"local\"]'::jsonb")
+    )
+    external_processing_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    allow_message_egress: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    allow_knowledge_egress: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    redact_sensitive_data: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
+    max_data_classification: Mapped[str] = mapped_column(
+        String(20), default="confidential", server_default="confidential"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class AgentRun(Base):
     __tablename__ = "agent_runs"
     __table_args__ = (
@@ -220,6 +263,50 @@ class AgentRun(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentSecurityEvent(Base):
+    __tablename__ = "agent_security_events"
+    __table_args__ = (
+        CheckConstraint(
+            "category IN ('prompt_injection', 'data_egress', 'sensitive_data')",
+            name="ck_agent_security_event_category",
+        ),
+        CheckConstraint(
+            "source IN ('user', 'knowledge', 'provider', 'system')",
+            name="ck_agent_security_event_source",
+        ),
+        CheckConstraint(
+            "severity IN ('low', 'medium', 'high', 'critical')",
+            name="ck_agent_security_event_severity",
+        ),
+        CheckConstraint(
+            "action IN ('blocked', 'redacted', 'reported')",
+            name="ck_agent_security_event_action",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    category: Mapped[str] = mapped_column(String(32), index=True)
+    source: Mapped[str] = mapped_column(String(20), index=True)
+    severity: Mapped[str] = mapped_column(String(16), index=True)
+    action: Mapped[str] = mapped_column(String(16), index=True)
+    content_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    indicators: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
 
 
 class AgentTool(Base):
