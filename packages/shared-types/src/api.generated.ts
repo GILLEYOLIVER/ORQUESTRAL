@@ -5300,10 +5300,40 @@ export interface components {
              * @default true
              */
             automatic_exit_enabled: boolean;
+            /**
+             * Availability Retention Days
+             * @default 30
+             */
+            availability_retention_days: number;
             /** Configured */
             configured: boolean;
             /** Expiry Warning Days */
             expiry_warning_days: number;
+            /**
+             * Identity Canary Days
+             * @default 14
+             */
+            identity_canary_days: number;
+            /**
+             * Identity Canary Interval Hours
+             * @default 24
+             */
+            identity_canary_interval_hours: number;
+            /**
+             * On Call End Hour
+             * @default 24
+             */
+            on_call_end_hour: number;
+            /**
+             * On Call Start Hour
+             * @default 0
+             */
+            on_call_start_hour: number;
+            /**
+             * On Call Timezone
+             * @default UTC
+             */
+            on_call_timezone: string;
             /** On Call User Ids */
             on_call_user_ids?: string[];
             /** Updated At */
@@ -5322,8 +5352,38 @@ export interface components {
              * @default true
              */
             automatic_exit_enabled: boolean;
+            /**
+             * Availability Retention Days
+             * @default 30
+             */
+            availability_retention_days: number;
             /** Expiry Warning Days */
             expiry_warning_days: number;
+            /**
+             * Identity Canary Days
+             * @default 14
+             */
+            identity_canary_days: number;
+            /**
+             * Identity Canary Interval Hours
+             * @default 24
+             */
+            identity_canary_interval_hours: number;
+            /**
+             * On Call End Hour
+             * @default 24
+             */
+            on_call_end_hour: number;
+            /**
+             * On Call Start Hour
+             * @default 0
+             */
+            on_call_start_hour: number;
+            /**
+             * On Call Timezone
+             * @default UTC
+             */
+            on_call_timezone: string;
             /** On Call User Ids */
             on_call_user_ids?: string[];
             /** Vault Failure Alert Threshold */
@@ -5348,8 +5408,15 @@ export interface components {
              * @enum {string}
              */
             health_status: "not_applicable" | "unknown" | "healthy" | "unavailable";
+            /**
+             * Identity Canary Status
+             * @enum {string}
+             */
+            identity_canary_status: "not_applicable" | "unknown" | "healthy" | "unavailable";
             /** Last Health Checked At */
             last_health_checked_at: string | null;
+            /** Last Identity Canary At */
+            last_identity_canary_at: string | null;
             /** Last Resolved At */
             last_resolved_at: string | null;
             /** Provider Code */

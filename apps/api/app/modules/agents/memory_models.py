@@ -754,6 +754,10 @@ class AgentMemoryKeyringBinding(Base):
             "health_status IN ('unknown', 'healthy', 'unavailable')",
             name="ck_agent_memory_keyring_binding_health",
         ),
+        CheckConstraint(
+            "identity_canary_status IN ('unknown', 'healthy', 'unavailable')",
+            name="ck_agent_memory_keyring_binding_canary",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -790,6 +794,10 @@ class AgentMemoryKeyringBinding(Base):
         index=True,
     )
     credential_revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    identity_canary_status: Mapped[str] = mapped_column(
+        String(16), default="unknown", server_default="unknown", index=True
+    )
+    last_identity_canary_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=func.now(),
@@ -869,6 +877,20 @@ class AgentMemoryKeyringPolicy(Base):
             "vault_slo_minutes BETWEEN 1 AND 1440",
             name="ck_agent_memory_keyring_policy_slo",
         ),
+        CheckConstraint(
+            "availability_retention_days BETWEEN 7 AND 365",
+            name="ck_agent_memory_keyring_policy_availability_retention",
+        ),
+        CheckConstraint(
+            "on_call_start_hour BETWEEN 0 AND 23 AND on_call_end_hour BETWEEN 1 AND 24 "
+            "AND on_call_start_hour < on_call_end_hour",
+            name="ck_agent_memory_keyring_policy_on_call_window",
+        ),
+        CheckConstraint(
+            "identity_canary_days BETWEEN 1 AND 90 "
+            "AND identity_canary_interval_hours BETWEEN 1 AND 168",
+            name="ck_agent_memory_keyring_policy_canary",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -884,8 +906,18 @@ class AgentMemoryKeyringPolicy(Base):
     automatic_exit_batch_size: Mapped[int] = mapped_column(Integer)
     vault_failure_alert_threshold: Mapped[int] = mapped_column(Integer)
     vault_slo_minutes: Mapped[int] = mapped_column(Integer)
+    availability_retention_days: Mapped[int] = mapped_column(
+        Integer, default=30, server_default="30"
+    )
     on_call_user_ids: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    on_call_timezone: Mapped[str] = mapped_column(String(64), default="UTC", server_default="UTC")
+    on_call_start_hour: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    on_call_end_hour: Mapped[int] = mapped_column(Integer, default=24, server_default="24")
+    identity_canary_days: Mapped[int] = mapped_column(Integer, default=14, server_default="14")
+    identity_canary_interval_hours: Mapped[int] = mapped_column(
+        Integer, default=24, server_default="24"
     )
     updated_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True

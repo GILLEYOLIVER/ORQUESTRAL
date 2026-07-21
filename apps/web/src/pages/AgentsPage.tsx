@@ -224,9 +224,23 @@ export function AgentsPage() {
   const [keyringFailureAlertThreshold, setKeyringFailureAlertThreshold] =
     useState("3");
   const [keyringSloMinutes, setKeyringSloMinutes] = useState("30");
+  const [
+    keyringAvailabilityRetentionDays,
+    setKeyringAvailabilityRetentionDays,
+  ] = useState("30");
   const [keyringOnCallUserIds, setKeyringOnCallUserIds] = useState<string[]>(
     [],
   );
+  const [keyringOnCallTimezone, setKeyringOnCallTimezone] =
+    useState("America/Sao_Paulo");
+  const [keyringOnCallStartHour, setKeyringOnCallStartHour] = useState("0");
+  const [keyringOnCallEndHour, setKeyringOnCallEndHour] = useState("24");
+  const [keyringIdentityCanaryDays, setKeyringIdentityCanaryDays] =
+    useState("14");
+  const [
+    keyringIdentityCanaryIntervalHours,
+    setKeyringIdentityCanaryIntervalHours,
+  ] = useState("24");
   const [credentialRenewalDays, setCredentialRenewalDays] = useState("30");
   const [credentialRenewalReason, setCredentialRenewalReason] = useState("");
   const [workloadIdentityReference, setWorkloadIdentityReference] =
@@ -568,7 +582,21 @@ export function AgentsPage() {
       String(memoryKeyringPolicy.data.vault_failure_alert_threshold),
     );
     setKeyringSloMinutes(String(memoryKeyringPolicy.data.vault_slo_minutes));
+    setKeyringAvailabilityRetentionDays(
+      String(memoryKeyringPolicy.data.availability_retention_days),
+    );
     setKeyringOnCallUserIds(memoryKeyringPolicy.data.on_call_user_ids);
+    setKeyringOnCallTimezone(memoryKeyringPolicy.data.on_call_timezone);
+    setKeyringOnCallStartHour(
+      String(memoryKeyringPolicy.data.on_call_start_hour),
+    );
+    setKeyringOnCallEndHour(String(memoryKeyringPolicy.data.on_call_end_hour));
+    setKeyringIdentityCanaryDays(
+      String(memoryKeyringPolicy.data.identity_canary_days),
+    );
+    setKeyringIdentityCanaryIntervalHours(
+      String(memoryKeyringPolicy.data.identity_canary_interval_hours),
+    );
   }, [memoryKeyringPolicy.data]);
 
   const refresh = () => {
@@ -1031,7 +1059,15 @@ export function AgentsPage() {
           automatic_exit_batch_size: Number(keyringAutomaticExitBatchSize),
           vault_failure_alert_threshold: Number(keyringFailureAlertThreshold),
           vault_slo_minutes: Number(keyringSloMinutes),
+          availability_retention_days: Number(keyringAvailabilityRetentionDays),
           on_call_user_ids: keyringOnCallUserIds,
+          on_call_timezone: keyringOnCallTimezone,
+          on_call_start_hour: Number(keyringOnCallStartHour),
+          on_call_end_hour: Number(keyringOnCallEndHour),
+          identity_canary_days: Number(keyringIdentityCanaryDays),
+          identity_canary_interval_hours: Number(
+            keyringIdentityCanaryIntervalHours,
+          ),
         },
       }),
     onSuccess: (policy) => {
@@ -1044,7 +1080,17 @@ export function AgentsPage() {
         String(policy.vault_failure_alert_threshold),
       );
       setKeyringSloMinutes(String(policy.vault_slo_minutes));
+      setKeyringAvailabilityRetentionDays(
+        String(policy.availability_retention_days),
+      );
       setKeyringOnCallUserIds(policy.on_call_user_ids);
+      setKeyringOnCallTimezone(policy.on_call_timezone);
+      setKeyringOnCallStartHour(String(policy.on_call_start_hour));
+      setKeyringOnCallEndHour(String(policy.on_call_end_hour));
+      setKeyringIdentityCanaryDays(String(policy.identity_canary_days));
+      setKeyringIdentityCanaryIntervalHours(
+        String(policy.identity_canary_interval_hours),
+      );
       setMemoryIncidentFeedback(
         "Política do cofre atualizada para esta empresa.",
       );
@@ -2550,6 +2596,66 @@ export function AgentsPage() {
                       type="number"
                       value={keyringSloMinutes}
                     />
+                    <TextField
+                      label="Retenção da disponibilidade (dias)"
+                      min={7}
+                      max={365}
+                      onChange={(event) =>
+                        setKeyringAvailabilityRetentionDays(event.target.value)
+                      }
+                      type="number"
+                      value={keyringAvailabilityRetentionDays}
+                    />
+                    <TextField
+                      label="Fuso do plantão"
+                      onChange={(event) =>
+                        setKeyringOnCallTimezone(event.target.value)
+                      }
+                      placeholder="America/Sao_Paulo"
+                      value={keyringOnCallTimezone}
+                    />
+                    <TextField
+                      label="Início do plantão (hora)"
+                      min={0}
+                      max={23}
+                      onChange={(event) =>
+                        setKeyringOnCallStartHour(event.target.value)
+                      }
+                      type="number"
+                      value={keyringOnCallStartHour}
+                    />
+                    <TextField
+                      label="Fim do plantão (hora)"
+                      min={1}
+                      max={24}
+                      onChange={(event) =>
+                        setKeyringOnCallEndHour(event.target.value)
+                      }
+                      type="number"
+                      value={keyringOnCallEndHour}
+                    />
+                    <TextField
+                      label="Antecedência do canário (dias)"
+                      min={1}
+                      max={90}
+                      onChange={(event) =>
+                        setKeyringIdentityCanaryDays(event.target.value)
+                      }
+                      type="number"
+                      value={keyringIdentityCanaryDays}
+                    />
+                    <TextField
+                      label="Intervalo do canário (horas)"
+                      min={1}
+                      max={168}
+                      onChange={(event) =>
+                        setKeyringIdentityCanaryIntervalHours(
+                          event.target.value,
+                        )
+                      }
+                      type="number"
+                      value={keyringIdentityCanaryIntervalHours}
+                    />
                     <label className="agent-checkbox-card">
                       <input
                         checked={keyringAutomaticExitEnabled}
@@ -2619,12 +2725,18 @@ export function AgentsPage() {
                         {memoryKeyringStatus.data?.credential_expires_at
                           ? ` · credencial vence ${new Date(memoryKeyringStatus.data.credential_expires_at).toLocaleDateString("pt-BR")}`
                           : " · sem vencimento configurado"}
+                        {memoryKeyringStatus.data?.last_identity_canary_at
+                          ? ` · último canário ${new Date(memoryKeyringStatus.data.last_identity_canary_at).toLocaleString("pt-BR")}`
+                          : " · canário ainda não executado"}
                       </small>
                     </div>
                     <span className="status-badge">
                       {memoryKeyringStatus.data?.health_status ?? "verificando"}{" "}
                       · SLO{" "}
                       {memoryKeyringStatus.data?.slo_status ?? "verificando"}
+                      {" · canário "}
+                      {memoryKeyringStatus.data?.identity_canary_status ??
+                        "verificando"}
                     </span>
                   </article>
                   {memoryKeyringStatus.data?.source === "managed" ? (

@@ -389,6 +389,9 @@ export interface AgentMemoryKeyringStatus {
   automatic_exit_status:
     "pending" | "running" | "completed" | "failed" | "closed" | null;
   slo_status: "not_applicable" | "within_slo" | "breached";
+  identity_canary_status:
+    "not_applicable" | "unknown" | "healthy" | "unavailable";
+  last_identity_canary_at: string | null;
 }
 
 export interface AgentMemoryVaultIncident {
@@ -409,7 +412,13 @@ export interface AgentMemoryKeyringPolicy {
   automatic_exit_batch_size: number;
   vault_failure_alert_threshold: number;
   vault_slo_minutes: number;
+  availability_retention_days: number;
   on_call_user_ids: string[];
+  on_call_timezone: string;
+  on_call_start_hour: number;
+  on_call_end_hour: number;
+  identity_canary_days: number;
+  identity_canary_interval_hours: number;
   configured: boolean;
   updated_at: string | null;
 }

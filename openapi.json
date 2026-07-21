@@ -2459,6 +2459,13 @@
             "title": "Automatic Exit Enabled",
             "type": "boolean"
           },
+          "availability_retention_days": {
+            "default": 30,
+            "maximum": 365.0,
+            "minimum": 7.0,
+            "title": "Availability Retention Days",
+            "type": "integer"
+          },
           "configured": {
             "title": "Configured",
             "type": "boolean"
@@ -2468,6 +2475,41 @@
             "minimum": 1.0,
             "title": "Expiry Warning Days",
             "type": "integer"
+          },
+          "identity_canary_days": {
+            "default": 14,
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Identity Canary Days",
+            "type": "integer"
+          },
+          "identity_canary_interval_hours": {
+            "default": 24,
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Identity Canary Interval Hours",
+            "type": "integer"
+          },
+          "on_call_end_hour": {
+            "default": 24,
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "On Call End Hour",
+            "type": "integer"
+          },
+          "on_call_start_hour": {
+            "default": 0,
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "On Call Start Hour",
+            "type": "integer"
+          },
+          "on_call_timezone": {
+            "default": "UTC",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "On Call Timezone",
+            "type": "string"
           },
           "on_call_user_ids": {
             "items": {
@@ -2528,11 +2570,53 @@
             "title": "Automatic Exit Enabled",
             "type": "boolean"
           },
+          "availability_retention_days": {
+            "default": 30,
+            "maximum": 365.0,
+            "minimum": 7.0,
+            "title": "Availability Retention Days",
+            "type": "integer"
+          },
           "expiry_warning_days": {
             "maximum": 90.0,
             "minimum": 1.0,
             "title": "Expiry Warning Days",
             "type": "integer"
+          },
+          "identity_canary_days": {
+            "default": 14,
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Identity Canary Days",
+            "type": "integer"
+          },
+          "identity_canary_interval_hours": {
+            "default": 24,
+            "maximum": 168.0,
+            "minimum": 1.0,
+            "title": "Identity Canary Interval Hours",
+            "type": "integer"
+          },
+          "on_call_end_hour": {
+            "default": 24,
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "On Call End Hour",
+            "type": "integer"
+          },
+          "on_call_start_hour": {
+            "default": 0,
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "On Call Start Hour",
+            "type": "integer"
+          },
+          "on_call_timezone": {
+            "default": "UTC",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "On Call Timezone",
+            "type": "string"
           },
           "on_call_user_ids": {
             "items": {
@@ -2636,6 +2720,16 @@
             "title": "Health Status",
             "type": "string"
           },
+          "identity_canary_status": {
+            "enum": [
+              "not_applicable",
+              "unknown",
+              "healthy",
+              "unavailable"
+            ],
+            "title": "Identity Canary Status",
+            "type": "string"
+          },
           "last_health_checked_at": {
             "anyOf": [
               {
@@ -2647,6 +2741,18 @@
               }
             ],
             "title": "Last Health Checked At"
+          },
+          "last_identity_canary_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Identity Canary At"
           },
           "last_resolved_at": {
             "anyOf": [
@@ -2699,7 +2805,9 @@
           "expiry_warning_sent",
           "automatic_exit_job_id",
           "automatic_exit_status",
-          "slo_status"
+          "slo_status",
+          "identity_canary_status",
+          "last_identity_canary_at"
         ],
         "title": "AgentMemoryKeyringStatusResponse",
         "type": "object"

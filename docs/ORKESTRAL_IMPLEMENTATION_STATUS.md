@@ -815,3 +815,15 @@ Data: 21 de julho de 2026.
 - Segurança comprovada: plantonista de outro tenant retorna `422`, autoaprovação retorna `409`, decisão cruzada retorna `404`, a identidade proposta é validada no cofre e nenhum texto de identidade ou justificativa aparece na API.
 - Risco operacional anterior não alterado: o health check interno do n8n permanece em `unhealthy`, embora o contrato E2E de disponibilidade continue aprovado.
 - Próximo passo: retenção do histórico, escala de plantão com horários e teste canário automatizado da identidade antes do vencimento.
+
+## Ciclo 50 - retenção, janela de plantão e canário preventivo
+
+- A política empresarial controla retenção de disponibilidade, fuso e janela diária do plantão, antecedência do canário e intervalo entre verificações.
+- A manutenção remove agregados vencidos por tenant e mantém janelas atuais, sem tocar em incidentes, auditoria ou dados criptográficos.
+- O canário testa a identidade real antes do vencimento da credencial, alerta de forma idempotente na falha e registra a recuperação sem armazenar erro ou referência do provedor.
+- A interface mostra política, janela e estado do último canário; fusos inválidos e horários incoerentes são recusados pelo contrato da API.
+- Migração: `20260721_0071_vault_retention_oncall_canary.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `174 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados.
+- Migração reversível `0071 -> 0070 -> 0071` aprovada; banco em `20260721_0071 (head)`; contratos regenerados e probe HMAC do worker aprovado.
+- Segurança comprovada: fusos e janelas inválidos são recusados, a retenção é aplicada por tenant, o canário usa a identidade real sem persistir referência ou erro do provedor e alertas de falha/recuperação são idempotentes.
+- Próximo passo: escalas semanais por plantonista, exportação de SLO e canário com promoção gradual da identidade.

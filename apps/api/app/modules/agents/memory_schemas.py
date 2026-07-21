@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal, Self
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, field_validator, model_validator
 
@@ -563,6 +564,8 @@ class AgentMemoryKeyringStatusResponse(StrictSchema):
     automatic_exit_job_id: UUID | None
     automatic_exit_status: Literal["pending", "running", "completed", "failed", "closed"] | None
     slo_status: Literal["not_applicable", "within_slo", "breached"]
+    identity_canary_status: Literal["not_applicable", "unknown", "healthy", "unavailable"]
+    last_identity_canary_at: datetime | None
 
 
 class AgentMemoryKeyringExitCreate(StrictSchema):
@@ -588,7 +591,13 @@ class AgentMemoryKeyringPolicyUpdate(StrictSchema):
     automatic_exit_batch_size: int = Field(ge=1, le=500)
     vault_failure_alert_threshold: int = Field(ge=1, le=20)
     vault_slo_minutes: int = Field(ge=1, le=1440)
+    availability_retention_days: int = Field(default=30, ge=7, le=365)
     on_call_user_ids: list[UUID] = Field(default_factory=list, max_length=20)
+    on_call_timezone: str = Field(default="UTC", min_length=1, max_length=64)
+    on_call_start_hour: int = Field(default=0, ge=0, le=23)
+    on_call_end_hour: int = Field(default=24, ge=1, le=24)
+    identity_canary_days: int = Field(default=14, ge=1, le=90)
+    identity_canary_interval_hours: int = Field(default=24, ge=1, le=168)
 
     @field_validator("on_call_user_ids")
     @classmethod
@@ -596,6 +605,22 @@ class AgentMemoryKeyringPolicyUpdate(StrictSchema):
         if len(set(value)) != len(value):
             raise ValueError("Cada usuário de plantão pode aparecer somente uma vez.")
         return value
+
+    @field_validator("on_call_timezone")
+    @classmethod
+    def valid_on_call_timezone(cls, value: str) -> str:
+        timezone = value.strip()
+        try:
+            ZoneInfo(timezone)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError("Informe um fuso horário IANA válido.") from exc
+        return timezone
+
+    @model_validator(mode="after")
+    def valid_on_call_window(self) -> Self:
+        if self.on_call_start_hour >= self.on_call_end_hour:
+            raise ValueError("O início do plantão deve ocorrer antes do término.")
+        return self
 
 
 class AgentMemoryKeyringPolicyResponse(AgentMemoryKeyringPolicyUpdate):
