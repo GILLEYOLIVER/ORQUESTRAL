@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 import re
 from html.parser import HTMLParser
 from io import BytesIO
@@ -10,6 +11,7 @@ from uuid import UUID
 
 from docx import Document
 from minio import Minio
+from minio.sse import SseCustomerKey
 from openpyxl import load_workbook
 from pypdf import PdfReader
 from sqlalchemy import delete, select
@@ -51,6 +53,17 @@ def storage(settings: Settings) -> Minio:
         secret_key=settings.storage_secret_key,
         secure=endpoint.scheme == "https",
     )
+
+
+def storage_sse(settings: Settings) -> SseCustomerKey | None:
+    if not settings.object_storage_sse_enabled:
+        return None
+    key = hmac.new(
+        settings.encryption_key.encode("utf-8"),
+        b"orkestral-object-storage-sse-v1",
+        hashlib.sha256,
+    ).digest()
+    return SseCustomerKey(key)
 
 
 def extract(data: bytes, mime: str) -> str:
@@ -104,7 +117,10 @@ async def process_document(document_id: UUID, settings: Settings) -> None:
             try:
                 client = storage(settings)
                 response = await asyncio.to_thread(
-                    client.get_object, settings.storage_bucket, document.storage_key
+                    client.get_object,
+                    settings.storage_bucket,
+                    document.storage_key,
+                    ssec=storage_sse(settings),
                 )
                 try:
                     data = await asyncio.to_thread(response.read)

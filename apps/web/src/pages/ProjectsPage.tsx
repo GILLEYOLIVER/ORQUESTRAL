@@ -12,6 +12,10 @@ import {
 import { Alert, Button, Card } from "@orkestral/ui-components";
 import { ApiClientError, request } from "../lib/http";
 import { useSession } from "../session/context";
+import {
+  ProjectPortfolioPanel,
+  type GovernedProject,
+} from "./projects/ProjectPortfolioPanel";
 import "./projects.css";
 
 type ProjectStatus =
@@ -30,6 +34,11 @@ type Project = {
   task_done: number;
   progress_percent: number;
   updated_at: string;
+  portfolio_id: string | null;
+  owner_user_id: string | null;
+  health: "unknown" | "on_track" | "at_risk" | "off_track";
+  budget_cents: number;
+  version: number;
 };
 type ProjectTask = {
   id: string;
@@ -226,6 +235,11 @@ export function ProjectsPage() {
           <span>em andamento</span>
         </div>
       </section>
+      <ProjectPortfolioPanel
+        project={selected as GovernedProject | null}
+        canCreate={canCreate}
+        canUpdate={canUpdate}
+      />
       {feedback ? <Alert variant="success">{feedback}</Alert> : null}
       {error ? <Alert variant="error">{error}</Alert> : null}
       <div className="projects-toolbar">

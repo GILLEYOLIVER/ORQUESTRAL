@@ -12,6 +12,7 @@ import {
 import { Alert, Button, Card } from "@orkestral/ui-components";
 import { ApiClientError, request } from "../lib/http";
 import { useSession } from "../session/context";
+import { MarketingIntelligencePanel } from "./marketing/MarketingIntelligencePanel";
 import "./marketing.css";
 
 type CampaignStatus =
@@ -311,6 +312,10 @@ export function MarketingPage() {
           <span>conversões registradas</span>
         </Card>
       </section>
+      <MarketingIntelligencePanel
+        campaigns={campaigns.data ?? []}
+        canUpdate={canUpdate}
+      />
       <div className="marketing-tabs">
         <button
           className={tab === "campaigns" ? "active" : ""}

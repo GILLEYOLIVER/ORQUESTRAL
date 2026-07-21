@@ -12,7 +12,14 @@ from app.core.config import Settings
 
 async def get_database_session(request: Request) -> AsyncIterator[AsyncSession]:
     async with request.app.state.resources.sessions() as session:
-        yield session
+        try:
+            yield session
+        except BaseException:
+            await session.rollback()
+            raise
+        finally:
+            if session.in_transaction():
+                await session.rollback()
 
 
 def get_redis(request: Request) -> Redis:

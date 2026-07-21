@@ -747,6 +747,23 @@ export interface paths {
         patch: operations["update_company_companies__company_id__patch"];
         trace?: never;
     };
+    "/companies/{company_id}/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Purge Company */
+        post: operations["purge_company_companies__company_id__purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/invitations": {
         parameters: {
             query?: never;
@@ -833,6 +850,113 @@ export interface paths {
         head?: never;
         /** Update Contact */
         patch: operations["update_contact_crm_contacts__contact_id__patch"];
+        trace?: never;
+    };
+    "/crm/opportunities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Opportunities */
+        get: operations["list_opportunities_crm_opportunities_get"];
+        put?: never;
+        /** Create Opportunity */
+        post: operations["create_opportunity_crm_opportunities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/opportunities/{opportunity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Opportunity */
+        get: operations["get_opportunity_crm_opportunities__opportunity_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Opportunity */
+        delete: operations["delete_opportunity_crm_opportunities__opportunity_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Opportunity */
+        patch: operations["update_opportunity_crm_opportunities__opportunity_id__patch"];
+        trace?: never;
+    };
+    "/crm/opportunities/{opportunity_id}/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Opportunity Activities */
+        get: operations["list_opportunity_activities_crm_opportunities__opportunity_id__activities_get"];
+        put?: never;
+        /** Create Opportunity Activity */
+        post: operations["create_opportunity_activity_crm_opportunities__opportunity_id__activities_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/pipelines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pipelines */
+        get: operations["list_pipelines_crm_pipelines_get"];
+        put?: never;
+        /** Create Pipeline */
+        post: operations["create_pipeline_crm_pipelines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/pipelines/{pipeline_id}/stages/{stage_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Pipeline Stage */
+        patch: operations["update_pipeline_stage_crm_pipelines__pipeline_id__stages__stage_id__patch"];
+        trace?: never;
+    };
+    "/crm/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Commercial Summary */
+        get: operations["commercial_summary_crm_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/crm/tags": {
@@ -1447,6 +1571,24 @@ export interface paths {
         patch: operations["update_campaign_marketing_campaigns__campaign_id__patch"];
         trace?: never;
     };
+    "/marketing/campaigns/{campaign_id}/attributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Attributions */
+        get: operations["list_attributions_marketing_campaigns__campaign_id__attributions_get"];
+        put?: never;
+        /** Create Attribution */
+        post: operations["create_attribution_marketing_campaigns__campaign_id__attributions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/marketing/campaigns/{campaign_id}/audience": {
         parameters: {
             query?: never;
@@ -1481,6 +1623,76 @@ export interface paths {
         head?: never;
         /** Update Campaign Contact */
         patch: operations["update_campaign_contact_marketing_campaigns__campaign_id__audience__item_id__patch"];
+        trace?: never;
+    };
+    "/marketing/campaigns/{campaign_id}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Campaign Metrics */
+        get: operations["list_campaign_metrics_marketing_campaigns__campaign_id__metrics_get"];
+        put?: never;
+        /** Record Campaign Metric */
+        post: operations["record_campaign_metric_marketing_campaigns__campaign_id__metrics_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketing/campaigns/{campaign_id}/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Campaign Performance */
+        get: operations["campaign_performance_marketing_campaigns__campaign_id__performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketing/experiments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Experiments */
+        get: operations["list_experiments_marketing_experiments_get"];
+        put?: never;
+        /** Create Experiment */
+        post: operations["create_experiment_marketing_experiments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketing/experiments/{experiment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Experiment */
+        patch: operations["update_experiment_marketing_experiments__experiment_id__patch"];
         trace?: never;
     };
     "/marketing/journeys": {
@@ -1553,6 +1765,23 @@ export interface paths {
         head?: never;
         /** Update Journey Step */
         patch: operations["update_journey_step_marketing_journeys__journey_id__steps__step_id__patch"];
+        trace?: never;
+    };
+    "/marketing/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overall Performance */
+        get: operations["overall_performance_marketing_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/marketing/summary": {
@@ -1949,6 +2178,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/portfolio-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portfolio Summary */
+        get: operations["portfolio_summary_projects_portfolio_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/portfolios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Portfolios */
+        get: operations["list_portfolios_projects_portfolios_get"];
+        put?: never;
+        /** Create Portfolio */
+        post: operations["create_portfolio_projects_portfolios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project_id}": {
         parameters: {
             query?: never;
@@ -1966,6 +2230,147 @@ export interface paths {
         head?: never;
         /** Update Project */
         patch: operations["update_project_projects__project_id__patch"];
+        trace?: never;
+    };
+    "/projects/{project_id}/dependencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Dependencies */
+        get: operations["list_dependencies_projects__project_id__dependencies_get"];
+        put?: never;
+        /** Create Dependency */
+        post: operations["create_dependency_projects__project_id__dependencies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/dependencies/{dependency_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Dependency */
+        delete: operations["delete_dependency_projects__project_id__dependencies__dependency_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/governance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Governance */
+        get: operations["get_governance_projects__project_id__governance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Governance */
+        patch: operations["update_governance_projects__project_id__governance_patch"];
+        trace?: never;
+    };
+    "/projects/{project_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Members */
+        get: operations["list_members_projects__project_id__members_get"];
+        put?: never;
+        /** Upsert Member */
+        post: operations["upsert_member_projects__project_id__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/milestones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Milestones */
+        get: operations["list_milestones_projects__project_id__milestones_get"];
+        put?: never;
+        /** Create Milestone */
+        post: operations["create_milestone_projects__project_id__milestones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/milestones/{milestone_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Milestone */
+        patch: operations["update_milestone_projects__project_id__milestones__milestone_id__patch"];
+        trace?: never;
+    };
+    "/projects/{project_id}/risks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Risks */
+        get: operations["list_risks_projects__project_id__risks_get"];
+        put?: never;
+        /** Create Risk */
+        post: operations["create_risk_projects__project_id__risks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/risks/{risk_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Risk */
+        patch: operations["update_risk_projects__project_id__risks__risk_id__patch"];
         trace?: never;
     };
     "/projects/{project_id}/tasks": {
@@ -2004,6 +2409,23 @@ export interface paths {
         patch: operations["update_task_projects__project_id__tasks__task_id__patch"];
         trace?: never;
     };
+    "/projects/{project_id}/tasks/{task_id}/planning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Task Planning */
+        patch: operations["update_task_planning_projects__project_id__tasks__task_id__planning_patch"];
+        trace?: never;
+    };
     "/ready": {
         parameters: {
             query?: never;
@@ -2015,6 +2437,59 @@ export interface paths {
         get: operations["ready_ready_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Support Dashboard */
+        get: operations["support_dashboard_support_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/queues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Queues */
+        get: operations["list_queues_support_queues_get"];
+        put?: never;
+        /** Create Queue */
+        post: operations["create_queue_support_queues_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/sla-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sla Policies */
+        get: operations["list_sla_policies_support_sla_policies_get"];
+        put?: never;
+        /** Create Sla Policy */
+        post: operations["create_sla_policy_support_sla_policies_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2057,6 +2532,23 @@ export interface paths {
         patch: operations["update_ticket_support_tickets__ticket_id__patch"];
         trace?: never;
     };
+    "/support/tickets/{ticket_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Ticket Events */
+        get: operations["list_ticket_events_support_tickets__ticket_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/support/tickets/{ticket_id}/interactions": {
         parameters: {
             query?: never;
@@ -2069,6 +2561,57 @@ export interface paths {
         put?: never;
         /** Create Interaction */
         post: operations["create_interaction_support_tickets__ticket_id__interactions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ticket_id}/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Ticket Operations */
+        patch: operations["update_ticket_operations_support_tickets__ticket_id__operations_patch"];
+        trace?: never;
+    };
+    "/support/tickets/{ticket_id}/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Respond To Ticket */
+        post: operations["respond_to_ticket_support_tickets__ticket_id__response_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{ticket_id}/satisfaction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Satisfaction */
+        post: operations["record_satisfaction_support_tickets__ticket_id__satisfaction_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3005,6 +3548,75 @@ export interface components {
             /** Workflow Id */
             workflow_id: string | null;
         };
+        /** AttributionCreate */
+        AttributionCreate: {
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Medium */
+            medium?: string | null;
+            /** Metadata Json */
+            metadata_json?: {
+                [key: string]: unknown;
+            };
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Opportunity Id */
+            opportunity_id?: string | null;
+            /** Source */
+            source?: string | null;
+            /**
+             * Touchpoint
+             * @enum {string}
+             */
+            touchpoint: "first_touch" | "lead_creation" | "influenced" | "last_touch" | "conversion";
+            /**
+             * Value Cents
+             * @default 0
+             */
+            value_cents: number;
+        };
+        /** AttributionResponse */
+        AttributionResponse: {
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Medium */
+            medium: string | null;
+            /** Metadata Json */
+            metadata_json: {
+                [key: string]: unknown;
+            };
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Opportunity Id */
+            opportunity_id: string | null;
+            /** Source */
+            source: string | null;
+            /**
+             * Touchpoint
+             * @enum {string}
+             */
+            touchpoint: "first_touch" | "lead_creation" | "influenced" | "last_touch" | "conversion";
+            /** Value Cents */
+            value_cents: number;
+        };
         /** AuditEventPage */
         AuditEventPage: {
             /** Items */
@@ -3119,6 +3731,23 @@ export interface components {
             /** File */
             file: string;
         };
+        /** CRMCommercialSummary */
+        CRMCommercialSummary: {
+            /** Lost Opportunities */
+            lost_opportunities: number;
+            /** Open Opportunities */
+            open_opportunities: number;
+            /** Open Value */
+            open_value: string;
+            /** Overdue Opportunities */
+            overdue_opportunities: number;
+            /** Pipeline Count */
+            pipeline_count: number;
+            /** Weighted Forecast */
+            weighted_forecast: string;
+            /** Won Opportunities */
+            won_opportunities: number;
+        };
         /** CRMContactCreate */
         CRMContactCreate: {
             /** Assigned User Id */
@@ -3216,6 +3845,274 @@ export interface components {
             status?: ("lead" | "prospect" | "customer" | "inactive") | null;
             /** Tag Ids */
             tag_ids?: string[] | null;
+        };
+        /** CRMOpportunityActivityCreate */
+        CRMOpportunityActivityCreate: {
+            /**
+             * Activity Type
+             * @default note
+             * @enum {string}
+             */
+            activity_type: "note" | "call" | "email" | "meeting" | "stage_change" | "status_change";
+            /** Body */
+            body?: string | null;
+            /** Occurred At */
+            occurred_at?: string | null;
+            /** Subject */
+            subject: string;
+        };
+        /** CRMOpportunityActivityResponse */
+        CRMOpportunityActivityResponse: {
+            /**
+             * Activity Type
+             * @enum {string}
+             */
+            activity_type: "note" | "call" | "email" | "meeting" | "stage_change" | "status_change";
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** Body */
+            body: string | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Opportunity Id
+             * Format: uuid
+             */
+            opportunity_id: string;
+            /** Subject */
+            subject: string;
+        };
+        /** CRMOpportunityCreate */
+        CRMOpportunityCreate: {
+            /**
+             * Amount
+             * @default 0
+             */
+            amount: number | string;
+            /** Assigned User Id */
+            assigned_user_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Expected Close Date */
+            expected_close_date?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Pipeline Id
+             * Format: uuid
+             */
+            pipeline_id: string;
+            /** Probability */
+            probability?: number | null;
+            /** Source */
+            source?: string | null;
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Title */
+            title: string;
+        };
+        /** CRMOpportunityResponse */
+        CRMOpportunityResponse: {
+            /** Amount */
+            amount: string;
+            /** Assigned User Id */
+            assigned_user_id: string | null;
+            /** Closed At */
+            closed_at: string | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /** Contact Name */
+            contact_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Expected Close Date */
+            expected_close_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lost Reason */
+            lost_reason: string | null;
+            /** Notes */
+            notes: string | null;
+            /**
+             * Pipeline Id
+             * Format: uuid
+             */
+            pipeline_id: string;
+            /** Pipeline Name */
+            pipeline_name: string;
+            /** Probability */
+            probability: number | null;
+            /** Source */
+            source: string | null;
+            /**
+             * Stage Id
+             * Format: uuid
+             */
+            stage_id: string;
+            /** Stage Name */
+            stage_name: string;
+            /** Stage Probability */
+            stage_probability: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "won" | "lost";
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CRMOpportunityUpdate */
+        CRMOpportunityUpdate: {
+            /** Amount */
+            amount?: number | string | null;
+            /** Assigned User Id */
+            assigned_user_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Expected Close Date */
+            expected_close_date?: string | null;
+            /** Lost Reason */
+            lost_reason?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Pipeline Id */
+            pipeline_id?: string | null;
+            /** Probability */
+            probability?: number | null;
+            /** Source */
+            source?: string | null;
+            /** Stage Id */
+            stage_id?: string | null;
+            /** Status */
+            status?: ("open" | "won" | "lost") | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** CRMPipelineCreate */
+        CRMPipelineCreate: {
+            /** Name */
+            name: string;
+            /** Stages */
+            stages: components["schemas"]["CRMPipelineStageCreate"][];
+        };
+        /** CRMPipelineResponse */
+        CRMPipelineResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Default */
+            is_default: boolean;
+            /** Name */
+            name: string;
+            /** Open Value */
+            open_value: string;
+            /** Opportunity Count */
+            opportunity_count: number;
+            /** Stages */
+            stages: components["schemas"]["CRMPipelineStageResponse"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CRMPipelineStageCreate */
+        CRMPipelineStageCreate: {
+            /**
+             * Color
+             * @default #2f6f64
+             */
+            color: string;
+            /** Name */
+            name: string;
+            /**
+             * Position
+             * @default 0
+             */
+            position: number;
+            /**
+             * Probability
+             * @default 0
+             */
+            probability: number;
+        };
+        /** CRMPipelineStageResponse */
+        CRMPipelineStageResponse: {
+            /** Color */
+            color: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Pipeline Id
+             * Format: uuid
+             */
+            pipeline_id: string;
+            /** Position */
+            position: number;
+            /** Probability */
+            probability: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CRMPipelineStageUpdate */
+        CRMPipelineStageUpdate: {
+            /** Color */
+            color?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Position */
+            position?: number | null;
+            /** Probability */
+            probability?: number | null;
         };
         /** CRMTagCreate */
         CRMTagCreate: {
@@ -3322,6 +4219,140 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "scheduled" | "active" | "paused" | "completed" | "cancelled";
+        };
+        /** CampaignMetricCreate */
+        CampaignMetricCreate: {
+            /**
+             * Channel
+             * @default multi_channel
+             * @enum {string}
+             */
+            channel: "email" | "whatsapp" | "sms" | "social" | "multi_channel";
+            /**
+             * Clicks
+             * @default 0
+             */
+            clicks: number;
+            /**
+             * Conversions
+             * @default 0
+             */
+            conversions: number;
+            /**
+             * Impressions
+             * @default 0
+             */
+            impressions: number;
+            /**
+             * Leads
+             * @default 0
+             */
+            leads: number;
+            /**
+             * Observed On
+             * Format: date
+             */
+            observed_on: string;
+            /**
+             * Reach
+             * @default 0
+             */
+            reach: number;
+            /**
+             * Revenue Cents
+             * @default 0
+             */
+            revenue_cents: number;
+            /**
+             * Spend Cents
+             * @default 0
+             */
+            spend_cents: number;
+            /**
+             * Variant Key
+             * @default all
+             */
+            variant_key: string;
+        };
+        /** CampaignMetricResponse */
+        CampaignMetricResponse: {
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "email" | "whatsapp" | "sms" | "social" | "multi_channel";
+            /** Clicks */
+            clicks: number;
+            /** Conversions */
+            conversions: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Impressions */
+            impressions: number;
+            /** Leads */
+            leads: number;
+            /**
+             * Observed On
+             * Format: date
+             */
+            observed_on: string;
+            /** Reach */
+            reach: number;
+            /** Revenue Cents */
+            revenue_cents: number;
+            /** Spend Cents */
+            spend_cents: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Variant Key */
+            variant_key: string;
+        };
+        /** CampaignPerformanceResponse */
+        CampaignPerformanceResponse: {
+            /** Acquisition Cost Cents */
+            acquisition_cost_cents: number;
+            /** Campaign Id */
+            campaign_id: string | null;
+            /** Click Rate */
+            click_rate: number;
+            /** Clicks */
+            clicks: number;
+            /** Conversion Rate */
+            conversion_rate: number;
+            /** Conversions */
+            conversions: number;
+            /** Cost Per Lead Cents */
+            cost_per_lead_cents: number;
+            /** Impressions */
+            impressions: number;
+            /** Lead Rate */
+            lead_rate: number;
+            /** Leads */
+            leads: number;
+            /** Reach */
+            reach: number;
+            /** Revenue Cents */
+            revenue_cents: number;
+            /** Roas */
+            roas: number;
+            /** Spend Cents */
+            spend_cents: number;
         };
         /** CampaignResponse */
         CampaignResponse: {
@@ -3441,6 +4472,31 @@ export interface components {
             timezone: string;
             /** Trade Name */
             trade_name: string;
+        };
+        /** CompanyErasureRequest */
+        CompanyErasureRequest: {
+            /** Account Password */
+            account_password: string;
+            /** Acknowledge Backup Expiration */
+            acknowledge_backup_expiration: boolean;
+            /** Confirmation */
+            confirmation: string;
+        };
+        /** CompanyErasureResponse */
+        CompanyErasureResponse: {
+            /**
+             * Company Id
+             * Format: uuid
+             */
+            company_id: string;
+            /** Removed Objects */
+            removed_objects: number;
+            /** Removed Orphan Users */
+            removed_orphan_users: number;
+            /** Revoked Sessions */
+            revoked_sessions: number;
+            /** Status */
+            status: string;
         };
         /** CompanyModuleUpdate */
         CompanyModuleUpdate: {
@@ -3976,6 +5032,85 @@ export interface components {
             notes?: string | null;
             /** Reference */
             reference?: string | null;
+        };
+        /** ExperimentCreate */
+        ExperimentCreate: {
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Name */
+            name: string;
+            /**
+             * Success Metric
+             * @enum {string}
+             */
+            success_metric: "click_rate" | "lead_rate" | "conversion_rate" | "revenue";
+            /** Variants */
+            variants: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** ExperimentResponse */
+        ExperimentResponse: {
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** End At */
+            end_at: string | null;
+            /** Hypothesis */
+            hypothesis: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Start At */
+            start_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "running" | "completed" | "cancelled";
+            /**
+             * Success Metric
+             * @enum {string}
+             */
+            success_metric: "click_rate" | "lead_rate" | "conversion_rate" | "revenue";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Variants */
+            variants: {
+                [key: string]: unknown;
+            }[];
+            /** Winner Key */
+            winner_key: string | null;
+        };
+        /** ExperimentUpdate */
+        ExperimentUpdate: {
+            /** End At */
+            end_at?: string | null;
+            /** Start At */
+            start_at?: string | null;
+            /** Status */
+            status?: ("draft" | "running" | "completed" | "cancelled") | null;
+            /** Winner Key */
+            winner_key?: string | null;
         };
         /** FinanceSummaryResponse */
         FinanceSummaryResponse: {
@@ -5196,8 +6331,185 @@ export interface components {
              */
             status: "planning" | "active" | "on_hold" | "completed" | "cancelled";
         };
+        /** ProjectGovernanceUpdate */
+        ProjectGovernanceUpdate: {
+            /** Budget Cents */
+            budget_cents?: number | null;
+            /** Expected Version */
+            expected_version: number;
+            /** Health */
+            health?: ("unknown" | "on_track" | "at_risk" | "off_track") | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Portfolio Id */
+            portfolio_id?: string | null;
+        };
+        /** ProjectMemberCreate */
+        ProjectMemberCreate: {
+            /**
+             * Allocation Percent
+             * @default 100
+             */
+            allocation_percent: number;
+            /**
+             * Role
+             * @default Membro
+             */
+            role: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** ProjectMemberResponse */
+        ProjectMemberResponse: {
+            /** Allocation Percent */
+            allocation_percent: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Role */
+            role: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** ProjectMilestoneCreate */
+        ProjectMilestoneCreate: {
+            /** Description */
+            description?: string | null;
+            /**
+             * Due Date
+             * Format: date
+             */
+            due_date: string;
+            /** Name */
+            name: string;
+        };
+        /** ProjectMilestoneResponse */
+        ProjectMilestoneResponse: {
+            /** Completed At */
+            completed_at: string | null;
+            /** Description */
+            description: string | null;
+            /**
+             * Due Date
+             * Format: date
+             */
+            due_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "at_risk" | "completed" | "cancelled";
+            /** Task Done */
+            task_done: number;
+            /** Task Total */
+            task_total: number;
+        };
+        /** ProjectMilestoneUpdate */
+        ProjectMilestoneUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Status */
+            status?: ("pending" | "at_risk" | "completed" | "cancelled") | null;
+        };
+        /** ProjectPortfolioCreate */
+        ProjectPortfolioCreate: {
+            /**
+             * Budget Cents
+             * @default 0
+             */
+            budget_cents: number;
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Objective */
+            objective?: string | null;
+        };
+        /** ProjectPortfolioResponse */
+        ProjectPortfolioResponse: {
+            /** Active Projects */
+            active_projects: number;
+            /** At Risk Projects */
+            at_risk_projects: number;
+            /** Budget Cents */
+            budget_cents: number;
+            /** Description */
+            description: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Name */
+            name: string;
+            /** Objective */
+            objective: string | null;
+            /** Project Count */
+            project_count: number;
+        };
+        /** ProjectPortfolioSummary */
+        ProjectPortfolioSummary: {
+            /** Active Projects */
+            active_projects: number;
+            /** Actual Minutes */
+            actual_minutes: number;
+            /** At Risk Projects */
+            at_risk_projects: number;
+            /** Critical Risks */
+            critical_risks: number;
+            /** Milestone Count */
+            milestone_count: number;
+            /** Open Risks */
+            open_risks: number;
+            /** Overdue Milestones */
+            overdue_milestones: number;
+            /** Overdue Projects */
+            overdue_projects: number;
+            /** Planned Minutes */
+            planned_minutes: number;
+            /** Portfolio Count */
+            portfolio_count: number;
+            /** Project Count */
+            project_count: number;
+        };
         /** ProjectResponse */
         ProjectResponse: {
+            /**
+             * Budget Cents
+             * @default 0
+             */
+            budget_cents: number;
             /** Completed At */
             completed_at: string | null;
             /**
@@ -5210,12 +6522,22 @@ export interface components {
             /** Due Date */
             due_date: string | null;
             /**
+             * Health
+             * @default unknown
+             * @enum {string}
+             */
+            health: "unknown" | "on_track" | "at_risk" | "off_track";
+            /**
              * Id
              * Format: uuid
              */
             id: string;
             /** Name */
             name: string;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Portfolio Id */
+            portfolio_id?: string | null;
             /**
              * Priority
              * @enum {string}
@@ -5239,6 +6561,77 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
+        };
+        /** ProjectRiskCreate */
+        ProjectRiskCreate: {
+            /** Description */
+            description: string;
+            /** Impact */
+            impact: number;
+            /** Mitigation */
+            mitigation?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Probability */
+            probability: number;
+            /** Title */
+            title: string;
+        };
+        /** ProjectRiskResponse */
+        ProjectRiskResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Impact */
+            impact: number;
+            /** Mitigation */
+            mitigation: string | null;
+            /** Owner User Id */
+            owner_user_id: string | null;
+            /** Probability */
+            probability: number;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Score */
+            score: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "mitigating" | "accepted" | "closed";
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ProjectRiskUpdate */
+        ProjectRiskUpdate: {
+            /** Mitigation */
+            mitigation?: string | null;
+            /** Owner User Id */
+            owner_user_id?: string | null;
+            /** Status */
+            status?: ("open" | "mitigating" | "accepted" | "closed") | null;
         };
         /** ProjectTaskCreate */
         ProjectTaskCreate: {
@@ -5266,8 +6659,64 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** ProjectTaskDependencyCreate */
+        ProjectTaskDependencyCreate: {
+            /**
+             * Predecessor Task Id
+             * Format: uuid
+             */
+            predecessor_task_id: string;
+            /**
+             * Successor Task Id
+             * Format: uuid
+             */
+            successor_task_id: string;
+        };
+        /** ProjectTaskDependencyResponse */
+        ProjectTaskDependencyResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Predecessor Task Id
+             * Format: uuid
+             */
+            predecessor_task_id: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * Successor Task Id
+             * Format: uuid
+             */
+            successor_task_id: string;
+        };
+        /** ProjectTaskPlanningUpdate */
+        ProjectTaskPlanningUpdate: {
+            /** Actual Minutes */
+            actual_minutes?: number | null;
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Estimated Minutes */
+            estimated_minutes?: number | null;
+            /** Expected Version */
+            expected_version: number;
+            /** Milestone Id */
+            milestone_id?: string | null;
+        };
         /** ProjectTaskResponse */
         ProjectTaskResponse: {
+            /**
+             * Actual Minutes
+             * @default 0
+             */
+            actual_minutes: number;
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
             /** Completed At */
             completed_at: string | null;
             /**
@@ -5280,10 +6729,17 @@ export interface components {
             /** Due Date */
             due_date: string | null;
             /**
+             * Estimated Minutes
+             * @default 0
+             */
+            estimated_minutes: number;
+            /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Milestone Id */
+            milestone_id?: string | null;
             /** Position */
             position: number;
             /**
@@ -5308,6 +6764,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
         };
         /** ProjectTaskUpdate */
         ProjectTaskUpdate: {
@@ -5511,6 +6972,27 @@ export interface components {
             /** Trial Ends At */
             trial_ends_at: string | null;
         };
+        /** SupportDashboardResponse */
+        SupportDashboardResponse: {
+            /** Average First Response Minutes */
+            average_first_response_minutes: number;
+            /** Breached Tickets */
+            breached_tickets: number;
+            /** Due Soon Tickets */
+            due_soon_tickets: number;
+            /** Open Tickets */
+            open_tickets: number;
+            /** Resolved Today */
+            resolved_today: number;
+            /** Satisfaction Average */
+            satisfaction_average: number;
+            /** Satisfaction Responses */
+            satisfaction_responses: number;
+            /** Unassigned Tickets */
+            unassigned_tickets: number;
+            /** Waiting Tickets */
+            waiting_tickets: number;
+        };
         /** SupportInteractionCreate */
         SupportInteractionCreate: {
             /**
@@ -5548,6 +7030,95 @@ export interface components {
              */
             ticket_id: string;
         };
+        /** SupportQueueCreate */
+        SupportQueueCreate: {
+            /**
+             * Color
+             * @default #2f6f64
+             */
+            color: string;
+            /** Description */
+            description?: string | null;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+        };
+        /** SupportQueueResponse */
+        SupportQueueResponse: {
+            /** Breached Tickets */
+            breached_tickets: number;
+            /** Color */
+            color: string;
+            /** Description */
+            description: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Default */
+            is_default: boolean;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Open Tickets */
+            open_tickets: number;
+            /** Unassigned Tickets */
+            unassigned_tickets: number;
+        };
+        /** SupportSLAPolicyCreate */
+        SupportSLAPolicyCreate: {
+            /**
+             * Business Hours Only
+             * @default false
+             */
+            business_hours_only: boolean;
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Targets */
+            targets: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+        };
+        /** SupportSLAPolicyResponse */
+        SupportSLAPolicyResponse: {
+            /** Business Hours Only */
+            business_hours_only: boolean;
+            /** Description */
+            description: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Default */
+            is_default: boolean;
+            /** Name */
+            name: string;
+            /** Targets */
+            targets: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+        };
+        /** SupportSatisfactionCreate */
+        SupportSatisfactionCreate: {
+            /** Comment */
+            comment?: string | null;
+            /** Score */
+            score: number;
+        };
         /** SupportTicketCreate */
         SupportTicketCreate: {
             /** Assignee User Id */
@@ -5573,10 +7144,53 @@ export interface components {
             /** Subject */
             subject: string;
         };
+        /** SupportTicketEventResponse */
+        SupportTicketEventResponse: {
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            };
+            /** Event Type */
+            event_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+        };
+        /** SupportTicketOperationsUpdate */
+        SupportTicketOperationsUpdate: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Priority */
+            priority?: ("low" | "normal" | "high" | "urgent") | null;
+            /** Queue Id */
+            queue_id?: string | null;
+            /** Sla Policy Id */
+            sla_policy_id?: string | null;
+            /** Status */
+            status?: ("open" | "in_progress" | "waiting" | "resolved" | "closed") | null;
+        };
         /** SupportTicketResponse */
         SupportTicketResponse: {
             /** Assignee User Id */
             assignee_user_id: string | null;
+            /** Breached At */
+            breached_at: string | null;
             /**
              * Channel
              * @enum {string}
@@ -5596,6 +7210,10 @@ export interface components {
             description: string;
             /** Due At */
             due_at: string | null;
+            /** First Responded At */
+            first_responded_at: string | null;
+            /** First Response Due At */
+            first_response_due_at: string | null;
             /**
              * Id
              * Format: uuid
@@ -5606,10 +7224,20 @@ export interface components {
              * @enum {string}
              */
             priority: "low" | "normal" | "high" | "urgent";
+            /** Queue Id */
+            queue_id: string | null;
             /** Requester Contact Id */
             requester_contact_id: string | null;
+            /** Resolution Due At */
+            resolution_due_at: string | null;
             /** Resolved At */
             resolved_at: string | null;
+            /** Satisfaction Comment */
+            satisfaction_comment: string | null;
+            /** Satisfaction Score */
+            satisfaction_score: number | null;
+            /** Sla Policy Id */
+            sla_policy_id: string | null;
             /**
              * Status
              * @enum {string}
@@ -8901,6 +10529,59 @@ export interface operations {
             };
         };
     };
+    purge_company_companies__company_id__purge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                company_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyErasureRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyErasureResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     invite_company_user_company_invitations_post: {
         parameters: {
             query?: never;
@@ -9278,6 +10959,559 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CRMContactResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_opportunities_crm_opportunities_get: {
+        parameters: {
+            query?: {
+                pipeline_id?: string | null;
+                stage_id?: string | null;
+                status?: ("open" | "won" | "lost") | null;
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMOpportunityResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_opportunity_crm_opportunities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CRMOpportunityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMOpportunityResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_opportunity_crm_opportunities__opportunity_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMOpportunityResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    delete_opportunity_crm_opportunities__opportunity_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_opportunity_crm_opportunities__opportunity_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CRMOpportunityUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMOpportunityResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_opportunity_activities_crm_opportunities__opportunity_id__activities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMOpportunityActivityResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_opportunity_activity_crm_opportunities__opportunity_id__activities_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                opportunity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CRMOpportunityActivityCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMOpportunityActivityResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_pipelines_crm_pipelines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMPipelineResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_pipeline_crm_pipelines_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CRMPipelineCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMPipelineResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_pipeline_stage_crm_pipelines__pipeline_id__stages__stage_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pipeline_id: string;
+                stage_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CRMPipelineStageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMPipelineStageResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    commercial_summary_crm_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMCommercialSummary"];
                 };
             };
             /** @description Solicitação inválida */
@@ -11908,6 +14142,108 @@ export interface operations {
             };
         };
     };
+    list_attributions_marketing_campaigns__campaign_id__attributions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributionResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_attribution_marketing_campaigns__campaign_id__attributions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttributionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttributionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     list_campaign_audience_marketing_campaigns__campaign_id__audience_get: {
         parameters: {
             query?: never;
@@ -12081,6 +14417,310 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CampaignAudienceResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_campaign_metrics_marketing_campaigns__campaign_id__metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignMetricResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    record_campaign_metric_marketing_campaigns__campaign_id__metrics_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignMetricCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignMetricResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    campaign_performance_marketing_campaigns__campaign_id__performance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignPerformanceResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_experiments_marketing_experiments_get: {
+        parameters: {
+            query?: {
+                campaign_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_experiment_marketing_experiments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_experiment_marketing_experiments__experiment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -12483,6 +15123,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JourneyStepResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    overall_performance_marketing_performance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignPerformanceResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -13804,6 +16491,151 @@ export interface operations {
             };
         };
     };
+    portfolio_summary_projects_portfolio_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPortfolioSummary"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_portfolios_projects_portfolios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPortfolioResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_portfolio_projects_portfolios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectPortfolioCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPortfolioResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     get_project_projects__project_id__get: {
         parameters: {
             query?: never;
@@ -13922,6 +16754,672 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_dependencies_projects__project_id__dependencies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTaskDependencyResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_dependency_projects__project_id__dependencies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectTaskDependencyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTaskDependencyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    delete_dependency_projects__project_id__dependencies__dependency_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                dependency_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_governance_projects__project_id__governance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_governance_projects__project_id__governance_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectGovernanceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_members_projects__project_id__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMemberResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    upsert_member_projects__project_id__members_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectMemberCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMemberResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_milestones_projects__project_id__milestones_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMilestoneResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_milestone_projects__project_id__milestones_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectMilestoneCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMilestoneResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_milestone_projects__project_id__milestones__milestone_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                milestone_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectMilestoneUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMilestoneResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_risks_projects__project_id__risks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRiskResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_risk_projects__project_id__risks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectRiskCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRiskResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_risk_projects__project_id__risks__risk_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                risk_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectRiskUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectRiskResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -14157,6 +17655,60 @@ export interface operations {
             };
         };
     };
+    update_task_planning_projects__project_id__tasks__task_id__planning_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectTaskPlanningUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTaskResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     ready_ready_get: {
         parameters: {
             query?: never;
@@ -14209,6 +17761,249 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReadinessResponse"];
+                };
+            };
+        };
+    };
+    support_dashboard_support_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportDashboardResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_queues_support_queues_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportQueueResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_queue_support_queues_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportQueueCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportQueueResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_sla_policies_support_sla_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportSLAPolicyResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_sla_policy_support_sla_policies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportSLAPolicyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportSLAPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
@@ -14417,6 +18212,55 @@ export interface operations {
             };
         };
     };
+    list_ticket_events_support_tickets__ticket_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTicketEventResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     list_interactions_support_tickets__ticket_id__interactions_get: {
         parameters: {
             query?: never;
@@ -14488,6 +18332,165 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SupportInteractionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_ticket_operations_support_tickets__ticket_id__operations_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportTicketOperationsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTicketResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    respond_to_ticket_support_tickets__ticket_id__response_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportInteractionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportInteractionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    record_satisfaction_support_tickets__ticket_id__satisfaction_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportSatisfactionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTicketResponse"];
                 };
             };
             /** @description Solicitação inválida */

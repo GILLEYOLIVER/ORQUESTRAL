@@ -21,9 +21,12 @@ from app.modules.audit.service import AuditEventInput, AuditService
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
-def client_ip_address(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for", "").split(",", maxsplit=1)[0].strip()
-    candidate = forwarded or (request.client.host if request.client else "unknown")
+def client_ip_address(request: Request, settings: Settings | None = None) -> str:
+    direct = request.client.host if request.client else "unknown"
+    forwarded = ""
+    if settings is not None and direct in settings.security_trusted_proxy_ips:
+        forwarded = request.headers.get("x-forwarded-for", "").split(",", maxsplit=1)[0].strip()
+    candidate = forwarded or direct
     try:
         return str(ipaddress.ip_address(candidate))
     except ValueError:
@@ -34,6 +37,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         settings = cast(Settings, request.app.state.settings)
         response = self._validate_body_size(request, settings)
+        if response is None:
+            response = self._validate_request_origin(request, settings)
+        if response is None:
+            response = self._validate_content_type(request, settings)
         if response is None:
             response = await self._enforce_rate_limit(request, settings)
         if response is None:
@@ -82,10 +89,67 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             )
         return None
 
+    def _validate_request_origin(self, request: Request, settings: Settings) -> Response | None:
+        if (
+            not settings.security_enforce_origin
+            or request.method not in _MUTATING_METHODS
+            or settings.app_env == "testing"
+        ):
+            return None
+        origin = request.headers.get("origin")
+        if origin and origin.rstrip("/") not in {
+            allowed.rstrip("/") for allowed in settings.cors_origins
+        }:
+            return self._problem(
+                request,
+                403,
+                "Origem não autorizada",
+                "A origem da solicitação não possui permissão para alterar dados.",
+            )
+        fetch_site = request.headers.get("sec-fetch-site", "").lower()
+        if fetch_site == "cross-site" and not origin:
+            return self._problem(
+                request,
+                403,
+                "Solicitação bloqueada",
+                "Solicitações mutáveis entre sites exigem uma origem autorizada.",
+            )
+        return None
+
+    def _validate_content_type(self, request: Request, settings: Settings) -> Response | None:
+        if (
+            not settings.security_enforce_json_content_type
+            or request.method not in {"POST", "PUT", "PATCH"}
+            or settings.app_env == "testing"
+        ):
+            return None
+        content_length = int(request.headers.get("content-length", "0") or "0")
+        if content_length == 0:
+            return None
+        content_type = request.headers.get("content-type", "").split(";", maxsplit=1)[0].lower()
+        if content_type in {"application/json", "multipart/form-data"} or content_type.endswith(
+            "+json"
+        ):
+            return None
+        return self._problem(
+            request,
+            415,
+            "Tipo de conteúdo não permitido",
+            "Envie dados estruturados em JSON ou arquivos em multipart/form-data.",
+        )
+
     async def _enforce_rate_limit(self, request: Request, settings: Settings) -> Response | None:
         if not settings.security_rate_limit_enabled or settings.app_env == "testing":
             return None
-        fingerprint = hashlib.sha256(client_ip_address(request).encode()).hexdigest()
+        identity = client_ip_address(request, settings)
+        authorization = request.headers.get("authorization", "")
+        if authorization.lower().startswith("bearer "):
+            try:
+                claims = decode_access_token(settings, authorization[7:].strip())
+                identity = f"{identity}:{claims.user_id}"
+            except InvalidAccessTokenError:
+                pass
+        fingerprint = hashlib.sha256(identity.encode()).hexdigest()
         bucket = f"security:rate:{fingerprint}"
         redis = cast(Redis, request.app.state.resources.redis)
         try:
@@ -120,6 +184,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+        response.headers["X-Download-Options"] = "noopen"
+        response.headers["Origin-Agent-Cluster"] = "?1"
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
         )
@@ -136,6 +203,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if settings.remote_development_enabled:
             response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
         response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
         if settings.auth_cookie_secure and settings.security_hsts_seconds:
             response.headers["Strict-Transport-Security"] = (
                 f"max-age={settings.security_hsts_seconds}; includeSubDomains"
@@ -171,7 +240,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         resource_id=None,
                         before_data=None,
                         after_data={"status_code": response.status_code},
-                        ip_address=client_ip_address(request),
+                        ip_address=client_ip_address(request, settings),
                         user_agent=request.headers.get("user-agent"),
                         request_id=getattr(request.state, "request_id", normalize_request_id(None)),
                     )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -16,6 +16,11 @@ AudienceStatus = Literal[
 JourneyTrigger = Literal["manual", "contact_created", "contact_tagged", "scheduled"]
 JourneyStatus = Literal["draft", "active", "paused", "archived"]
 JourneyAction = Literal["wait", "email", "whatsapp", "task", "webhook"]
+ExperimentStatus = Literal["draft", "running", "completed", "cancelled"]
+ExperimentMetric = Literal["click_rate", "lead_rate", "conversion_rate", "revenue"]
+AttributionTouchpoint = Literal[
+    "first_touch", "lead_creation", "influenced", "last_touch", "conversion"
+]
 
 
 class CampaignCreate(StrictSchema):
@@ -142,3 +147,111 @@ class JourneyStepResponse(StrictSchema):
     configuration: dict[str, Any]
     created_at: datetime
     updated_at: datetime
+
+
+class CampaignMetricCreate(StrictSchema):
+    observed_on: date
+    channel: CampaignChannel = "multi_channel"
+    variant_key: str = Field(default="all", min_length=1, max_length=80)
+    impressions: int = Field(default=0, ge=0)
+    reach: int = Field(default=0, ge=0)
+    clicks: int = Field(default=0, ge=0)
+    leads: int = Field(default=0, ge=0)
+    conversions: int = Field(default=0, ge=0)
+    spend_cents: int = Field(default=0, ge=0)
+    revenue_cents: int = Field(default=0, ge=0)
+
+
+class CampaignMetricResponse(StrictSchema):
+    id: UUID
+    campaign_id: UUID
+    observed_on: date
+    channel: CampaignChannel
+    variant_key: str
+    impressions: int
+    reach: int
+    clicks: int
+    leads: int
+    conversions: int
+    spend_cents: int
+    revenue_cents: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class CampaignPerformanceResponse(StrictSchema):
+    campaign_id: UUID | None
+    impressions: int
+    reach: int
+    clicks: int
+    leads: int
+    conversions: int
+    spend_cents: int
+    revenue_cents: int
+    click_rate: float
+    lead_rate: float
+    conversion_rate: float
+    cost_per_lead_cents: int
+    acquisition_cost_cents: int
+    roas: float
+
+
+class ExperimentCreate(StrictSchema):
+    campaign_id: UUID
+    name: str = Field(min_length=2, max_length=180)
+    hypothesis: str = Field(min_length=5, max_length=10_000)
+    success_metric: ExperimentMetric
+    variants: list[dict[str, Any]] = Field(min_length=2, max_length=10)
+
+
+class ExperimentUpdate(StrictSchema):
+    status: ExperimentStatus | None = None
+    winner_key: str | None = Field(default=None, max_length=80)
+    start_at: datetime | None = None
+    end_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_experiment_update(self) -> ExperimentUpdate:
+        if not self.model_fields_set:
+            raise ValueError("Informe ao menos um campo para atualizar.")
+        return self
+
+
+class ExperimentResponse(StrictSchema):
+    id: UUID
+    campaign_id: UUID
+    name: str
+    hypothesis: str
+    success_metric: ExperimentMetric
+    status: ExperimentStatus
+    variants: list[dict[str, Any]]
+    winner_key: str | None
+    start_at: datetime | None
+    end_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttributionCreate(StrictSchema):
+    contact_id: UUID | None = None
+    opportunity_id: UUID | None = None
+    touchpoint: AttributionTouchpoint
+    source: str | None = Field(default=None, max_length=120)
+    medium: str | None = Field(default=None, max_length=120)
+    value_cents: int = Field(default=0, ge=0)
+    metadata_json: dict[str, Any] = Field(default_factory=dict)
+    occurred_at: datetime | None = None
+
+
+class AttributionResponse(StrictSchema):
+    id: UUID
+    campaign_id: UUID
+    contact_id: UUID | None
+    opportunity_id: UUID | None
+    touchpoint: AttributionTouchpoint
+    source: str | None
+    medium: str | None
+    value_cents: int
+    metadata_json: dict[str, Any]
+    occurred_at: datetime
+    created_at: datetime

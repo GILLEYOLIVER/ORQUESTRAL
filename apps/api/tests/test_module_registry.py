@@ -23,7 +23,7 @@ def test_registry_loads_only_installed_modules() -> None:
     assert installed[0].version == "1.0.0"
     assert installed[0].migrations == ("20260720_0022",)
     assert "analytics.measurements.manage" in installed[0].permissions
-    assert installed[1].migrations == ("20260716_0004",)
+    assert installed[1].migrations == ("20260716_0004", "20260720_0024")
     assert "crm.contacts.view" in installed[1].permissions
     assert installed[2].migrations == ("20260720_0020",)
     assert "finance.entries.settle" in installed[2].permissions
@@ -31,11 +31,11 @@ def test_registry_loads_only_installed_modules() -> None:
     assert "hr.leave.decide" in installed[3].permissions
     assert installed[4].migrations == ("20260720_0019",)
     assert "inventory.movements.create" in installed[4].permissions
-    assert installed[5].migrations == ("20260720_0018",)
+    assert installed[5].migrations == ("20260720_0018", "20260720_0025")
     assert "marketing.journeys.manage" in installed[5].permissions
-    assert installed[6].migrations == ("20260720_0017",)
+    assert installed[6].migrations == ("20260720_0017", "20260720_0027")
     assert "projects.tasks.manage" in installed[6].permissions
-    assert installed[7].migrations == ("20260720_0016",)
+    assert installed[7].migrations == ("20260720_0016", "20260720_0026")
     assert "support.tickets.view" in installed[7].permissions
     for module in installed:
         assert set(module.permissions) <= TENANT_PERMISSION_CODES

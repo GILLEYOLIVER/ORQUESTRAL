@@ -25,6 +25,7 @@ import type {
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
 import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
+import { CRMPipelineView } from "./crm/CRMPipelineView";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Informe o nome."),
@@ -325,9 +326,11 @@ export function CRMContactsPage() {
     <div className="management-page crm-page">
       <div className="dashboard__heading">
         <div>
-          <span className="eyebrow">CRM básico</span>
-          <h1>Contatos</h1>
-          <p>Organize relacionamentos comerciais com isolamento por empresa.</p>
+          <span className="eyebrow">CRM e vendas</span>
+          <h1>Relacionamentos comerciais</h1>
+          <p>
+            Conecte contatos, oportunidades, atividades e previsões de receita.
+          </p>
         </div>
         <PermissionGuard all={["crm.contacts.create"]}>
           <Button
@@ -340,6 +343,16 @@ export function CRMContactsPage() {
           </Button>
         </PermissionGuard>
       </div>
+      <details className="crm-pipeline-disclosure" open>
+        <summary>
+          <span>Pipeline comercial</span>
+          <small>
+            Acompanhe oportunidades, valores, etapas e histórico de cada
+            negociação.
+          </small>
+        </summary>
+        <CRMPipelineView />
+      </details>
       {contacts.isError ? (
         <Alert variant="error">
           {contacts.error instanceof ApiClientError
