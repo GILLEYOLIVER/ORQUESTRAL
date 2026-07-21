@@ -32,6 +32,8 @@ import {
   type AgentMemoryRiskSigningKey,
   type AgentMemoryExerciseSchedule,
   type AgentMemoryExerciseDue,
+  type AgentMemoryCredentialRenewal,
+  type AgentMemoryKeyringPolicy,
   type AgentMemoryKeyringStatus,
   type AgentMemoryLegalHoldRenewal,
   type AgentMemoryReencryptionJob,
@@ -211,6 +213,17 @@ export function AgentsPage() {
     useState("100");
   const [memoryReencryptionMaxRetries, setMemoryReencryptionMaxRetries] =
     useState("3");
+  const [keyringExpiryWarningDays, setKeyringExpiryWarningDays] =
+    useState("14");
+  const [keyringAutomaticExitEnabled, setKeyringAutomaticExitEnabled] =
+    useState(true);
+  const [keyringAutomaticExitBatchSize, setKeyringAutomaticExitBatchSize] =
+    useState("100");
+  const [keyringFailureAlertThreshold, setKeyringFailureAlertThreshold] =
+    useState("3");
+  const [keyringSloMinutes, setKeyringSloMinutes] = useState("30");
+  const [credentialRenewalDays, setCredentialRenewalDays] = useState("30");
+  const [credentialRenewalReason, setCredentialRenewalReason] = useState("");
   const [memoryVaultCredentialId, setMemoryVaultCredentialId] = useState("");
   const [memoryJobLegalHoldReason, setMemoryJobLegalHoldReason] = useState<
     "legal_claim" | "regulatory_request" | "audit_preservation"
@@ -349,6 +362,20 @@ export function AgentsPage() {
       request<AgentMemoryKeyringStatus>(`/agents/${selectedId}/memory-keyring`),
     enabled: canConfigure && Boolean(selectedId),
     refetchInterval: 15_000,
+  });
+  const memoryKeyringPolicy = useQuery({
+    queryKey: ["agent-memory-keyring-policy", me?.current_company?.id],
+    queryFn: () =>
+      request<AgentMemoryKeyringPolicy>("/agents/memory-keyring/policy"),
+    enabled: canConfigure && Boolean(me?.current_company),
+  });
+  const credentialRenewals = useQuery({
+    queryKey: ["agent-memory-credential-renewals", selectedId],
+    queryFn: () =>
+      request<AgentMemoryCredentialRenewal[]>(
+        `/agents/${selectedId}/memory-keyring/credential-renewals`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
   });
   const memoryVaultIncidents = useQuery({
     queryKey: ["agent-memory-vault-incidents", selectedId],
@@ -500,6 +527,22 @@ export function AgentsPage() {
       String(memoryExerciseSchedule.data.heartbeat_slo_minutes),
     );
   }, [memoryExerciseSchedule.data]);
+  useEffect(() => {
+    if (!memoryKeyringPolicy.data) return;
+    setKeyringExpiryWarningDays(
+      String(memoryKeyringPolicy.data.expiry_warning_days),
+    );
+    setKeyringAutomaticExitEnabled(
+      memoryKeyringPolicy.data.automatic_exit_enabled,
+    );
+    setKeyringAutomaticExitBatchSize(
+      String(memoryKeyringPolicy.data.automatic_exit_batch_size),
+    );
+    setKeyringFailureAlertThreshold(
+      String(memoryKeyringPolicy.data.vault_failure_alert_threshold),
+    );
+    setKeyringSloMinutes(String(memoryKeyringPolicy.data.vault_slo_minutes));
+  }, [memoryKeyringPolicy.data]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["agents"] });
@@ -947,6 +990,82 @@ export function AgentsPage() {
       setMemoryIncidentFeedback(
         "Saída segura iniciada. O vínculo só será revogado após a recriptografia.",
       );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const updateMemoryKeyringPolicy = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryKeyringPolicy>("/agents/memory-keyring/policy", {
+        method: "PUT",
+        body: {
+          expiry_warning_days: Number(keyringExpiryWarningDays),
+          automatic_exit_enabled: keyringAutomaticExitEnabled,
+          automatic_exit_batch_size: Number(keyringAutomaticExitBatchSize),
+          vault_failure_alert_threshold: Number(keyringFailureAlertThreshold),
+          vault_slo_minutes: Number(keyringSloMinutes),
+        },
+      }),
+    onSuccess: (policy) => {
+      setKeyringExpiryWarningDays(String(policy.expiry_warning_days));
+      setKeyringAutomaticExitEnabled(policy.automatic_exit_enabled);
+      setKeyringAutomaticExitBatchSize(
+        String(policy.automatic_exit_batch_size),
+      );
+      setKeyringFailureAlertThreshold(
+        String(policy.vault_failure_alert_threshold),
+      );
+      setKeyringSloMinutes(String(policy.vault_slo_minutes));
+      setMemoryIncidentFeedback(
+        "Política do cofre atualizada para esta empresa.",
+      );
+      void memoryKeyringPolicy.refetch();
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const requestCredentialRenewal = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryCredentialRenewal>(
+        `/agents/${selectedId}/memory-keyring/credential-renewals`,
+        {
+          method: "POST",
+          body: {
+            extension_days: Number(credentialRenewalDays),
+            reason: credentialRenewalReason,
+          },
+        },
+      ),
+    onSuccess: () => {
+      setCredentialRenewalReason("");
+      setMemoryIncidentFeedback(
+        "Renovação solicitada. Outro administrador precisa decidir.",
+      );
+      void credentialRenewals.refetch();
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const decideCredentialRenewal = useMutation({
+    mutationFn: ({
+      renewalId,
+      decision,
+    }: {
+      renewalId: string;
+      decision: "approved" | "rejected";
+    }) =>
+      request<AgentMemoryCredentialRenewal>(
+        `/agents/${selectedId}/memory-keyring/credential-renewals/${renewalId}/decision`,
+        { method: "POST", body: { decision } },
+      ),
+    onSuccess: (renewal) => {
+      setMemoryIncidentFeedback(
+        renewal.status === "approved"
+          ? "Validade da credencial renovada com aprovação independente."
+          : "Renovação rejeitada; a política de saída segura continua ativa.",
+      );
+      void credentialRenewals.refetch();
+      void memoryKeyringStatus.refetch();
       refresh();
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
@@ -2303,6 +2422,86 @@ export function AgentsPage() {
                   <strong>Proteção do keyring</strong>
                   <article className="agent-policy-row">
                     <div>
+                      <strong>Política operacional da empresa</strong>
+                      <small>
+                        {memoryKeyringPolicy.data?.configured
+                          ? "Configuração própria ativa"
+                          : "Usando padrões seguros do ambiente"}
+                      </small>
+                    </div>
+                    <span className="status-badge">
+                      SLO {memoryKeyringPolicy.data?.vault_slo_minutes ?? 30}{" "}
+                      min
+                    </span>
+                  </article>
+                  <div className="agent-policy-form">
+                    <TextField
+                      label="Avisar antes do vencimento (dias)"
+                      min={1}
+                      max={90}
+                      onChange={(event) =>
+                        setKeyringExpiryWarningDays(event.target.value)
+                      }
+                      type="number"
+                      value={keyringExpiryWarningDays}
+                    />
+                    <TextField
+                      label="Lote da saída automática"
+                      min={1}
+                      max={500}
+                      onChange={(event) =>
+                        setKeyringAutomaticExitBatchSize(event.target.value)
+                      }
+                      type="number"
+                      value={keyringAutomaticExitBatchSize}
+                    />
+                    <TextField
+                      label="Falhas antes do alerta"
+                      min={1}
+                      max={20}
+                      onChange={(event) =>
+                        setKeyringFailureAlertThreshold(event.target.value)
+                      }
+                      type="number"
+                      value={keyringFailureAlertThreshold}
+                    />
+                    <TextField
+                      label="SLO de indisponibilidade (minutos)"
+                      min={1}
+                      max={1440}
+                      onChange={(event) =>
+                        setKeyringSloMinutes(event.target.value)
+                      }
+                      type="number"
+                      value={keyringSloMinutes}
+                    />
+                    <label className="agent-checkbox-card">
+                      <input
+                        checked={keyringAutomaticExitEnabled}
+                        onChange={(event) =>
+                          setKeyringAutomaticExitEnabled(event.target.checked)
+                        }
+                        type="checkbox"
+                      />
+                      <span>
+                        <strong>Saída automática protegida</strong>
+                        <small>
+                          Recriptografa antes de revogar credenciais próximas do
+                          vencimento.
+                        </small>
+                      </span>
+                    </label>
+                    <Button
+                      loading={updateMemoryKeyringPolicy.isPending}
+                      onClick={() => updateMemoryKeyringPolicy.mutate()}
+                      type="button"
+                      variant="secondary"
+                    >
+                      Salvar política do cofre
+                    </Button>
+                  </div>
+                  <article className="agent-policy-row">
+                    <div>
                       <strong>
                         {memoryKeyringStatus.data?.source === "managed"
                           ? "Cofre gerenciado ativo"
@@ -2321,24 +2520,103 @@ export function AgentsPage() {
                       </small>
                     </div>
                     <span className="status-badge">
-                      {memoryKeyringStatus.data?.health_status ?? "verificando"}
+                      {memoryKeyringStatus.data?.health_status ?? "verificando"}{" "}
+                      · SLO{" "}
+                      {memoryKeyringStatus.data?.slo_status ?? "verificando"}
                     </span>
                   </article>
                   {memoryKeyringStatus.data?.source === "managed" ? (
-                    <Button
-                      disabled={Boolean(
-                        memoryKeyringStatus.data.automatic_exit_status &&
-                        ["pending", "running"].includes(
-                          memoryKeyringStatus.data.automatic_exit_status,
-                        ),
-                      )}
-                      loading={exitManagedMemoryKeyring.isPending}
-                      onClick={() => exitManagedMemoryKeyring.mutate()}
-                      type="button"
-                      variant="secondary"
-                    >
-                      <TimerReset size={16} /> Retornar à chave do ambiente
-                    </Button>
+                    <>
+                      <div className="agent-policy-form">
+                        <TextField
+                          label="Prorrogar validade (dias)"
+                          min={1}
+                          max={365}
+                          onChange={(event) =>
+                            setCredentialRenewalDays(event.target.value)
+                          }
+                          type="number"
+                          value={credentialRenewalDays}
+                        />
+                        <TextField
+                          label="Justificativa protegida"
+                          onChange={(event) =>
+                            setCredentialRenewalReason(event.target.value)
+                          }
+                          value={credentialRenewalReason}
+                        />
+                        <Button
+                          disabled={credentialRenewalReason.trim().length < 4}
+                          loading={requestCredentialRenewal.isPending}
+                          onClick={() => requestCredentialRenewal.mutate()}
+                          type="button"
+                          variant="secondary"
+                        >
+                          Solicitar renovação
+                        </Button>
+                      </div>
+                      {credentialRenewals.data?.map((renewal) => (
+                        <article className="agent-policy-row" key={renewal.id}>
+                          <div>
+                            <strong>Renovação {renewal.status}</strong>
+                            <small>
+                              +{renewal.extension_days} dias · validade proposta{" "}
+                              {new Date(
+                                renewal.proposed_expires_at,
+                              ).toLocaleDateString("pt-BR")}
+                            </small>
+                          </div>
+                          {renewal.status === "pending" ? (
+                            <div className="button-row">
+                              <Button
+                                loading={decideCredentialRenewal.isPending}
+                                onClick={() =>
+                                  decideCredentialRenewal.mutate({
+                                    renewalId: renewal.id,
+                                    decision: "approved",
+                                  })
+                                }
+                                type="button"
+                                variant="secondary"
+                              >
+                                Aprovar
+                              </Button>
+                              <Button
+                                loading={decideCredentialRenewal.isPending}
+                                onClick={() =>
+                                  decideCredentialRenewal.mutate({
+                                    renewalId: renewal.id,
+                                    decision: "rejected",
+                                  })
+                                }
+                                type="button"
+                                variant="secondary"
+                              >
+                                Rejeitar
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="status-badge">
+                              {renewal.status}
+                            </span>
+                          )}
+                        </article>
+                      ))}
+                      <Button
+                        disabled={Boolean(
+                          memoryKeyringStatus.data.automatic_exit_status &&
+                          ["pending", "running"].includes(
+                            memoryKeyringStatus.data.automatic_exit_status,
+                          ),
+                        )}
+                        loading={exitManagedMemoryKeyring.isPending}
+                        onClick={() => exitManagedMemoryKeyring.mutate()}
+                        type="button"
+                        variant="secondary"
+                      >
+                        <TimerReset size={16} /> Retornar à chave do ambiente
+                      </Button>
+                    </>
                   ) : null}
                   {memoryVaultIncidents.data?.map((incident) => (
                     <article className="agent-policy-row" key={incident.id}>
@@ -2354,6 +2632,7 @@ export function AgentsPage() {
                           {new Date(incident.last_detected_at).toLocaleString(
                             "pt-BR",
                           )}
+                          {incident.slo_breached ? " · SLO violado" : ""}
                         </small>
                       </div>
                       <span className="status-badge">{incident.status}</span>

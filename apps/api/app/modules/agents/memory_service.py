@@ -20,6 +20,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryEntry,
     AgentMemoryExerciseSchedule,
     AgentMemoryKeyringBinding,
+    AgentMemoryKeyringPolicy,
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
@@ -52,6 +53,54 @@ from app.modules.plugins.models import IntegrationCredential, Plugin
 
 DEFAULT_SCOPES = ["conversation", "task", "operational"]
 DEFAULT_CLASSIFICATIONS = ["public", "internal"]
+
+
+@dataclass(frozen=True, slots=True)
+class AgentMemoryKeyringPolicyValues:
+    expiry_warning_days: int
+    automatic_exit_enabled: bool
+    automatic_exit_batch_size: int
+    vault_failure_alert_threshold: int
+    vault_slo_minutes: int
+    configured: bool
+    updated_at: datetime | None
+
+
+async def agent_memory_keyring_policy_values(
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    company_id: UUID,
+) -> AgentMemoryKeyringPolicyValues:
+    policy = await database.scalar(
+        select(AgentMemoryKeyringPolicy).where(AgentMemoryKeyringPolicy.company_id == company_id)
+    )
+    if policy is None:
+        return AgentMemoryKeyringPolicyValues(
+            expiry_warning_days=settings.agent_memory_keyring_expiry_warning_days,
+            automatic_exit_enabled=True,
+            automatic_exit_batch_size=settings.agent_memory_keyring_automatic_exit_batch_size,
+            vault_failure_alert_threshold=settings.agent_memory_vault_failure_alert_threshold,
+            vault_slo_minutes=30,
+            configured=False,
+            updated_at=None,
+        )
+    return AgentMemoryKeyringPolicyValues(
+        expiry_warning_days=policy.expiry_warning_days,
+        automatic_exit_enabled=policy.automatic_exit_enabled,
+        automatic_exit_batch_size=policy.automatic_exit_batch_size,
+        vault_failure_alert_threshold=policy.vault_failure_alert_threshold,
+        vault_slo_minutes=policy.vault_slo_minutes,
+        configured=True,
+        updated_at=policy.updated_at,
+    )
+
+
+def memory_credential_renewal_reason_fingerprint(
+    *, secret: str, company_id: UUID, binding_id: UUID, reason: str
+) -> str:
+    payload = f"{company_id}:{binding_id}:{reason}".encode()
+    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -345,9 +394,7 @@ async def create_agent_memory_environment_exit_job(
             else "agent.memory_keyring.exit_requested"
         ),
         title=(
-            "Saída automática do cofre iniciada"
-            if automatic
-            else "Saída segura do cofre iniciada"
+            "Saída automática do cofre iniciada" if automatic else "Saída segura do cofre iniciada"
         ),
         message="As memórias serão movidas para a chave do ambiente antes da revogação.",
         severity="warning" if automatic else "info",
@@ -1478,7 +1525,6 @@ async def enforce_agent_memory_keyring_lifecycle(
     limit: int = 1_000,
 ) -> dict[str, int]:
     current = now or utc_now()
-    warning_cutoff = current + timedelta(days=settings.agent_memory_keyring_expiry_warning_days)
     rows = (
         await database.execute(
             select(AgentMemoryKeyringBinding, IntegrationCredential)
@@ -1494,6 +1540,12 @@ async def enforce_agent_memory_keyring_lifecycle(
     ).all()
     warnings = automatic_exits = 0
     for binding, credential in rows:
+        policy = await agent_memory_keyring_policy_values(
+            database,
+            settings=settings,
+            company_id=binding.company_id,
+        )
+        warning_cutoff = current + timedelta(days=policy.expiry_warning_days)
         expires_at = credential.expires_at
         if expires_at is None or expires_at > warning_cutoff:
             continue
@@ -1544,14 +1596,18 @@ async def enforce_agent_memory_keyring_lifecycle(
                     payload={"agent_id": str(binding.agent_id)},
                 ),
             )
-        if expires_at <= current or binding.automatic_exit_job_id is not None:
+        if (
+            expires_at <= current
+            or not policy.automatic_exit_enabled
+            or binding.automatic_exit_job_id is not None
+        ):
             continue
         job = await create_agent_memory_environment_exit_job(
             database,
             settings=settings,
             binding=binding,
             requested_by_user_id=binding.activated_by_user_id,
-            batch_size=settings.agent_memory_keyring_automatic_exit_batch_size,
+            batch_size=policy.automatic_exit_batch_size,
             max_retry_attempts=3,
             automatic=True,
         )
@@ -1579,8 +1635,13 @@ async def monitor_agent_memory_keyrings(
             .with_for_update(skip_locked=True)
         )
     )
-    alerted = resolved_count = unavailable = 0
+    alerted = resolved_count = unavailable = slo_breaches = 0
     for binding in bindings:
+        policy = await agent_memory_keyring_policy_values(
+            database,
+            settings=settings,
+            company_id=binding.company_id,
+        )
         binding.last_health_checked_at = current
         try:
             await resolve_agent_memory_external_keyring(
@@ -1618,7 +1679,7 @@ async def monitor_agent_memory_keyrings(
                 incident.last_detected_at = current
             if (
                 incident.alerted_at is None
-                and incident.failure_count >= settings.agent_memory_vault_failure_alert_threshold
+                and incident.failure_count >= policy.vault_failure_alert_threshold
             ):
                 recipient_ids = tuple(
                     dict.fromkeys(
@@ -1641,7 +1702,10 @@ async def monitor_agent_memory_keyrings(
                         severity="critical",
                         resource_type="agent_memory_vault_incident",
                         resource_id=incident.id,
-                        data={"agent_id": str(binding.agent_id), "provider_code": binding.provider_code},
+                        data={
+                            "agent_id": str(binding.agent_id),
+                            "provider_code": binding.provider_code,
+                        },
                     )
                 incident.alerted_at = current
                 alerted += 1
@@ -1669,6 +1733,66 @@ async def monitor_agent_memory_keyrings(
                             "incident_id": str(incident.id),
                             "agent_id": str(binding.agent_id),
                             "provider_code": binding.provider_code,
+                        },
+                    ),
+                )
+            if (
+                incident.slo_breached_at is None
+                and current
+                >= incident.first_detected_at + timedelta(minutes=policy.vault_slo_minutes)
+            ):
+                recipient_ids = tuple(
+                    dict.fromkeys(
+                        (
+                            binding.activated_by_user_id,
+                            *await company_approver_user_ids(database, binding.company_id),
+                        )
+                    )
+                )
+                for recipient_user_id in recipient_ids:
+                    await create_notification(
+                        database,
+                        company_id=binding.company_id,
+                        recipient_user_id=recipient_user_id,
+                        event_type="agent.memory_keyring.vault_slo_breached",
+                        title="SLO do cofre gerenciado violado",
+                        message=("A indisponibilidade ultrapassou o prazo operacional da empresa."),
+                        severity="critical",
+                        resource_type="agent_memory_vault_incident",
+                        resource_id=incident.id,
+                        data={
+                            "agent_id": str(binding.agent_id),
+                            "provider_code": binding.provider_code,
+                            "slo_minutes": policy.vault_slo_minutes,
+                        },
+                    )
+                incident.slo_breached_at = current
+                slo_breaches += 1
+                record_authorization_audit(
+                    database,
+                    company_id=binding.company_id,
+                    actor_user_id=binding.activated_by_user_id,
+                    action="agent.memory_keyring.vault_slo_breached",
+                    target_type="agent_memory_vault_incident",
+                    target_id=incident.id,
+                    details={
+                        "agent_id": str(binding.agent_id),
+                        "provider_code": binding.provider_code,
+                        "slo_minutes": policy.vault_slo_minutes,
+                    },
+                )
+                enqueue_domain_event(
+                    database,
+                    DomainEventCreate(
+                        event_type="agent.memory_keyring.vault_slo_breached",
+                        company_id=binding.company_id,
+                        actor_user_id=binding.activated_by_user_id,
+                        classification="internal",
+                        payload={
+                            "incident_id": str(incident.id),
+                            "agent_id": str(binding.agent_id),
+                            "provider_code": binding.provider_code,
+                            "slo_minutes": policy.vault_slo_minutes,
                         },
                     ),
                 )
@@ -1708,7 +1832,10 @@ async def monitor_agent_memory_keyrings(
                     severity="success",
                     resource_type="agent_memory_vault_incident",
                     resource_id=incident.id,
-                    data={"agent_id": str(binding.agent_id), "provider_code": binding.provider_code},
+                    data={
+                        "agent_id": str(binding.agent_id),
+                        "provider_code": binding.provider_code,
+                    },
                 )
         record_authorization_audit(
             database,
@@ -1734,6 +1861,7 @@ async def monitor_agent_memory_keyrings(
         "vault_checked": len(bindings),
         "vault_unavailable": unavailable,
         "vault_alerts": alerted,
+        "vault_slo_breaches": slo_breaches,
         "vault_resolved": resolved_count,
     }
 
@@ -1752,9 +1880,7 @@ async def revoke_expired_unbound_memory_credentials(
                 IntegrationCredential.status == "active",
                 IntegrationCredential.expires_at.is_not(None),
                 IntegrationCredential.expires_at <= current,
-                exists().where(
-                    AgentMemoryKeyringBinding.credential_id == IntegrationCredential.id
-                ),
+                exists().where(AgentMemoryKeyringBinding.credential_id == IntegrationCredential.id),
                 not_(
                     exists().where(
                         AgentMemoryKeyringBinding.credential_id == IntegrationCredential.id,

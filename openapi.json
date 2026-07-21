@@ -2122,6 +2122,109 @@
         "title": "AgentMemoryCreate",
         "type": "object"
       },
+      "AgentMemoryCredentialRenewalCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "extension_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Extension Days",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 240,
+            "minLength": 4,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "extension_days",
+          "reason"
+        ],
+        "title": "AgentMemoryCredentialRenewalCreate",
+        "type": "object"
+      },
+      "AgentMemoryCredentialRenewalResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By User Id"
+          },
+          "extension_days": {
+            "title": "Extension Days",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "proposed_expires_at": {
+            "format": "date-time",
+            "title": "Proposed Expires At",
+            "type": "string"
+          },
+          "requested_by_user_id": {
+            "format": "uuid",
+            "title": "Requested By User Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "extension_days",
+          "proposed_expires_at",
+          "status",
+          "requested_by_user_id",
+          "decided_by_user_id",
+          "created_at",
+          "decided_at"
+        ],
+        "title": "AgentMemoryCredentialRenewalResponse",
+        "type": "object"
+      },
       "AgentMemoryExerciseDueResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2342,6 +2445,108 @@
         "title": "AgentMemoryKeyringExitCreate",
         "type": "object"
       },
+      "AgentMemoryKeyringPolicyResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "automatic_exit_batch_size": {
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Automatic Exit Batch Size",
+            "type": "integer"
+          },
+          "automatic_exit_enabled": {
+            "default": true,
+            "title": "Automatic Exit Enabled",
+            "type": "boolean"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "expiry_warning_days": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Expiry Warning Days",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "vault_failure_alert_threshold": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Vault Failure Alert Threshold",
+            "type": "integer"
+          },
+          "vault_slo_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Vault Slo Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expiry_warning_days",
+          "automatic_exit_batch_size",
+          "vault_failure_alert_threshold",
+          "vault_slo_minutes",
+          "configured",
+          "updated_at"
+        ],
+        "title": "AgentMemoryKeyringPolicyResponse",
+        "type": "object"
+      },
+      "AgentMemoryKeyringPolicyUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "automatic_exit_batch_size": {
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Automatic Exit Batch Size",
+            "type": "integer"
+          },
+          "automatic_exit_enabled": {
+            "default": true,
+            "title": "Automatic Exit Enabled",
+            "type": "boolean"
+          },
+          "expiry_warning_days": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Expiry Warning Days",
+            "type": "integer"
+          },
+          "vault_failure_alert_threshold": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Vault Failure Alert Threshold",
+            "type": "integer"
+          },
+          "vault_slo_minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Vault Slo Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expiry_warning_days",
+          "automatic_exit_batch_size",
+          "vault_failure_alert_threshold",
+          "vault_slo_minutes"
+        ],
+        "title": "AgentMemoryKeyringPolicyUpdate",
+        "type": "object"
+      },
       "AgentMemoryKeyringStatusResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2441,6 +2646,15 @@
             "title": "Provider Code",
             "type": "string"
           },
+          "slo_status": {
+            "enum": [
+              "not_applicable",
+              "within_slo",
+              "breached"
+            ],
+            "title": "Slo Status",
+            "type": "string"
+          },
           "source": {
             "enum": [
               "environment",
@@ -2466,7 +2680,8 @@
           "credential_expires_at",
           "expiry_warning_sent",
           "automatic_exit_job_id",
-          "automatic_exit_status"
+          "automatic_exit_status",
+          "slo_status"
         ],
         "title": "AgentMemoryKeyringStatusResponse",
         "type": "object"
@@ -4248,6 +4463,10 @@
             ],
             "title": "Resolved At"
           },
+          "slo_breached": {
+            "title": "Slo Breached",
+            "type": "boolean"
+          },
           "status": {
             "enum": [
               "open",
@@ -4263,6 +4482,7 @@
           "status",
           "failure_count",
           "alerted",
+          "slo_breached",
           "first_detected_at",
           "last_detected_at",
           "resolved_at"
@@ -19749,6 +19969,126 @@
         ]
       }
     },
+    "/agents/memory-keyring/policy": {
+      "get": {
+        "operationId": "get_agent_memory_keyring_policy_agents_memory_keyring_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryKeyringPolicyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Agent Memory Keyring Policy",
+        "tags": [
+          "agents"
+        ]
+      },
+      "put": {
+        "operationId": "update_agent_memory_keyring_policy_agents_memory_keyring_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryKeyringPolicyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryKeyringPolicyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Agent Memory Keyring Policy",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/agents/providers/status": {
       "get": {
         "operationId": "provider_status_agents_providers_status_get",
@@ -23104,6 +23444,242 @@
           }
         ],
         "summary": "Get Agent Memory Keyring Status",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-keyring/credential-renewals": {
+      "get": {
+        "operationId": "list_agent_memory_credential_renewals_agents__agent_id__memory_keyring_credential_renewals_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryCredentialRenewalResponse"
+                  },
+                  "title": "Response List Agent Memory Credential Renewals Agents  Agent Id  Memory Keyring Credential Renewals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Memory Credential Renewals",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "operationId": "request_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryCredentialRenewalCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryCredentialRenewalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Agent Memory Credential Renewal",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-keyring/credential-renewals/{renewal_id}/decision": {
+      "post": {
+        "operationId": "decide_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals__renewal_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "renewal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Renewal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryLegalHoldDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryCredentialRenewalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Agent Memory Credential Renewal",
         "tags": [
           "agents"
         ]

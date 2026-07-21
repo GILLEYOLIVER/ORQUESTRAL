@@ -16,9 +16,11 @@ from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.agents.coordination_models import AgentDelegation, AgentTaskContract
 from app.modules.agents.memory_models import (
     AgentMemoryConsentRevocation,
+    AgentMemoryCredentialRenewal,
     AgentMemoryEntry,
     AgentMemoryExerciseSchedule,
     AgentMemoryKeyringBinding,
+    AgentMemoryKeyringPolicy,
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
@@ -40,11 +42,15 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryConsentRevocationResponse,
     AgentMemoryConsentRevoke,
     AgentMemoryCreate,
+    AgentMemoryCredentialRenewalCreate,
+    AgentMemoryCredentialRenewalResponse,
     AgentMemoryExerciseDueResponse,
     AgentMemoryExerciseScheduleResponse,
     AgentMemoryExerciseScheduleUpdate,
     AgentMemoryIncidentEscalationResponse,
     AgentMemoryKeyringExitCreate,
+    AgentMemoryKeyringPolicyResponse,
+    AgentMemoryKeyringPolicyUpdate,
     AgentMemoryKeyringStatusResponse,
     AgentMemoryLegalHoldCreate,
     AgentMemoryLegalHoldDecision,
@@ -98,11 +104,13 @@ from app.modules.agents.memory_schemas import (
 )
 from app.modules.agents.memory_service import (
     agent_memory_credential_vault,
+    agent_memory_keyring_policy_values,
     create_agent_memory_environment_exit_job,
     has_active_memory_legal_hold,
     memory_access_revocation_fingerprint,
     memory_consent_fingerprint,
     memory_content_fingerprint,
+    memory_credential_renewal_reason_fingerprint,
     memory_external_target_key_id,
     memory_incident_value_fingerprint,
     memory_is_expired,
@@ -136,6 +144,87 @@ async def _tenant_agent(database: DatabaseSession, *, company_id: UUID, agent_id
     if agent is None:
         raise HTTPException(status_code=404, detail="Agente não encontrado.")
     return agent
+
+
+@router.get(
+    "/memory-keyring/policy",
+    response_model=AgentMemoryKeyringPolicyResponse,
+)
+async def get_agent_memory_keyring_policy(
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryKeyringPolicyResponse:
+    context = get_request_context(principal)
+    policy = await agent_memory_keyring_policy_values(
+        database,
+        settings=settings,
+        company_id=context.company_id,
+    )
+    return AgentMemoryKeyringPolicyResponse(
+        expiry_warning_days=policy.expiry_warning_days,
+        automatic_exit_enabled=policy.automatic_exit_enabled,
+        automatic_exit_batch_size=policy.automatic_exit_batch_size,
+        vault_failure_alert_threshold=policy.vault_failure_alert_threshold,
+        vault_slo_minutes=policy.vault_slo_minutes,
+        configured=policy.configured,
+        updated_at=policy.updated_at,
+    )
+
+
+@router.put(
+    "/memory-keyring/policy",
+    response_model=AgentMemoryKeyringPolicyResponse,
+)
+async def update_agent_memory_keyring_policy(
+    payload: AgentMemoryKeyringPolicyUpdate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryKeyringPolicyResponse:
+    context = get_request_context(principal)
+    policy = await database.scalar(
+        select(AgentMemoryKeyringPolicy)
+        .where(AgentMemoryKeyringPolicy.company_id == context.company_id)
+        .with_for_update()
+    )
+    if policy is None:
+        policy = AgentMemoryKeyringPolicy(
+            company_id=context.company_id,
+            updated_by_user_id=context.user_id,
+            **payload.model_dump(),
+        )
+        database.add(policy)
+    else:
+        for field, value in payload.model_dump().items():
+            setattr(policy, field, value)
+        policy.updated_by_user_id = context.user_id
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_keyring.policy_updated",
+        target_type="agent_memory_keyring_policy",
+        target_id=policy.id,
+        details=payload.model_dump(),
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_keyring.policy_updated",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={"policy_id": str(policy.id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(policy)
+    return AgentMemoryKeyringPolicyResponse(
+        **payload.model_dump(),
+        configured=True,
+        updated_at=policy.updated_at,
+    )
 
 
 async def _notify_memory_incident_reviewers(
@@ -2245,6 +2334,22 @@ def _memory_reencryption_legal_hold_renewal_response(
     )
 
 
+def _memory_credential_renewal_response(
+    renewal: AgentMemoryCredentialRenewal,
+) -> AgentMemoryCredentialRenewalResponse:
+    return AgentMemoryCredentialRenewalResponse(
+        id=renewal.id,
+        agent_id=renewal.agent_id,
+        extension_days=renewal.extension_days,
+        proposed_expires_at=renewal.proposed_expires_at,
+        status=cast(Literal["pending", "approved", "rejected"], renewal.status),
+        requested_by_user_id=renewal.requested_by_user_id,
+        decided_by_user_id=renewal.decided_by_user_id,
+        created_at=renewal.created_at,
+        decided_at=renewal.decided_at,
+    )
+
+
 @router.get(
     "/{agent_id}/memory-keyring",
     response_model=AgentMemoryKeyringStatusResponse,
@@ -2276,6 +2381,7 @@ async def get_agent_memory_keyring_status(
             expiry_warning_sent=False,
             automatic_exit_job_id=None,
             automatic_exit_status=None,
+            slo_status="not_applicable",
         )
     credential_expires_at = await database.scalar(
         select(IntegrationCredential.expires_at).where(
@@ -2292,6 +2398,13 @@ async def get_agent_memory_keyring_status(
         )
         if binding.automatic_exit_job_id is not None
         else None
+    )
+    open_incident = await database.scalar(
+        select(AgentMemoryVaultIncident).where(
+            AgentMemoryVaultIncident.company_id == context.company_id,
+            AgentMemoryVaultIncident.binding_id == binding.id,
+            AgentMemoryVaultIncident.status == "open",
+        )
     )
     return AgentMemoryKeyringStatusResponse(
         source="managed",
@@ -2311,6 +2424,9 @@ async def get_agent_memory_keyring_status(
             Literal["pending", "running", "completed", "failed", "closed"] | None,
             automatic_exit_status,
         ),
+        slo_status="breached"
+        if open_incident is not None and open_incident.slo_breached_at is not None
+        else "within_slo",
     )
 
 
@@ -2343,12 +2459,257 @@ async def list_agent_memory_vault_incidents(
             status=cast(Literal["open", "resolved"], incident.status),
             failure_count=incident.failure_count,
             alerted=incident.alerted_at is not None,
+            slo_breached=incident.slo_breached_at is not None,
             first_detected_at=incident.first_detected_at,
             last_detected_at=incident.last_detected_at,
             resolved_at=incident.resolved_at,
         )
         for incident in incidents
     ]
+
+
+@router.get(
+    "/{agent_id}/memory-keyring/credential-renewals",
+    response_model=list[AgentMemoryCredentialRenewalResponse],
+)
+async def list_agent_memory_credential_renewals(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryCredentialRenewalResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    renewals = list(
+        await database.scalars(
+            select(AgentMemoryCredentialRenewal)
+            .where(
+                AgentMemoryCredentialRenewal.company_id == context.company_id,
+                AgentMemoryCredentialRenewal.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryCredentialRenewal.created_at.desc())
+            .limit(50)
+        )
+    )
+    return [_memory_credential_renewal_response(renewal) for renewal in renewals]
+
+
+@router.post(
+    "/{agent_id}/memory-keyring/credential-renewals",
+    response_model=AgentMemoryCredentialRenewalResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_agent_memory_credential_renewal(
+    agent_id: UUID,
+    payload: AgentMemoryCredentialRenewalCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryCredentialRenewalResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    binding = await database.scalar(
+        select(AgentMemoryKeyringBinding)
+        .where(
+            AgentMemoryKeyringBinding.company_id == context.company_id,
+            AgentMemoryKeyringBinding.agent_id == agent_id,
+            AgentMemoryKeyringBinding.status == "active",
+        )
+        .with_for_update()
+    )
+    if binding is None:
+        raise HTTPException(status_code=409, detail="O agente não possui keyring gerenciado ativo.")
+    if binding.automatic_exit_job_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="A saída segura já começou e não pode ser substituída por uma renovação.",
+        )
+    credential = await database.scalar(
+        select(IntegrationCredential)
+        .where(
+            IntegrationCredential.id == binding.credential_id,
+            IntegrationCredential.company_id == context.company_id,
+            IntegrationCredential.status == "active",
+        )
+        .with_for_update()
+    )
+    now = utc_now()
+    if credential is None or credential.expires_at is None or credential.expires_at <= now:
+        raise HTTPException(
+            status_code=409,
+            detail="A credencial precisa estar ativa e possuir vencimento futuro.",
+        )
+    pending = await database.scalar(
+        select(AgentMemoryCredentialRenewal.id).where(
+            AgentMemoryCredentialRenewal.company_id == context.company_id,
+            AgentMemoryCredentialRenewal.binding_id == binding.id,
+            AgentMemoryCredentialRenewal.status == "pending",
+        )
+    )
+    if pending is not None:
+        raise HTTPException(status_code=409, detail="Já existe uma renovação pendente.")
+    renewal = AgentMemoryCredentialRenewal(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        binding_id=binding.id,
+        credential_id=credential.id,
+        extension_days=payload.extension_days,
+        reason_fingerprint=memory_credential_renewal_reason_fingerprint(
+            secret=memory_signing_secrets(
+                settings,
+                memory_master_key_id(settings.encryption_key),
+            )[0],
+            company_id=context.company_id,
+            binding_id=binding.id,
+            reason=payload.reason,
+        ),
+        proposed_expires_at=credential.expires_at + timedelta(days=payload.extension_days),
+        requested_by_user_id=context.user_id,
+    )
+    database.add(renewal)
+    await database.flush()
+    reviewer_ids = [
+        user_id
+        for user_id in await company_approver_user_ids(database, context.company_id)
+        if user_id != context.user_id
+    ]
+    for recipient_user_id in reviewer_ids:
+        await create_notification(
+            database,
+            company_id=context.company_id,
+            recipient_user_id=recipient_user_id,
+            event_type="agent.memory_keyring.credential_renewal_requested",
+            title="Renovação de credencial aguardando aprovação",
+            message="Revise a extensão de validade antes do início da saída segura.",
+            severity="warning",
+            resource_type="agent_memory_credential_renewal",
+            resource_id=renewal.id,
+            data={"agent_id": str(agent_id), "extension_days": payload.extension_days},
+        )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_keyring.credential_renewal_requested",
+        target_type="agent_memory_credential_renewal",
+        target_id=renewal.id,
+        details={"agent_id": str(agent_id), "extension_days": payload.extension_days},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_keyring.credential_renewal_requested",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"renewal_id": str(renewal.id), "agent_id": str(agent_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(renewal)
+    return _memory_credential_renewal_response(renewal)
+
+
+@router.post(
+    "/{agent_id}/memory-keyring/credential-renewals/{renewal_id}/decision",
+    response_model=AgentMemoryCredentialRenewalResponse,
+)
+async def decide_agent_memory_credential_renewal(
+    agent_id: UUID,
+    renewal_id: UUID,
+    payload: AgentMemoryLegalHoldDecision,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryCredentialRenewalResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    renewal = await database.scalar(
+        select(AgentMemoryCredentialRenewal)
+        .where(
+            AgentMemoryCredentialRenewal.id == renewal_id,
+            AgentMemoryCredentialRenewal.company_id == context.company_id,
+            AgentMemoryCredentialRenewal.agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if renewal is None:
+        raise HTTPException(status_code=404, detail="Renovação não encontrada.")
+    if renewal.status != "pending":
+        raise HTTPException(status_code=409, detail="A renovação já foi decidida.")
+    if renewal.requested_by_user_id == context.user_id:
+        raise HTTPException(status_code=409, detail="Outro usuário deve decidir a renovação.")
+    binding = await database.scalar(
+        select(AgentMemoryKeyringBinding)
+        .where(
+            AgentMemoryKeyringBinding.id == renewal.binding_id,
+            AgentMemoryKeyringBinding.company_id == context.company_id,
+            AgentMemoryKeyringBinding.agent_id == agent_id,
+            AgentMemoryKeyringBinding.status == "active",
+        )
+        .with_for_update()
+    )
+    if binding is None:
+        raise HTTPException(status_code=409, detail="O vínculo do keyring não está mais ativo.")
+    if payload.decision == "approved":
+        if binding.automatic_exit_job_id is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="A saída segura já começou e não pode ser cancelada pela renovação.",
+            )
+        credential = await database.scalar(
+            select(IntegrationCredential)
+            .where(
+                IntegrationCredential.id == renewal.credential_id,
+                IntegrationCredential.company_id == context.company_id,
+                IntegrationCredential.status == "active",
+                IntegrationCredential.expires_at > utc_now(),
+            )
+            .with_for_update()
+        )
+        if credential is None:
+            raise HTTPException(status_code=409, detail="A credencial não pode mais ser renovada.")
+        credential.expires_at = renewal.proposed_expires_at
+        binding.expiry_warning_sent_at = None
+    renewal.status = payload.decision
+    renewal.decided_by_user_id = context.user_id
+    renewal.decided_at = utc_now()
+    await create_notification(
+        database,
+        company_id=context.company_id,
+        recipient_user_id=renewal.requested_by_user_id,
+        event_type="agent.memory_keyring.credential_renewal_decided",
+        title="Renovação de credencial revisada",
+        message=(
+            "A extensão de validade foi aprovada."
+            if payload.decision == "approved"
+            else "A extensão de validade foi rejeitada."
+        ),
+        severity="success" if payload.decision == "approved" else "warning",
+        resource_type="agent_memory_credential_renewal",
+        resource_id=renewal.id,
+        data={"agent_id": str(agent_id), "decision": payload.decision},
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.memory_keyring.credential_renewal_{payload.decision}",
+        target_type="agent_memory_credential_renewal",
+        target_id=renewal.id,
+        details={"agent_id": str(agent_id), "extension_days": renewal.extension_days},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.memory_keyring.credential_renewal_{payload.decision}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"renewal_id": str(renewal.id), "agent_id": str(agent_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(renewal)
+    return _memory_credential_renewal_response(renewal)
 
 
 @router.post(

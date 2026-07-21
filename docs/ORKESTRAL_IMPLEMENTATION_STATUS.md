@@ -788,3 +788,16 @@ Data: 21 de julho de 2026.
 - Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0068 -> 0067 -> 0068`; `/health`, `/ready`, `/app` e monitor HMAC validados.
 - O teste de integração foi isolado do worker contínuo para impedir consumo concorrente das delegações sintéticas; o worker foi religado e permaneceu saudável.
 - Próximo passo: políticas configuráveis por empresa, renovação de credenciais antes da saída e SLO operacional dos cofres gerenciados.
+
+## Ciclo 48 - política empresarial, renovação de credencial e SLO
+
+- Política de keyring configurável por empresa define aviso de vencimento, saída automática, lote, limiar de falhas e SLO sem alterar padrões de outros tenants.
+- Credenciais vinculadas e ainda válidas recebem renovação governada por aprovação independente; justificativas são reduzidas a HMAC e não retornam pela API.
+- Saída segura iniciada, credencial vencida, autoaprovação, decisão repetida e acesso entre empresas são bloqueados no back-end.
+- Incidentes rompendo o SLO geram escalonamento idempotente com notificação, auditoria e evento; status e histórico aparecem na interface sem segredos.
+- Migração: `20260721_0069_memory_vault_policy_renewal_slo.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados.
+- Migração reversível `0069 -> 0068 -> 0069` aprovada; banco em `20260721_0069 (head)`; `/health`, `/ready`, `/app` e o probe HMAC do worker responderam corretamente com API, worker e gateway saudáveis.
+- A dependência transitiva vulnerável `js-yaml 4.2.0` foi substituída por `4.3.0` via override central do workspace; as auditorias Node e Python não encontraram vulnerabilidades conhecidas.
+- Risco operacional anterior não alterado: o health check interno do n8n permanece em `unhealthy`, embora o contrato E2E de disponibilidade continue aprovado.
+- Próximo passo: escalonamento por plantão, histórico de disponibilidade e rotação coordenada da identidade da carga.

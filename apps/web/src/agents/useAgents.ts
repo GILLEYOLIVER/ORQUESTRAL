@@ -388,6 +388,7 @@ export interface AgentMemoryKeyringStatus {
   automatic_exit_job_id: string | null;
   automatic_exit_status:
     "pending" | "running" | "completed" | "failed" | "closed" | null;
+  slo_status: "not_applicable" | "within_slo" | "breached";
 }
 
 export interface AgentMemoryVaultIncident {
@@ -396,9 +397,32 @@ export interface AgentMemoryVaultIncident {
   status: "open" | "resolved";
   failure_count: number;
   alerted: boolean;
+  slo_breached: boolean;
   first_detected_at: string;
   last_detected_at: string;
   resolved_at: string | null;
+}
+
+export interface AgentMemoryKeyringPolicy {
+  expiry_warning_days: number;
+  automatic_exit_enabled: boolean;
+  automatic_exit_batch_size: number;
+  vault_failure_alert_threshold: number;
+  vault_slo_minutes: number;
+  configured: boolean;
+  updated_at: string | null;
+}
+
+export interface AgentMemoryCredentialRenewal {
+  id: string;
+  agent_id: string;
+  extension_days: number;
+  proposed_expires_at: string;
+  status: "pending" | "approved" | "rejected";
+  requested_by_user_id: string;
+  decided_by_user_id: string | null;
+  created_at: string;
+  decided_at: string | null;
 }
 
 export interface ManagedVaultMetric {

@@ -562,6 +562,7 @@ class AgentMemoryKeyringStatusResponse(StrictSchema):
     expiry_warning_sent: bool
     automatic_exit_job_id: UUID | None
     automatic_exit_status: Literal["pending", "running", "completed", "failed", "closed"] | None
+    slo_status: Literal["not_applicable", "within_slo", "breached"]
 
 
 class AgentMemoryKeyringExitCreate(StrictSchema):
@@ -575,9 +576,45 @@ class AgentMemoryVaultIncidentResponse(StrictSchema):
     status: Literal["open", "resolved"]
     failure_count: int
     alerted: bool
+    slo_breached: bool
     first_detected_at: datetime
     last_detected_at: datetime
     resolved_at: datetime | None
+
+
+class AgentMemoryKeyringPolicyUpdate(StrictSchema):
+    expiry_warning_days: int = Field(ge=1, le=90)
+    automatic_exit_enabled: bool = True
+    automatic_exit_batch_size: int = Field(ge=1, le=500)
+    vault_failure_alert_threshold: int = Field(ge=1, le=20)
+    vault_slo_minutes: int = Field(ge=1, le=1440)
+
+
+class AgentMemoryKeyringPolicyResponse(AgentMemoryKeyringPolicyUpdate):
+    configured: bool
+    updated_at: datetime | None
+
+
+class AgentMemoryCredentialRenewalCreate(StrictSchema):
+    extension_days: int = Field(ge=1, le=365)
+    reason: str = Field(min_length=4, max_length=240)
+
+    @field_validator("reason")
+    @classmethod
+    def trim_reason(cls, value: str) -> str:
+        return value.strip()
+
+
+class AgentMemoryCredentialRenewalResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    extension_days: int
+    proposed_expires_at: datetime
+    status: Literal["pending", "approved", "rejected"]
+    requested_by_user_id: UUID
+    decided_by_user_id: UUID | None
+    created_at: datetime
+    decided_at: datetime | None
 
 
 class AgentMemoryReencryptionLegalHoldResponse(StrictSchema):

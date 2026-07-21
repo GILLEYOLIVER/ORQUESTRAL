@@ -1396,10 +1396,91 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert keyring_status.status_code == 200
             assert keyring_status.json()["source"] == "managed"
             assert keyring_status.json()["provider_code"] == "google_secret_manager"
+            assert keyring_status.json()["slo_status"] == "within_slo"
             assert (
                 client.get(f"/agents/{agent_id}/memory-keyring", headers=headers_a).status_code
                 == 404
             )
+            default_keyring_policy = client.get(
+                "/agents/memory-keyring/policy", headers=headers_b
+            )
+            assert default_keyring_policy.status_code == 200
+            assert default_keyring_policy.json()["configured"] is False
+            keyring_policy = client.put(
+                "/agents/memory-keyring/policy",
+                headers=headers_b,
+                json={
+                    "expiry_warning_days": 5,
+                    "automatic_exit_enabled": True,
+                    "automatic_exit_batch_size": 250,
+                    "vault_failure_alert_threshold": 1,
+                    "vault_slo_minutes": 1,
+                },
+            )
+            assert keyring_policy.status_code == 200, keyring_policy.text
+            assert keyring_policy.json()["configured"] is True
+            assert keyring_policy.json()["automatic_exit_batch_size"] == 250
+            other_tenant_policy = client.get(
+                "/agents/memory-keyring/policy", headers=headers_a
+            )
+            assert other_tenant_policy.status_code == 200
+            assert other_tenant_policy.json()["configured"] is False
+            asyncio.run(
+                _set_managed_credential_expiry(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    credential_id=managed_credential_id,
+                    expires_in_days=10,
+                )
+            )
+            credential_renewal = client.post(
+                f"/agents/{agent_id}/memory-keyring/credential-renewals",
+                headers=headers_b,
+                json={
+                    "extension_days": 30,
+                    "reason": "Continuidade aprovada do cofre gerenciado",
+                },
+            )
+            assert credential_renewal.status_code == 201, credential_renewal.text
+            renewal_payload = credential_renewal.json()
+            assert renewal_payload["status"] == "pending"
+            assert "reason" not in renewal_payload
+            assert "credential_id" not in renewal_payload
+            assert "binding_id" not in renewal_payload
+            credential_renewal_path = (
+                f"/agents/{agent_id}/memory-keyring/credential-renewals/"
+                f"{renewal_payload['id']}/decision"
+            )
+            assert (
+                client.post(
+                    credential_renewal_path,
+                    headers=headers_b,
+                    json={"decision": "approved"},
+                ).status_code
+                == 409
+            )
+            assert (
+                client.post(
+                    credential_renewal_path,
+                    headers=headers_a,
+                    json={"decision": "approved"},
+                ).status_code
+                == 404
+            )
+            approved_credential_renewal = client.post(
+                credential_renewal_path,
+                headers=headers_reviewer,
+                json={"decision": "approved"},
+            )
+            assert approved_credential_renewal.status_code == 200
+            assert approved_credential_renewal.json()["status"] == "approved"
+            listed_credential_renewals = client.get(
+                f"/agents/{agent_id}/memory-keyring/credential-renewals",
+                headers=headers_b,
+            )
+            assert listed_credential_renewals.status_code == 200
+            assert listed_credential_renewals.json()[0]["status"] == "approved"
+            assert "Continuidade aprovada" not in str(listed_credential_renewals.json())
             managed_memory_content = "Memória cifrada pelo keyring gerenciado."
             managed_memory = client.post(
                 f"/agents/{agent_id}/memories",
@@ -1454,12 +1535,42 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert incidents.status_code == 200
             assert incidents.json()[0]["status"] == "open"
+            assert incidents.json()[0]["slo_breached"] is False
             assert "Falha sintética" not in str(incidents.json())
             assert (
                 client.get(
                     f"/agents/{agent_id}/memory-vault-incidents", headers=headers_a
                 ).status_code
                 == 404
+            )
+            current_vault_monitor_time = memory_service_module.utc_now
+            monkeypatch.setattr(
+                memory_service_module,
+                "utc_now",
+                lambda: current_vault_monitor_time() + timedelta(minutes=2),
+            )
+            breached_vault_slo = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert breached_vault_slo["vault_slo_breaches"] == 1
+            repeated_vault_slo = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert repeated_vault_slo["vault_slo_breaches"] == 0
+            breached_incident = client.get(
+                f"/agents/{agent_id}/memory-vault-incidents", headers=headers_b
+            )
+            assert breached_incident.json()[0]["slo_breached"] is True
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/memory-keyring", headers=headers_b
+                ).json()["slo_status"]
+                == "breached"
+            )
+            monkeypatch.setattr(
+                memory_service_module,
+                "utc_now",
+                current_vault_monitor_time,
             )
             monkeypatch.setattr(
                 memory_service_module.ManagedVaultSecretResolver,

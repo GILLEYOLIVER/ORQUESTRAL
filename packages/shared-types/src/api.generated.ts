@@ -56,6 +56,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/memory-keyring/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Memory Keyring Policy */
+        get: operations["get_agent_memory_keyring_policy_agents_memory_keyring_policy_get"];
+        /** Update Agent Memory Keyring Policy */
+        put: operations["update_agent_memory_keyring_policy_agents_memory_keyring_policy_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/providers/status": {
         parameters: {
             query?: never;
@@ -637,6 +655,41 @@ export interface paths {
         get: operations["get_agent_memory_keyring_status_agents__agent_id__memory_keyring_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/credential-renewals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Credential Renewals */
+        get: operations["list_agent_memory_credential_renewals_agents__agent_id__memory_keyring_credential_renewals_get"];
+        put?: never;
+        /** Request Agent Memory Credential Renewal */
+        post: operations["request_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/credential-renewals/{renewal_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Credential Renewal */
+        post: operations["decide_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals__renewal_id__decision_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5066,6 +5119,52 @@ export interface components {
             /** Task Delegation Id */
             task_delegation_id?: string | null;
         };
+        /** AgentMemoryCredentialRenewalCreate */
+        AgentMemoryCredentialRenewalCreate: {
+            /** Extension Days */
+            extension_days: number;
+            /** Reason */
+            reason: string;
+        };
+        /** AgentMemoryCredentialRenewalResponse */
+        AgentMemoryCredentialRenewalResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /** Extension Days */
+            extension_days: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Proposed Expires At
+             * Format: date-time
+             */
+            proposed_expires_at: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+        };
         /** AgentMemoryExerciseDueResponse */
         AgentMemoryExerciseDueResponse: {
             /** Executed */
@@ -5140,6 +5239,42 @@ export interface components {
              */
             max_retry_attempts: number;
         };
+        /** AgentMemoryKeyringPolicyResponse */
+        AgentMemoryKeyringPolicyResponse: {
+            /** Automatic Exit Batch Size */
+            automatic_exit_batch_size: number;
+            /**
+             * Automatic Exit Enabled
+             * @default true
+             */
+            automatic_exit_enabled: boolean;
+            /** Configured */
+            configured: boolean;
+            /** Expiry Warning Days */
+            expiry_warning_days: number;
+            /** Updated At */
+            updated_at: string | null;
+            /** Vault Failure Alert Threshold */
+            vault_failure_alert_threshold: number;
+            /** Vault Slo Minutes */
+            vault_slo_minutes: number;
+        };
+        /** AgentMemoryKeyringPolicyUpdate */
+        AgentMemoryKeyringPolicyUpdate: {
+            /** Automatic Exit Batch Size */
+            automatic_exit_batch_size: number;
+            /**
+             * Automatic Exit Enabled
+             * @default true
+             */
+            automatic_exit_enabled: boolean;
+            /** Expiry Warning Days */
+            expiry_warning_days: number;
+            /** Vault Failure Alert Threshold */
+            vault_failure_alert_threshold: number;
+            /** Vault Slo Minutes */
+            vault_slo_minutes: number;
+        };
         /** AgentMemoryKeyringStatusResponse */
         AgentMemoryKeyringStatusResponse: {
             /** Activated At */
@@ -5163,6 +5298,11 @@ export interface components {
             last_resolved_at: string | null;
             /** Provider Code */
             provider_code: string;
+            /**
+             * Slo Status
+             * @enum {string}
+             */
+            slo_status: "not_applicable" | "within_slo" | "breached";
             /**
              * Source
              * @enum {string}
@@ -5943,6 +6083,8 @@ export interface components {
             provider_code: string;
             /** Resolved At */
             resolved_at: string | null;
+            /** Slo Breached */
+            slo_breached: boolean;
             /**
              * Status
              * @enum {string}
@@ -11838,6 +11980,104 @@ export interface operations {
             };
         };
     };
+    get_agent_memory_keyring_policy_agents_memory_keyring_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryKeyringPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_agent_memory_keyring_policy_agents_memory_keyring_policy_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryKeyringPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryKeyringPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     provider_status_agents_providers_status_get: {
         parameters: {
             query?: never;
@@ -14017,6 +14257,162 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryKeyringStatusResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_credential_renewals_agents__agent_id__memory_keyring_credential_renewals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryCredentialRenewalResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryCredentialRenewalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryCredentialRenewalResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_credential_renewal_agents__agent_id__memory_keyring_credential_renewals__renewal_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                renewal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryCredentialRenewalResponse"];
                 };
             };
             /** @description Solicitação inválida */

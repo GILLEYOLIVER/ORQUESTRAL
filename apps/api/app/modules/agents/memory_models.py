@@ -829,9 +829,7 @@ class AgentMemoryVaultIncident(Base):
     company_id: Mapped[UUID] = mapped_column(
         ForeignKey("companies.id", ondelete="CASCADE"), index=True
     )
-    agent_id: Mapped[UUID] = mapped_column(
-        ForeignKey("agents.id", ondelete="CASCADE"), index=True
-    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     binding_id: Mapped[UUID] = mapped_column(
         ForeignKey("agent_memory_keyring_bindings.id", ondelete="CASCADE"), index=True
     )
@@ -847,7 +845,116 @@ class AgentMemoryVaultIncident(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
     alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    slo_breached_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentMemoryKeyringPolicy(Base):
+    __tablename__ = "agent_memory_keyring_policies"
+    __table_args__ = (
+        UniqueConstraint("company_id", name="uq_agent_memory_keyring_policy_company"),
+        CheckConstraint(
+            "expiry_warning_days BETWEEN 1 AND 90",
+            name="ck_agent_memory_keyring_policy_warning",
+        ),
+        CheckConstraint(
+            "automatic_exit_batch_size BETWEEN 1 AND 500",
+            name="ck_agent_memory_keyring_policy_batch",
+        ),
+        CheckConstraint(
+            "vault_failure_alert_threshold BETWEEN 1 AND 20",
+            name="ck_agent_memory_keyring_policy_failure_threshold",
+        ),
+        CheckConstraint(
+            "vault_slo_minutes BETWEEN 1 AND 1440",
+            name="ck_agent_memory_keyring_policy_slo",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    expiry_warning_days: Mapped[int] = mapped_column(Integer)
+    automatic_exit_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
+    automatic_exit_batch_size: Mapped[int] = mapped_column(Integer)
+    vault_failure_alert_threshold: Mapped[int] = mapped_column(Integer)
+    vault_slo_minutes: Mapped[int] = mapped_column(Integer)
+    updated_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AgentMemoryCredentialRenewal(Base):
+    __tablename__ = "agent_memory_credential_renewals"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_agent_memory_credential_renewal_status",
+        ),
+        CheckConstraint(
+            "extension_days BETWEEN 1 AND 365",
+            name="ck_agent_memory_credential_renewal_extension",
+        ),
+        CheckConstraint(
+            "char_length(reason_fingerprint) = 64",
+            name="ck_agent_memory_credential_renewal_reason",
+        ),
+        CheckConstraint(
+            "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id",
+            name="ck_agent_memory_credential_renewal_separation",
+        ),
+        Index(
+            "uq_agent_memory_credential_renewal_pending",
+            "company_id",
+            "binding_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    binding_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_memory_keyring_bindings.id", ondelete="CASCADE"), index=True
+    )
+    credential_id: Mapped[UUID] = mapped_column(
+        ForeignKey("integration_credentials.id", ondelete="RESTRICT"), index=True
+    )
+    extension_days: Mapped[int] = mapped_column(Integer)
+    reason_fingerprint: Mapped[str] = mapped_column(String(64))
+    proposed_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending", index=True
+    )
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    decided_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AgentMemoryReencryptionLegalHold(Base):

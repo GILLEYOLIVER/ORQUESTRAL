@@ -145,3 +145,12 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 - O worker verifica cofres ativos, abre um único incidente por vínculo, alerta após o limiar configurado e registra a recuperação sem armazenar mensagens do provedor, referências ou segredos.
 - Credenciais com vencimento iniciam saída automática dentro da janela configurada. Uma credencial vencida só é revogada quando nenhum keyring ativo depende dela.
 - Renovações de retenção legal estão disponíveis na interface e continuam exigindo uma decisão de outro usuário autorizado.
+
+## Política, renovação e SLO dos cofres gerenciados
+
+- Cada empresa pode definir sua própria janela de aviso, lote de saída, limiar de falhas e SLO de indisponibilidade. Sem configuração, os padrões seguros do ambiente continuam valendo.
+- A saída automática pode ser desativada por política empresarial, mas credenciais vencidas nunca são tratadas como válidas e a revogação continua condicionada à ausência de vínculos ativos.
+- Uma credencial vinculada e ainda válida pode receber solicitação de extensão. A justificativa é persistida apenas como impressão HMAC e não aparece em respostas, eventos ou notificações.
+- O solicitante não pode aprovar a própria renovação. Aprovação após vencimento ou após início da saída segura é bloqueada.
+- O primeiro rompimento do SLO por incidente gera alerta, auditoria e evento uma única vez; recuperações encerram o incidente sem apagar seu histórico.
+- A interface mostra a política, o estado do SLO, solicitações de renovação e decisões, sem revelar credencial, referência de chave ou material criptográfico.
