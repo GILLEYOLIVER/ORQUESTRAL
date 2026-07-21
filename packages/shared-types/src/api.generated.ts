@@ -5202,6 +5202,8 @@ export interface components {
              * @default 100
              */
             batch_size: number;
+            /** Key Credential Id */
+            key_credential_id?: string | null;
             /**
              * Max Retry Attempts
              * @default 3
@@ -5250,6 +5252,8 @@ export interface components {
             last_retry_at: string | null;
             /** Max Retry Attempts */
             max_retry_attempts: number;
+            /** Purge After */
+            purge_after: string | null;
             /** Recovery Assessed By User Id */
             recovery_assessed_by_user_id: string | null;
             /**
@@ -5286,6 +5290,8 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Vault Credential Bound */
+            vault_credential_bound: boolean;
         };
         /** AgentMemoryReencryptionJobRetry */
         AgentMemoryReencryptionJobRetry: {

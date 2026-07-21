@@ -83,3 +83,12 @@ def test_external_key_provider_requires_coordinated_previous_references() -> Non
             encryption_previous_keys=["historical-key-material-with-32-characters"],
             encryption_previous_key_references=[],
         )
+
+
+def test_monitor_secret_rotation_rejects_duplicate_keyring() -> None:
+    with pytest.raises(ValidationError, match="devem ser únicos"):
+        Settings(
+            agent_memory_monitor_previous_secrets=[
+                "development-only-change-me-agent-memory-monitor-secret-32"
+            ]
+        )

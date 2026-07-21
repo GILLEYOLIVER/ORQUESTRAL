@@ -39,12 +39,17 @@ def verify_agent_memory_monitor(request: Request) -> None:
             detail="Assinatura do monitor expirada.",
         )
     message = f"GET\n{_MEMORY_MONITOR_PATH}\n{timestamp}".encode()
-    expected = hmac.new(
-        request.app.state.settings.agent_memory_monitor_secret.encode(),
-        message,
-        hashlib.sha256,
-    ).hexdigest()
-    if not hmac.compare_digest(expected, signature):
+    secrets = (
+        request.app.state.settings.agent_memory_monitor_secret,
+        *request.app.state.settings.agent_memory_monitor_previous_secrets,
+    )
+    signature_valid = any(
+        hmac.compare_digest(
+            hmac.new(secret.encode(), message, hashlib.sha256).hexdigest(), signature
+        )
+        for secret in secrets
+    )
+    if not signature_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Assinatura do monitor inválida.",

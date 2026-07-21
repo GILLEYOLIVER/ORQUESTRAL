@@ -479,6 +479,7 @@ class AgentMemorySchedulerMetricsResponse(StrictSchema):
 class AgentMemoryReencryptionJobCreate(StrictSchema):
     batch_size: int = Field(default=100, ge=1, le=500)
     max_retry_attempts: int = Field(default=3, ge=1, le=10)
+    key_credential_id: UUID | None = None
 
 
 class AgentMemoryReencryptionJobRetry(StrictSchema):
@@ -506,6 +507,7 @@ class AgentMemoryReencryptionJobResponse(StrictSchema):
     status: Literal["pending", "running", "completed", "failed", "closed"]
     target_master_key_id: str
     key_provider: Literal["environment", "external"]
+    vault_credential_bound: bool
     batch_size: int
     total_count: int
     scanned_count: int
@@ -526,6 +528,7 @@ class AgentMemoryReencryptionJobResponse(StrictSchema):
     created_at: datetime
     started_at: datetime | None
     completed_at: datetime | None
+    purge_after: datetime | None
     updated_at: datetime
 
 

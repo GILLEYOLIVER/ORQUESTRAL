@@ -10,10 +10,10 @@ from fastapi.testclient import TestClient
 MONITOR_SECRET = "development-only-change-me-agent-memory-monitor-secret-32"
 
 
-def _monitor_headers(*, at: datetime | None = None) -> dict[str, str]:
+def _monitor_headers(*, at: datetime | None = None, secret: str = MONITOR_SECRET) -> dict[str, str]:
     timestamp = str(int((at or datetime.now(UTC)).timestamp()))
     message = f"GET\n/health/agent-memory-scheduler\n{timestamp}"
-    signature = hmac.new(MONITOR_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()
+    signature = hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
     return {
         "X-Orkestral-Monitor-Timestamp": timestamp,
         "X-Orkestral-Monitor-Signature": signature,
@@ -45,6 +45,14 @@ def test_agent_memory_scheduler_health_is_generic(client: TestClient) -> None:
     assert response.json()["component"] == "agent-memory-worker"
     assert response.json()["state"] in {"idle", "healthy"}
     assert set(response.json()) == {"status", "component", "state", "request_id"}
+
+    previous_secret = "previous-monitor-secret-with-at-least-32-characters"
+    client.app.state.settings.agent_memory_monitor_previous_secrets = [previous_secret]
+    rotated_response = client.get(
+        "/health/agent-memory-scheduler",
+        headers=_monitor_headers(secret=previous_secret),
+    )
+    assert rotated_response.status_code == 200
 
 
 def test_valid_request_id_is_propagated(client: TestClient) -> None:

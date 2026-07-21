@@ -105,6 +105,7 @@ from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.notifications.service import company_approver_user_ids, create_notification
 from app.modules.plugins.crypto import CredentialVault
+from app.modules.plugins.models import IntegrationCredential
 from app.modules.users.models import CompanyUser
 
 router = APIRouter()
@@ -2156,6 +2157,7 @@ def _memory_reencryption_job_response(
         status=cast(Literal["pending", "running", "completed", "failed", "closed"], job.status),
         target_master_key_id=job.target_master_key_id,
         key_provider=cast(Literal["environment", "external"], job.key_provider),
+        vault_credential_bound=job.vault_credential_id is not None,
         batch_size=job.batch_size,
         total_count=job.total_count,
         scanned_count=job.scanned_count,
@@ -2176,8 +2178,49 @@ def _memory_reencryption_job_response(
         created_at=job.created_at,
         started_at=job.started_at,
         completed_at=job.completed_at,
+        purge_after=job.purge_after,
         updated_at=job.updated_at,
     )
+
+
+async def _vault_credential_binding(
+    database: DatabaseSession,
+    *,
+    settings: Settings,
+    company_id: UUID,
+    credential_id: UUID | None,
+) -> IntegrationCredential | None:
+    if settings.encryption_key_provider == "environment":
+        if credential_id is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="Credencial de cofre só pode ser vinculada ao provedor externo.",
+            )
+        return None
+    if credential_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Selecione uma credencial ativa do cofre externo.",
+        )
+    credential = await database.scalar(
+        select(IntegrationCredential).where(
+            IntegrationCredential.id == credential_id,
+            IntegrationCredential.company_id == company_id,
+            IntegrationCredential.status == "active",
+            or_(
+                IntegrationCredential.expires_at.is_(None),
+                IntegrationCredential.expires_at > utc_now(),
+            ),
+        )
+    )
+    if credential is None:
+        raise HTTPException(status_code=404, detail="Credencial ativa do cofre não encontrada.")
+    if "key_reference" not in credential.credential_fields:
+        raise HTTPException(
+            status_code=422,
+            detail="A credencial do cofre deve declarar o campo key_reference.",
+        )
+    return credential
 
 
 async def _memory_reencryption_recovery_assessment(
@@ -2208,6 +2251,37 @@ async def _memory_reencryption_recovery_assessment(
         )
         .limit(1)
     )
+    vault_credential_active = job.key_provider == "environment"
+    vault_credential_binding_matches = job.key_provider == "environment"
+    if job.key_provider == "external" and job.vault_credential_id is not None:
+        credential = await database.scalar(
+            select(IntegrationCredential).where(
+                IntegrationCredential.id == job.vault_credential_id,
+                IntegrationCredential.company_id == job.company_id,
+                IntegrationCredential.status == "active",
+                or_(
+                    IntegrationCredential.expires_at.is_(None),
+                    IntegrationCredential.expires_at > utc_now(),
+                ),
+            )
+        )
+        vault_credential_active = bool(
+            credential is not None and "key_reference" in credential.credential_fields
+        )
+        vault_credential_binding_matches = bool(
+            credential is not None
+            and job.vault_credential_fingerprint
+            and compare_digest(
+                job.vault_credential_fingerprint,
+                memory_incident_value_fingerprint(
+                    secret=settings.encryption_key,
+                    company_id=job.company_id,
+                    agent_id=job.agent_id,
+                    value_type="vault_credential_binding",
+                    value=str(credential.id),
+                ),
+            )
+        )
     checks = {
         "job_failed": job.status == "failed",
         "historical_keyring_configured": bool(settings.encryption_previous_keys),
@@ -2220,6 +2294,8 @@ async def _memory_reencryption_recovery_assessment(
         "external_keyring_coordinated": settings.encryption_key_provider == "environment"
         or len(settings.encryption_previous_key_references)
         == len(settings.encryption_previous_keys),
+        "vault_credential_active": vault_credential_active,
+        "vault_credential_binding_matches": vault_credential_binding_matches,
         "snapshot_intact": job.total_count == 0
         or (job.snapshot_created_at is not None and job.snapshot_memory_id is not None),
         "retry_budget_available": job.retry_count < job.max_retry_attempts,
@@ -2241,6 +2317,12 @@ async def _memory_reencryption_recovery_assessment(
         ),
         "external_keyring_coordinated": (
             "Associe uma referência externa a cada chave histórica antes de continuar."
+        ),
+        "vault_credential_active": (
+            "Ative uma credencial de cofre da mesma empresa contendo key_reference."
+        ),
+        "vault_credential_binding_matches": (
+            "Restaure a credencial originalmente vinculada ou encerre o job com auditoria."
         ),
         "snapshot_intact": (
             "Não retome: o snapshot está incompleto e exige investigação operacional."
@@ -2299,6 +2381,12 @@ async def create_agent_memory_reencryption_job(
 ) -> AgentMemoryReencryptionJobResponse:
     context = get_request_context(principal)
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    vault_credential = await _vault_credential_binding(
+        database,
+        settings=settings,
+        company_id=context.company_id,
+        credential_id=payload.key_credential_id,
+    )
     if not settings.encryption_previous_keys:
         raise HTTPException(
             status_code=409,
@@ -2344,6 +2432,18 @@ async def create_agent_memory_reencryption_job(
         target_key_reference_fingerprint=memory_key_reference_fingerprint(
             settings.encryption_key_reference
         ),
+        vault_credential_id=vault_credential.id if vault_credential else None,
+        vault_credential_fingerprint=(
+            memory_incident_value_fingerprint(
+                secret=settings.encryption_key,
+                company_id=context.company_id,
+                agent_id=agent_id,
+                value_type="vault_credential_binding",
+                value=str(vault_credential.id),
+            )
+            if vault_credential
+            else None
+        ),
         batch_size=payload.batch_size,
         max_retry_attempts=payload.max_retry_attempts,
         total_count=total_count,
@@ -2360,7 +2460,11 @@ async def create_agent_memory_reencryption_job(
         action="agent.memory_reencryption.requested",
         target_type="agent_memory_reencryption_job",
         target_id=job.id,
-        details={"agent_id": str(agent_id), "total_count": total_count},
+        details={
+            "agent_id": str(agent_id),
+            "total_count": total_count,
+            "vault_credential_bound": vault_credential is not None,
+        },
     )
     enqueue_domain_event(
         database,
@@ -2489,6 +2593,9 @@ async def close_agent_memory_reencryption_job(
     )
     job.closed_at = now
     job.closed_by_user_id = context.user_id
+    job.purge_after = now + timedelta(
+        days=settings.agent_memory_reencryption_terminal_retention_days
+    )
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -2620,6 +2727,7 @@ async def retry_agent_memory_reencryption_job(
     )
     job.started_at = None
     job.completed_at = None
+    job.purge_after = None
     job.recovery_status = "not_assessed"
     job.last_recovery_assessment_at = None
     job.recovery_assessed_by_user_id = None

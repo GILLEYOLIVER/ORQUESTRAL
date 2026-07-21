@@ -332,6 +332,7 @@ export interface AgentMemoryReencryptionJob {
   status: "pending" | "running" | "completed" | "failed" | "closed";
   target_master_key_id: string;
   key_provider: "environment" | "external";
+  vault_credential_bound: boolean;
   batch_size: number;
   total_count: number;
   scanned_count: number;
@@ -352,6 +353,7 @@ export interface AgentMemoryReencryptionJob {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  purge_after: string | null;
   updated_at: string;
 }
 

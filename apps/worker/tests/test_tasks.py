@@ -54,7 +54,13 @@ def test_memory_response_schedule_delegates_to_domain_service(monkeypatch: Monke
 def test_memory_reencryption_delegates_to_domain_service(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(
         "worker.tasks.maintain_agent_memory_reencryption_jobs_sync",
-        lambda: {"processed": 1, "completed": 1, "failed": 0, "rotated": 3},
+        lambda: {
+            "processed": 1,
+            "completed": 1,
+            "failed": 0,
+            "rotated": 3,
+            "purged": 2,
+        },
     )
     result = maintain_agent_memory_reencryption_task.apply()
     assert result.successful()
@@ -64,4 +70,5 @@ def test_memory_reencryption_delegates_to_domain_service(monkeypatch: MonkeyPatc
         "completed": 1,
         "failed": 0,
         "rotated": 3,
+        "purged": 2,
     }

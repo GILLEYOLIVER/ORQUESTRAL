@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.resources import create_resources
-from app.core.security import hash_password
+from app.core.security import hash_password, utc_now
 from app.main import create_app
 from app.modules.agents import coordination_execution as coordination_execution_module
 from app.modules.agents import memory_routes as memory_routes_module
@@ -25,6 +25,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryEntry,
     AgentMemoryExerciseSchedule,
     AgentMemoryPolicy,
+    AgentMemoryReencryptionJob,
     AgentMemoryScopePolicy,
     AgentTaskMemoryAccessGrant,
 )
@@ -43,6 +44,8 @@ from app.modules.companies.models import Company
 from app.modules.events.models import OutboxEvent
 from app.modules.notifications.models import Notification
 from app.modules.notifications.service import represented_approver_user_id
+from app.modules.plugins.crypto import CredentialVault
+from app.modules.plugins.models import IntegrationCredential, Plugin
 from app.modules.users.models import CompanyUser, User
 
 
@@ -154,7 +157,64 @@ async def _remove(settings: Settings, identity: AgentGovernanceIdentity) -> None
                 delete(OutboxEvent).where(OutboxEvent.company_id.in_(identity.company_ids))
             )
             await database.execute(delete(Company).where(Company.id.in_(identity.company_ids)))
+            await database.execute(
+                delete(Plugin).where(Plugin.code == f"test-vault-{identity.company_ids[1]}")
+            )
             await database.execute(delete(User).where(User.email.in_(identity.emails)))
+            await database.commit()
+    finally:
+        await resources.close()
+
+
+async def _seed_vault_credentials(
+    settings: Settings, identity: AgentGovernanceIdentity
+) -> tuple[UUID, UUID]:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            plugin = Plugin(
+                code=f"test-vault-{identity.company_ids[1]}",
+                name="Cofre de teste",
+                version="1.0.0",
+                description="Credencial sintética para contrato multiempresa.",
+                authentication_type="secret_reference",
+                status="installed",
+                manifest={},
+            )
+            database.add(plugin)
+            await database.flush()
+            credentials = [
+                IntegrationCredential(
+                    company_id=company_id,
+                    plugin_id=plugin.id,
+                    name="Referência externa de teste",
+                    encrypted_credentials=CredentialVault(settings.encryption_key).encrypt(
+                        {"key_reference": "vault://orkestral/integration/active"}
+                    ),
+                    credential_fields=["key_reference"],
+                    status="active",
+                )
+                for company_id in identity.company_ids
+            ]
+            database.add_all(credentials)
+            await database.commit()
+            return credentials[0].id, credentials[1].id
+    finally:
+        await resources.close()
+
+
+async def _expire_reencryption_job(settings: Settings, *, company_id: UUID, job_id: UUID) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            job = await database.scalar(
+                select(AgentMemoryReencryptionJob).where(
+                    AgentMemoryReencryptionJob.id == job_id,
+                    AgentMemoryReencryptionJob.company_id == company_id,
+                )
+            )
+            assert job is not None
+            job.purge_after = utc_now() - timedelta(minutes=1)
             await database.commit()
     finally:
         await resources.close()
@@ -854,6 +914,64 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 ).status_code
                 == 409
             )
+            vault_credential_a, vault_credential_b = asyncio.run(
+                _seed_vault_credentials(settings, identity)
+            )
+            settings.encryption_key_provider = "external"
+            settings.encryption_key_reference = "vault://orkestral/integration/active"
+            settings.encryption_previous_key_references = ["vault://orkestral/integration/previous"]
+            missing_vault_binding = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={"batch_size": 500, "max_retry_attempts": 1},
+            )
+            assert missing_vault_binding.status_code == 409
+            cross_tenant_vault_binding = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={
+                    "batch_size": 500,
+                    "max_retry_attempts": 1,
+                    "key_credential_id": str(vault_credential_a),
+                },
+            )
+            assert cross_tenant_vault_binding.status_code == 404
+            external_rotation = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={
+                    "batch_size": 500,
+                    "max_retry_attempts": 1,
+                    "key_credential_id": str(vault_credential_b),
+                },
+            )
+            assert external_rotation.status_code == 201
+            assert external_rotation.json()["key_provider"] == "external"
+            assert external_rotation.json()["vault_credential_bound"] is True
+            assert "key_credential_id" not in external_rotation.json()
+            external_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert external_maintenance["completed"] == 1
+            asyncio.run(
+                _expire_reencryption_job(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    job_id=UUID(external_rotation.json()["id"]),
+                )
+            )
+            retention_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert retention_maintenance["purged"] == 1
+            retained_jobs = client.get(
+                f"/agents/{agent_id}/memory-reencryption-jobs", headers=headers_b
+            )
+            assert retained_jobs.status_code == 200
+            assert external_rotation.json()["id"] not in {job["id"] for job in retained_jobs.json()}
+            settings.encryption_key_provider = "environment"
+            settings.encryption_key_reference = "environment://orkestral/local/active"
+            settings.encryption_previous_key_references = []
             other_user_retrieval = asyncio.run(
                 _retrieve_memory_context(
                     settings,

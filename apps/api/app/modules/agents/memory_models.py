@@ -649,6 +649,17 @@ class AgentMemoryReencryptionJob(Base):
             "AND closed_at IS NULL AND closed_by_user_id IS NULL)",
             name="ck_agent_memory_reencryption_job_closure",
         ),
+        CheckConstraint(
+            "(vault_credential_id IS NULL AND vault_credential_fingerprint IS NULL) OR "
+            "(vault_credential_id IS NOT NULL "
+            "AND char_length(vault_credential_fingerprint) = 64)",
+            name="ck_agent_memory_reencryption_job_vault_binding",
+        ),
+        CheckConstraint(
+            "(status IN ('completed', 'failed', 'closed') AND purge_after IS NOT NULL) OR "
+            "(status IN ('pending', 'running') AND purge_after IS NULL)",
+            name="ck_agent_memory_reencryption_job_retention",
+        ),
         Index(
             "uq_agent_memory_reencryption_job_active",
             "company_id",
@@ -673,6 +684,10 @@ class AgentMemoryReencryptionJob(Base):
         String(24), default="environment", server_default="environment"
     )
     target_key_reference_fingerprint: Mapped[str] = mapped_column(String(64))
+    vault_credential_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("integration_credentials.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    vault_credential_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     batch_size: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
     total_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     scanned_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -708,6 +723,9 @@ class AgentMemoryReencryptionJob(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    purge_after: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=func.now(),

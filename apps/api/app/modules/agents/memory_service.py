@@ -9,7 +9,7 @@ from time import perf_counter
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -40,6 +40,7 @@ from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.notifications.service import create_notification
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
+from app.modules.plugins.models import IntegrationCredential
 
 DEFAULT_SCOPES = ["conversation", "task", "operational"]
 DEFAULT_CLASSIFICATIONS = ["public", "internal"]
@@ -741,10 +742,57 @@ async def process_agent_memory_reencryption_jobs(
     active_key_id = memory_master_key_id(settings.encryption_key)
     for job in jobs:
         now = utc_now()
+        if job.key_provider == "external":
+            credential = (
+                await database.scalar(
+                    select(IntegrationCredential).where(
+                        IntegrationCredential.id == job.vault_credential_id,
+                        IntegrationCredential.company_id == job.company_id,
+                        IntegrationCredential.status == "active",
+                        or_(
+                            IntegrationCredential.expires_at.is_(None),
+                            IntegrationCredential.expires_at > now,
+                        ),
+                    )
+                )
+                if job.vault_credential_id is not None
+                else None
+            )
+            expected_binding = (
+                memory_incident_value_fingerprint(
+                    secret=settings.encryption_key,
+                    company_id=job.company_id,
+                    agent_id=job.agent_id,
+                    value_type="vault_credential_binding",
+                    value=str(credential.id),
+                )
+                if credential is not None
+                else ""
+            )
+            if (
+                credential is None
+                or "key_reference" not in credential.credential_fields
+                or not job.vault_credential_fingerprint
+                or not hmac.compare_digest(job.vault_credential_fingerprint, expected_binding)
+            ):
+                job.status = "failed"
+                job.error_code = "vault_credential_unavailable"
+                job.completed_at = now
+                job.purge_after = now + timedelta(
+                    days=settings.agent_memory_reencryption_terminal_retention_days
+                )
+                job.recovery_status = "not_assessed"
+                job.last_recovery_assessment_at = None
+                job.recovery_assessed_by_user_id = None
+                failed += 1
+                continue
         if job.target_master_key_id != active_key_id:
             job.status = "failed"
             job.error_code = "target_key_changed"
             job.completed_at = now
+            job.purge_after = now + timedelta(
+                days=settings.agent_memory_reencryption_terminal_retention_days
+            )
             job.recovery_status = "not_assessed"
             job.last_recovery_assessment_at = None
             job.recovery_assessed_by_user_id = None
@@ -799,6 +847,9 @@ async def process_agent_memory_reencryption_jobs(
                 job.status = "failed"
                 job.error_code = "memory_decryption_failed"
                 job.completed_at = utc_now()
+                job.purge_after = job.completed_at + timedelta(
+                    days=settings.agent_memory_reencryption_terminal_retention_days
+                )
                 job.recovery_status = "not_assessed"
                 job.last_recovery_assessment_at = None
                 job.recovery_assessed_by_user_id = None
@@ -814,6 +865,9 @@ async def process_agent_memory_reencryption_jobs(
         if not rows or len(rows) < job.batch_size or job.scanned_count >= job.total_count:
             job.status = "completed"
             job.completed_at = utc_now()
+            job.purge_after = job.completed_at + timedelta(
+                days=settings.agent_memory_reencryption_terminal_retention_days
+            )
             completed += 1
             record_authorization_audit(
                 database,
@@ -863,11 +917,64 @@ async def process_agent_memory_reencryption_jobs(
     }
 
 
+async def purge_terminal_agent_memory_reencryption_jobs(
+    database: AsyncSession, *, now: datetime | None = None, limit: int = 1_000
+) -> int:
+    cutoff = now or utc_now()
+    jobs = list(
+        await database.scalars(
+            select(AgentMemoryReencryptionJob)
+            .where(
+                AgentMemoryReencryptionJob.status.in_(("completed", "failed", "closed")),
+                AgentMemoryReencryptionJob.purge_after <= cutoff,
+            )
+            .order_by(AgentMemoryReencryptionJob.purge_after)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    grouped: dict[tuple[UUID, UUID], dict[str, int]] = {}
+    for job in jobs:
+        key = (job.company_id, job.requested_by_user_id)
+        counts = grouped.setdefault(key, {"completed": 0, "failed": 0, "closed": 0})
+        counts[job.status] += 1
+    if jobs:
+        await database.execute(
+            delete(AgentMemoryReencryptionJob).where(
+                AgentMemoryReencryptionJob.id.in_([job.id for job in jobs])
+            )
+        )
+    for (company_id, actor_user_id), counts in grouped.items():
+        record_authorization_audit(
+            database,
+            company_id=company_id,
+            actor_user_id=actor_user_id,
+            action="agent.memory_reencryption.retention_purged",
+            target_type="company",
+            target_id=company_id,
+            details={"purged_count": sum(counts.values()), "statuses": counts},
+        )
+        enqueue_domain_event(
+            database,
+            DomainEventCreate(
+                event_type="agent.memory_reencryption.retention_purged",
+                company_id=company_id,
+                actor_user_id=actor_user_id,
+                classification="internal",
+                payload={"purged_count": sum(counts.values()), "statuses": counts},
+            ),
+        )
+    await database.commit()
+    return len(jobs)
+
+
 async def maintain_agent_memory_reencryption_jobs(*, settings: Settings) -> dict[str, int]:
     resources = create_resources(settings)
     try:
         async with resources.sessions() as database:
-            return await process_agent_memory_reencryption_jobs(database, settings=settings)
+            result = await process_agent_memory_reencryption_jobs(database, settings=settings)
+            result["purged"] = await purge_terminal_agent_memory_reencryption_jobs(database)
+            return result
     finally:
         await resources.close()
 

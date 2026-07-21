@@ -45,9 +45,9 @@ class Settings(BaseSettings):
     encryption_key_provider: Literal["environment", "external"] = "environment"
     encryption_key_reference: str = "environment://orkestral/local/active"
     encryption_previous_key_references: list[str] = Field(default_factory=list)
-    agent_memory_monitor_secret: str = (
-        "development-only-change-me-agent-memory-monitor-secret-32"  # noqa: S105
-    )
+    agent_memory_monitor_secret: str = "development-only-change-me-agent-memory-monitor-secret-32"  # noqa: S105
+    agent_memory_monitor_previous_secrets: list[str] = Field(default_factory=list)
+    agent_memory_reencryption_terminal_retention_days: int = Field(default=90, ge=7, le=3_650)
     n8n_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:5678")
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
     n8n_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
@@ -118,6 +118,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
+        monitor_secrets = (
+            self.agent_memory_monitor_secret,
+            *self.agent_memory_monitor_previous_secrets,
+        )
+        if len(set(monitor_secrets)) != len(monitor_secrets):
+            raise ValueError("Segredos ativos e anteriores do monitor devem ser únicos")
         if self.encryption_key_provider == "external":
             references = (
                 self.encryption_key_reference,
@@ -151,6 +157,11 @@ class Settings(BaseSettings):
                 if len(value) < 32
                 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
             ]
+            if any(
+                len(value) < 32 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
+                for value in self.agent_memory_monitor_previous_secrets
+            ):
+                unsafe_remote_secrets.append("AGENT_MEMORY_MONITOR_PREVIOUS_SECRETS")
             if unsafe_remote_secrets:
                 raise ValueError(
                     "Segredos inseguros no desenvolvimento remoto: "
@@ -202,6 +213,11 @@ class Settings(BaseSettings):
             for name, value in secrets.items()
             if len(value) < 32 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
         ]
+        if any(
+            len(value) < 32 or any(marker in value.lower() for marker in _PLACEHOLDER_MARKERS)
+            for value in self.agent_memory_monitor_previous_secrets
+        ):
+            unsafe.append("AGENT_MEMORY_MONITOR_PREVIOUS_SECRETS")
         if unsafe:
             joined = ", ".join(sorted(unsafe))
             raise ValueError(f"Valores inseguros para produção: {joined}")

@@ -698,3 +698,18 @@ Data: 21 de julho de 2026.
 - Segurança comprovada: acesso sem assinatura ou com timestamp expirado retorna `401`, fechamento cruzado retorna `404`, job encerrado não pode ser retomado e justificativas não aparecem nas respostas.
 - Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
 - Próximo passo: gestão de referências de cofre por credencial vinculada, rotação automatizada do segredo do monitor e política de retenção dos registros terminais.
+
+## Ciclo 41 - credencial de cofre, rotação do monitor e retenção terminal
+
+- Jobs com provedor externo exigem credencial criptografada ativa da mesma empresa contendo `key_reference`; a API nunca retorna seu ID, URI ou conteúdo.
+- O diagnóstico bloqueia credenciais revogadas, expiradas, externas ao tenant ou diferentes do vínculo HMAC original.
+- O monitor aceita o segredo ativo e uma lista temporária de segredos anteriores únicos, permitindo rotação sem indisponibilidade e remoção após a janela antirreplay.
+- Jobs terminais recebem prazo configurável entre 7 e 3.650 dias; o worker remove registros vencidos e preserva auditoria agregada sem identificadores operacionais.
+- A interface informa apenas se há credencial vinculada e a data limite de retenção.
+- Migração: `20260721_0062_agent_memory_vault_monitor_retention.py`.
+- Validação local: Ruff e MyPy aprovados em 198 arquivos; 140 testes da API, 5 do worker, 12 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria sem vulnerabilidades conhecidas.
+- Migração reversível `0062 -> 0061 -> 0062` aprovada; banco em `20260721_0062 (head)`.
+- Runtime local: `/health`, `/ready`, `/app` e monitor HMAC responderam `200`; API, worker e gateway saudáveis; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: credencial ausente retorna `409`, vínculo de outro tenant retorna `404`, vínculo válido não expõe ID e registro terminal vencido é removido com auditoria agregada.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
+- Próximo passo: seleção guiada de credenciais por catálogo, rotação programada do segredo do monitor e legal hold específico para jobs de recriptografia.

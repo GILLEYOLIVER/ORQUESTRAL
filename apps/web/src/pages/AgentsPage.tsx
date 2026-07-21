@@ -204,6 +204,7 @@ export function AgentsPage() {
     useState("100");
   const [memoryReencryptionMaxRetries, setMemoryReencryptionMaxRetries] =
     useState("3");
+  const [memoryVaultCredentialId, setMemoryVaultCredentialId] = useState("");
   const [memoryReencryptionRetryReason, setMemoryReencryptionRetryReason] =
     useState("");
   const [memoryReencryptionClosureCode, setMemoryReencryptionClosureCode] =
@@ -834,6 +835,7 @@ export function AgentsPage() {
           body: {
             batch_size: Number(memoryReencryptionBatchSize),
             max_retry_attempts: Number(memoryReencryptionMaxRetries),
+            key_credential_id: memoryVaultCredentialId.trim() || null,
           },
         },
       ),
@@ -2144,6 +2146,13 @@ export function AgentsPage() {
                     type="number"
                     value={memoryReencryptionMaxRetries}
                   />
+                  <TextField
+                    label="ID da credencial do cofre externo (opcional no ambiente local)"
+                    onChange={(event) =>
+                      setMemoryVaultCredentialId(event.target.value)
+                    }
+                    value={memoryVaultCredentialId}
+                  />
                   <Button
                     loading={startMemoryReencryption.isPending}
                     type="submit"
@@ -2160,7 +2169,13 @@ export function AgentsPage() {
                         ? ` · erro ${latestMemoryReencryptionJob.error_code}`
                         : ""}
                       {` · chaves ${latestMemoryReencryptionJob.key_provider}`}
+                      {latestMemoryReencryptionJob.vault_credential_bound
+                        ? " · credencial vinculada"
+                        : " · sem credencial externa"}
                       {` · retomadas ${latestMemoryReencryptionJob.retry_count}/${latestMemoryReencryptionJob.max_retry_attempts}`}
+                      {latestMemoryReencryptionJob.purge_after
+                        ? ` · retenção até ${new Date(latestMemoryReencryptionJob.purge_after).toLocaleDateString("pt-BR")}`
+                        : ""}
                     </small>
                   ) : (
                     <small>Nenhuma recriptografia solicitada.</small>
