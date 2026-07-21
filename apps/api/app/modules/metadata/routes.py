@@ -4,10 +4,23 @@ from collections.abc import Awaitable
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from app.core.dependencies import DatabaseSession
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.metadata.record_schemas import (
+    MetadataRecordCreate,
+    MetadataRecordPage,
+    MetadataRecordResponse,
+    MetadataRecordUpdate,
+)
+from app.modules.metadata.record_service import (
+    create_custom_record,
+    delete_custom_record,
+    get_custom_record,
+    list_custom_records,
+    update_custom_record,
+)
 from app.modules.metadata.schemas import (
     MetadataEntityCreate,
     MetadataEntityDetail,
@@ -31,6 +44,16 @@ router = APIRouter(prefix="/metadata", tags=["metadata"])
 CanViewMetadata = Annotated[Principal, Depends(require_permission("metadata.view"))]
 CanConfigureMetadata = Annotated[Principal, Depends(require_permission("metadata.configure"))]
 CanPublishMetadata = Annotated[Principal, Depends(require_permission("metadata.publish"))]
+CanViewMetadataRecords = Annotated[Principal, Depends(require_permission("metadata.records.view"))]
+CanCreateMetadataRecords = Annotated[
+    Principal, Depends(require_permission("metadata.records.create"))
+]
+CanUpdateMetadataRecords = Annotated[
+    Principal, Depends(require_permission("metadata.records.update"))
+]
+CanDeleteMetadataRecords = Annotated[
+    Principal, Depends(require_permission("metadata.records.delete"))
+]
 
 
 async def _run[ResultT](operation: Awaitable[ResultT]) -> ResultT:
@@ -172,3 +195,118 @@ async def publish_metadata_entity(
             _correlation_id(request),
         )
     )
+
+
+@router.get("/entities/{definition_id}/records", response_model=MetadataRecordPage)
+async def list_metadata_records(
+    definition_id: UUID,
+    request: Request,
+    principal: CanViewMetadataRecords,
+    database: DatabaseSession,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> MetadataRecordPage:
+    return await _run(
+        list_custom_records(
+            database,
+            get_request_context(principal),
+            definition_id,
+            _correlation_id(request),
+            page=page,
+            page_size=page_size,
+        )
+    )
+
+
+@router.post(
+    "/entities/{definition_id}/records",
+    response_model=MetadataRecordResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_metadata_record(
+    definition_id: UUID,
+    payload: MetadataRecordCreate,
+    request: Request,
+    principal: CanCreateMetadataRecords,
+    database: DatabaseSession,
+) -> MetadataRecordResponse:
+    return await _run(
+        create_custom_record(
+            database,
+            get_request_context(principal),
+            definition_id,
+            payload,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.get(
+    "/entities/{definition_id}/records/{record_id}",
+    response_model=MetadataRecordResponse,
+)
+async def get_metadata_record(
+    definition_id: UUID,
+    record_id: UUID,
+    request: Request,
+    principal: CanViewMetadataRecords,
+    database: DatabaseSession,
+) -> MetadataRecordResponse:
+    return await _run(
+        get_custom_record(
+            database,
+            get_request_context(principal),
+            definition_id,
+            record_id,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.put(
+    "/entities/{definition_id}/records/{record_id}",
+    response_model=MetadataRecordResponse,
+)
+async def update_metadata_record(
+    definition_id: UUID,
+    record_id: UUID,
+    payload: MetadataRecordUpdate,
+    request: Request,
+    principal: CanUpdateMetadataRecords,
+    database: DatabaseSession,
+) -> MetadataRecordResponse:
+    return await _run(
+        update_custom_record(
+            database,
+            get_request_context(principal),
+            definition_id,
+            record_id,
+            payload,
+            _correlation_id(request),
+        )
+    )
+
+
+@router.delete(
+    "/entities/{definition_id}/records/{record_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_metadata_record(
+    definition_id: UUID,
+    record_id: UUID,
+    request: Request,
+    principal: CanDeleteMetadataRecords,
+    database: DatabaseSession,
+    expected_version: Annotated[int, Query(ge=1)],
+) -> Response:
+    await _run(
+        delete_custom_record(
+            database,
+            get_request_context(principal),
+            definition_id,
+            record_id,
+            expected_version,
+            _correlation_id(request),
+        )
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

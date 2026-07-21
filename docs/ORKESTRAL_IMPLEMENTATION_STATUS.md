@@ -252,3 +252,27 @@ Data: 21 de julho de 2026.
 - Migracao: `0030 -> 0029 -> 0030` aprovada; banco em `20260721_0030 (head)`.
 - Isolamento: entidade de uma empresa retorna `404` para outra empresa.
 - Eventos: auditoria e eventos de dominio possuem contratos distintos, sem duplicidade semantica.
+
+## Ciclo empresarial 8 - registros personalizados seguros
+
+Data: 21 de julho de 2026.
+
+- Runtime: registros vinculados ao schema publicado e a sua versao exata.
+- Validacao: tipos, obrigatoriedade, padroes, campos desconhecidos e unicidade.
+- Confiabilidade: idempotencia de criacao e concorrencia otimista de atualizacao.
+- Seguranca: permissoes por operacao e mascaramento/bloqueio por campo no backend.
+- Privacidade: eventos sem valores e exclusao fisica de registro e revisoes.
+- Rastreabilidade: revisoes imutaveis enquanto o registro existe, auditoria e outbox.
+- Migracao: `20260721_0031`.
+- Proximo passo exato: validar o ciclo e criar layouts e visualizacoes para o Metadata Studio.
+
+### Evidencia de validacao do ciclo 8
+
+- Ruff: 246 arquivos formatados e lint aprovado.
+- MyPy: 175 arquivos aprovados.
+- Backend: 112 testes unitarios aprovados.
+- Integracao: 10 testes aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Migracao: `0031 -> 0030 -> 0031` aprovada; banco em `20260721_0031 (head)`.
+- Privacidade: exclusao remove registro e revisoes; eventos nao contem valores empresariais.
+- Confiabilidade: repeticao idempotente e atualizacao com versao obsoleta validadas.

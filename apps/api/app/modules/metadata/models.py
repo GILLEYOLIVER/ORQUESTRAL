@@ -139,3 +139,98 @@ class MetadataFieldDefinition(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
+
+
+class MetadataRecord(Base):
+    __tablename__ = "metadata_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "definition_id",
+            "idempotency_key",
+            name="uq_metadata_record_idempotency",
+        ),
+        CheckConstraint("record_version > 0", name="ck_metadata_record_version_positive"),
+        Index(
+            "ix_metadata_record_company_definition_active",
+            "company_id",
+            "definition_id",
+            "deleted_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    definition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="CASCADE"), index=True
+    )
+    schema_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="RESTRICT"), index=True
+    )
+    schema_version: Mapped[int] = mapped_column(Integer)
+    values: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    record_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    idempotency_key: Mapped[UUID | None]
+    created_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    updated_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class MetadataRecordRevision(Base):
+    __tablename__ = "metadata_record_revisions"
+    __table_args__ = (
+        UniqueConstraint("record_id", "revision", name="uq_metadata_record_revision"),
+        CheckConstraint("revision > 0", name="ck_metadata_record_revision_positive"),
+        CheckConstraint(
+            "change_type IN ('created', 'updated')",
+            name="ck_metadata_record_revision_change_type",
+        ),
+        Index(
+            "ix_metadata_record_revision_company_record",
+            "company_id",
+            "record_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    definition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="CASCADE"), index=True
+    )
+    record_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_records.id", ondelete="CASCADE"), index=True
+    )
+    schema_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="RESTRICT")
+    )
+    schema_version: Mapped[int] = mapped_column(Integer)
+    revision: Mapped[int] = mapped_column(Integer)
+    change_type: Mapped[str] = mapped_column(String(16))
+    values: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    changed_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
