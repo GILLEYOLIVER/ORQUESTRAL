@@ -44,6 +44,7 @@ export function AuthenticatedLayout({
   const attentionCount =
     (notificationSummary.data?.unread_count ?? 0) +
     (notificationSummary.data?.pending_approvals ?? 0);
+  const readOnly = session.me?.access_mode === "read_only";
 
   const logout = async () => {
     await session.logout();
@@ -51,7 +52,7 @@ export function AuthenticatedLayout({
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${readOnly ? " app-shell--read-only" : ""}`}>
       <aside className="sidebar">
         <NavLink
           aria-label="Orkestral"
@@ -216,6 +217,12 @@ export function AuthenticatedLayout({
         <div className="sidebar__footer">Operação segura e integrada</div>
       </aside>
       <div className="app-main">
+        {readOnly ? (
+          <div className="read-only-banner" role="status">
+            Administrador Somente Leitura · você pode consultar toda a empresa,
+            mas qualquer alteração será bloqueada e auditada.
+          </div>
+        ) : null}
         {environment.remoteDevelopment ? (
           <div className="remote-development-banner" role="status">
             Ambiente de desenvolvimento remoto · dados de teste · recursos

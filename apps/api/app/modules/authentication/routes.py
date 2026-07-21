@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 from sqlalchemy import select
 
 from app.core.dependencies import DatabaseSession, RedisClient, RequestSettings
@@ -19,6 +20,12 @@ from app.modules.authentication.schemas import (
     MembershipResponse,
     MeResponse,
     MessageResponse,
+    ReadOnlyLinkAuthorizationRequest,
+    ReadOnlyLinkAuthorizationResponse,
+    ReadOnlyLinkCandidateResponse,
+    ReadOnlyLinkCreateRequest,
+    ReadOnlyLinkCreateResponse,
+    ReadOnlyLinkExchangeRequest,
     ResetPasswordRequest,
     SelectCompanyRequest,
     UserResponse,
@@ -28,6 +35,7 @@ from app.modules.authentication.service import (
     CompanyAccessError,
     InvalidCredentialsError,
     InvalidOneTimeTokenError,
+    InvalidReadOnlyLinkError,
     InvalidRefreshTokenError,
     IssuedTokens,
     LoginRateLimitedError,
@@ -141,6 +149,108 @@ async def login(
     return _token_response(issued)
 
 
+@router.post(
+    "/read-only-links/authorize",
+    response_model=ReadOnlyLinkAuthorizationResponse,
+)
+async def authorize_read_only_link(
+    payload: ReadOnlyLinkAuthorizationRequest,
+    request: Request,
+    database: DatabaseSession,
+    redis: RedisClient,
+    settings: RequestSettings,
+) -> ReadOnlyLinkAuthorizationResponse:
+    try:
+        authorization = await AuthenticationService(
+            database, redis, settings
+        ).authorize_read_only_link(
+            email=str(payload.email),
+            password=payload.password,
+            ip_address=_client_ip(request),
+        )
+    except InvalidCredentialsError as exc:
+        raise HTTPException(status_code=401, detail="E-mail ou senha inválidos.") from exc
+    except LoginRateLimitedError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail="Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+        ) from exc
+    except CompanyAccessError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail="Somente administradores autorizados podem gerar links de acesso.",
+        ) from exc
+    return ReadOnlyLinkAuthorizationResponse(
+        authorization_token=authorization.token,
+        expires_at=authorization.expires_at,
+        candidates=[
+            ReadOnlyLinkCandidateResponse(
+                company_id=candidate.company_id,
+                company_name=candidate.company_name,
+                user_id=candidate.user_id,
+                user_name=candidate.user_name,
+                user_email=candidate.user_email,
+            )
+            for candidate in authorization.candidates
+        ],
+    )
+
+
+@router.post(
+    "/read-only-links",
+    response_model=ReadOnlyLinkCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_read_only_link(
+    payload: ReadOnlyLinkCreateRequest,
+    authorization_token: Annotated[
+        str, Header(alias="X-Read-Only-Link-Authorization", min_length=32, max_length=256)
+    ],
+    database: DatabaseSession,
+    redis: RedisClient,
+    settings: RequestSettings,
+) -> ReadOnlyLinkCreateResponse:
+    try:
+        issued = await AuthenticationService(database, redis, settings).create_read_only_link(
+            authorization_token=authorization_token,
+            company_id=payload.company_id,
+            target_user_id=payload.target_user_id,
+            expiration_minutes=payload.expiration_minutes,
+        )
+    except InvalidReadOnlyLinkError as exc:
+        raise HTTPException(
+            status_code=401, detail="A autorização expirou. Autentique-se novamente."
+        ) from exc
+    except CompanyAccessError as exc:
+        raise HTTPException(status_code=404, detail="Usuário autorizado não encontrado.") from exc
+    return ReadOnlyLinkCreateResponse(
+        id=issued.link.id,
+        token=issued.token,
+        expires_at=issued.link.expires_at,
+    )
+
+
+@router.post("/read-only-links/exchange", response_model=AccessTokenResponse)
+async def exchange_read_only_link(
+    payload: ReadOnlyLinkExchangeRequest,
+    request: Request,
+    response: Response,
+    database: DatabaseSession,
+    redis: RedisClient,
+    settings: RequestSettings,
+) -> AccessTokenResponse:
+    try:
+        issued = await AuthenticationService(database, redis, settings).exchange_read_only_link(
+            token=payload.token,
+            ip_address=_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    except InvalidReadOnlyLinkError as exc:
+        raise HTTPException(status_code=401, detail="Link inválido ou expirado.") from exc
+    _set_refresh_cookie(response, issued.refresh_token, settings)
+    return _token_response(issued)
+
+
 @router.post("/refresh", response_model=AccessTokenResponse)
 async def refresh(
     request: Request,
@@ -193,6 +303,7 @@ async def list_sessions(
             last_used_at=session.last_used_at,
             created_at=session.created_at,
             current=session.id == principal.session.id,
+            access_mode=session.access_mode,
         )
         for session in sessions
     ]
@@ -328,4 +439,10 @@ async def me(principal: CurrentPrincipal, database: DatabaseSession) -> MeRespon
         memberships=memberships,
         permissions=sorted(principal.permissions),
         requires_company_selection=current_company is None and len(memberships) > 1,
+        access_mode=principal.session.access_mode,
+        access_profile=(
+            "Administrador Somente Leitura"
+            if principal.session.access_mode == "read_only"
+            else None
+        ),
     )

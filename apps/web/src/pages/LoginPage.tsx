@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Link2, LockKeyhole, ShieldCheck, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -16,10 +16,33 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 type DevelopmentAccess = { enabled: boolean };
+type LinkCandidate = {
+  company_id: string;
+  company_name: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+};
+type LinkAuthorization = {
+  authorization_token: string;
+  expires_at: string;
+  candidates: LinkCandidate[];
+};
+type GeneratedLink = { id: string; token: string; expires_at: string };
 
 export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [developmentSubmitting, setDevelopmentSubmitting] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkAuthorization, setLinkAuthorization] =
+    useState<LinkAuthorization | null>(null);
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
+  const [selectedCandidate, setSelectedCandidate] = useState("");
+  const [expirationMinutes, setExpirationMinutes] = useState("480");
+  const [generatedUrl, setGeneratedUrl] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
   const session = useSession();
   const navigate = useNavigate();
   const {
@@ -75,6 +98,79 @@ export function LoginPage() {
       );
     } finally {
       setDevelopmentSubmitting(false);
+    }
+  };
+
+  const closeLinkDialog = () => {
+    setLinkDialogOpen(false);
+    setLinkAuthorization(null);
+    setLinkPassword("");
+    setSelectedCandidate("");
+    setGeneratedUrl("");
+    setLinkError(null);
+  };
+
+  const authorizeLinkGeneration = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLinkError(null);
+    setLinkSubmitting(true);
+    try {
+      const authorization = await request<LinkAuthorization>(
+        "/auth/read-only-links/authorize",
+        {
+          method: "POST",
+          authenticated: false,
+          allowAuthRefresh: false,
+          body: { email: linkEmail, password: linkPassword },
+        },
+      );
+      setLinkAuthorization(authorization);
+      const first = authorization.candidates[0];
+      setSelectedCandidate(first ? `${first.company_id}:${first.user_id}` : "");
+      setLinkPassword("");
+    } catch (caught) {
+      setLinkError(
+        caught instanceof ApiClientError
+          ? caught.message
+          : "Não foi possível autenticar o administrador.",
+      );
+    } finally {
+      setLinkSubmitting(false);
+    }
+  };
+
+  const generateReadOnlyLink = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!linkAuthorization || !selectedCandidate) return;
+    const [companyId, userId] = selectedCandidate.split(":");
+    setLinkError(null);
+    setLinkSubmitting(true);
+    try {
+      const generated = await request<GeneratedLink>("/auth/read-only-links", {
+        method: "POST",
+        authenticated: false,
+        allowAuthRefresh: false,
+        headers: {
+          "X-Read-Only-Link-Authorization":
+            linkAuthorization.authorization_token,
+        },
+        body: {
+          company_id: companyId,
+          target_user_id: userId,
+          expiration_minutes: Number(expirationMinutes),
+        },
+      });
+      setGeneratedUrl(
+        `${window.location.origin}/acesso-socio#token=${encodeURIComponent(generated.token)}`,
+      );
+    } catch (caught) {
+      setLinkError(
+        caught instanceof ApiClientError
+          ? caught.message
+          : "Não foi possível gerar o link.",
+      );
+    } finally {
+      setLinkSubmitting(false);
     }
   };
 
@@ -149,10 +245,132 @@ export function LoginPage() {
               Acessar como administrador
             </Button>
           ) : null}
+          <button
+            className="auth-card__link-generator"
+            onClick={() => setLinkDialogOpen(true)}
+            type="button"
+          >
+            <Link2 aria-hidden="true" size={15} />
+            Gerar link de acesso
+          </button>
           <p className="auth-card__footnote">
             A Orkestral não armazena tokens no armazenamento do navegador.
           </p>
         </div>
+        {linkDialogOpen ? (
+          <div className="secure-link-overlay">
+            <section
+              aria-labelledby="secure-link-title"
+              aria-modal="true"
+              className="secure-link-dialog"
+              role="dialog"
+            >
+              <button
+                aria-label="Fechar"
+                className="secure-link-dialog__close"
+                onClick={closeLinkDialog}
+                type="button"
+              >
+                <X size={18} />
+              </button>
+              <span className="eyebrow">Acesso de sócios</span>
+              <h2 id="secure-link-title">
+                {generatedUrl
+                  ? "Link seguro criado"
+                  : linkAuthorization
+                    ? "Defina o acesso somente leitura"
+                    : "Confirme sua identidade de administrador"}
+              </h2>
+              <p>
+                {linkAuthorization
+                  ? "O usuário verá a mesma plataforma, mas toda alteração será bloqueada pelo servidor."
+                  : "Nenhum link pode ser criado sem autenticação administrativa."}
+              </p>
+              {linkError ? <Alert variant="error">{linkError}</Alert> : null}
+              {generatedUrl ? (
+                <div className="secure-link-result">
+                  <label htmlFor="generated-read-only-link">
+                    Link de acesso
+                  </label>
+                  <input
+                    id="generated-read-only-link"
+                    readOnly
+                    value={generatedUrl}
+                  />
+                  <Button
+                    onClick={() =>
+                      void navigator.clipboard.writeText(generatedUrl)
+                    }
+                    type="button"
+                  >
+                    Copiar link
+                  </Button>
+                </div>
+              ) : linkAuthorization ? (
+                <form onSubmit={(event) => void generateReadOnlyLink(event)}>
+                  <label htmlFor="read-only-user">Usuário</label>
+                  <select
+                    id="read-only-user"
+                    onChange={(event) =>
+                      setSelectedCandidate(event.target.value)
+                    }
+                    required
+                    value={selectedCandidate}
+                  >
+                    {linkAuthorization.candidates.map((candidate) => (
+                      <option
+                        key={`${candidate.company_id}:${candidate.user_id}`}
+                        value={`${candidate.company_id}:${candidate.user_id}`}
+                      >
+                        {candidate.user_name} · {candidate.company_name} ·{" "}
+                        {candidate.user_email}
+                      </option>
+                    ))}
+                  </select>
+                  <label htmlFor="read-only-expiration">Expiração</label>
+                  <select
+                    id="read-only-expiration"
+                    onChange={(event) =>
+                      setExpirationMinutes(event.target.value)
+                    }
+                    value={expirationMinutes}
+                  >
+                    <option value="60">1 hora</option>
+                    <option value="480">8 horas</option>
+                    <option value="1440">1 dia</option>
+                    <option value="10080">7 dias</option>
+                    <option value="43200">30 dias</option>
+                  </select>
+                  <Button loading={linkSubmitting} type="submit">
+                    Gerar token seguro
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={(event) => void authorizeLinkGeneration(event)}>
+                  <TextField
+                    autoComplete="email"
+                    label="E-mail do administrador"
+                    onChange={(event) => setLinkEmail(event.target.value)}
+                    required
+                    type="email"
+                    value={linkEmail}
+                  />
+                  <TextField
+                    autoComplete="current-password"
+                    label="Senha do administrador"
+                    onChange={(event) => setLinkPassword(event.target.value)}
+                    required
+                    type="password"
+                    value={linkPassword}
+                  />
+                  <Button loading={linkSubmitting} type="submit">
+                    Autenticar administrador
+                  </Button>
+                </form>
+              )}
+            </section>
+          </div>
+        ) : null}
       </section>
     </div>
   );

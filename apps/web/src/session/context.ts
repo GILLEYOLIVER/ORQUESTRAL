@@ -7,6 +7,7 @@ export type SessionStatus =
 export interface SessionContextValue {
   developmentLogin: () => Promise<MeResponse>;
   login: (email: string, password: string) => Promise<MeResponse>;
+  loginWithReadOnlyLink: (token: string) => Promise<MeResponse>;
   logout: () => Promise<void>;
   me: MeResponse | null;
   refreshProfile: () => Promise<MeResponse | null>;

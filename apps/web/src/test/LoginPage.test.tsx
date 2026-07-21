@@ -16,6 +16,7 @@ vi.mock("../lib/http", async (importOriginal) => {
 });
 
 const profile: MeResponse = {
+  access_mode: "standard",
   current_company: {
     id: "6a818688-1d95-4fac-9c2d-b64b3317dbaa",
     language: "pt-BR",
@@ -46,6 +47,7 @@ function renderLogin(overrides: Partial<SessionContextValue> = {}) {
     developmentLogin: vi.fn().mockResolvedValue(profile),
     getAccessToken: () => null,
     login: vi.fn().mockResolvedValue(profile),
+    loginWithReadOnlyLink: vi.fn().mockResolvedValue(profile),
     logout: vi.fn().mockResolvedValue(undefined),
     me: null,
     refreshProfile: vi.fn().mockResolvedValue(null),
@@ -103,5 +105,23 @@ describe("LoginPage", () => {
       }),
     );
     expect(developmentLogin).toHaveBeenCalledOnce();
+  });
+
+  it("exige credenciais administrativas antes de gerar link", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+    await user.click(
+      screen.getByRole("button", { name: "Gerar link de acesso" }),
+    );
+    expect(
+      screen.getByRole("dialog", {
+        name: "Confirme sua identidade de administrador",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("E-mail do administrador")).toBeRequired();
+    expect(screen.getByLabelText("Senha do administrador")).toBeRequired();
+    expect(
+      screen.queryByRole("button", { name: "Gerar token seguro" }),
+    ).not.toBeInTheDocument();
   });
 });

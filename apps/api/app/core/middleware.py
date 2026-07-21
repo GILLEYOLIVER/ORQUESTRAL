@@ -42,6 +42,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if response is None:
             response = self._validate_content_type(request, settings)
         if response is None:
+            response = self._enforce_read_only(request, settings)
+        if response is None:
             response = await self._enforce_rate_limit(request, settings)
         if response is None:
             response = await call_next(request)
@@ -178,6 +180,25 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["Retry-After"] = str(ttl)
         return response
 
+    def _enforce_read_only(self, request: Request, settings: Settings) -> Response | None:
+        if request.method not in _MUTATING_METHODS or request.url.path == "/auth/logout":
+            return None
+        authorization = request.headers.get("authorization", "")
+        if not authorization.lower().startswith("bearer "):
+            return None
+        try:
+            claims = decode_access_token(settings, authorization[7:].strip())
+        except InvalidAccessTokenError:
+            return None
+        if claims.access_mode != "read_only":
+            return None
+        return self._problem(
+            request,
+            403,
+            "Acesso somente leitura",
+            "Este acesso permite visualizar a Orkestral, mas não permite alterar dados.",
+        )
+
     @staticmethod
     def _apply_security_headers(request: Request, response: Response, settings: Settings) -> None:
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -191,7 +212,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
         )
         if settings.web_static_directory and (
-            request.url.path in {"/", "/login", "/selecionar-empresa", "/app"}
+            request.url.path in {"/", "/login", "/acesso-socio", "/selecionar-empresa", "/app"}
             or request.url.path.startswith("/app/")
             or request.url.path.startswith("/assets/")
         ):
