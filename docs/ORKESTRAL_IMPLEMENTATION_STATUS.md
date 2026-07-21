@@ -228,3 +228,27 @@ Data: 21 de julho de 2026.
 - Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
 - Migracao: `0029 -> 0028 -> 0029` aprovada; banco em `20260721_0029 (head)`.
 - Proximo passo exato: aplicar a fundacao empresarial ao primeiro dominio e iniciar a plataforma de metadados.
+
+## Ciclo empresarial 7 - fundacao da plataforma de metadados
+
+Data: 21 de julho de 2026.
+
+- Definicoes: entidades e campos normalizados, tipados e isolados por empresa.
+- Versoes: rascunho, validacao, publicacao, retirada e checksum deterministico.
+- API: listar, criar, consultar, editar rascunho, versionar, validar e publicar.
+- Seguranca: permissoes dedicadas e Policy Engine aplicado ao primeiro dominio real.
+- Rastreabilidade: auditoria e eventos transacionais para todas as alteracoes.
+- Migracao: `20260721_0030`.
+- Testes: contratos puros e ciclo completo entre duas empresas.
+- Proximo passo exato: validar o ciclo e criar registros personalizados seguros sobre schemas publicados.
+
+### Evidencia de validacao do ciclo 7
+
+- Ruff: 240 arquivos formatados e lint aprovado.
+- MyPy: 172 arquivos aprovados.
+- Backend: 109 testes unitarios aprovados.
+- Integracao: 9 testes aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Migracao: `0030 -> 0029 -> 0030` aprovada; banco em `20260721_0030 (head)`.
+- Isolamento: entidade de uma empresa retorna `404` para outra empresa.
+- Eventos: auditoria e eventos de dominio possuem contratos distintos, sem duplicidade semantica.
