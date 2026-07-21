@@ -22,6 +22,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
     AgentMemoryReencryptionJob,
+    AgentMemoryReencryptionLegalHold,
     AgentMemoryResponseExercise,
     AgentMemoryRiskReportRecord,
     AgentMemoryRiskSigningKeyVersion,
@@ -53,6 +54,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryReencryptionJobCreate,
     AgentMemoryReencryptionJobResponse,
     AgentMemoryReencryptionJobRetry,
+    AgentMemoryReencryptionLegalHoldResponse,
     AgentMemoryReencryptionRecoveryAssessmentResponse,
     AgentMemoryResponse,
     AgentMemoryResponseExerciseCreate,
@@ -64,6 +66,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryRiskSummary,
     AgentMemorySchedulerMetricsResponse,
     AgentMemoryScopePolicyInput,
+    AgentMemoryVaultCredentialOption,
     AgentTaskMemoryAccessDecision,
     AgentTaskMemoryAccessGrantCreate,
     AgentTaskMemoryAccessGrantResponse,
@@ -76,6 +79,7 @@ from app.modules.agents.memory_schemas import (
     AgentTaskMemoryIncidentResponse,
     AgentTaskMemoryIncidentReview,
     AgentTaskMemoryIncidentRevoke,
+    LegalHoldReason,
     LegalHoldStatus,
     MemoryClassification,
     MemoryPurpose,
@@ -105,7 +109,7 @@ from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.notifications.service import company_approver_user_ids, create_notification
 from app.modules.plugins.crypto import CredentialVault
-from app.modules.plugins.models import IntegrationCredential
+from app.modules.plugins.models import IntegrationCredential, Plugin
 from app.modules.users.models import CompanyUser
 
 router = APIRouter()
@@ -2183,6 +2187,24 @@ def _memory_reencryption_job_response(
     )
 
 
+def _memory_reencryption_legal_hold_response(
+    hold: AgentMemoryReencryptionLegalHold,
+) -> AgentMemoryReencryptionLegalHoldResponse:
+    hold_status = "expired" if hold.expires_at <= utc_now() else hold.status
+    return AgentMemoryReencryptionLegalHoldResponse(
+        id=hold.id,
+        job_id=hold.job_id,
+        reason_code=cast(LegalHoldReason, hold.reason_code),
+        retention_days=hold.retention_days,
+        status=cast(Literal["pending", "approved", "rejected", "expired"], hold_status),
+        requested_by_user_id=hold.requested_by_user_id,
+        decided_by_user_id=hold.decided_by_user_id,
+        expires_at=hold.expires_at,
+        created_at=hold.created_at,
+        decided_at=hold.decided_at,
+    )
+
+
 async def _vault_credential_binding(
     database: DatabaseSession,
     *,
@@ -2365,6 +2387,224 @@ async def list_agent_memory_reencryption_jobs(
         )
     )
     return [_memory_reencryption_job_response(job) for job in jobs]
+
+
+@router.get(
+    "/{agent_id}/memory-vault-credentials",
+    response_model=list[AgentMemoryVaultCredentialOption],
+)
+async def list_agent_memory_vault_credentials(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryVaultCredentialOption]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    rows = (
+        await database.execute(
+            select(IntegrationCredential, Plugin.code)
+            .join(Plugin, Plugin.id == IntegrationCredential.plugin_id)
+            .where(
+                IntegrationCredential.company_id == context.company_id,
+                IntegrationCredential.status == "active",
+                or_(
+                    IntegrationCredential.expires_at.is_(None),
+                    IntegrationCredential.expires_at > utc_now(),
+                ),
+            )
+            .order_by(IntegrationCredential.name, IntegrationCredential.created_at)
+        )
+    ).all()
+    return [
+        AgentMemoryVaultCredentialOption(
+            id=credential.id,
+            name=credential.name,
+            plugin_code=str(plugin_code),
+            expires_at=credential.expires_at,
+        )
+        for credential, plugin_code in rows
+        if "key_reference" in credential.credential_fields
+    ]
+
+
+@router.get(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds",
+    response_model=list[AgentMemoryReencryptionLegalHoldResponse],
+)
+async def list_agent_memory_reencryption_legal_holds(
+    agent_id: UUID,
+    job_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryReencryptionLegalHoldResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    job_exists = await database.scalar(
+        select(AgentMemoryReencryptionJob.id).where(
+            AgentMemoryReencryptionJob.id == job_id,
+            AgentMemoryReencryptionJob.company_id == context.company_id,
+            AgentMemoryReencryptionJob.agent_id == agent_id,
+        )
+    )
+    if job_exists is None:
+        raise HTTPException(status_code=404, detail="Job de recriptografia não encontrado.")
+    holds = list(
+        await database.scalars(
+            select(AgentMemoryReencryptionLegalHold)
+            .where(
+                AgentMemoryReencryptionLegalHold.company_id == context.company_id,
+                AgentMemoryReencryptionLegalHold.agent_id == agent_id,
+                AgentMemoryReencryptionLegalHold.job_id == job_id,
+            )
+            .order_by(AgentMemoryReencryptionLegalHold.created_at.desc())
+        )
+    )
+    return [_memory_reencryption_legal_hold_response(hold) for hold in holds]
+
+
+@router.post(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds",
+    response_model=AgentMemoryReencryptionLegalHoldResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_agent_memory_reencryption_legal_hold(
+    agent_id: UUID,
+    job_id: UUID,
+    payload: AgentMemoryLegalHoldCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryReencryptionLegalHoldResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    job = await database.scalar(
+        select(AgentMemoryReencryptionJob)
+        .where(
+            AgentMemoryReencryptionJob.id == job_id,
+            AgentMemoryReencryptionJob.company_id == context.company_id,
+            AgentMemoryReencryptionJob.agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job de recriptografia não encontrado.")
+    if job.status not in {"completed", "failed", "closed"}:
+        raise HTTPException(
+            status_code=409, detail="Somente jobs terminais aceitam retenção legal."
+        )
+    existing = await database.scalar(
+        select(AgentMemoryReencryptionLegalHold.id).where(
+            AgentMemoryReencryptionLegalHold.company_id == context.company_id,
+            AgentMemoryReencryptionLegalHold.job_id == job_id,
+            AgentMemoryReencryptionLegalHold.status.in_(("pending", "approved")),
+            AgentMemoryReencryptionLegalHold.expires_at > utc_now(),
+        )
+    )
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="O job já possui retenção legal ativa.")
+    now = utc_now()
+    hold = AgentMemoryReencryptionLegalHold(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        job_id=job_id,
+        reason_code=payload.reason_code,
+        legal_reference_fingerprint=memory_incident_value_fingerprint(
+            secret=settings.encryption_key,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            value_type="reencryption_legal_hold",
+            value=payload.legal_reference,
+        ),
+        retention_days=payload.retention_days,
+        requested_by_user_id=context.user_id,
+        expires_at=now + timedelta(days=payload.retention_days),
+    )
+    database.add(hold)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_reencryption_legal_hold.requested",
+        target_type="agent_memory_reencryption_legal_hold",
+        target_id=hold.id,
+        details={
+            "agent_id": str(agent_id),
+            "job_id": str(job_id),
+            "reason_code": hold.reason_code,
+            "retention_days": hold.retention_days,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_reencryption_legal_hold.requested",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"hold_id": str(hold.id), "job_id": str(job_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(hold)
+    return _memory_reencryption_legal_hold_response(hold)
+
+
+@router.post(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/decision",
+    response_model=AgentMemoryReencryptionLegalHoldResponse,
+)
+async def decide_agent_memory_reencryption_legal_hold(
+    agent_id: UUID,
+    job_id: UUID,
+    hold_id: UUID,
+    payload: AgentMemoryLegalHoldDecision,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryReencryptionLegalHoldResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    hold = await database.scalar(
+        select(AgentMemoryReencryptionLegalHold)
+        .where(
+            AgentMemoryReencryptionLegalHold.id == hold_id,
+            AgentMemoryReencryptionLegalHold.company_id == context.company_id,
+            AgentMemoryReencryptionLegalHold.agent_id == agent_id,
+            AgentMemoryReencryptionLegalHold.job_id == job_id,
+        )
+        .with_for_update()
+    )
+    if hold is None:
+        raise HTTPException(status_code=404, detail="Retenção legal não encontrada.")
+    if hold.status != "pending" or hold.expires_at <= utc_now():
+        raise HTTPException(status_code=409, detail="A retenção legal não está pendente.")
+    if hold.requested_by_user_id == context.user_id:
+        raise HTTPException(status_code=409, detail="A solicitação exige aprovação independente.")
+    hold.status = payload.decision
+    hold.decided_by_user_id = context.user_id
+    hold.decided_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.memory_reencryption_legal_hold.{payload.decision}",
+        target_type="agent_memory_reencryption_legal_hold",
+        target_id=hold.id,
+        details={"agent_id": str(agent_id), "job_id": str(job_id)},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.memory_reencryption_legal_hold.{payload.decision}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"hold_id": str(hold.id), "job_id": str(job_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(hold)
+    return _memory_reencryption_legal_hold_response(hold)
 
 
 @router.post(

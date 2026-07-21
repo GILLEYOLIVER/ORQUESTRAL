@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from pydantic import ValidationError
 
@@ -29,6 +31,7 @@ def production_settings(
         encryption_key_provider="external",
         encryption_key_reference="vault://orkestral/production/active",
         agent_memory_monitor_secret="production-monitor-secret-with-at-least-32-characters",  # noqa: S106
+        agent_memory_monitor_secret_rotated_at=datetime.now(UTC),
         n8n_api_key="production-n8n-key-with-at-least-32-characters",
         storage_access_key="production-storage-access-key-32-characters",
         storage_secret_key="production-storage-secret-key-32-characters",  # noqa: S106
@@ -92,3 +95,15 @@ def test_monitor_secret_rotation_rejects_duplicate_keyring() -> None:
                 "development-only-change-me-agent-memory-monitor-secret-32"
             ]
         )
+
+
+def test_monitor_secret_rotation_rejects_expired_secret() -> None:
+    with pytest.raises(ValidationError, match="idade máxima"):
+        Settings(agent_memory_monitor_secret_rotated_at=datetime.now(UTC) - timedelta(days=91))
+
+
+def test_local_monitor_secret_rotation_accepts_empty_environment_value() -> None:
+    assert (
+        Settings(agent_memory_monitor_secret_rotated_at="").agent_memory_monitor_secret_rotated_at
+        is None
+    )

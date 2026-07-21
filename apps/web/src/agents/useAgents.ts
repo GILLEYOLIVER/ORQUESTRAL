@@ -366,6 +366,26 @@ export interface AgentMemoryReencryptionRecoveryAssessment {
   assessed_at: string;
 }
 
+export interface AgentMemoryVaultCredentialOption {
+  id: string;
+  name: string;
+  plugin_code: string;
+  expires_at: string | null;
+}
+
+export interface AgentMemoryReencryptionLegalHold {
+  id: string;
+  job_id: string;
+  reason_code: "legal_claim" | "regulatory_request" | "audit_preservation";
+  retention_days: number;
+  status: "pending" | "approved" | "rejected" | "expired";
+  requested_by_user_id: string;
+  decided_by_user_id: string | null;
+  expires_at: string;
+  created_at: string;
+  decided_at: string | null;
+}
+
 export function useAgents(enabled = true) {
   const { me, status } = useSession();
   return useQuery({

@@ -26,6 +26,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryExerciseSchedule,
     AgentMemoryPolicy,
     AgentMemoryReencryptionJob,
+    AgentMemoryReencryptionLegalHold,
     AgentMemoryScopePolicy,
     AgentTaskMemoryAccessGrant,
 )
@@ -215,6 +216,26 @@ async def _expire_reencryption_job(settings: Settings, *, company_id: UUID, job_
             )
             assert job is not None
             job.purge_after = utc_now() - timedelta(minutes=1)
+            await database.commit()
+    finally:
+        await resources.close()
+
+
+async def _expire_reencryption_legal_hold(
+    settings: Settings, *, company_id: UUID, hold_id: UUID
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            hold = await database.scalar(
+                select(AgentMemoryReencryptionLegalHold).where(
+                    AgentMemoryReencryptionLegalHold.id == hold_id,
+                    AgentMemoryReencryptionLegalHold.company_id == company_id,
+                )
+            )
+            assert hold is not None
+            hold.created_at = utc_now() - timedelta(days=2)
+            hold.expires_at = utc_now() - timedelta(days=1)
             await database.commit()
     finally:
         await resources.close()
@@ -917,6 +938,18 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             vault_credential_a, vault_credential_b = asyncio.run(
                 _seed_vault_credentials(settings, identity)
             )
+            vault_catalog = client.get(
+                f"/agents/{agent_id}/memory-vault-credentials", headers=headers_b
+            )
+            assert vault_catalog.status_code == 200
+            assert {item["id"] for item in vault_catalog.json()} == {str(vault_credential_b)}
+            assert str(vault_credential_a) not in str(vault_catalog.json())
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/memory-vault-credentials", headers=headers_a
+                ).status_code
+                == 404
+            )
             settings.encryption_key_provider = "external"
             settings.encryption_key_reference = "vault://orkestral/integration/active"
             settings.encryption_previous_key_references = ["vault://orkestral/integration/previous"]
@@ -953,11 +986,64 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 maintain_agent_memory_reencryption_jobs(settings=settings)
             )
             assert external_maintenance["completed"] == 1
+            job_hold = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs/"
+                f"{external_rotation.json()['id']}/legal-holds",
+                headers=headers_b,
+                json={
+                    "reason_code": "audit_preservation",
+                    "legal_reference": "AUDITORIA-SIGILOSA-ROTACAO-2026",
+                    "retention_days": 30,
+                },
+            )
+            assert job_hold.status_code == 201
+            assert job_hold.json()["status"] == "pending"
+            assert "AUDITORIA-SIGILOSA-ROTACAO-2026" not in str(job_hold.json())
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs/"
+                    f"{external_rotation.json()['id']}/legal-holds/"
+                    f"{job_hold.json()['id']}/decision",
+                    headers=headers_b,
+                    json={"decision": "approved"},
+                ).status_code
+                == 409
+            )
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-reencryption-jobs/"
+                    f"{external_rotation.json()['id']}/legal-holds/"
+                    f"{job_hold.json()['id']}/decision",
+                    headers=headers_a,
+                    json={"decision": "approved"},
+                ).status_code
+                == 404
+            )
+            approved_hold = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs/"
+                f"{external_rotation.json()['id']}/legal-holds/"
+                f"{job_hold.json()['id']}/decision",
+                headers=headers_reviewer,
+                json={"decision": "approved"},
+            )
+            assert approved_hold.status_code == 200, approved_hold.text
+            assert approved_hold.json()["status"] == "approved"
             asyncio.run(
                 _expire_reencryption_job(
                     settings,
                     company_id=identity.company_ids[1],
                     job_id=UUID(external_rotation.json()["id"]),
+                )
+            )
+            retention_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert retention_maintenance["purged"] == 0
+            asyncio.run(
+                _expire_reencryption_legal_hold(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    hold_id=UUID(job_hold.json()["id"]),
                 )
             )
             retention_maintenance = asyncio.run(
@@ -1229,7 +1315,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 headers=headers_reviewer,
                 json={"decision": "approved"},
             )
-            assert approved_hold.status_code == 200
+            assert approved_hold.status_code == 200, approved_hold.text
             assert approved_hold.json()["status"] == "approved"
             handoff = client.post(
                 f"/agents/{agent_id}/delegations/{delegation_id}/handoffs",

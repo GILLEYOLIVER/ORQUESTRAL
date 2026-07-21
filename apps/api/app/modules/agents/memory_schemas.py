@@ -541,6 +541,26 @@ class AgentMemoryReencryptionRecoveryAssessmentResponse(StrictSchema):
     assessed_at: datetime
 
 
+class AgentMemoryVaultCredentialOption(StrictSchema):
+    id: UUID
+    name: str
+    plugin_code: str
+    expires_at: datetime | None
+
+
+class AgentMemoryReencryptionLegalHoldResponse(StrictSchema):
+    id: UUID
+    job_id: UUID
+    reason_code: LegalHoldReason
+    retention_days: int
+    status: Literal["pending", "approved", "rejected", "expired"]
+    requested_by_user_id: UUID
+    decided_by_user_id: UUID | None
+    expires_at: datetime
+    created_at: datetime
+    decided_at: datetime | None
+
+
 class AgentTaskMemoryContextRequest(StrictSchema):
     grant_id: UUID
     purpose: TaskMemoryAccessPurpose

@@ -9,7 +9,7 @@ from time import perf_counter
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import and_, delete, exists, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -23,6 +23,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
     AgentMemoryReencryptionJob,
+    AgentMemoryReencryptionLegalHold,
     AgentMemoryResponseExercise,
     AgentMemoryRiskReportRecord,
     AgentMemoryScopePolicy,
@@ -927,6 +928,15 @@ async def purge_terminal_agent_memory_reencryption_jobs(
             .where(
                 AgentMemoryReencryptionJob.status.in_(("completed", "failed", "closed")),
                 AgentMemoryReencryptionJob.purge_after <= cutoff,
+                not_(
+                    exists().where(
+                        AgentMemoryReencryptionLegalHold.company_id
+                        == AgentMemoryReencryptionJob.company_id,
+                        AgentMemoryReencryptionLegalHold.job_id == AgentMemoryReencryptionJob.id,
+                        AgentMemoryReencryptionLegalHold.status.in_(("pending", "approved")),
+                        AgentMemoryReencryptionLegalHold.expires_at > cutoff,
+                    )
+                ),
             )
             .order_by(AgentMemoryReencryptionJob.purge_after)
             .limit(limit)

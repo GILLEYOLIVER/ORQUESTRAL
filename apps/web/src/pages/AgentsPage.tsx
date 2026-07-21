@@ -33,8 +33,10 @@ import {
   type AgentMemoryExerciseSchedule,
   type AgentMemoryExerciseDue,
   type AgentMemoryReencryptionJob,
+  type AgentMemoryReencryptionLegalHold,
   type AgentMemoryReencryptionRecoveryAssessment,
   type AgentMemorySchedulerMetrics,
+  type AgentMemoryVaultCredentialOption,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -205,6 +207,12 @@ export function AgentsPage() {
   const [memoryReencryptionMaxRetries, setMemoryReencryptionMaxRetries] =
     useState("3");
   const [memoryVaultCredentialId, setMemoryVaultCredentialId] = useState("");
+  const [memoryJobLegalHoldReason, setMemoryJobLegalHoldReason] = useState<
+    "legal_claim" | "regulatory_request" | "audit_preservation"
+  >("audit_preservation");
+  const [memoryJobLegalReference, setMemoryJobLegalReference] = useState("");
+  const [memoryJobLegalRetentionDays, setMemoryJobLegalRetentionDays] =
+    useState("90");
   const [memoryReencryptionRetryReason, setMemoryReencryptionRetryReason] =
     useState("");
   const [memoryReencryptionClosureCode, setMemoryReencryptionClosureCode] =
@@ -318,6 +326,31 @@ export function AgentsPage() {
     enabled: canConfigure && Boolean(selectedId),
   });
   const latestMemoryReencryptionJob = memoryReencryptionJobs.data?.[0];
+  const memoryVaultCredentials = useQuery({
+    queryKey: ["agent-memory-vault-credentials", selectedId],
+    queryFn: () =>
+      request<AgentMemoryVaultCredentialOption[]>(
+        `/agents/${selectedId}/memory-vault-credentials`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryReencryptionLegalHolds = useQuery({
+    queryKey: [
+      "agent-memory-reencryption-legal-holds",
+      selectedId,
+      latestMemoryReencryptionJob?.id,
+    ],
+    queryFn: () =>
+      request<AgentMemoryReencryptionLegalHold[]>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${latestMemoryReencryptionJob?.id}/legal-holds`,
+      ),
+    enabled:
+      canConfigure &&
+      Boolean(selectedId && latestMemoryReencryptionJob) &&
+      ["completed", "failed", "closed"].includes(
+        latestMemoryReencryptionJob?.status ?? "",
+      ),
+  });
   useEffect(() => {
     setMemoryRecoveryAssessment(null);
   }, [latestMemoryReencryptionJob?.id, latestMemoryReencryptionJob?.status]);
@@ -904,6 +937,50 @@ export function AgentsPage() {
       );
       setMemoryReencryptionClosureReason("");
       setMemoryRecoveryAssessment(null);
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const requestMemoryReencryptionLegalHold = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryReencryptionLegalHold>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${latestMemoryReencryptionJob?.id}/legal-holds`,
+        {
+          method: "POST",
+          body: {
+            reason_code: memoryJobLegalHoldReason,
+            legal_reference: memoryJobLegalReference,
+            retention_days: Number(memoryJobLegalRetentionDays),
+          },
+        },
+      ),
+    onSuccess: () => {
+      setMemoryIncidentFeedback(
+        "Retenção legal solicitada e aguardando decisão independente.",
+      );
+      setMemoryJobLegalReference("");
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const decideMemoryReencryptionLegalHold = useMutation({
+    mutationFn: ({
+      holdId,
+      decision,
+    }: {
+      holdId: string;
+      decision: "approved" | "rejected";
+    }) =>
+      request<AgentMemoryReencryptionLegalHold>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${latestMemoryReencryptionJob?.id}/legal-holds/${holdId}/decision`,
+        { method: "POST", body: { decision } },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.status === "approved"
+          ? "Retenção legal aprovada; o expurgo está suspenso."
+          : "Retenção legal rejeitada com auditoria.",
+      );
       refresh();
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
@@ -2146,13 +2223,27 @@ export function AgentsPage() {
                     type="number"
                     value={memoryReencryptionMaxRetries}
                   />
-                  <TextField
-                    label="ID da credencial do cofre externo (opcional no ambiente local)"
-                    onChange={(event) =>
-                      setMemoryVaultCredentialId(event.target.value)
-                    }
-                    value={memoryVaultCredentialId}
-                  />
+                  <label className="native-field">
+                    <span>Credencial do cofre externo</span>
+                    <select
+                      className="agent-native-select"
+                      onChange={(event) =>
+                        setMemoryVaultCredentialId(event.target.value)
+                      }
+                      value={memoryVaultCredentialId}
+                    >
+                      <option value="">Nenhuma (ambiente local)</option>
+                      {memoryVaultCredentials.data?.map((credential) => (
+                        <option key={credential.id} value={credential.id}>
+                          {credential.name} · {credential.plugin_code}
+                        </option>
+                      ))}
+                    </select>
+                    <small>
+                      Somente credenciais ativas desta empresa com o campo
+                      key_reference são exibidas.
+                    </small>
+                  </label>
                   <Button
                     loading={startMemoryReencryption.isPending}
                     type="submit"
@@ -2180,6 +2271,119 @@ export function AgentsPage() {
                   ) : (
                     <small>Nenhuma recriptografia solicitada.</small>
                   )}
+                  {latestMemoryReencryptionJob &&
+                  ["completed", "failed", "closed"].includes(
+                    latestMemoryReencryptionJob.status,
+                  ) ? (
+                    <div className="agent-policy-list">
+                      <strong>Retenção legal do job</strong>
+                      <small>
+                        Suspende o expurgo durante investigação, processo ou
+                        auditoria. Outra pessoa autorizada deve decidir.
+                      </small>
+                      <label className="native-field">
+                        <span>Motivo da retenção</span>
+                        <select
+                          className="agent-native-select"
+                          onChange={(event) =>
+                            setMemoryJobLegalHoldReason(
+                              event.target.value as
+                                | "legal_claim"
+                                | "regulatory_request"
+                                | "audit_preservation",
+                            )
+                          }
+                          value={memoryJobLegalHoldReason}
+                        >
+                          <option value="audit_preservation">
+                            Preservação para auditoria
+                          </option>
+                          <option value="legal_claim">Processo legal</option>
+                          <option value="regulatory_request">
+                            Solicitação regulatória
+                          </option>
+                        </select>
+                      </label>
+                      <TextField
+                        label="Referência jurídica sigilosa"
+                        maxLength={160}
+                        onChange={(event) =>
+                          setMemoryJobLegalReference(event.target.value)
+                        }
+                        value={memoryJobLegalReference}
+                      />
+                      <TextField
+                        label="Dias de retenção"
+                        max={3650}
+                        min={1}
+                        onChange={(event) =>
+                          setMemoryJobLegalRetentionDays(event.target.value)
+                        }
+                        type="number"
+                        value={memoryJobLegalRetentionDays}
+                      />
+                      <Button
+                        disabled={memoryJobLegalReference.trim().length < 8}
+                        loading={requestMemoryReencryptionLegalHold.isPending}
+                        onClick={() =>
+                          requestMemoryReencryptionLegalHold.mutate()
+                        }
+                        type="button"
+                        variant="secondary"
+                      >
+                        Solicitar retenção legal
+                      </Button>
+                      {memoryReencryptionLegalHolds.data?.map((hold) => (
+                        <article className="agent-policy-row" key={hold.id}>
+                          <div>
+                            <strong>
+                              {hold.reason_code} · {hold.status}
+                            </strong>
+                            <small>
+                              Até{" "}
+                              {new Date(hold.expires_at).toLocaleDateString(
+                                "pt-BR",
+                              )}
+                            </small>
+                          </div>
+                          {hold.status === "pending" ? (
+                            <div className="button-row">
+                              <Button
+                                loading={
+                                  decideMemoryReencryptionLegalHold.isPending
+                                }
+                                onClick={() =>
+                                  decideMemoryReencryptionLegalHold.mutate({
+                                    holdId: hold.id,
+                                    decision: "approved",
+                                  })
+                                }
+                                type="button"
+                                variant="secondary"
+                              >
+                                Aprovar
+                              </Button>
+                              <Button
+                                loading={
+                                  decideMemoryReencryptionLegalHold.isPending
+                                }
+                                onClick={() =>
+                                  decideMemoryReencryptionLegalHold.mutate({
+                                    holdId: hold.id,
+                                    decision: "rejected",
+                                  })
+                                }
+                                type="button"
+                                variant="ghost"
+                              >
+                                Rejeitar
+                              </Button>
+                            </div>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  ) : null}
                   {latestMemoryReencryptionJob?.status === "failed" ? (
                     <>
                       <Button

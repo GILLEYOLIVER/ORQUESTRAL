@@ -713,3 +713,18 @@ Data: 21 de julho de 2026.
 - Segurança comprovada: credencial ausente retorna `409`, vínculo de outro tenant retorna `404`, vínculo válido não expõe ID e registro terminal vencido é removido com auditoria agregada.
 - Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
 - Próximo passo: seleção guiada de credenciais por catálogo, rotação programada do segredo do monitor e legal hold específico para jobs de recriptografia.
+
+## Ciclo 42 - catálogo de cofre, prazo de rotação e legal hold
+
+- A API lista somente credenciais ativas da empresa atual que declaram `key_reference`; a interface substitui o UUID manual por seleção guiada com nome e plugin.
+- Ambientes remotos exigem data de rotação do segredo do monitor e recusam inicialização quando a idade máxima configurada é excedida.
+- Jobs terminais aceitam retenção legal com referência protegida por HMAC, motivo tipado, prazo e separação obrigatória entre solicitante e decisor.
+- Holds pendentes ou aprovados bloqueiam o expurgo; após expirar, a política normal de retenção volta a remover o registro operacional.
+- Catálogo, criação, decisão e expurgo permanecem filtrados por empresa, sem revelar credenciais nem referências jurídicas de outro tenant.
+- Migração: `20260721_0063_agent_memory_vault_catalog_hold.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos de produção; 142 testes da API, 5 do worker, 13 integrações e 12 testes do front-end aprovados; ESLint, TypeScript, Prettier, build e auditoria sem vulnerabilidades conhecidas.
+- Migração reversível `0063 -> 0062 -> 0063` aprovada; banco em `20260721_0063 (head)`.
+- Runtime local: ambiente iniciado pelo script oficial; `/health`, `/ready`, `/app` e monitor HMAC responderam `200`; API, worker e gateway saudáveis; E2E com 7 aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: catálogo não lista credenciais de outro tenant, autoaprovação retorna `409`, decisão cruzada retorna `404`, referência jurídica não aparece na resposta e hold ativo bloqueia o expurgo.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
+- Próximo passo: alertas prévios de vencimento de segredo, notificações do legal hold e conectores nativos para cofres gerenciados.

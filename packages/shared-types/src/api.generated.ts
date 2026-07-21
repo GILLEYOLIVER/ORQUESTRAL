@@ -696,6 +696,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Reencryption Legal Holds */
+        get: operations["list_agent_memory_reencryption_legal_holds_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_get"];
+        put?: never;
+        /** Request Agent Memory Reencryption Legal Hold */
+        post: operations["request_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Reencryption Legal Hold */
+        post: operations["decide_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/recovery-assessment": {
         parameters: {
             query?: never;
@@ -860,6 +895,23 @@ export interface paths {
         };
         /** Get Agent Memory Risk Summary */
         get: operations["get_agent_memory_risk_summary_agents__agent_id__memory_risk_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-vault-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Vault Credentials */
+        get: operations["list_agent_memory_vault_credentials_agents__agent_id__memory_vault_credentials_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5298,6 +5350,50 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** AgentMemoryReencryptionLegalHoldResponse */
+        AgentMemoryReencryptionLegalHoldResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "legal_claim" | "regulatory_request" | "audit_preservation";
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /** Retention Days */
+            retention_days: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "expired";
+        };
         /** AgentMemoryReencryptionRecoveryAssessmentResponse */
         AgentMemoryReencryptionRecoveryAssessmentResponse: {
             /**
@@ -5600,6 +5696,20 @@ export interface components {
              * @enum {string}
              */
             scope: "conversation" | "task" | "user" | "company" | "operational";
+        };
+        /** AgentMemoryVaultCredentialOption */
+        AgentMemoryVaultCredentialOption: {
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Plugin Code */
+            plugin_code: string;
         };
         /** AgentMessageResponse */
         AgentMessageResponse: {
@@ -13931,6 +14041,165 @@ export interface operations {
             };
         };
     };
+    list_agent_memory_reencryption_legal_holds_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionLegalHoldResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_reencryption_legal_hold_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     assess_agent_memory_reencryption_recovery_agents__agent_id__memory_reencryption_jobs__job_id__recovery_assessment_post: {
         parameters: {
             query?: never;
@@ -14506,6 +14775,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryRiskSummary"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_vault_credentials_agents__agent_id__memory_vault_credentials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryVaultCredentialOption"][];
                 };
             };
             /** @description Solicitação inválida */
