@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from time import perf_counter
 from typing import cast
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, delete, exists, func, not_, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -65,7 +66,13 @@ class AgentMemoryKeyringPolicyValues:
     automatic_exit_batch_size: int
     vault_failure_alert_threshold: int
     vault_slo_minutes: int
+    availability_retention_days: int
     on_call_user_ids: tuple[UUID, ...]
+    on_call_timezone: str
+    on_call_start_hour: int
+    on_call_end_hour: int
+    identity_canary_days: int
+    identity_canary_interval_hours: int
     configured: bool
     updated_at: datetime | None
 
@@ -86,7 +93,13 @@ async def agent_memory_keyring_policy_values(
             automatic_exit_batch_size=settings.agent_memory_keyring_automatic_exit_batch_size,
             vault_failure_alert_threshold=settings.agent_memory_vault_failure_alert_threshold,
             vault_slo_minutes=30,
+            availability_retention_days=30,
             on_call_user_ids=(),
+            on_call_timezone="UTC",
+            on_call_start_hour=0,
+            on_call_end_hour=24,
+            identity_canary_days=14,
+            identity_canary_interval_hours=24,
             configured=False,
             updated_at=None,
         )
@@ -104,13 +117,25 @@ async def agent_memory_keyring_policy_values(
         if configured_on_call_ids
         else ()
     )
+    local_hour = utc_now().astimezone(ZoneInfo(policy.on_call_timezone)).hour
+    scheduled_on_call_ids = (
+        active_on_call_ids
+        if policy.on_call_start_hour <= local_hour < policy.on_call_end_hour
+        else ()
+    )
     return AgentMemoryKeyringPolicyValues(
         expiry_warning_days=policy.expiry_warning_days,
         automatic_exit_enabled=policy.automatic_exit_enabled,
         automatic_exit_batch_size=policy.automatic_exit_batch_size,
         vault_failure_alert_threshold=policy.vault_failure_alert_threshold,
         vault_slo_minutes=policy.vault_slo_minutes,
-        on_call_user_ids=active_on_call_ids,
+        availability_retention_days=policy.availability_retention_days,
+        on_call_user_ids=scheduled_on_call_ids,
+        on_call_timezone=policy.on_call_timezone,
+        on_call_start_hour=policy.on_call_start_hour,
+        on_call_end_hour=policy.on_call_end_hour,
+        identity_canary_days=policy.identity_canary_days,
+        identity_canary_interval_hours=policy.identity_canary_interval_hours,
         configured=True,
         updated_at=policy.updated_at,
     )
@@ -164,6 +189,187 @@ async def record_agent_memory_vault_availability(
         },
     )
     await database.execute(statement)
+
+
+async def purge_agent_memory_vault_availability(
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    now: datetime | None = None,
+) -> int:
+    current = now or utc_now()
+    company_ids = tuple(
+        await database.scalars(select(AgentMemoryVaultAvailabilityWindow.company_id).distinct())
+    )
+    purged = 0
+    for company_id in company_ids:
+        policy = await agent_memory_keyring_policy_values(
+            database,
+            settings=settings,
+            company_id=company_id,
+        )
+        result = await database.execute(
+            delete(AgentMemoryVaultAvailabilityWindow).where(
+                AgentMemoryVaultAvailabilityWindow.company_id == company_id,
+                AgentMemoryVaultAvailabilityWindow.window_started_at
+                < current - timedelta(days=policy.availability_retention_days),
+            )
+        )
+        purged += int(getattr(result, "rowcount", 0) or 0)
+    await database.commit()
+    return purged
+
+
+async def run_agent_memory_workload_identity_canaries(
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    now: datetime | None = None,
+    limit: int = 1_000,
+    resolver: ManagedVaultSecretResolver | None = None,
+) -> dict[str, int]:
+    current = now or utc_now()
+    rows = (
+        await database.execute(
+            select(AgentMemoryKeyringBinding, IntegrationCredential)
+            .join(
+                IntegrationCredential,
+                IntegrationCredential.id == AgentMemoryKeyringBinding.credential_id,
+            )
+            .where(
+                AgentMemoryKeyringBinding.status == "active",
+                IntegrationCredential.status == "active",
+                IntegrationCredential.expires_at.is_not(None),
+                IntegrationCredential.expires_at > current,
+            )
+            .order_by(IntegrationCredential.expires_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+    ).all()
+    checked = passed = failed = alerted = recovered = 0
+    for binding, credential in rows:
+        policy = await agent_memory_keyring_policy_values(
+            database,
+            settings=settings,
+            company_id=binding.company_id,
+        )
+        if credential.expires_at is None or credential.expires_at > current + timedelta(
+            days=policy.identity_canary_days
+        ):
+            continue
+        if binding.last_identity_canary_at is not None and binding.last_identity_canary_at > (
+            current - timedelta(hours=policy.identity_canary_interval_hours)
+        ):
+            continue
+        checked += 1
+        previous_status = binding.identity_canary_status
+        binding.last_identity_canary_at = current
+        try:
+            await resolve_agent_memory_external_keyring(
+                database,
+                settings=settings,
+                company_id=binding.company_id,
+                agent_id=binding.agent_id,
+                resolver=resolver,
+            )
+        except ManagedVaultResolutionError:
+            binding.identity_canary_status = "unavailable"
+            failed += 1
+            if previous_status == "unavailable":
+                continue
+            recipient_ids = tuple(
+                dict.fromkeys(
+                    (
+                        binding.activated_by_user_id,
+                        *await company_approver_user_ids(database, binding.company_id),
+                        *policy.on_call_user_ids,
+                    )
+                )
+            )
+            for recipient_user_id in recipient_ids:
+                await create_notification(
+                    database,
+                    company_id=binding.company_id,
+                    recipient_user_id=recipient_user_id,
+                    event_type="agent.memory_keyring.identity_canary_failed",
+                    title="Canário da identidade do cofre falhou",
+                    message="A identidade não conseguiu ler a chave antes do vencimento.",
+                    severity="critical",
+                    resource_type="agent_memory_keyring_binding",
+                    resource_id=binding.id,
+                    data={
+                        "agent_id": str(binding.agent_id),
+                        "provider_code": binding.provider_code,
+                    },
+                )
+            alerted += 1
+            event_type = "agent.memory_keyring.identity_canary_failed"
+        else:
+            binding.identity_canary_status = "healthy"
+            passed += 1
+            if previous_status != "unavailable":
+                continue
+            recovered += 1
+            recipient_ids = tuple(
+                dict.fromkeys(
+                    (
+                        binding.activated_by_user_id,
+                        *await company_approver_user_ids(database, binding.company_id),
+                        *policy.on_call_user_ids,
+                    )
+                )
+            )
+            for recipient_user_id in recipient_ids:
+                await create_notification(
+                    database,
+                    company_id=binding.company_id,
+                    recipient_user_id=recipient_user_id,
+                    event_type="agent.memory_keyring.identity_canary_recovered",
+                    title="Canário da identidade do cofre recuperado",
+                    message="A identidade voltou a ler a chave antes do vencimento.",
+                    severity="success",
+                    resource_type="agent_memory_keyring_binding",
+                    resource_id=binding.id,
+                    data={
+                        "agent_id": str(binding.agent_id),
+                        "provider_code": binding.provider_code,
+                    },
+                )
+            event_type = "agent.memory_keyring.identity_canary_recovered"
+        record_authorization_audit(
+            database,
+            company_id=binding.company_id,
+            actor_user_id=binding.activated_by_user_id,
+            action=event_type,
+            target_type="agent_memory_keyring_binding",
+            target_id=binding.id,
+            details={
+                "agent_id": str(binding.agent_id),
+                "provider_code": binding.provider_code,
+            },
+        )
+        enqueue_domain_event(
+            database,
+            DomainEventCreate(
+                event_type=event_type,
+                company_id=binding.company_id,
+                actor_user_id=binding.activated_by_user_id,
+                classification="internal",
+                payload={
+                    "agent_id": str(binding.agent_id),
+                    "provider_code": binding.provider_code,
+                },
+            ),
+        )
+    await database.commit()
+    return {
+        "identity_canaries_checked": checked,
+        "identity_canaries_passed": passed,
+        "identity_canaries_failed": failed,
+        "identity_canary_alerts": alerted,
+        "identity_canary_recoveries": recovered,
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -2029,11 +2235,15 @@ async def maintain_agent_memory_reencryption_jobs(*, settings: Settings) -> dict
     resources = create_resources(settings)
     try:
         async with resources.sessions() as database:
+            canaries = await run_agent_memory_workload_identity_canaries(
+                database, settings=settings
+            )
             lifecycle = await enforce_agent_memory_keyring_lifecycle(database, settings=settings)
             health = await monitor_agent_memory_keyrings(database, settings=settings)
             result = await process_agent_memory_reencryption_jobs(database, settings=settings)
             result.update(lifecycle)
             result.update(health)
+            result.update(canaries)
             result["credentials_revoked"] = await revoke_expired_unbound_memory_credentials(
                 database
             )
@@ -2043,6 +2253,10 @@ async def maintain_agent_memory_reencryption_jobs(*, settings: Settings) -> dict
                 database, settings=settings
             )
             result["purged"] = await purge_terminal_agent_memory_reencryption_jobs(database)
+            result["availability_purged"] = await purge_agent_memory_vault_availability(
+                database,
+                settings=settings,
+            )
             return result
     finally:
         await resources.close()

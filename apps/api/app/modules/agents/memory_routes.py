@@ -178,7 +178,13 @@ async def get_agent_memory_keyring_policy(
         automatic_exit_batch_size=policy.automatic_exit_batch_size,
         vault_failure_alert_threshold=policy.vault_failure_alert_threshold,
         vault_slo_minutes=policy.vault_slo_minutes,
+        availability_retention_days=policy.availability_retention_days,
         on_call_user_ids=list(policy.on_call_user_ids),
+        on_call_timezone=policy.on_call_timezone,
+        on_call_start_hour=policy.on_call_start_hour,
+        on_call_end_hour=policy.on_call_end_hour,
+        identity_canary_days=policy.identity_canary_days,
+        identity_canary_interval_hours=policy.identity_canary_interval_hours,
         configured=policy.configured,
         updated_at=policy.updated_at,
     )
@@ -244,7 +250,13 @@ async def update_agent_memory_keyring_policy(
             "automatic_exit_batch_size": payload.automatic_exit_batch_size,
             "vault_failure_alert_threshold": payload.vault_failure_alert_threshold,
             "vault_slo_minutes": payload.vault_slo_minutes,
+            "availability_retention_days": payload.availability_retention_days,
             "on_call_user_count": len(payload.on_call_user_ids),
+            "on_call_timezone": payload.on_call_timezone,
+            "on_call_start_hour": payload.on_call_start_hour,
+            "on_call_end_hour": payload.on_call_end_hour,
+            "identity_canary_days": payload.identity_canary_days,
+            "identity_canary_interval_hours": payload.identity_canary_interval_hours,
         },
     )
     enqueue_domain_event(
@@ -2476,6 +2488,8 @@ async def get_agent_memory_keyring_status(
             automatic_exit_job_id=None,
             automatic_exit_status=None,
             slo_status="not_applicable",
+            identity_canary_status="not_applicable",
+            last_identity_canary_at=None,
         )
     credential_expires_at = await database.scalar(
         select(IntegrationCredential.expires_at).where(
@@ -2521,6 +2535,11 @@ async def get_agent_memory_keyring_status(
         slo_status="breached"
         if open_incident is not None and open_incident.slo_breached_at is not None
         else "within_slo",
+        identity_canary_status=cast(
+            Literal["not_applicable", "unknown", "healthy", "unavailable"],
+            binding.identity_canary_status,
+        ),
+        last_identity_canary_at=binding.last_identity_canary_at,
     )
 
 

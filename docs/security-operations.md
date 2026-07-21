@@ -163,3 +163,11 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 - A identidade proposta para um cofre fica cifrada até a decisão. A justificativa e as identidades recebem impressões HMAC separadas para auditoria sem recuperação do texto.
 - O solicitante não decide a própria rotação. Antes da aprovação, o Orkestral exige uma leitura real da chave pela nova identidade; falha, vencimento, saída segura ou troca de tenant bloqueiam a ativação.
 - A credencial existente é atualizada atomicamente somente após a validação, preservando os demais campos cifrados e mantendo a identidade anterior em uso quando a solicitação é rejeitada.
+
+## Retenção, janela de plantão e canário preventivo
+
+- A retenção das janelas de disponibilidade é configurável entre 7 e 365 dias por empresa. A manutenção remove somente agregados anteriores ao prazo do respectivo tenant.
+- O plantão possui fuso IANA e janela diária com início e fim explícitos. Fora desse horário, os usuários continuam cadastrados, mas não entram nos novos alertas operacionais.
+- Credenciais com vencimento dentro da antecedência configurada executam um canário periódico por identidade da carga antes da saída automática.
+- O canário realiza leitura real da chave, registra apenas `healthy` ou `unavailable` e alerta somente na transição para falha. A recuperação também gera notificação, auditoria e evento.
+- O status do agente mostra resultado e horário do último canário, nunca a identidade usada, a referência da chave ou a resposta do provedor.

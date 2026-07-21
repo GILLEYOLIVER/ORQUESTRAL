@@ -24,10 +24,12 @@ from app.modules.agents.coordination_models import AgentDelegationPayload
 from app.modules.agents.memory_models import (
     AgentMemoryEntry,
     AgentMemoryExerciseSchedule,
+    AgentMemoryKeyringBinding,
     AgentMemoryPolicy,
     AgentMemoryReencryptionJob,
     AgentMemoryReencryptionLegalHold,
     AgentMemoryScopePolicy,
+    AgentMemoryVaultAvailabilityWindow,
     AgentTaskMemoryAccessGrant,
 )
 from app.modules.agents.memory_service import (
@@ -314,6 +316,56 @@ async def _set_managed_credential_expiry(
             )
             assert credential is not None
             credential.expires_at = utc_now() + timedelta(days=expires_in_days)
+            await database.commit()
+    finally:
+        await resources.close()
+
+
+async def _age_identity_canary(
+    settings: Settings,
+    *,
+    company_id: UUID,
+    agent_id: UUID,
+    hours: int,
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            binding = await database.scalar(
+                select(AgentMemoryKeyringBinding).where(
+                    AgentMemoryKeyringBinding.company_id == company_id,
+                    AgentMemoryKeyringBinding.agent_id == agent_id,
+                    AgentMemoryKeyringBinding.status == "active",
+                )
+            )
+            assert binding is not None
+            binding.last_identity_canary_at = utc_now() - timedelta(hours=hours)
+            await database.commit()
+    finally:
+        await resources.close()
+
+
+async def _age_vault_availability(
+    settings: Settings,
+    *,
+    company_id: UUID,
+    provider_code: str,
+    days: int,
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            windows = list(
+                await database.scalars(
+                    select(AgentMemoryVaultAvailabilityWindow).where(
+                        AgentMemoryVaultAvailabilityWindow.company_id == company_id,
+                        AgentMemoryVaultAvailabilityWindow.provider_code == provider_code,
+                    )
+                )
+            )
+            assert windows
+            for window in windows:
+                window.window_started_at = utc_now() - timedelta(days=days)
             await database.commit()
     finally:
         await resources.close()
@@ -1420,7 +1472,13 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     "automatic_exit_batch_size": 250,
                     "vault_failure_alert_threshold": 1,
                     "vault_slo_minutes": 1,
+                    "availability_retention_days": 30,
                     "on_call_user_ids": [str(identity.user_ids[3])],
+                    "on_call_timezone": "UTC",
+                    "on_call_start_hour": 0,
+                    "on_call_end_hour": 24,
+                    "identity_canary_days": 14,
+                    "identity_canary_interval_hours": 1,
                 },
             )
             assert keyring_policy.status_code == 200, keyring_policy.text
@@ -1438,10 +1496,35 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     "automatic_exit_batch_size": 250,
                     "vault_failure_alert_threshold": 1,
                     "vault_slo_minutes": 1,
+                    "availability_retention_days": 30,
                     "on_call_user_ids": [str(identity.user_ids[0])],
+                    "on_call_timezone": "UTC",
+                    "on_call_start_hour": 0,
+                    "on_call_end_hour": 24,
+                    "identity_canary_days": 14,
+                    "identity_canary_interval_hours": 1,
                 },
             )
             assert invalid_on_call_policy.status_code == 422
+            invalid_on_call_timezone = client.put(
+                "/agents/memory-keyring/policy",
+                headers=headers_b,
+                json={
+                    "expiry_warning_days": 5,
+                    "automatic_exit_enabled": True,
+                    "automatic_exit_batch_size": 250,
+                    "vault_failure_alert_threshold": 1,
+                    "vault_slo_minutes": 1,
+                    "availability_retention_days": 30,
+                    "on_call_user_ids": [str(identity.user_ids[3])],
+                    "on_call_timezone": "Fuso/Inexistente",
+                    "on_call_start_hour": 0,
+                    "on_call_end_hour": 24,
+                    "identity_canary_days": 14,
+                    "identity_canary_interval_hours": 1,
+                },
+            )
+            assert invalid_on_call_timezone.status_code == 422
             other_tenant_policy = client.get(
                 "/agents/memory-keyring/policy", headers=headers_a
             )
@@ -1557,6 +1640,27 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 in resolved_identity_references
             )
             resolved_identity_references.clear()
+            asyncio.run(
+                _set_managed_credential_expiry(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    credential_id=managed_credential_id,
+                    expires_in_days=10,
+                )
+            )
+            identity_canary = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert identity_canary["identity_canaries_checked"] == 1
+            assert identity_canary["identity_canaries_passed"] == 1
+            assert identity_canary["identity_canaries_failed"] == 0
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/memory-keyring", headers=headers_b
+                ).json()["identity_canary_status"]
+                == "healthy"
+            )
+            resolved_identity_references.clear()
             managed_memory_content = "Memória cifrada pelo keyring gerenciado."
             managed_memory = client.post(
                 f"/agents/{agent_id}/memories",
@@ -1605,9 +1709,19 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 "resolve_keyring",
                 fail_test_keyring,
             )
+            asyncio.run(
+                _age_identity_canary(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                    hours=2,
+                )
+            )
             outage_maintenance = asyncio.run(
                 maintain_agent_memory_reencryption_jobs(settings=settings)
             )
+            assert outage_maintenance["identity_canaries_failed"] == 1
+            assert outage_maintenance["identity_canary_alerts"] == 1
             assert outage_maintenance["vault_alerts"] == 1
             incidents = client.get(
                 f"/agents/{agent_id}/memory-vault-incidents", headers=headers_b
@@ -1656,9 +1770,19 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 "resolve_keyring",
                 resolve_test_keyring,
             )
+            asyncio.run(
+                _age_identity_canary(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                    hours=2,
+                )
+            )
             recovery_maintenance = asyncio.run(
                 maintain_agent_memory_reencryption_jobs(settings=settings)
             )
+            assert recovery_maintenance["identity_canaries_passed"] == 1
+            assert recovery_maintenance["identity_canary_recoveries"] == 1
             assert recovery_maintenance["vault_resolved"] == 1
             resolved_incidents = client.get(
                 f"/agents/{agent_id}/memory-vault-incidents", headers=headers_b
@@ -1680,6 +1804,42 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert other_tenant_availability.status_code == 200
             assert other_tenant_availability.json() == []
+            retention_policy = client.put(
+                "/agents/memory-keyring/policy",
+                headers=headers_b,
+                json={
+                    "expiry_warning_days": 5,
+                    "automatic_exit_enabled": True,
+                    "automatic_exit_batch_size": 250,
+                    "vault_failure_alert_threshold": 1,
+                    "vault_slo_minutes": 1,
+                    "availability_retention_days": 7,
+                    "on_call_user_ids": [str(identity.user_ids[3])],
+                    "on_call_timezone": "UTC",
+                    "on_call_start_hour": 0,
+                    "on_call_end_hour": 24,
+                    "identity_canary_days": 14,
+                    "identity_canary_interval_hours": 1,
+                },
+            )
+            assert retention_policy.status_code == 200
+            asyncio.run(
+                _age_vault_availability(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    provider_code="google_secret_manager",
+                    days=8,
+                )
+            )
+            retention_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert retention_maintenance["availability_purged"] == 1
+            retained_availability = client.get(
+                "/agents/memory-keyring/availability?days=7", headers=headers_b
+            )
+            assert retained_availability.status_code == 200
+            assert len(retained_availability.json()) == 1
             environment_exit = client.post(
                 f"/agents/{agent_id}/memory-keyring/exit",
                 headers=headers_b,
