@@ -375,6 +375,25 @@ export interface AgentMemoryVaultCredentialOption {
   expires_at: string | null;
 }
 
+export interface AgentMemoryKeyringStatus {
+  source: "environment" | "managed";
+  provider_code: string;
+  status: "active";
+  activated_at: string | null;
+  last_resolved_at: string | null;
+}
+
+export interface ManagedVaultMetric {
+  provider_code: string;
+  provider_name: string;
+  total_tests: number;
+  successful_tests: number;
+  failed_tests: number;
+  success_rate: number;
+  average_duration_ms: number;
+  last_tested_at: string | null;
+}
+
 export interface AgentMemoryReencryptionLegalHold {
   id: string;
   job_id: string;
@@ -384,6 +403,7 @@ export interface AgentMemoryReencryptionLegalHold {
   requested_by_user_id: string;
   decided_by_user_id: string | null;
   expires_at: string;
+  expiration_reminder_sent: boolean;
   created_at: string;
   decided_at: string | null;
 }

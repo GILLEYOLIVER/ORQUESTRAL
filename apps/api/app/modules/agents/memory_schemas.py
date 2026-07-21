@@ -572,6 +572,24 @@ class AgentMemoryReencryptionLegalHoldResponse(StrictSchema):
     decided_at: datetime | None
 
 
+class AgentMemoryLegalHoldRenewalCreate(StrictSchema):
+    extension_days: int = Field(ge=1, le=3650)
+    legal_reference: str = Field(min_length=4, max_length=240)
+
+
+class AgentMemoryLegalHoldRenewalResponse(StrictSchema):
+    id: UUID
+    hold_id: UUID
+    job_id: UUID
+    extension_days: int
+    proposed_expires_at: datetime
+    status: Literal["pending", "approved", "rejected"]
+    requested_by_user_id: UUID
+    decided_by_user_id: UUID | None
+    created_at: datetime
+    decided_at: datetime | None
+
+
 class AgentTaskMemoryContextRequest(StrictSchema):
     grant_id: UUID
     purpose: TaskMemoryAccessPurpose

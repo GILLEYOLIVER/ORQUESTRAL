@@ -129,3 +129,12 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 - O status do keyring é consultável sem expor IDs de credencial ou referências. Acesso cruzado entre empresas retorna `404`.
 - Métricas de teste dos cofres agregam sucesso, falha, latência e último teste por provedor, sempre com filtro obrigatório de empresa.
 - Não revogar um vínculo externo antes de executar uma recriptografia de retorno ou troca para outro keyring e validar a leitura. A revogação segura será um fluxo controlado posterior.
+
+## Renovação de retenção e saída de keyring
+
+- Cada renovação de retenção legal possui registro próprio, impressão protegida da nova referência, extensão proposta, solicitante, decisor e timestamps. A referência não aparece em respostas, notificações, eventos ou auditorias.
+- Uma renovação só pode ser criada para retenção aprovada e ativa, respeita o limite acumulado de dez anos e exige decisão de outra pessoa autorizada da mesma empresa.
+- A aprovação estende o vencimento, preserva o histórico e redefine o lembrete para o novo prazo. Rejeições não alteram a retenção original.
+- Para sair de um keyring externo, o job de ambiente monta temporariamente a chave de ambiente como primária e as chaves externas apenas para leitura. O vínculo só muda para `revoked` após todos os registros do snapshot serem recriptografados com sucesso.
+- Falha ao resolver o cofre interrompe a saída com `vault_resolution_failed`; o vínculo continua ativo e nenhuma remoção prematura ocorre.
+- O painel mostra apenas origem, provedor, última resolução, taxa de sucesso, quantidade de testes e latência. IDs de credenciais, referências e material secreto não são enviados ao navegador.

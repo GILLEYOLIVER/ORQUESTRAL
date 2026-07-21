@@ -852,6 +852,67 @@ class AgentMemoryReencryptionLegalHold(Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class AgentMemoryReencryptionLegalHoldRenewal(Base):
+    __tablename__ = "agent_memory_reencryption_legal_hold_renewals"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_amr_legal_hold_renewal_status",
+        ),
+        CheckConstraint(
+            "extension_days BETWEEN 1 AND 3650 AND proposed_expires_at > created_at",
+            name="ck_amr_legal_hold_renewal_extension",
+        ),
+        CheckConstraint(
+            "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id",
+            name="ck_amr_legal_hold_renewal_separation",
+        ),
+        CheckConstraint(
+            "(status = 'pending' AND decided_by_user_id IS NULL AND decided_at IS NULL) OR "
+            "(status IN ('approved', 'rejected') AND decided_by_user_id IS NOT NULL "
+            "AND decided_at IS NOT NULL)",
+            name="ck_amr_legal_hold_renewal_decision",
+        ),
+        Index(
+            "uq_amr_legal_hold_renewal_pending",
+            "company_id",
+            "hold_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_memory_reencryption_jobs.id", ondelete="CASCADE"), index=True
+    )
+    hold_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_memory_reencryption_legal_holds.id", ondelete="CASCADE"), index=True
+    )
+    extension_days: Mapped[int] = mapped_column(Integer)
+    legal_reference_fingerprint: Mapped[str] = mapped_column(String(64))
+    proposed_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending", index=True
+    )
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    decided_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class AgentTaskMemoryAccessGrant(Base):
     __tablename__ = "agent_task_memory_access_grants"
     __table_args__ = (

@@ -32,11 +32,13 @@ import {
   type AgentMemoryRiskSigningKey,
   type AgentMemoryExerciseSchedule,
   type AgentMemoryExerciseDue,
+  type AgentMemoryKeyringStatus,
   type AgentMemoryReencryptionJob,
   type AgentMemoryReencryptionLegalHold,
   type AgentMemoryReencryptionRecoveryAssessment,
   type AgentMemorySchedulerMetrics,
   type AgentMemoryVaultCredentialOption,
+  type ManagedVaultMetric,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -105,6 +107,7 @@ export function AgentsPage() {
   const canConfigure = me?.permissions.includes("agents.configure") ?? false;
   const canExecute = me?.permissions.includes("agents.execute") ?? false;
   const canViewUsers = me?.permissions.includes("users.view") ?? false;
+  const canManagePlugins = me?.permissions.includes("plugins.manage") ?? false;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -333,6 +336,20 @@ export function AgentsPage() {
         `/agents/${selectedId}/memory-vault-credentials`,
       ),
     enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryKeyringStatus = useQuery({
+    queryKey: ["agent-memory-keyring", selectedId],
+    queryFn: () =>
+      request<AgentMemoryKeyringStatus>(`/agents/${selectedId}/memory-keyring`),
+    enabled: canConfigure && Boolean(selectedId),
+    refetchInterval: 15_000,
+  });
+  const managedVaultMetrics = useQuery({
+    queryKey: ["managed-vault-metrics", me?.current_company?.id],
+    queryFn: () =>
+      request<ManagedVaultMetric[]>("/plugins/managed-vault-metrics/summary"),
+    enabled: canManagePlugins && Boolean(me?.current_company),
+    refetchInterval: 15_000,
   });
   const memoryReencryptionLegalHolds = useQuery({
     queryKey: [
@@ -2187,6 +2204,55 @@ export function AgentsPage() {
                   ) : (
                     <p>Nenhum exercício executado.</p>
                   )}
+                </div>
+                <div className="agent-policy-list">
+                  <strong>Proteção do keyring</strong>
+                  <article className="agent-policy-row">
+                    <div>
+                      <strong>
+                        {memoryKeyringStatus.data?.source === "managed"
+                          ? "Cofre gerenciado ativo"
+                          : "Chave do ambiente ativa"}
+                      </strong>
+                      <small>
+                        Provedor:{" "}
+                        {memoryKeyringStatus.data?.provider_code ??
+                          "carregando"}
+                        {memoryKeyringStatus.data?.last_resolved_at
+                          ? ` · última resolução ${new Date(memoryKeyringStatus.data.last_resolved_at).toLocaleString("pt-BR")}`
+                          : ""}
+                      </small>
+                    </div>
+                    <span className="status-badge">
+                      {memoryKeyringStatus.data?.status ?? "verificando"}
+                    </span>
+                  </article>
+                  {managedVaultMetrics.data?.map((metric) => (
+                    <article
+                      className="agent-policy-row"
+                      key={metric.provider_code}
+                    >
+                      <div>
+                        <strong>{metric.provider_name}</strong>
+                        <small>
+                          {Math.round(metric.success_rate * 100)}% de sucesso ·{" "}
+                          {metric.total_tests} teste(s) ·{" "}
+                          {metric.average_duration_ms} ms
+                        </small>
+                      </div>
+                      <span className="status-badge">
+                        {metric.failed_tests === 0
+                          ? "saudável"
+                          : `${metric.failed_tests} falha(s)`}
+                      </span>
+                    </article>
+                  ))}
+                  {canManagePlugins &&
+                  managedVaultMetrics.data?.length === 0 ? (
+                    <small>
+                      Nenhum teste de cofre registrado nesta empresa.
+                    </small>
+                  ) : null}
                 </div>
                 <form
                   className="agent-policy-form"

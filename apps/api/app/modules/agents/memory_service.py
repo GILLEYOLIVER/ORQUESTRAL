@@ -148,14 +148,20 @@ def memory_external_target_key_id(reference: str) -> str:
     return memory_key_reference_fingerprint(reference)[:32]
 
 
-async def agent_memory_credential_vault(
+@dataclass(frozen=True, slots=True)
+class ResolvedAgentMemoryKeyring:
+    binding: AgentMemoryKeyringBinding
+    external_keys: tuple[str, ...]
+
+
+async def resolve_agent_memory_external_keyring(
     database: AsyncSession,
     *,
     settings: Settings,
     company_id: UUID,
     agent_id: UUID,
     resolver: ManagedVaultSecretResolver | None = None,
-) -> CredentialVault:
+) -> ResolvedAgentMemoryKeyring | None:
     binding = await database.scalar(
         select(AgentMemoryKeyringBinding).where(
             AgentMemoryKeyringBinding.company_id == company_id,
@@ -164,7 +170,7 @@ async def agent_memory_credential_vault(
         )
     )
     if binding is None:
-        return memory_credential_vault(settings)
+        return None
     row = (
         await database.execute(
             select(IntegrationCredential, Plugin.code)
@@ -201,10 +207,30 @@ async def agent_memory_credential_vault(
         identity_reference=str(values.get("identity_reference", "")).strip() or None,
     )
     binding.last_resolved_at = utc_now()
+    return ResolvedAgentMemoryKeyring(binding=binding, external_keys=external_keys)
+
+
+async def agent_memory_credential_vault(
+    database: AsyncSession,
+    *,
+    settings: Settings,
+    company_id: UUID,
+    agent_id: UUID,
+    resolver: ManagedVaultSecretResolver | None = None,
+) -> CredentialVault:
+    resolved = await resolve_agent_memory_external_keyring(
+        database,
+        settings=settings,
+        company_id=company_id,
+        agent_id=agent_id,
+        resolver=resolver,
+    )
+    if resolved is None:
+        return memory_credential_vault(settings)
     return CredentialVault(
         ",".join(
             (
-                *external_keys,
+                *resolved.external_keys,
                 settings.encryption_key,
                 *settings.encryption_previous_keys,
             )
@@ -842,6 +868,39 @@ async def process_agent_memory_reencryption_jobs(
         managed_credential: IntegrationCredential | None = None
         managed_provider_code: str | None = None
         managed_reference: str | None = None
+        binding_to_revoke: AgentMemoryKeyringBinding | None = None
+        if job.key_provider == "environment":
+            try:
+                resolved_keyring = await resolve_agent_memory_external_keyring(
+                    database,
+                    settings=settings,
+                    company_id=job.company_id,
+                    agent_id=job.agent_id,
+                    resolver=resolver,
+                )
+                if resolved_keyring is not None:
+                    vault = CredentialVault(
+                        ",".join(
+                            (
+                                settings.encryption_key,
+                                *settings.encryption_previous_keys,
+                                *resolved_keyring.external_keys,
+                            )
+                        )
+                    )
+                    binding_to_revoke = resolved_keyring.binding
+            except ManagedVaultResolutionError:
+                job.status = "failed"
+                job.error_code = "vault_resolution_failed"
+                job.completed_at = now
+                job.purge_after = now + timedelta(
+                    days=settings.agent_memory_reencryption_terminal_retention_days
+                )
+                job.recovery_status = "not_assessed"
+                job.last_recovery_assessment_at = None
+                job.recovery_assessed_by_user_id = None
+                failed += 1
+                continue
         if job.key_provider == "external":
             credential_row = (
                 (
@@ -1060,6 +1119,31 @@ async def process_agent_memory_reencryption_jobs(
                     binding.activated_by_user_id = job.requested_by_user_id
                     binding.activated_at = job.completed_at
                     binding.last_resolved_at = job.completed_at
+            if binding_to_revoke is not None:
+                binding_to_revoke.status = "revoked"
+                binding_to_revoke.last_resolved_at = job.completed_at
+                record_authorization_audit(
+                    database,
+                    company_id=job.company_id,
+                    actor_user_id=job.requested_by_user_id,
+                    action="agent.memory_keyring.deactivated",
+                    target_type="agent_memory_keyring_binding",
+                    target_id=binding_to_revoke.id,
+                    details={"agent_id": str(job.agent_id), "job_id": str(job.id)},
+                )
+                enqueue_domain_event(
+                    database,
+                    DomainEventCreate(
+                        event_type="agent.memory_keyring.deactivated",
+                        company_id=job.company_id,
+                        actor_user_id=job.requested_by_user_id,
+                        classification="internal",
+                        payload={
+                            "agent_id": str(job.agent_id),
+                            "job_id": str(job.id),
+                        },
+                    ),
+                )
             record_authorization_audit(
                 database,
                 company_id=job.company_id,
@@ -1072,6 +1156,7 @@ async def process_agent_memory_reencryption_jobs(
                     "rotated_count": job.rotated_count,
                     "failed_count": job.failed_count,
                     "managed_keyring_activated": managed_credential is not None,
+                    "managed_keyring_deactivated": binding_to_revoke is not None,
                 },
             )
             enqueue_domain_event(
@@ -1086,6 +1171,7 @@ async def process_agent_memory_reencryption_jobs(
                         "agent_id": str(job.agent_id),
                         "rotated_count": job.rotated_count,
                         "managed_keyring_activated": managed_credential is not None,
+                        "managed_keyring_deactivated": binding_to_revoke is not None,
                     },
                 ),
             )

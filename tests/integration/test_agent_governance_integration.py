@@ -401,6 +401,33 @@ async def _assert_memory_requires_external_keyring(
         await resources.close()
 
 
+async def _assert_memory_uses_environment_key(
+    settings: Settings,
+    *,
+    company_id: UUID,
+    memory_id: UUID,
+    expected_content: str,
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            memory = await database.scalar(
+                select(AgentMemoryEntry).where(
+                    AgentMemoryEntry.id == memory_id,
+                    AgentMemoryEntry.company_id == company_id,
+                )
+            )
+            assert memory is not None
+            assert (
+                CredentialVault(settings.encryption_key)
+                .decrypt(memory.encrypted_content)
+                .get("content")
+                == expected_content
+            )
+    finally:
+        await resources.close()
+
+
 async def _age_memory_scheduler_heartbeat(
     settings: Settings, *, company_id: UUID, agent_id: UUID
 ) -> None:
@@ -1193,6 +1220,61 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert listed_holds.status_code == 200
             assert listed_holds.json()[0]["expiration_reminder_sent"] is True
+            renewal_path = (
+                f"/agents/{agent_id}/memory-reencryption-jobs/"
+                f"{external_rotation.json()['id']}/legal-holds/{job_hold.json()['id']}/renewals"
+            )
+            renewal = client.post(
+                renewal_path,
+                headers=headers_b,
+                json={
+                    "extension_days": 30,
+                    "legal_reference": "RENOVACAO-LEGAL-SIGILOSA-2026",
+                },
+            )
+            assert renewal.status_code == 201, renewal.text
+            assert renewal.json()["status"] == "pending"
+            assert "RENOVACAO-LEGAL-SIGILOSA-2026" not in str(renewal.json())
+            assert (
+                client.post(
+                    f"{renewal_path}/{renewal.json()['id']}/decision",
+                    headers=headers_b,
+                    json={"decision": "approved"},
+                ).status_code
+                == 409
+            )
+            assert (
+                client.post(
+                    f"{renewal_path}/{renewal.json()['id']}/decision",
+                    headers=headers_a,
+                    json={"decision": "approved"},
+                ).status_code
+                == 404
+            )
+            approved_renewal = client.post(
+                f"{renewal_path}/{renewal.json()['id']}/decision",
+                headers=headers_reviewer,
+                json={"decision": "approved"},
+            )
+            assert approved_renewal.status_code == 200, approved_renewal.text
+            assert approved_renewal.json()["status"] == "approved"
+            renewal_history = client.get(renewal_path, headers=headers_b)
+            assert renewal_history.status_code == 200
+            assert renewal_history.json()[0]["id"] == renewal.json()["id"]
+            renewed_hold = client.get(
+                f"/agents/{agent_id}/memory-reencryption-jobs/"
+                f"{external_rotation.json()['id']}/legal-holds",
+                headers=headers_b,
+            )
+            assert renewed_hold.status_code == 200
+            assert renewed_hold.json()[0]["retention_days"] == 60
+            assert renewed_hold.json()[0]["expiration_reminder_sent"] is False
+            assert (
+                asyncio.run(maintain_agent_memory_reencryption_jobs(settings=settings))[
+                    "legal_hold_reminders"
+                ]
+                == 0
+            )
             asyncio.run(
                 _expire_reencryption_job(
                     settings,
@@ -1308,6 +1390,29 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             settings.encryption_key_provider = "environment"
             settings.encryption_key_reference = "environment://orkestral/local/active"
             settings.encryption_previous_key_references = []
+            environment_exit = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={"batch_size": 500, "max_retry_attempts": 1},
+            )
+            assert environment_exit.status_code == 201, environment_exit.text
+            exit_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert exit_maintenance["completed"] == 1
+            environment_keyring_status = client.get(
+                f"/agents/{agent_id}/memory-keyring", headers=headers_b
+            )
+            assert environment_keyring_status.status_code == 200
+            assert environment_keyring_status.json()["source"] == "environment"
+            asyncio.run(
+                _assert_memory_uses_environment_key(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    memory_id=UUID(managed_memory.json()["id"]),
+                    expected_content=managed_memory_content,
+                )
+            )
             other_user_retrieval = asyncio.run(
                 _retrieve_memory_context(
                     settings,

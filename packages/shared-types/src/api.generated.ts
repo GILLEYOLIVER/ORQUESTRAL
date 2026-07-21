@@ -748,6 +748,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/renewals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Reencryption Legal Hold Renewals */
+        get: operations["list_agent_memory_reencryption_legal_hold_renewals_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_get"];
+        put?: never;
+        /** Request Agent Memory Reencryption Legal Hold Renewal */
+        post: operations["request_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/renewals/{renewal_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Reencryption Legal Hold Renewal */
+        post: operations["decide_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals__renewal_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/recovery-assessment": {
         parameters: {
             query?: never;
@@ -5096,6 +5131,57 @@ export interface components {
              * @enum {string}
              */
             decision: "approved" | "rejected";
+        };
+        /** AgentMemoryLegalHoldRenewalCreate */
+        AgentMemoryLegalHoldRenewalCreate: {
+            /** Extension Days */
+            extension_days: number;
+            /** Legal Reference */
+            legal_reference: string;
+        };
+        /** AgentMemoryLegalHoldRenewalResponse */
+        AgentMemoryLegalHoldRenewalResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /** Extension Days */
+            extension_days: number;
+            /**
+             * Hold Id
+             * Format: uuid
+             */
+            hold_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /**
+             * Proposed Expires At
+             * Format: date-time
+             */
+            proposed_expires_at: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
         };
         /** AgentMemoryLegalHoldResponse */
         AgentMemoryLegalHoldResponse: {
@@ -14308,6 +14394,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryReencryptionLegalHoldResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_reencryption_legal_hold_renewals_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_reencryption_legal_hold_renewal_agents__agent_id__memory_reencryption_jobs__job_id__legal_holds__hold_id__renewals__renewal_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+                hold_id: string;
+                renewal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryLegalHoldRenewalResponse"];
                 };
             };
             /** @description Solicitação inválida */

@@ -765,3 +765,15 @@ Data: 21 de julho de 2026.
 - Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0066 -> 0065 -> 0066`; `/health`, `/ready`, `/app` e monitor HMAC validados.
 - Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
 - Próximo passo: renovação de retenções com nova aprovação, recriptografia de saída antes da revogação do keyring e painel visual das métricas por provedor.
+
+## Ciclo 46 - renovação legal, saída segura e painel de cofres
+
+- Criado histórico de renovações de retenção legal com extensão limitada, nova referência protegida e decisão independente por solicitação.
+- Aprovações ampliam a retenção e rearmam o lembrete; rejeições preservam o prazo anterior. Toda decisão gera auditoria, evento e notificação sem referência jurídica.
+- Implementada recriptografia de saída: a chave de ambiente volta a ser primária, o keyring externo é usado apenas para leitura transitória e o vínculo só é revogado após conclusão.
+- O teste comprova ida para chave externa, impossibilidade de abertura pela chave de ambiente isolada, retorno para ambiente e leitura posterior pela chave local.
+- A tela de agentes exibe status do keyring e métricas por provedor com atualização periódica, linguagem operacional e sem credenciais.
+- Migração: `20260721_0067_reencryption_hold_renewals.py`.
+- Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0067 -> 0066 -> 0067`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: renovação e saída disponíveis na interface, alertas de indisponibilidade do cofre e política de expiração/revogação automática de credenciais vinculadas.

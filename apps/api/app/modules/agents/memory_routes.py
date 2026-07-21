@@ -24,6 +24,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryPurposePolicy,
     AgentMemoryReencryptionJob,
     AgentMemoryReencryptionLegalHold,
+    AgentMemoryReencryptionLegalHoldRenewal,
     AgentMemoryResponseExercise,
     AgentMemoryRiskReportRecord,
     AgentMemoryRiskSigningKeyVersion,
@@ -45,6 +46,8 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryKeyringStatusResponse,
     AgentMemoryLegalHoldCreate,
     AgentMemoryLegalHoldDecision,
+    AgentMemoryLegalHoldRenewalCreate,
+    AgentMemoryLegalHoldRenewalResponse,
     AgentMemoryLegalHoldResponse,
     AgentMemoryMetadataExport,
     AgentMemoryPolicyResponse,
@@ -2221,6 +2224,23 @@ def _memory_reencryption_legal_hold_response(
     )
 
 
+def _memory_reencryption_legal_hold_renewal_response(
+    renewal: AgentMemoryReencryptionLegalHoldRenewal,
+) -> AgentMemoryLegalHoldRenewalResponse:
+    return AgentMemoryLegalHoldRenewalResponse(
+        id=renewal.id,
+        hold_id=renewal.hold_id,
+        job_id=renewal.job_id,
+        extension_days=renewal.extension_days,
+        proposed_expires_at=renewal.proposed_expires_at,
+        status=cast(Literal["pending", "approved", "rejected"], renewal.status),
+        requested_by_user_id=renewal.requested_by_user_id,
+        decided_by_user_id=renewal.decided_by_user_id,
+        created_at=renewal.created_at,
+        decided_at=renewal.decided_at,
+    )
+
+
 @router.get(
     "/{agent_id}/memory-keyring",
     response_model=AgentMemoryKeyringStatusResponse,
@@ -2704,6 +2724,242 @@ async def decide_agent_memory_reencryption_legal_hold(
     await database.commit()
     await database.refresh(hold)
     return _memory_reencryption_legal_hold_response(hold)
+
+
+@router.get(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/renewals",
+    response_model=list[AgentMemoryLegalHoldRenewalResponse],
+)
+async def list_agent_memory_reencryption_legal_hold_renewals(
+    agent_id: UUID,
+    job_id: UUID,
+    hold_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryLegalHoldRenewalResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    renewals = list(
+        await database.scalars(
+            select(AgentMemoryReencryptionLegalHoldRenewal)
+            .where(
+                AgentMemoryReencryptionLegalHoldRenewal.company_id == context.company_id,
+                AgentMemoryReencryptionLegalHoldRenewal.agent_id == agent_id,
+                AgentMemoryReencryptionLegalHoldRenewal.job_id == job_id,
+                AgentMemoryReencryptionLegalHoldRenewal.hold_id == hold_id,
+            )
+            .order_by(AgentMemoryReencryptionLegalHoldRenewal.created_at.desc())
+        )
+    )
+    return [_memory_reencryption_legal_hold_renewal_response(renewal) for renewal in renewals]
+
+
+@router.post(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/renewals",
+    response_model=AgentMemoryLegalHoldRenewalResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_agent_memory_reencryption_legal_hold_renewal(
+    agent_id: UUID,
+    job_id: UUID,
+    hold_id: UUID,
+    payload: AgentMemoryLegalHoldRenewalCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryLegalHoldRenewalResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    hold = await database.scalar(
+        select(AgentMemoryReencryptionLegalHold)
+        .where(
+            AgentMemoryReencryptionLegalHold.id == hold_id,
+            AgentMemoryReencryptionLegalHold.company_id == context.company_id,
+            AgentMemoryReencryptionLegalHold.agent_id == agent_id,
+            AgentMemoryReencryptionLegalHold.job_id == job_id,
+        )
+        .with_for_update()
+    )
+    if hold is None:
+        raise HTTPException(status_code=404, detail="Retenção legal não encontrada.")
+    if hold.status != "approved" or hold.expires_at <= utc_now():
+        raise HTTPException(
+            status_code=409,
+            detail="Somente retenções aprovadas e ativas podem ser renovadas.",
+        )
+    if hold.retention_days + payload.extension_days > 3650:
+        raise HTTPException(status_code=422, detail="A retenção total supera dez anos.")
+    pending = await database.scalar(
+        select(AgentMemoryReencryptionLegalHoldRenewal.id).where(
+            AgentMemoryReencryptionLegalHoldRenewal.company_id == context.company_id,
+            AgentMemoryReencryptionLegalHoldRenewal.hold_id == hold_id,
+            AgentMemoryReencryptionLegalHoldRenewal.status == "pending",
+        )
+    )
+    if pending is not None:
+        raise HTTPException(status_code=409, detail="Já existe renovação pendente.")
+    renewal = AgentMemoryReencryptionLegalHoldRenewal(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        job_id=job_id,
+        hold_id=hold_id,
+        extension_days=payload.extension_days,
+        legal_reference_fingerprint=memory_incident_value_fingerprint(
+            secret=settings.encryption_key,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            value_type="reencryption_legal_hold_renewal",
+            value=payload.legal_reference,
+        ),
+        proposed_expires_at=hold.expires_at + timedelta(days=payload.extension_days),
+        requested_by_user_id=context.user_id,
+    )
+    database.add(renewal)
+    await database.flush()
+    reviewer_ids = await company_approver_user_ids(
+        database,
+        company_id=context.company_id,
+    )
+    for reviewer_id in reviewer_ids:
+        if reviewer_id == context.user_id:
+            continue
+        await create_notification(
+            database,
+            company_id=context.company_id,
+            recipient_user_id=reviewer_id,
+            event_type="agent.memory_reencryption_legal_hold_renewal.requested",
+            title="Renovação de retenção aguardando decisão",
+            message="Uma extensão de retenção legal exige revisão independente.",
+            severity="warning",
+            resource_type="agent_memory_reencryption_legal_hold_renewal",
+            resource_id=renewal.id,
+            data={"agent_id": str(agent_id), "job_id": str(job_id), "hold_id": str(hold_id)},
+        )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_reencryption_legal_hold_renewal.requested",
+        target_type="agent_memory_reencryption_legal_hold_renewal",
+        target_id=renewal.id,
+        details={
+            "agent_id": str(agent_id),
+            "job_id": str(job_id),
+            "hold_id": str(hold_id),
+            "extension_days": renewal.extension_days,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_reencryption_legal_hold_renewal.requested",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "renewal_id": str(renewal.id),
+                "hold_id": str(hold_id),
+                "job_id": str(job_id),
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(renewal)
+    return _memory_reencryption_legal_hold_renewal_response(renewal)
+
+
+@router.post(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/legal-holds/{hold_id}/renewals/"
+    "{renewal_id}/decision",
+    response_model=AgentMemoryLegalHoldRenewalResponse,
+)
+async def decide_agent_memory_reencryption_legal_hold_renewal(
+    agent_id: UUID,
+    job_id: UUID,
+    hold_id: UUID,
+    renewal_id: UUID,
+    payload: AgentMemoryLegalHoldDecision,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryLegalHoldRenewalResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    renewal = await database.scalar(
+        select(AgentMemoryReencryptionLegalHoldRenewal)
+        .where(
+            AgentMemoryReencryptionLegalHoldRenewal.id == renewal_id,
+            AgentMemoryReencryptionLegalHoldRenewal.company_id == context.company_id,
+            AgentMemoryReencryptionLegalHoldRenewal.agent_id == agent_id,
+            AgentMemoryReencryptionLegalHoldRenewal.job_id == job_id,
+            AgentMemoryReencryptionLegalHoldRenewal.hold_id == hold_id,
+        )
+        .with_for_update()
+    )
+    if renewal is None:
+        raise HTTPException(status_code=404, detail="Renovação de retenção não encontrada.")
+    if renewal.status != "pending":
+        raise HTTPException(status_code=409, detail="A renovação não está pendente.")
+    if renewal.requested_by_user_id == context.user_id:
+        raise HTTPException(status_code=409, detail="A renovação exige aprovação independente.")
+    hold = await database.scalar(
+        select(AgentMemoryReencryptionLegalHold)
+        .where(
+            AgentMemoryReencryptionLegalHold.id == hold_id,
+            AgentMemoryReencryptionLegalHold.company_id == context.company_id,
+        )
+        .with_for_update()
+    )
+    if hold is None or hold.status != "approved" or hold.expires_at <= utc_now():
+        raise HTTPException(status_code=409, detail="A retenção original não está ativa.")
+    renewal.status = payload.decision
+    renewal.decided_by_user_id = context.user_id
+    renewal.decided_at = utc_now()
+    if payload.decision == "approved":
+        hold.expires_at = renewal.proposed_expires_at
+        hold.retention_days += renewal.extension_days
+        hold.reminder_sent_at = None
+    await create_notification(
+        database,
+        company_id=context.company_id,
+        recipient_user_id=renewal.requested_by_user_id,
+        event_type=f"agent.memory_reencryption_legal_hold_renewal.{payload.decision}",
+        title="Renovação de retenção decidida",
+        message=(
+            "A renovação da retenção foi aprovada."
+            if payload.decision == "approved"
+            else "A renovação da retenção foi rejeitada."
+        ),
+        severity="success" if payload.decision == "approved" else "warning",
+        resource_type="agent_memory_reencryption_legal_hold_renewal",
+        resource_id=renewal.id,
+        data={"agent_id": str(agent_id), "job_id": str(job_id), "hold_id": str(hold_id)},
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.memory_reencryption_legal_hold_renewal.{payload.decision}",
+        target_type="agent_memory_reencryption_legal_hold_renewal",
+        target_id=renewal.id,
+        details={"agent_id": str(agent_id), "job_id": str(job_id), "hold_id": str(hold_id)},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.memory_reencryption_legal_hold_renewal.{payload.decision}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "renewal_id": str(renewal.id),
+                "hold_id": str(hold_id),
+                "job_id": str(job_id),
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(renewal)
+    return _memory_reencryption_legal_hold_renewal_response(renewal)
 
 
 @router.post(
