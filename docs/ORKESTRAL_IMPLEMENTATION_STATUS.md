@@ -620,3 +620,14 @@ Data: 21 de julho de 2026.
 - A interface permite acompanhar SLAs, escalonar atrasos, rotacionar assinaturas, configurar a agenda e executar exercícios vencidos.
 - Migração: `20260721_0056_agent_memory_sla_key_schedule.py`.
 - Próximo passo: entregar notificações para responsáveis pelo incidente, keyring para rotação segura do segredo mestre e disparo da agenda pelo worker.
+
+## Ciclo 36 - alertas, keyring mestre e execução recorrente
+
+- Incidentes novos notificam revisores independentes autorizados; SLA vencido produz alerta crítico separado e idempotente, sem referência ou motivo sensível.
+- Memórias antigas passam a ser lidas pelo keyring `ENCRYPTION_PREVIOUS_KEYS`, enquanto toda nova gravação continua usando exclusivamente `ENCRYPTION_KEY`.
+- Versões de assinatura registram somente um identificador não secreto da chave mestre e selecionam a chave histórica correta durante a verificação.
+- Troca da chave ativa cria nova versão automaticamente; ausência da chave histórica falha de forma segura e compreensível.
+- Celery Beat busca agendas vencidas a cada cinco minutos; bloqueio `SKIP LOCKED` impede processamento duplicado entre workers concorrentes.
+- Exercícios agendados usam o mesmo avaliador dos exercícios manuais, geram auditoria/evento e notificam o responsável quando algum controle falha.
+- Migração: `20260721_0057_agent_memory_keyring.py`.
+- Próximo passo: recriptografia controlada de memórias com checkpoint, destinatários responsáveis explícitos por incidente e métricas operacionais do scheduler.

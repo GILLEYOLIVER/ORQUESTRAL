@@ -4,11 +4,11 @@ import hashlib
 import hmac
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -17,11 +17,15 @@ from app.core.security import utc_now
 from app.modules.agents.coordination_models import AgentDelegation
 from app.modules.agents.memory_models import (
     AgentMemoryEntry,
+    AgentMemoryExerciseSchedule,
     AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
+    AgentMemoryResponseExercise,
+    AgentMemoryRiskReportRecord,
     AgentMemoryScopePolicy,
     AgentTaskMemoryAccessGrant,
+    AgentTaskMemoryAccessIncident,
 )
 from app.modules.agents.models import AgentDataPolicy
 from app.modules.agents.security import (
@@ -29,6 +33,10 @@ from app.modules.agents.security import (
     protect_provider_text,
     scan_prompt_injection,
 )
+from app.modules.authorization.service import record_authorization_audit
+from app.modules.events.schemas import DomainEventCreate
+from app.modules.events.service import enqueue_domain_event
+from app.modules.notifications.service import create_notification
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 
 DEFAULT_SCOPES = ["conversation", "task", "operational"]
@@ -105,6 +113,164 @@ def memory_incident_value_fingerprint(
 ) -> str:
     payload = f"{company_id}:{agent_id}:{value_type}:{value}".encode()
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
+def memory_master_key_id(secret: str) -> str:
+    return hashlib.sha256(f"orkestral-memory-master:{secret}".encode()).hexdigest()[:32]
+
+
+def memory_signing_secrets(settings: Settings, master_key_id: str) -> tuple[str, ...]:
+    candidates = tuple(dict.fromkeys((settings.encryption_key, *settings.encryption_previous_keys)))
+    if master_key_id == "legacy":
+        return candidates
+    return tuple(secret for secret in candidates if memory_master_key_id(secret) == master_key_id)
+
+
+def memory_credential_vault(settings: Settings) -> CredentialVault:
+    return CredentialVault(",".join((settings.encryption_key, *settings.encryption_previous_keys)))
+
+
+async def memory_response_exercise_checks(
+    database: AsyncSession, *, company_id: UUID, agent_id: UUID
+) -> dict[str, bool]:
+    quarantine_violations = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessGrant.id))
+            .select_from(AgentTaskMemoryAccessGrant)
+            .join(
+                AgentTaskMemoryAccessIncident,
+                and_(
+                    AgentTaskMemoryAccessIncident.company_id
+                    == AgentTaskMemoryAccessGrant.company_id,
+                    AgentTaskMemoryAccessIncident.owner_agent_id
+                    == AgentTaskMemoryAccessGrant.owner_agent_id,
+                    AgentTaskMemoryAccessGrant.created_at
+                    >= AgentTaskMemoryAccessIncident.created_at,
+                    AgentTaskMemoryAccessGrant.created_at
+                    < AgentTaskMemoryAccessIncident.quarantine_until,
+                ),
+            )
+            .where(
+                AgentTaskMemoryAccessGrant.company_id == company_id,
+                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessGrant.status == "active",
+            )
+        )
+        or 0
+    )
+    quorum_violations = int(
+        await database.scalar(
+            select(func.count(AgentTaskMemoryAccessIncident.id)).where(
+                AgentTaskMemoryAccessIncident.company_id == company_id,
+                AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+                AgentTaskMemoryAccessIncident.severity == "critical",
+                or_(
+                    and_(
+                        AgentTaskMemoryAccessIncident.review_status != "pending",
+                        AgentTaskMemoryAccessIncident.review_count
+                        < AgentTaskMemoryAccessIncident.required_review_quorum,
+                    ),
+                    and_(
+                        AgentTaskMemoryAccessIncident.review_status == "pending",
+                        AgentTaskMemoryAccessIncident.review_count
+                        >= AgentTaskMemoryAccessIncident.required_review_quorum,
+                    ),
+                ),
+            )
+        )
+        or 0
+    )
+    tenant_mismatches = sum(
+        int(value or 0)
+        for value in (
+            await database.scalar(
+                select(func.count(AgentTaskMemoryAccessGrant.id)).where(
+                    AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
+                    AgentTaskMemoryAccessGrant.company_id != company_id,
+                )
+            ),
+            await database.scalar(
+                select(func.count(AgentTaskMemoryAccessIncident.id)).where(
+                    AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+                    AgentTaskMemoryAccessIncident.company_id != company_id,
+                )
+            ),
+            await database.scalar(
+                select(func.count(AgentMemoryRiskReportRecord.id)).where(
+                    AgentMemoryRiskReportRecord.agent_id == agent_id,
+                    AgentMemoryRiskReportRecord.company_id != company_id,
+                )
+            ),
+        )
+    )
+    report_records = list(
+        await database.scalars(
+            select(AgentMemoryRiskReportRecord)
+            .where(
+                AgentMemoryRiskReportRecord.company_id == company_id,
+                AgentMemoryRiskReportRecord.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryRiskReportRecord.sequence)
+        )
+    )
+    report_chain_intact = all(
+        record.sequence == index + 1
+        and record.previous_signature == (report_records[index - 1].signature if index else None)
+        for index, record in enumerate(report_records)
+    )
+    return {
+        "quarantine_enforced": quarantine_violations == 0,
+        "critical_quorum_enforced": quorum_violations == 0,
+        "tenant_scope_intact": tenant_mismatches == 0,
+        "report_chain_intact": report_chain_intact,
+    }
+
+
+async def record_agent_memory_response_exercise(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    agent_id: UUID,
+    requested_by_user_id: UUID,
+    source: str,
+) -> AgentMemoryResponseExercise:
+    checks = await memory_response_exercise_checks(
+        database, company_id=company_id, agent_id=agent_id
+    )
+    exercise = AgentMemoryResponseExercise(
+        company_id=company_id,
+        agent_id=agent_id,
+        scenario="full",
+        status="passed" if all(checks.values()) else "failed",
+        checks=checks,
+        requested_by_user_id=requested_by_user_id,
+    )
+    database.add(exercise)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=company_id,
+        actor_user_id=requested_by_user_id,
+        action="agent.memory_response_exercise.completed",
+        target_type="agent_memory_response_exercise",
+        target_id=exercise.id,
+        details={"status": exercise.status, "checks": checks, "source": source},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_response_exercise.completed",
+            company_id=company_id,
+            actor_user_id=requested_by_user_id,
+            classification="internal",
+            payload={
+                "exercise_id": str(exercise.id),
+                "status": exercise.status,
+                "source": source,
+            },
+        ),
+    )
+    return exercise
 
 
 def memory_is_expired(memory: AgentMemoryEntry, *, now: datetime | None = None) -> bool:
@@ -248,7 +414,7 @@ async def retrieve_authorized_memories(
             .limit(memory_policy.max_retrieval_entries)
         )
     )
-    vault = CredentialVault(settings.encryption_key)
+    vault = memory_credential_vault(settings)
     contents: list[str] = []
     retrieved: list[str] = []
     blocked: list[str] = []
@@ -307,7 +473,7 @@ async def retrieve_shared_task_memories(
             .limit(effective_max_entries)
         )
     )
-    vault = CredentialVault(settings.encryption_key)
+    vault = memory_credential_vault(settings)
     items: list[SharedTaskMemoryItem] = []
     remaining_characters = effective_max_characters
     blocked_items = 0
@@ -437,3 +603,66 @@ def purge_expired_agent_memories_sync() -> int:
     import asyncio
 
     return asyncio.run(_purge_expired_agent_memories_once(get_settings()))
+
+
+async def run_due_agent_memory_response_exercises(
+    database: AsyncSession, *, limit: int = 100
+) -> dict[str, int]:
+    now = utc_now()
+    schedules = list(
+        await database.scalars(
+            select(AgentMemoryExerciseSchedule)
+            .where(
+                AgentMemoryExerciseSchedule.enabled.is_(True),
+                AgentMemoryExerciseSchedule.next_run_at.is_not(None),
+                AgentMemoryExerciseSchedule.next_run_at <= now,
+            )
+            .order_by(AgentMemoryExerciseSchedule.next_run_at)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    passed = failed = 0
+    for schedule in schedules:
+        exercise = await record_agent_memory_response_exercise(
+            database,
+            company_id=schedule.company_id,
+            agent_id=schedule.agent_id,
+            requested_by_user_id=schedule.updated_by_user_id,
+            source="worker_schedule",
+        )
+        schedule.last_run_at = now
+        schedule.next_run_at = now + timedelta(hours=schedule.cadence_hours)
+        if exercise.status == "passed":
+            passed += 1
+        else:
+            failed += 1
+            await create_notification(
+                database,
+                company_id=schedule.company_id,
+                recipient_user_id=schedule.updated_by_user_id,
+                event_type="agent.memory_response_exercise.failed",
+                title="Exercício de segurança exige revisão",
+                message="Um controle da memória do agente não passou no exercício agendado.",
+                severity="critical",
+                resource_type="agent_memory_response_exercise",
+                resource_id=exercise.id,
+                data={"agent_id": str(schedule.agent_id)},
+            )
+    await database.commit()
+    return {"processed": len(schedules), "passed": passed, "failed": failed}
+
+
+async def maintain_due_agent_memory_response_exercises(*, settings: Settings) -> dict[str, int]:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            return await run_due_agent_memory_response_exercises(database)
+    finally:
+        await resources.close()
+
+
+def maintain_due_agent_memory_response_exercises_sync() -> dict[str, int]:
+    import asyncio
+
+    return asyncio.run(maintain_due_agent_memory_response_exercises(settings=get_settings()))

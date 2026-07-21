@@ -38,6 +38,10 @@ celery_app.conf.update(
             "task": "orkestral.agents.purge_expired_memories",
             "schedule": 300.0,
         },
+        "run-agent-memory-response-exercises-every-five-minutes": {
+            "task": "orkestral.agents.run_due_memory_response_exercises",
+            "schedule": 300.0,
+        },
     },
 )
 

@@ -28,9 +28,12 @@ devem preservar o SHA completo e registrar a versão legível em comentário.
 2. Troque `JWT_SECRET` pelo valor novo e mantenha o anterior em `JWT_PREVIOUS_SECRETS`.
 3. Reinicie a API e aguarde o maior prazo de token de acesso.
 4. Remova o segredo anterior e reinicie novamente.
-5. Para credenciais de integrações, configure `ENCRYPTION_KEY` como `nova,anterior` durante a
-   janela de rotação. O cofre sempre grava com a primeira chave e lê pelas chaves seguintes.
-6. Nunca registre valores de segredo em tickets, logs, PRs ou comandos versionados.
+5. Configure a chave nova em `ENCRYPTION_KEY` e mantenha as anteriores temporariamente em
+   `ENCRYPTION_PREVIOUS_KEYS`. Novos dados usam somente a chave ativa; memórias, campos e
+   relatórios históricos procuram a chave anterior pelo keyring protegido.
+6. Execute os exercícios de resposta e verifique relatórios antigos antes de remover uma chave.
+7. Remova chaves anteriores somente depois da recriptografia e da janela de retenção aprovada.
+8. Nunca registre valores de segredo em tickets, logs, PRs ou comandos versionados.
 
 ## Backup
 

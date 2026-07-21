@@ -7,6 +7,7 @@ from worker.tasks import (
     maintain_agent_delegations_task,
     process_agent_delegation_task,
     purge_expired_agent_memories_task,
+    run_due_agent_memory_response_exercises_task,
 )
 
 
@@ -37,3 +38,13 @@ def test_memory_maintenance_delegates_to_domain_service(monkeypatch: MonkeyPatch
     result = purge_expired_agent_memories_task.apply()
     assert result.successful()
     assert result.result == {"status": "ok", "deleted": 3}
+
+
+def test_memory_response_schedule_delegates_to_domain_service(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "worker.tasks.maintain_due_agent_memory_response_exercises_sync",
+        lambda: {"processed": 2, "passed": 1, "failed": 1},
+    )
+    result = run_due_agent_memory_response_exercises_task.apply()
+    assert result.successful()
+    assert result.result == {"status": "ok", "processed": 2, "passed": 1, "failed": 1}

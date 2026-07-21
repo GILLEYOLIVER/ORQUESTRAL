@@ -477,6 +477,10 @@ class AgentMemoryRiskSigningKeyVersion(Base):
             name="uq_agent_memory_risk_signing_key_version",
         ),
         CheckConstraint("version >= 1", name="ck_agent_memory_risk_signing_key_version"),
+        CheckConstraint(
+            "char_length(master_key_id) BETWEEN 6 AND 64",
+            name="ck_agent_memory_risk_signing_master_key_id",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -487,6 +491,7 @@ class AgentMemoryRiskSigningKeyVersion(Base):
     )
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     version: Mapped[int] = mapped_column(Integer)
+    master_key_id: Mapped[str] = mapped_column(String(64), index=True)
     activated_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )

@@ -82,13 +82,17 @@ from app.modules.agents.memory_service import (
     memory_incident_value_fingerprint,
     memory_is_expired,
     memory_legal_reference_fingerprint,
+    memory_master_key_id,
     memory_policy_values,
+    memory_signing_secrets,
+    record_agent_memory_response_exercise,
     retrieve_shared_task_memories,
 )
 from app.modules.agents.models import Agent
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
+from app.modules.notifications.service import company_approver_user_ids, create_notification
 from app.modules.plugins.crypto import CredentialVault
 from app.modules.users.models import CompanyUser
 
@@ -104,6 +108,50 @@ async def _tenant_agent(database: DatabaseSession, *, company_id: UUID, agent_id
     if agent is None:
         raise HTTPException(status_code=404, detail="Agente não encontrado.")
     return agent
+
+
+async def _notify_memory_incident_reviewers(
+    database: DatabaseSession,
+    *,
+    incident: AgentTaskMemoryAccessIncident,
+    escalated: bool,
+) -> None:
+    recipients = [
+        user_id
+        for user_id in await company_approver_user_ids(database, incident.company_id)
+        if user_id != incident.triggered_by_user_id
+    ]
+    if not recipients:
+        recipients = [incident.triggered_by_user_id]
+    for recipient_user_id in recipients:
+        await create_notification(
+            database,
+            company_id=incident.company_id,
+            recipient_user_id=recipient_user_id,
+            event_type=(
+                "agent.memory_incident.review_overdue"
+                if escalated
+                else "agent.memory_incident.review_requested"
+            ),
+            title=(
+                "Revisão de incidente de memória atrasada"
+                if escalated
+                else "Nova revisão de incidente de memória"
+            ),
+            message=(
+                "O prazo de revisão venceu e exige ação independente."
+                if escalated
+                else "Um incidente exige revisão independente dentro do SLA configurado."
+            ),
+            severity="critical" if incident.severity == "critical" or escalated else "warning",
+            resource_type="agent_task_memory_access_incident",
+            resource_id=incident.id,
+            data={
+                "agent_id": str(incident.owner_agent_id),
+                "severity": incident.severity,
+                "review_due_at": incident.review_due_at.isoformat(),
+            },
+        )
 
 
 async def _memory_policy(
@@ -1049,6 +1097,7 @@ async def escalate_overdue_agent_memory_incidents(
     for incident in incidents:
         incident.escalated_at = now
         incident.escalation_count += 1
+        await _notify_memory_incident_reviewers(database, incident=incident, escalated=True)
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -1241,11 +1290,13 @@ async def export_agent_memory_risk_report(
         .order_by(AgentMemoryRiskSigningKeyVersion.version.desc())
         .limit(1)
     )
-    if signing_key is None:
+    active_master_key_id = memory_master_key_id(settings.encryption_key)
+    if signing_key is None or signing_key.master_key_id != active_master_key_id:
         signing_key = AgentMemoryRiskSigningKeyVersion(
             company_id=context.company_id,
             agent_id=agent_id,
-            version=1,
+            version=(signing_key.version + 1 if signing_key else 1),
+            master_key_id=active_master_key_id,
             activated_by_user_id=context.user_id,
         )
         database.add(signing_key)
@@ -1316,12 +1367,34 @@ async def verify_agent_memory_risk_report(
     )
     if record is None:
         return AgentMemoryRiskReportVerification(valid=False, reason="Relatório não registrado.")
-    expected = memory_incident_value_fingerprint(
-        secret=settings.encryption_key,
-        company_id=context.company_id,
-        agent_id=agent_id,
-        value_type=f"risk_report_v{payload.payload.signature_key_version}",
-        value=_canonical_risk_report(payload.payload),
+    signing_key = await database.scalar(
+        select(AgentMemoryRiskSigningKeyVersion).where(
+            AgentMemoryRiskSigningKeyVersion.company_id == context.company_id,
+            AgentMemoryRiskSigningKeyVersion.agent_id == agent_id,
+            AgentMemoryRiskSigningKeyVersion.version == payload.payload.signature_key_version,
+        )
+    )
+    if signing_key is None:
+        return AgentMemoryRiskReportVerification(
+            valid=False, reason="Versão da assinatura não registrada."
+        )
+    signing_secrets = memory_signing_secrets(settings, signing_key.master_key_id)
+    if not signing_secrets:
+        return AgentMemoryRiskReportVerification(
+            valid=False, reason="Chave histórica indisponível no ambiente seguro."
+        )
+    signature_matches = any(
+        compare_digest(
+            memory_incident_value_fingerprint(
+                secret=secret,
+                company_id=context.company_id,
+                agent_id=agent_id,
+                value_type=f"risk_report_v{payload.payload.signature_key_version}",
+                value=_canonical_risk_report(payload.payload),
+            ),
+            payload.signature,
+        )
+        for secret in signing_secrets
     )
     previous_signature = None
     if payload.payload.sequence > 1:
@@ -1333,7 +1406,7 @@ async def verify_agent_memory_risk_report(
             )
         )
     valid = (
-        compare_digest(expected, payload.signature)
+        signature_matches
         and compare_digest(record.signature, payload.signature)
         and record.sequence == payload.payload.sequence
         and record.signature_key_version == payload.payload.signature_key_version
@@ -1355,6 +1428,7 @@ async def rotate_agent_memory_risk_signing_key(
     agent_id: UUID,
     principal: CanConfigureAgentMemory,
     database: DatabaseSession,
+    settings: RequestSettings,
 ) -> AgentMemoryRiskSigningKeyResponse:
     context = get_request_context(principal)
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
@@ -1376,6 +1450,7 @@ async def rotate_agent_memory_risk_signing_key(
         company_id=context.company_id,
         agent_id=agent_id,
         version=latest_version + 1,
+        master_key_id=memory_master_key_id(settings.encryption_key),
         activated_by_user_id=context.user_id,
     )
     database.add(key)
@@ -1459,125 +1534,12 @@ async def run_agent_memory_response_exercise(
 ) -> AgentMemoryResponseExerciseResponse:
     context = get_request_context(principal)
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
-    quarantine_violations = int(
-        await database.scalar(
-            select(func.count(AgentTaskMemoryAccessGrant.id))
-            .select_from(AgentTaskMemoryAccessGrant)
-            .join(
-                AgentTaskMemoryAccessIncident,
-                and_(
-                    AgentTaskMemoryAccessIncident.company_id
-                    == AgentTaskMemoryAccessGrant.company_id,
-                    AgentTaskMemoryAccessIncident.owner_agent_id
-                    == AgentTaskMemoryAccessGrant.owner_agent_id,
-                    AgentTaskMemoryAccessGrant.created_at
-                    >= AgentTaskMemoryAccessIncident.created_at,
-                    AgentTaskMemoryAccessGrant.created_at
-                    < AgentTaskMemoryAccessIncident.quarantine_until,
-                ),
-            )
-            .where(
-                AgentTaskMemoryAccessGrant.company_id == context.company_id,
-                AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
-                AgentTaskMemoryAccessGrant.status == "active",
-            )
-        )
-        or 0
-    )
-    quorum_violations = int(
-        await database.scalar(
-            select(func.count(AgentTaskMemoryAccessIncident.id)).where(
-                AgentTaskMemoryAccessIncident.company_id == context.company_id,
-                AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
-                AgentTaskMemoryAccessIncident.severity == "critical",
-                or_(
-                    and_(
-                        AgentTaskMemoryAccessIncident.review_status != "pending",
-                        AgentTaskMemoryAccessIncident.review_count
-                        < AgentTaskMemoryAccessIncident.required_review_quorum,
-                    ),
-                    and_(
-                        AgentTaskMemoryAccessIncident.review_status == "pending",
-                        AgentTaskMemoryAccessIncident.review_count
-                        >= AgentTaskMemoryAccessIncident.required_review_quorum,
-                    ),
-                ),
-            )
-        )
-        or 0
-    )
-    tenant_mismatches = sum(
-        int(value or 0)
-        for value in (
-            await database.scalar(
-                select(func.count(AgentTaskMemoryAccessGrant.id)).where(
-                    AgentTaskMemoryAccessGrant.owner_agent_id == agent_id,
-                    AgentTaskMemoryAccessGrant.company_id != context.company_id,
-                )
-            ),
-            await database.scalar(
-                select(func.count(AgentTaskMemoryAccessIncident.id)).where(
-                    AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
-                    AgentTaskMemoryAccessIncident.company_id != context.company_id,
-                )
-            ),
-            await database.scalar(
-                select(func.count(AgentMemoryRiskReportRecord.id)).where(
-                    AgentMemoryRiskReportRecord.agent_id == agent_id,
-                    AgentMemoryRiskReportRecord.company_id != context.company_id,
-                )
-            ),
-        )
-    )
-    report_records = list(
-        await database.scalars(
-            select(AgentMemoryRiskReportRecord)
-            .where(
-                AgentMemoryRiskReportRecord.company_id == context.company_id,
-                AgentMemoryRiskReportRecord.agent_id == agent_id,
-            )
-            .order_by(AgentMemoryRiskReportRecord.sequence)
-        )
-    )
-    report_chain_intact = all(
-        record.sequence == index + 1
-        and record.previous_signature == (report_records[index - 1].signature if index else None)
-        for index, record in enumerate(report_records)
-    )
-    checks = {
-        "quarantine_enforced": quarantine_violations == 0,
-        "critical_quorum_enforced": quorum_violations == 0,
-        "tenant_scope_intact": tenant_mismatches == 0,
-        "report_chain_intact": report_chain_intact,
-    }
-    exercise = AgentMemoryResponseExercise(
+    exercise = await record_agent_memory_response_exercise(
+        database,
         company_id=context.company_id,
         agent_id=agent_id,
-        scenario=payload.scenario,
-        status="passed" if all(checks.values()) else "failed",
-        checks=checks,
         requested_by_user_id=context.user_id,
-    )
-    database.add(exercise)
-    await database.flush()
-    record_authorization_audit(
-        database,
-        company_id=context.company_id,
-        actor_user_id=context.user_id,
-        action="agent.memory_response_exercise.completed",
-        target_type="agent_memory_response_exercise",
-        target_id=exercise.id,
-        details={"status": exercise.status, "checks": checks},
-    )
-    enqueue_domain_event(
-        database,
-        DomainEventCreate(
-            event_type="agent.memory_response_exercise.completed",
-            company_id=context.company_id,
-            actor_user_id=context.user_id,
-            classification="internal",
-            payload={"exercise_id": str(exercise.id), "status": exercise.status},
-        ),
+        source="manual",
     )
     await database.commit()
     await database.refresh(exercise)
@@ -1694,16 +1656,27 @@ async def run_due_agent_memory_exercise(
             next_run_at=schedule.next_run_at if schedule else None,
             exercise=None,
         )
-    exercise = await run_agent_memory_response_exercise(
-        agent_id,
-        AgentMemoryResponseExerciseCreate(),
-        principal,
+    exercise_record = await record_agent_memory_response_exercise(
         database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        requested_by_user_id=context.user_id,
+        source="manual_schedule",
     )
     schedule.last_run_at = now
     schedule.next_run_at = now + timedelta(hours=schedule.cadence_hours)
     schedule.updated_by_user_id = context.user_id
     await database.commit()
+    await database.refresh(exercise_record)
+    exercise = AgentMemoryResponseExerciseResponse(
+        id=exercise_record.id,
+        agent_id=agent_id,
+        scenario=exercise_record.scenario,
+        status=exercise_record.status,
+        checks=exercise_record.checks,
+        requested_by_user_id=exercise_record.requested_by_user_id,
+        created_at=exercise_record.created_at,
+    )
     return AgentMemoryExerciseDueResponse(
         executed=True,
         next_run_at=schedule.next_run_at,
@@ -1827,6 +1800,7 @@ async def revoke_agent_task_memory_access_for_incident(
             },
         ),
     )
+    await _notify_memory_incident_reviewers(database, incident=incident, escalated=False)
     await database.commit()
     await database.refresh(incident)
     return _task_memory_incident_response(incident)

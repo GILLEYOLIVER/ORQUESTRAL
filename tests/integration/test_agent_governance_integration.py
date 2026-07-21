@@ -16,6 +16,7 @@ from app.core.security import hash_password
 from app.main import create_app
 from app.modules.agents import coordination_execution as coordination_execution_module
 from app.modules.agents import memory_routes as memory_routes_module
+from app.modules.agents import memory_service as memory_service_module
 from app.modules.agents.coordination_execution import process_delegation
 from app.modules.agents.coordination_models import AgentDelegationPayload
 from app.modules.agents.memory_models import (
@@ -28,6 +29,7 @@ from app.modules.agents.memory_service import (
     AuthorizedMemoryContext,
     SharedTaskMemoryContext,
     memory_access_revocation_fingerprint,
+    maintain_due_agent_memory_response_exercises,
     retrieve_authorized_memories,
     retrieve_shared_task_memories,
 )
@@ -645,6 +647,21 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert len(retrieved.retrieved_fingerprints) == 1
             assert len(retrieved.blocked_fingerprints) == 1
             assert retrieved.estimated_tokens <= 128
+            original_encryption_key = settings.encryption_key
+            rotated_encryption_key = "rotated-agent-memory-key-2026-secure-value"
+            settings.encryption_key = rotated_encryption_key
+            settings.encryption_previous_keys = [original_encryption_key]
+            keyring_retrieval = asyncio.run(
+                _retrieve_memory_context(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                    user_id=identity.user_ids[1],
+                )
+            )
+            assert keyring_retrieval.contents == (sensitive_memory,)
+            settings.encryption_key = original_encryption_key
+            settings.encryption_previous_keys = []
             other_user_retrieval = asyncio.run(
                 _retrieve_memory_context(
                     settings,
@@ -1457,6 +1474,16 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert incident.status_code == 201
             assert incident.json()["revoked_grants"] >= 1
             assert "incident_reference" not in incident.json()
+            assert (
+                asyncio.run(
+                    _notification_count(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        event_type="agent.memory_incident.review_requested",
+                    )
+                )
+                >= 1
+            )
             repeated_incident = client.post(
                 f"/agents/{agent_id}/memory-access-incidents/revoke",
                 headers=headers_b,
@@ -1538,6 +1565,16 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert repeated_escalation.status_code == 200
             assert repeated_escalation.json()["escalated_count"] == 0
+            assert (
+                asyncio.run(
+                    _notification_count(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        event_type="agent.memory_incident.review_overdue",
+                    )
+                )
+                >= 1
+            )
             monkeypatch.setattr(memory_routes_module, "utc_now", current_memory_route_time)
             incident_review_path = (
                 f"/agents/{agent_id}/memory-access-incidents/{incident.json()['id']}/review"
@@ -1617,6 +1654,37 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert historical_report.status_code == 200
             assert historical_report.json()["valid"] is True
+            settings.encryption_key = rotated_encryption_key
+            settings.encryption_previous_keys = [original_encryption_key]
+            master_rotated_key = client.post(
+                f"/agents/{agent_id}/memory-risk-signing-keys/rotate",
+                headers=headers_b,
+            )
+            assert master_rotated_key.status_code == 201
+            assert master_rotated_key.json()["version"] == 3
+            third_risk_report = client.post(
+                f"/agents/{agent_id}/memory-risk-report", headers=headers_b
+            )
+            assert third_risk_report.status_code == 200
+            assert third_risk_report.json()["payload"]["signature_key_version"] == 3
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memory-risk-report/verify",
+                    headers=headers_b,
+                    json=risk_report.json(),
+                ).json()["valid"]
+                is True
+            )
+            settings.encryption_previous_keys = []
+            unavailable_history = client.post(
+                f"/agents/{agent_id}/memory-risk-report/verify",
+                headers=headers_b,
+                json=risk_report.json(),
+            )
+            assert unavailable_history.status_code == 200
+            assert unavailable_history.json()["valid"] is False
+            settings.encryption_key = original_encryption_key
+            settings.encryption_previous_keys = []
             tampered_report = risk_report.json()
             tampered_report["payload"]["risk_summary"]["active_grants"] += 1
             rejected_report = client.post(
@@ -1660,10 +1728,21 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert not_due.status_code == 200
             assert not_due.json()["executed"] is False
+            current_memory_service_time = memory_service_module.utc_now
+            monkeypatch.setattr(
+                memory_service_module,
+                "utc_now",
+                lambda: current_memory_service_time() + timedelta(hours=2),
+            )
+            scheduled_result = asyncio.run(
+                maintain_due_agent_memory_response_exercises(settings=settings)
+            )
+            assert scheduled_result == {"processed": 1, "passed": 1, "failed": 0}
+            monkeypatch.setattr(memory_service_module, "utc_now", current_memory_service_time)
             monkeypatch.setattr(
                 memory_routes_module,
                 "utc_now",
-                lambda: current_memory_route_time() + timedelta(hours=2),
+                lambda: current_memory_route_time() + timedelta(hours=4),
             )
             due = client.post(
                 f"/agents/{agent_id}/memory-response-exercise-schedule/run-due",
