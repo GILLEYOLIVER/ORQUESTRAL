@@ -554,8 +554,30 @@ class AgentMemoryKeyringStatusResponse(StrictSchema):
     source: Literal["environment", "managed"]
     provider_code: str
     status: Literal["active"]
+    health_status: Literal["not_applicable", "unknown", "healthy", "unavailable"]
     activated_at: datetime | None
     last_resolved_at: datetime | None
+    last_health_checked_at: datetime | None
+    credential_expires_at: datetime | None
+    expiry_warning_sent: bool
+    automatic_exit_job_id: UUID | None
+    automatic_exit_status: Literal["pending", "running", "completed", "failed", "closed"] | None
+
+
+class AgentMemoryKeyringExitCreate(StrictSchema):
+    batch_size: int = Field(default=100, ge=1, le=500)
+    max_retry_attempts: int = Field(default=3, ge=1, le=10)
+
+
+class AgentMemoryVaultIncidentResponse(StrictSchema):
+    id: UUID
+    provider_code: str
+    status: Literal["open", "resolved"]
+    failure_count: int
+    alerted: bool
+    first_detected_at: datetime
+    last_detected_at: datetime
+    resolved_at: datetime | None
 
 
 class AgentMemoryReencryptionLegalHoldResponse(StrictSchema):

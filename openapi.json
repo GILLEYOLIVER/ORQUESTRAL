@@ -2321,6 +2321,27 @@
         "title": "AgentMemoryIncidentEscalationResponse",
         "type": "object"
       },
+      "AgentMemoryKeyringExitCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "batch_size": {
+            "default": 100,
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Batch Size",
+            "type": "integer"
+          },
+          "max_retry_attempts": {
+            "default": 3,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Retry Attempts",
+            "type": "integer"
+          }
+        },
+        "title": "AgentMemoryKeyringExitCreate",
+        "type": "object"
+      },
       "AgentMemoryKeyringStatusResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2335,6 +2356,74 @@
               }
             ],
             "title": "Activated At"
+          },
+          "automatic_exit_job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automatic Exit Job Id"
+          },
+          "automatic_exit_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "running",
+                  "completed",
+                  "failed",
+                  "closed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automatic Exit Status"
+          },
+          "credential_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential Expires At"
+          },
+          "expiry_warning_sent": {
+            "title": "Expiry Warning Sent",
+            "type": "boolean"
+          },
+          "health_status": {
+            "enum": [
+              "not_applicable",
+              "unknown",
+              "healthy",
+              "unavailable"
+            ],
+            "title": "Health Status",
+            "type": "string"
+          },
+          "last_health_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Health Checked At"
           },
           "last_resolved_at": {
             "anyOf": [
@@ -2370,8 +2459,14 @@
           "source",
           "provider_code",
           "status",
+          "health_status",
           "activated_at",
-          "last_resolved_at"
+          "last_resolved_at",
+          "last_health_checked_at",
+          "credential_expires_at",
+          "expiry_warning_sent",
+          "automatic_exit_job_id",
+          "automatic_exit_status"
         ],
         "title": "AgentMemoryKeyringStatusResponse",
         "type": "object"
@@ -4109,6 +4204,70 @@
           "expires_at"
         ],
         "title": "AgentMemoryVaultCredentialOption",
+        "type": "object"
+      },
+      "AgentMemoryVaultIncidentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "alerted": {
+            "title": "Alerted",
+            "type": "boolean"
+          },
+          "failure_count": {
+            "title": "Failure Count",
+            "type": "integer"
+          },
+          "first_detected_at": {
+            "format": "date-time",
+            "title": "First Detected At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_detected_at": {
+            "format": "date-time",
+            "title": "Last Detected At",
+            "type": "string"
+          },
+          "provider_code": {
+            "title": "Provider Code",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider_code",
+          "status",
+          "failure_count",
+          "alerted",
+          "first_detected_at",
+          "last_detected_at",
+          "resolved_at"
+        ],
+        "title": "AgentMemoryVaultIncidentResponse",
         "type": "object"
       },
       "AgentMessageResponse": {
@@ -22950,6 +23109,84 @@
         ]
       }
     },
+    "/agents/{agent_id}/memory-keyring/exit": {
+      "post": {
+        "operationId": "request_agent_memory_keyring_exit_agents__agent_id__memory_keyring_exit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryKeyringExitCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryReencryptionJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Agent Memory Keyring Exit",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/agents/{agent_id}/memory-policy": {
       "get": {
         "operationId": "get_agent_memory_policy_agents__agent_id__memory_policy_get",
@@ -24913,6 +25150,78 @@
           }
         ],
         "summary": "List Agent Memory Vault Credentials",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-vault-incidents": {
+      "get": {
+        "operationId": "list_agent_memory_vault_incidents_agents__agent_id__memory_vault_incidents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryVaultIncidentResponse"
+                  },
+                  "title": "Response List Agent Memory Vault Incidents Agents  Agent Id  Memory Vault Incidents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Memory Vault Incidents",
         "tags": [
           "agents"
         ]

@@ -138,3 +138,10 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 - Para sair de um keyring externo, o job de ambiente monta temporariamente a chave de ambiente como primária e as chaves externas apenas para leitura. O vínculo só muda para `revoked` após todos os registros do snapshot serem recriptografados com sucesso.
 - Falha ao resolver o cofre interrompe a saída com `vault_resolution_failed`; o vínculo continua ativo e nenhuma remoção prematura ocorre.
 - O painel mostra apenas origem, provedor, última resolução, taxa de sucesso, quantidade de testes e latência. IDs de credenciais, referências e material secreto não são enviados ao navegador.
+
+## Ciclo de vida dos keyrings gerenciados
+
+- A interface permite solicitar a saída do cofre sem alterar a configuração global. O vínculo permanece ativo até a recriptografia para a chave do ambiente terminar.
+- O worker verifica cofres ativos, abre um único incidente por vínculo, alerta após o limiar configurado e registra a recuperação sem armazenar mensagens do provedor, referências ou segredos.
+- Credenciais com vencimento iniciam saída automática dentro da janela configurada. Uma credencial vencida só é revogada quando nenhum keyring ativo depende dela.
+- Renovações de retenção legal estão disponíveis na interface e continuam exigindo uma decisão de outro usuário autorizado.

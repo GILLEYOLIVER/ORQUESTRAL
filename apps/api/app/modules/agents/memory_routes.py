@@ -29,6 +29,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryRiskReportRecord,
     AgentMemoryRiskSigningKeyVersion,
     AgentMemoryScopePolicy,
+    AgentMemoryVaultIncident,
     AgentTaskMemoryAccessGrant,
     AgentTaskMemoryAccessIncident,
     AgentTaskMemoryAccessTrace,
@@ -43,6 +44,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryExerciseScheduleResponse,
     AgentMemoryExerciseScheduleUpdate,
     AgentMemoryIncidentEscalationResponse,
+    AgentMemoryKeyringExitCreate,
     AgentMemoryKeyringStatusResponse,
     AgentMemoryLegalHoldCreate,
     AgentMemoryLegalHoldDecision,
@@ -72,6 +74,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemorySchedulerMetricsResponse,
     AgentMemoryScopePolicyInput,
     AgentMemoryVaultCredentialOption,
+    AgentMemoryVaultIncidentResponse,
     AgentTaskMemoryAccessDecision,
     AgentTaskMemoryAccessGrantCreate,
     AgentTaskMemoryAccessGrantResponse,
@@ -95,6 +98,7 @@ from app.modules.agents.memory_schemas import (
 )
 from app.modules.agents.memory_service import (
     agent_memory_credential_vault,
+    create_agent_memory_environment_exit_job,
     has_active_memory_legal_hold,
     memory_access_revocation_fingerprint,
     memory_consent_fingerprint,
@@ -2264,16 +2268,144 @@ async def get_agent_memory_keyring_status(
             source="environment",
             provider_code="environment",
             status="active",
+            health_status="not_applicable",
             activated_at=None,
             last_resolved_at=None,
+            last_health_checked_at=None,
+            credential_expires_at=None,
+            expiry_warning_sent=False,
+            automatic_exit_job_id=None,
+            automatic_exit_status=None,
         )
+    credential_expires_at = await database.scalar(
+        select(IntegrationCredential.expires_at).where(
+            IntegrationCredential.id == binding.credential_id,
+            IntegrationCredential.company_id == context.company_id,
+        )
+    )
+    automatic_exit_status = (
+        await database.scalar(
+            select(AgentMemoryReencryptionJob.status).where(
+                AgentMemoryReencryptionJob.id == binding.automatic_exit_job_id,
+                AgentMemoryReencryptionJob.company_id == context.company_id,
+            )
+        )
+        if binding.automatic_exit_job_id is not None
+        else None
+    )
     return AgentMemoryKeyringStatusResponse(
         source="managed",
         provider_code=binding.provider_code,
         status="active",
+        health_status=cast(
+            Literal["not_applicable", "unknown", "healthy", "unavailable"],
+            binding.health_status,
+        ),
         activated_at=binding.activated_at,
         last_resolved_at=binding.last_resolved_at,
+        last_health_checked_at=binding.last_health_checked_at,
+        credential_expires_at=credential_expires_at,
+        expiry_warning_sent=binding.expiry_warning_sent_at is not None,
+        automatic_exit_job_id=binding.automatic_exit_job_id,
+        automatic_exit_status=cast(
+            Literal["pending", "running", "completed", "failed", "closed"] | None,
+            automatic_exit_status,
+        ),
     )
+
+
+@router.get(
+    "/{agent_id}/memory-vault-incidents",
+    response_model=list[AgentMemoryVaultIncidentResponse],
+)
+async def list_agent_memory_vault_incidents(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryVaultIncidentResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    incidents = list(
+        await database.scalars(
+            select(AgentMemoryVaultIncident)
+            .where(
+                AgentMemoryVaultIncident.company_id == context.company_id,
+                AgentMemoryVaultIncident.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryVaultIncident.first_detected_at.desc())
+            .limit(50)
+        )
+    )
+    return [
+        AgentMemoryVaultIncidentResponse(
+            id=incident.id,
+            provider_code=incident.provider_code,
+            status=cast(Literal["open", "resolved"], incident.status),
+            failure_count=incident.failure_count,
+            alerted=incident.alerted_at is not None,
+            first_detected_at=incident.first_detected_at,
+            last_detected_at=incident.last_detected_at,
+            resolved_at=incident.resolved_at,
+        )
+        for incident in incidents
+    ]
+
+
+@router.post(
+    "/{agent_id}/memory-keyring/exit",
+    response_model=AgentMemoryReencryptionJobResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_agent_memory_keyring_exit(
+    agent_id: UUID,
+    payload: AgentMemoryKeyringExitCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryReencryptionJobResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    binding = await database.scalar(
+        select(AgentMemoryKeyringBinding)
+        .where(
+            AgentMemoryKeyringBinding.company_id == context.company_id,
+            AgentMemoryKeyringBinding.agent_id == agent_id,
+            AgentMemoryKeyringBinding.status == "active",
+        )
+        .with_for_update()
+    )
+    if binding is None:
+        raise HTTPException(status_code=409, detail="O agente não possui keyring gerenciado ativo.")
+    credential_active = await database.scalar(
+        select(IntegrationCredential.id).where(
+            IntegrationCredential.id == binding.credential_id,
+            IntegrationCredential.company_id == context.company_id,
+            IntegrationCredential.status == "active",
+            or_(
+                IntegrationCredential.expires_at.is_(None),
+                IntegrationCredential.expires_at > utc_now(),
+            ),
+        )
+    )
+    if credential_active is None:
+        raise HTTPException(
+            status_code=409,
+            detail="A credencial venceu; renove o acesso ao cofre antes da saída segura.",
+        )
+    job = await create_agent_memory_environment_exit_job(
+        database,
+        settings=settings,
+        binding=binding,
+        requested_by_user_id=context.user_id,
+        batch_size=payload.batch_size,
+        max_retry_attempts=payload.max_retry_attempts,
+        automatic=False,
+    )
+    if job is None:
+        raise HTTPException(status_code=409, detail="Já existe uma recriptografia em andamento.")
+    await database.commit()
+    await database.refresh(job)
+    return _memory_reencryption_job_response(job)
 
 
 async def _vault_credential_binding(

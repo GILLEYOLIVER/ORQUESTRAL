@@ -643,6 +643,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-keyring/exit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Agent Memory Keyring Exit */
+        post: operations["request_agent_memory_keyring_exit_agents__agent_id__memory_keyring_exit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-policy": {
         parameters: {
             query?: never;
@@ -964,6 +981,23 @@ export interface paths {
         };
         /** List Agent Memory Vault Credentials */
         get: operations["list_agent_memory_vault_credentials_agents__agent_id__memory_vault_credentials_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-vault-incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Vault Incidents */
+        get: operations["list_agent_memory_vault_incidents_agents__agent_id__memory_vault_incidents_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5093,10 +5127,38 @@ export interface components {
             /** Escalated Count */
             escalated_count: number;
         };
+        /** AgentMemoryKeyringExitCreate */
+        AgentMemoryKeyringExitCreate: {
+            /**
+             * Batch Size
+             * @default 100
+             */
+            batch_size: number;
+            /**
+             * Max Retry Attempts
+             * @default 3
+             */
+            max_retry_attempts: number;
+        };
         /** AgentMemoryKeyringStatusResponse */
         AgentMemoryKeyringStatusResponse: {
             /** Activated At */
             activated_at: string | null;
+            /** Automatic Exit Job Id */
+            automatic_exit_job_id: string | null;
+            /** Automatic Exit Status */
+            automatic_exit_status: ("pending" | "running" | "completed" | "failed" | "closed") | null;
+            /** Credential Expires At */
+            credential_expires_at: string | null;
+            /** Expiry Warning Sent */
+            expiry_warning_sent: boolean;
+            /**
+             * Health Status
+             * @enum {string}
+             */
+            health_status: "not_applicable" | "unknown" | "healthy" | "unavailable";
+            /** Last Health Checked At */
+            last_health_checked_at: string | null;
             /** Last Resolved At */
             last_resolved_at: string | null;
             /** Provider Code */
@@ -5855,6 +5917,37 @@ export interface components {
             plugin_code: string;
             /** Provider Name */
             provider_name: string;
+        };
+        /** AgentMemoryVaultIncidentResponse */
+        AgentMemoryVaultIncidentResponse: {
+            /** Alerted */
+            alerted: boolean;
+            /** Failure Count */
+            failure_count: number;
+            /**
+             * First Detected At
+             * Format: date-time
+             */
+            first_detected_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Detected At
+             * Format: date-time
+             */
+            last_detected_at: string;
+            /** Provider Code */
+            provider_code: string;
+            /** Resolved At */
+            resolved_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "resolved";
         };
         /** AgentMessageResponse */
         AgentMessageResponse: {
@@ -13955,6 +14048,59 @@ export interface operations {
             };
         };
     };
+    request_agent_memory_keyring_exit_agents__agent_id__memory_keyring_exit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryKeyringExitCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     get_agent_memory_policy_agents__agent_id__memory_policy_get: {
         parameters: {
             query?: never;
@@ -15211,6 +15357,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryVaultCredentialOption"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_vault_incidents_agents__agent_id__memory_vault_incidents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryVaultIncidentResponse"][];
                 };
             };
             /** @description Solicitação inválida */

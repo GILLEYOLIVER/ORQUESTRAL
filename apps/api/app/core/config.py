@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     )
     agent_memory_reencryption_terminal_retention_days: int = Field(default=90, ge=7, le=3_650)
     agent_memory_reencryption_legal_hold_reminder_days: int = Field(default=7, ge=1, le=90)
+    agent_memory_vault_failure_alert_threshold: int = Field(default=2, ge=1, le=10)
+    agent_memory_keyring_expiry_warning_days: int = Field(default=14, ge=1, le=90)
+    agent_memory_keyring_automatic_exit_batch_size: int = Field(default=100, ge=1, le=500)
     n8n_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:5678")
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
     n8n_timeout_seconds: float = Field(default=15.0, gt=0, le=60)

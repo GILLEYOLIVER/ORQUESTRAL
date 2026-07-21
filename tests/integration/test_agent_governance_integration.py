@@ -296,6 +296,47 @@ async def _expire_reencryption_legal_hold(
         await resources.close()
 
 
+async def _set_managed_credential_expiry(
+    settings: Settings,
+    *,
+    company_id: UUID,
+    credential_id: UUID,
+    expires_in_days: int,
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            credential = await database.scalar(
+                select(IntegrationCredential).where(
+                    IntegrationCredential.id == credential_id,
+                    IntegrationCredential.company_id == company_id,
+                )
+            )
+            assert credential is not None
+            credential.expires_at = utc_now() + timedelta(days=expires_in_days)
+            await database.commit()
+    finally:
+        await resources.close()
+
+
+async def _managed_credential_status(
+    settings: Settings, *, company_id: UUID, credential_id: UUID
+) -> str:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            status_value = await database.scalar(
+                select(IntegrationCredential.status).where(
+                    IntegrationCredential.id == credential_id,
+                    IntegrationCredential.company_id == company_id,
+                )
+            )
+            assert status_value is not None
+            return status_value
+    finally:
+        await resources.close()
+
+
 def _login(client: TestClient, email: str, password: str) -> dict[str, str]:
     response = client.post("/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200
@@ -1387,15 +1428,59 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 )
             )
             assert managed_memory_content in managed_retrieval.contents
-            settings.encryption_key_provider = "environment"
-            settings.encryption_key_reference = "environment://orkestral/local/active"
-            settings.encryption_previous_key_references = []
+            settings.agent_memory_vault_failure_alert_threshold = 1
+
+            async def fail_test_keyring(
+                self,  # type: ignore[no-untyped-def]
+                references,  # type: ignore[no-untyped-def]
+                *,
+                identity_reference=None,  # type: ignore[no-untyped-def]
+            ) -> tuple[str, ...]:
+                raise memory_service_module.ManagedVaultResolutionError(
+                    "Falha sintética que não deve alcançar a resposta."
+                )
+
+            monkeypatch.setattr(
+                memory_service_module.ManagedVaultSecretResolver,
+                "resolve_keyring",
+                fail_test_keyring,
+            )
+            outage_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert outage_maintenance["vault_alerts"] == 1
+            incidents = client.get(
+                f"/agents/{agent_id}/memory-vault-incidents", headers=headers_b
+            )
+            assert incidents.status_code == 200
+            assert incidents.json()[0]["status"] == "open"
+            assert "Falha sintética" not in str(incidents.json())
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/memory-vault-incidents", headers=headers_a
+                ).status_code
+                == 404
+            )
+            monkeypatch.setattr(
+                memory_service_module.ManagedVaultSecretResolver,
+                "resolve_keyring",
+                resolve_test_keyring,
+            )
+            recovery_maintenance = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert recovery_maintenance["vault_resolved"] == 1
+            resolved_incidents = client.get(
+                f"/agents/{agent_id}/memory-vault-incidents", headers=headers_b
+            )
+            assert resolved_incidents.json()[0]["status"] == "resolved"
             environment_exit = client.post(
-                f"/agents/{agent_id}/memory-reencryption-jobs",
+                f"/agents/{agent_id}/memory-keyring/exit",
                 headers=headers_b,
                 json={"batch_size": 500, "max_retry_attempts": 1},
             )
             assert environment_exit.status_code == 201, environment_exit.text
+            assert environment_exit.json()["key_provider"] == "environment"
             exit_maintenance = asyncio.run(
                 maintain_agent_memory_reencryption_jobs(settings=settings)
             )
@@ -1412,6 +1497,58 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     memory_id=UUID(managed_memory.json()["id"]),
                     expected_content=managed_memory_content,
                 )
+            )
+            managed_rotation_again = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={
+                    "batch_size": 500,
+                    "max_retry_attempts": 1,
+                    "key_credential_id": str(managed_credential_id),
+                },
+            )
+            assert managed_rotation_again.status_code == 201, managed_rotation_again.text
+            assert asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )["completed"] == 1
+            asyncio.run(
+                _set_managed_credential_expiry(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    credential_id=managed_credential_id,
+                    expires_in_days=3,
+                )
+            )
+            automatic_exit = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert automatic_exit["expiry_warnings"] == 1
+            assert automatic_exit["automatic_exits"] == 1
+            assert automatic_exit["completed"] == 1
+            assert client.get(
+                f"/agents/{agent_id}/memory-keyring", headers=headers_b
+            ).json()["source"] == "environment"
+            asyncio.run(
+                _set_managed_credential_expiry(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    credential_id=managed_credential_id,
+                    expires_in_days=-1,
+                )
+            )
+            revoked_credential = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert revoked_credential["credentials_revoked"] == 1
+            assert (
+                asyncio.run(
+                    _managed_credential_status(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        credential_id=managed_credential_id,
+                    )
+                )
+                == "revoked"
             )
             other_user_retrieval = asyncio.run(
                 _retrieve_memory_context(

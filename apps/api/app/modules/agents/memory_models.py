@@ -750,6 +750,10 @@ class AgentMemoryKeyringBinding(Base):
             "char_length(key_reference_fingerprint) = 64",
             name="ck_agent_memory_keyring_binding_reference",
         ),
+        CheckConstraint(
+            "health_status IN ('unknown', 'healthy', 'unavailable')",
+            name="ck_agent_memory_keyring_binding_health",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -774,12 +778,76 @@ class AgentMemoryKeyringBinding(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
     last_resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    health_status: Mapped[str] = mapped_column(
+        String(16), default="unknown", server_default="unknown", index=True
+    )
+    last_health_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expiry_warning_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    automatic_exit_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    automatic_exit_job_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_memory_reencryption_jobs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    credential_revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=func.now(),
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+
+class AgentMemoryVaultIncident(Base):
+    __tablename__ = "agent_memory_vault_incidents"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('open', 'resolved')",
+            name="ck_agent_memory_vault_incident_status",
+        ),
+        CheckConstraint(
+            "failure_count >= 1",
+            name="ck_agent_memory_vault_incident_failures",
+        ),
+        CheckConstraint(
+            "(status = 'open' AND resolved_at IS NULL) OR "
+            "(status = 'resolved' AND resolved_at IS NOT NULL)",
+            name="ck_agent_memory_vault_incident_resolution",
+        ),
+        Index(
+            "uq_agent_memory_vault_incident_open",
+            "company_id",
+            "binding_id",
+            unique=True,
+            postgresql_where=text("status = 'open'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="CASCADE"), index=True
+    )
+    binding_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_memory_keyring_bindings.id", ondelete="CASCADE"), index=True
+    )
+    provider_code: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(
+        String(16), default="open", server_default="open", index=True
+    )
+    failure_count: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    first_detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    last_detected_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AgentMemoryReencryptionLegalHold(Base):

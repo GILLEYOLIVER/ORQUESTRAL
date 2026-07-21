@@ -777,3 +777,14 @@ Data: 21 de julho de 2026.
 - Validação local concluída: Ruff em 234 arquivos e na migração nova; MyPy em 194 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0067 -> 0066 -> 0067`; `/health`, `/ready`, `/app` e monitor HMAC validados.
 - Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
 - Próximo passo: renovação e saída disponíveis na interface, alertas de indisponibilidade do cofre e política de expiração/revogação automática de credenciais vinculadas.
+
+## Ciclo 47 - interface de governança e ciclo de vida do cofre
+
+- A tela de agentes permite solicitar renovação de retenção legal, decidir extensões pendentes e iniciar a saída segura de um keyring gerenciado sem alterar a configuração global do ambiente.
+- O worker monitora cada vínculo ativo por identidade da carga, abre incidentes idempotentes, alerta responsáveis após o limiar e registra a recuperação sem persistir a mensagem do provedor.
+- Credenciais próximas do vencimento iniciam automaticamente a recriptografia para a chave do ambiente; a revogação ocorre somente depois que nenhum vínculo ativo depende delas.
+- Status e incidentes são filtrados por `company_id`, e a API não retorna IDs de credencial, referências de chave ou material resolvido.
+- Migração: `20260721_0068_memory_vault_lifecycle.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0068 -> 0067 -> 0068`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- O teste de integração foi isolado do worker contínuo para impedir consumo concorrente das delegações sintéticas; o worker foi religado e permaneceu saudável.
+- Próximo passo: políticas configuráveis por empresa, renovação de credenciais antes da saída e SLO operacional dos cofres gerenciados.

@@ -379,8 +379,26 @@ export interface AgentMemoryKeyringStatus {
   source: "environment" | "managed";
   provider_code: string;
   status: "active";
+  health_status: "not_applicable" | "unknown" | "healthy" | "unavailable";
   activated_at: string | null;
   last_resolved_at: string | null;
+  last_health_checked_at: string | null;
+  credential_expires_at: string | null;
+  expiry_warning_sent: boolean;
+  automatic_exit_job_id: string | null;
+  automatic_exit_status:
+    "pending" | "running" | "completed" | "failed" | "closed" | null;
+}
+
+export interface AgentMemoryVaultIncident {
+  id: string;
+  provider_code: string;
+  status: "open" | "resolved";
+  failure_count: number;
+  alerted: boolean;
+  first_detected_at: string;
+  last_detected_at: string;
+  resolved_at: string | null;
 }
 
 export interface ManagedVaultMetric {
@@ -404,6 +422,19 @@ export interface AgentMemoryReencryptionLegalHold {
   decided_by_user_id: string | null;
   expires_at: string;
   expiration_reminder_sent: boolean;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface AgentMemoryLegalHoldRenewal {
+  id: string;
+  hold_id: string;
+  job_id: string;
+  extension_days: number;
+  proposed_expires_at: string;
+  status: "pending" | "approved" | "rejected";
+  requested_by_user_id: string;
+  decided_by_user_id: string | null;
   created_at: string;
   decided_at: string | null;
 }

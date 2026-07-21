@@ -33,11 +33,13 @@ import {
   type AgentMemoryExerciseSchedule,
   type AgentMemoryExerciseDue,
   type AgentMemoryKeyringStatus,
+  type AgentMemoryLegalHoldRenewal,
   type AgentMemoryReencryptionJob,
   type AgentMemoryReencryptionLegalHold,
   type AgentMemoryReencryptionRecoveryAssessment,
   type AgentMemorySchedulerMetrics,
   type AgentMemoryVaultCredentialOption,
+  type AgentMemoryVaultIncident,
   type ManagedVaultMetric,
   type AgentResponse,
   type AgentToolCatalog,
@@ -216,6 +218,10 @@ export function AgentsPage() {
   const [memoryJobLegalReference, setMemoryJobLegalReference] = useState("");
   const [memoryJobLegalRetentionDays, setMemoryJobLegalRetentionDays] =
     useState("90");
+  const [memoryJobLegalRenewalDays, setMemoryJobLegalRenewalDays] =
+    useState("30");
+  const [memoryJobLegalRenewalReference, setMemoryJobLegalRenewalReference] =
+    useState("");
   const [memoryReencryptionRetryReason, setMemoryReencryptionRetryReason] =
     useState("");
   const [memoryReencryptionClosureCode, setMemoryReencryptionClosureCode] =
@@ -344,6 +350,15 @@ export function AgentsPage() {
     enabled: canConfigure && Boolean(selectedId),
     refetchInterval: 15_000,
   });
+  const memoryVaultIncidents = useQuery({
+    queryKey: ["agent-memory-vault-incidents", selectedId],
+    queryFn: () =>
+      request<AgentMemoryVaultIncident[]>(
+        `/agents/${selectedId}/memory-vault-incidents`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+    refetchInterval: 15_000,
+  });
   const managedVaultMetrics = useQuery({
     queryKey: ["managed-vault-metrics", me?.current_company?.id],
     queryFn: () =>
@@ -367,6 +382,22 @@ export function AgentsPage() {
       ["completed", "failed", "closed"].includes(
         latestMemoryReencryptionJob?.status ?? "",
       ),
+  });
+  const renewableMemoryLegalHold = memoryReencryptionLegalHolds.data?.find(
+    (hold) => hold.status === "approved",
+  );
+  const memoryReencryptionLegalHoldRenewals = useQuery({
+    queryKey: [
+      "agent-memory-reencryption-legal-hold-renewals",
+      selectedId,
+      latestMemoryReencryptionJob?.id,
+      renewableMemoryLegalHold?.id,
+    ],
+    queryFn: () =>
+      request<AgentMemoryLegalHoldRenewal[]>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${latestMemoryReencryptionJob?.id}/legal-holds/${renewableMemoryLegalHold?.id}/renewals`,
+      ),
+    enabled: canConfigure && Boolean(renewableMemoryLegalHold),
   });
   useEffect(() => {
     setMemoryRecoveryAssessment(null);
@@ -900,6 +931,26 @@ export function AgentsPage() {
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
   });
+  const exitManagedMemoryKeyring = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryReencryptionJob>(
+        `/agents/${selectedId}/memory-keyring/exit`,
+        {
+          method: "POST",
+          body: {
+            batch_size: Number(memoryReencryptionBatchSize),
+            max_retry_attempts: Number(memoryReencryptionMaxRetries),
+          },
+        },
+      ),
+    onSuccess: () => {
+      setMemoryIncidentFeedback(
+        "Saída segura iniciada. O vínculo só será revogado após a recriptografia.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
   const assessMemoryReencryptionRecovery = useMutation({
     mutationFn: (jobId: string) =>
       request<AgentMemoryReencryptionRecoveryAssessment>(
@@ -997,6 +1048,49 @@ export function AgentsPage() {
         result.status === "approved"
           ? "Retenção legal aprovada; o expurgo está suspenso."
           : "Retenção legal rejeitada com auditoria.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const requestMemoryReencryptionLegalHoldRenewal = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryLegalHoldRenewal>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${latestMemoryReencryptionJob?.id}/legal-holds/${renewableMemoryLegalHold?.id}/renewals`,
+        {
+          method: "POST",
+          body: {
+            extension_days: Number(memoryJobLegalRenewalDays),
+            legal_reference: memoryJobLegalRenewalReference,
+          },
+        },
+      ),
+    onSuccess: () => {
+      setMemoryJobLegalRenewalReference("");
+      setMemoryIncidentFeedback(
+        "Renovação solicitada e encaminhada para aprovação independente.",
+      );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const decideMemoryReencryptionLegalHoldRenewal = useMutation({
+    mutationFn: ({
+      renewalId,
+      decision,
+    }: {
+      renewalId: string;
+      decision: "approved" | "rejected";
+    }) =>
+      request<AgentMemoryLegalHoldRenewal>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${latestMemoryReencryptionJob?.id}/legal-holds/${renewableMemoryLegalHold?.id}/renewals/${renewalId}/decision`,
+        { method: "POST", body: { decision } },
+      ),
+    onSuccess: (result) => {
+      setMemoryIncidentFeedback(
+        result.status === "approved"
+          ? "Renovação aprovada e prazo ampliado."
+          : "Renovação rejeitada sem alterar o prazo atual.",
       );
       refresh();
     },
@@ -2221,12 +2315,50 @@ export function AgentsPage() {
                         {memoryKeyringStatus.data?.last_resolved_at
                           ? ` · última resolução ${new Date(memoryKeyringStatus.data.last_resolved_at).toLocaleString("pt-BR")}`
                           : ""}
+                        {memoryKeyringStatus.data?.credential_expires_at
+                          ? ` · credencial vence ${new Date(memoryKeyringStatus.data.credential_expires_at).toLocaleDateString("pt-BR")}`
+                          : " · sem vencimento configurado"}
                       </small>
                     </div>
                     <span className="status-badge">
-                      {memoryKeyringStatus.data?.status ?? "verificando"}
+                      {memoryKeyringStatus.data?.health_status ?? "verificando"}
                     </span>
                   </article>
+                  {memoryKeyringStatus.data?.source === "managed" ? (
+                    <Button
+                      disabled={Boolean(
+                        memoryKeyringStatus.data.automatic_exit_status &&
+                        ["pending", "running"].includes(
+                          memoryKeyringStatus.data.automatic_exit_status,
+                        ),
+                      )}
+                      loading={exitManagedMemoryKeyring.isPending}
+                      onClick={() => exitManagedMemoryKeyring.mutate()}
+                      type="button"
+                      variant="secondary"
+                    >
+                      <TimerReset size={16} /> Retornar à chave do ambiente
+                    </Button>
+                  ) : null}
+                  {memoryVaultIncidents.data?.map((incident) => (
+                    <article className="agent-policy-row" key={incident.id}>
+                      <div>
+                        <strong>
+                          {incident.status === "open"
+                            ? "Cofre indisponível"
+                            : "Incidente resolvido"}
+                        </strong>
+                        <small>
+                          {incident.provider_code} · {incident.failure_count}{" "}
+                          falha(s) · última detecção{" "}
+                          {new Date(incident.last_detected_at).toLocaleString(
+                            "pt-BR",
+                          )}
+                        </small>
+                      </div>
+                      <span className="status-badge">{incident.status}</span>
+                    </article>
+                  ))}
                   {managedVaultMetrics.data?.map((metric) => (
                     <article
                       className="agent-policy-row"
@@ -2451,6 +2583,109 @@ export function AgentsPage() {
                           ) : null}
                         </article>
                       ))}
+                      {renewableMemoryLegalHold ? (
+                        <div className="agent-policy-list">
+                          <strong>Renovar retenção aprovada</strong>
+                          <small>
+                            A extensão exige uma nova referência e decisão de
+                            outra pessoa autorizada.
+                          </small>
+                          <TextField
+                            label="Dias adicionais"
+                            max={3650}
+                            min={1}
+                            onChange={(event) =>
+                              setMemoryJobLegalRenewalDays(event.target.value)
+                            }
+                            type="number"
+                            value={memoryJobLegalRenewalDays}
+                          />
+                          <TextField
+                            label="Nova referência jurídica sigilosa"
+                            maxLength={240}
+                            onChange={(event) =>
+                              setMemoryJobLegalRenewalReference(
+                                event.target.value,
+                              )
+                            }
+                            value={memoryJobLegalRenewalReference}
+                          />
+                          <Button
+                            disabled={
+                              memoryJobLegalRenewalReference.trim().length < 4
+                            }
+                            loading={
+                              requestMemoryReencryptionLegalHoldRenewal.isPending
+                            }
+                            onClick={() =>
+                              requestMemoryReencryptionLegalHoldRenewal.mutate()
+                            }
+                            type="button"
+                            variant="secondary"
+                          >
+                            Solicitar renovação
+                          </Button>
+                          {memoryReencryptionLegalHoldRenewals.data?.map(
+                            (renewal) => (
+                              <article
+                                className="agent-policy-row"
+                                key={renewal.id}
+                              >
+                                <div>
+                                  <strong>
+                                    +{renewal.extension_days} dias ·{" "}
+                                    {renewal.status}
+                                  </strong>
+                                  <small>
+                                    Prazo proposto{" "}
+                                    {new Date(
+                                      renewal.proposed_expires_at,
+                                    ).toLocaleDateString("pt-BR")}
+                                  </small>
+                                </div>
+                                {renewal.status === "pending" ? (
+                                  <div className="button-row">
+                                    <Button
+                                      loading={
+                                        decideMemoryReencryptionLegalHoldRenewal.isPending
+                                      }
+                                      onClick={() =>
+                                        decideMemoryReencryptionLegalHoldRenewal.mutate(
+                                          {
+                                            renewalId: renewal.id,
+                                            decision: "approved",
+                                          },
+                                        )
+                                      }
+                                      type="button"
+                                      variant="secondary"
+                                    >
+                                      Aprovar extensão
+                                    </Button>
+                                    <Button
+                                      loading={
+                                        decideMemoryReencryptionLegalHoldRenewal.isPending
+                                      }
+                                      onClick={() =>
+                                        decideMemoryReencryptionLegalHoldRenewal.mutate(
+                                          {
+                                            renewalId: renewal.id,
+                                            decision: "rejected",
+                                          },
+                                        )
+                                      }
+                                      type="button"
+                                      variant="ghost"
+                                    >
+                                      Rejeitar extensão
+                                    </Button>
+                                  </div>
+                                ) : null}
+                              </article>
+                            ),
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                   {latestMemoryReencryptionJob?.status === "failed" ? (
