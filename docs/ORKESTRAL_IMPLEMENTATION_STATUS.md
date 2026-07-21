@@ -206,3 +206,25 @@ Data: 21 de julho de 2026.
 - Seguranca: auditoria concluida sem bloqueios.
 - Migracao: `0028 -> 0027 -> 0028` aprovada; banco em `20260721_0028 (head)`.
 - Worker: task registrada e execucao real aprovada com lote vazio.
+
+## Ciclo empresarial 6 - contexto e Policy Engine
+
+Data: 21 de julho de 2026.
+
+- Contexto: empresa, ator e correlacao propagaveis para jobs sem snapshot de permissao.
+- Policy: tenant, permissao, campos, risco e escopo de plataforma avaliados deterministicamente.
+- Auditoria: ledger versionado de decisoes e evento transacional sem identificador cross-tenant.
+- Integracao inicial: dispatcher de outbox vincula contexto por evento.
+- Migracao: `20260721_0029`.
+- Adocao: contrato criado; migracao das rotas sera incremental e mensurada.
+- Proximo passo exato: validar o ciclo e aplicar Policy Engine ao primeiro dominio empresarial.
+
+### Evidencia de validacao do ciclo 6
+
+- Ruff: 231 arquivos formatados e lint aprovado.
+- MyPy: 166 arquivos aprovados.
+- Backend: 105 testes unitarios aprovados.
+- Integracao: 8 testes aprovados.
+- Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
+- Migracao: `0029 -> 0028 -> 0029` aprovada; banco em `20260721_0029 (head)`.
+- Proximo passo exato: aplicar a fundacao empresarial ao primeiro dominio e iniciar a plataforma de metadados.

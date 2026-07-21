@@ -47,3 +47,18 @@ class DomainEventEnvelope(BaseModel):
         if len(encoded) > MAX_PAYLOAD_BYTES:
             raise ValueError(f"Payload de evento excede {MAX_PAYLOAD_BYTES} bytes.")
         return payload
+
+
+class DomainEventCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    event_type: str = Field(pattern=r"^[a-z][a-z0-9_.-]{2,159}$")
+    event_version: int = Field(default=1, ge=1, le=1000)
+    company_id: UUID
+    actor_user_id: UUID | None = None
+    correlation_id: UUID | None = None
+    causation_id: UUID | None = None
+    classification: Literal["public", "internal", "confidential", "restricted"]
+    payload: dict[str, Any]
+
+    _payload_is_safe = field_validator("payload")(DomainEventEnvelope.validate_payload)

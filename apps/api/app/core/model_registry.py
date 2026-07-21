@@ -166,4 +166,5 @@ __all__ = [
     "WorkflowVersion",
 ]
 
+from app.modules.authorization import policy_models as _policy_models  # noqa: F401
 from app.modules.events import models as _event_models  # noqa: F401

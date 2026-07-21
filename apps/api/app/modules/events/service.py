@@ -3,17 +3,20 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Protocol
+from uuid import uuid4
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.execution_context import ExecutionContext, bind_execution_context
+from app.core.security import utc_now
 from app.modules.events.models import OutboxEvent
 from app.modules.events.repository import (
     claim_pending_events,
     mark_event_failed,
     mark_event_published,
 )
-from app.modules.events.schemas import DomainEventEnvelope
+from app.modules.events.schemas import DomainEventCreate, DomainEventEnvelope
 
 DEFAULT_EVENT_STREAM = "orkestral:domain-events:v1"
 
@@ -71,6 +74,29 @@ def event_envelope(event: OutboxEvent) -> DomainEventEnvelope:
     )
 
 
+def enqueue_domain_event(database: AsyncSession, event: DomainEventCreate) -> OutboxEvent:
+    now = utc_now()
+    row = OutboxEvent(
+        id=uuid4(),
+        company_id=event.company_id,
+        actor_user_id=event.actor_user_id,
+        event_type=event.event_type,
+        event_version=event.event_version,
+        correlation_id=event.correlation_id,
+        causation_id=event.causation_id,
+        classification=event.classification,
+        payload=event.payload,
+        status="pending",
+        attempt_count=0,
+        max_attempts=8,
+        available_at=now,
+        created_at=now,
+        updated_at=now,
+    )
+    database.add(row)
+    return row
+
+
 async def dispatch_outbox_batch(
     database: AsyncSession,
     transport: EventTransport,
@@ -85,7 +111,15 @@ async def dispatch_outbox_batch(
 
     for event in events:
         try:
-            external_id = await transport.publish(event_envelope(event))
+            context = ExecutionContext(
+                company_id=event.company_id,
+                actor_user_id=event.actor_user_id,
+                correlation_id=event.correlation_id or event.id,
+                source="outbox.dispatch",
+                environment="worker",
+            )
+            with bind_execution_context(context):
+                external_id = await transport.publish(event_envelope(event))
         except Exception as exc:
             mark_event_failed(event, type(exc).__name__)
             failed += 1
