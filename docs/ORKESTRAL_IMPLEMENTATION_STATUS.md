@@ -515,3 +515,21 @@ Data: 21 de julho de 2026.
 - Runtime local: `/health`, `/ready` e `/app` responderam `200`.
 - Risco conhecido: estimativa de tokens usa aproximação determinística e conservadora; tokenizador específico poderá ser conectado por provedor sem alterar a política.
 - Próximo passo: ciclo 26, revisão e eliminação de memória pelo próprio titular, exportação segura de metadados e retenção por finalidade.
+
+## Ciclo 26 - Direitos do titular e finalidade da memória
+
+- Usuário com acesso ao agente pode revisar somente os metadados das próprias memórias pessoais, sem permissão administrativa.
+- Eliminação self-service aplica filtros simultâneos de empresa, agente, escopo e titular e remove fisicamente o ciphertext.
+- Exportação JSON contém somente metadados autorizados; conteúdo, HMAC e referência de consentimento nunca são incluídos.
+- Acesso de outra empresa retorna `404` e outro usuário da mesma empresa recebe lista vazia, comprovando isolamento horizontal.
+- Finalidades `service`, `personalization`, `operations`, `compliance` e `analytics` possuem políticas relacionais de habilitação e retenção.
+- Retenção efetiva usa o menor valor entre política global, escopo, finalidade e solicitação, impedindo ampliação por cliente.
+- Fingerprint do conteúdo passou a incluir a finalidade, evitando deduplicação indevida entre bases legais distintas.
+- Interface permite configurar finalidades e oferece ao titular exportação e exclusão das próprias memórias.
+- Correção visual: retorno de encerramento da conversa voltou ao card de conversa, em vez do card de ferramentas.
+- Migração: `20260721_0047_agent_memory_subject_rights.py`.
+- Validação local: Ruff e MyPy aprovados em 196 arquivos de produção; ESLint, TypeScript e Prettier aprovados; 137 testes da API, 3 do worker, 12 integrações e 12 testes do front-end aprovados; build e auditoria de segurança sem bloqueios; E2E com 7 aprovados e 2 cenários explicitamente ignorados.
+- Migração reversível `0047 -> 0046 -> 0047` aprovada; banco em `20260721_0047 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`.
+- Segurança comprovada: exportação não contém segredo, fingerprint ou consentimento; finalidade desabilitada é rejeitada; titular remove a própria memória sem alcançar dados alheios.
+- Próximo passo: ciclo 27, memória de tarefa vinculada, conclusão com eliminação e política de retenção legal para exceções aprovadas.

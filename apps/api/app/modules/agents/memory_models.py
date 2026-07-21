@@ -105,6 +105,32 @@ class AgentMemoryScopePolicy(Base):
     retrieval_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 
 
+class AgentMemoryPurposePolicy(Base):
+    __tablename__ = "agent_memory_purpose_policies"
+    __table_args__ = (
+        UniqueConstraint("agent_id", "purpose", name="uq_agent_memory_purpose_policy"),
+        CheckConstraint(
+            "purpose IN ('service', 'personalization', 'operations', 'compliance', 'analytics')",
+            name="ck_agent_memory_purpose_policy_purpose",
+        ),
+        CheckConstraint(
+            "retention_days BETWEEN 1 AND 3650",
+            name="ck_agent_memory_purpose_policy_retention",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    purpose: Mapped[str] = mapped_column(String(24), index=True)
+    retention_days: Mapped[int] = mapped_column(Integer)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+
 class AgentMemoryEntry(Base):
     __tablename__ = "agent_memory_entries"
     __table_args__ = (
@@ -122,6 +148,10 @@ class AgentMemoryEntry(Base):
         CheckConstraint(
             "source_type IN ('manual', 'conversation', 'task', 'tool')",
             name="ck_agent_memory_source_type",
+        ),
+        CheckConstraint(
+            "purpose IN ('service', 'personalization', 'operations', 'compliance', 'analytics')",
+            name="ck_agent_memory_purpose",
         ),
         CheckConstraint("expires_at > created_at", name="ck_agent_memory_expiration"),
         CheckConstraint(
@@ -150,6 +180,9 @@ class AgentMemoryEntry(Base):
     content_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
     source_type: Mapped[str] = mapped_column(String(24), default="manual", server_default="manual")
     source_id: Mapped[str | None] = mapped_column(String(160))
+    purpose: Mapped[str] = mapped_column(
+        String(24), default="operations", server_default="operations", index=True
+    )
     subject_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )

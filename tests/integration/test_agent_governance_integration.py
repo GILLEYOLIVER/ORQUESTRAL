@@ -401,6 +401,23 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                             "retrieval_enabled": True,
                         },
                     ],
+                    "purpose_policies": [
+                        {
+                            "purpose": "operations",
+                            "retention_days": 3,
+                            "enabled": True,
+                        },
+                        {
+                            "purpose": "personalization",
+                            "retention_days": 5,
+                            "enabled": True,
+                        },
+                        {
+                            "purpose": "compliance",
+                            "retention_days": 7,
+                            "enabled": False,
+                        },
+                    ],
                 },
             )
             assert memory_policy.status_code == 200
@@ -424,6 +441,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     "scope": "user",
                     "classification": "confidential",
                     "subject_user_id": str(identity.user_ids[1]),
+                    "purpose": "personalization",
                     "consent_reference": "consent-test-2026",
                 },
             )
@@ -432,6 +450,29 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             assert "consent-test-2026" not in str(stored_memory.json())
             assert stored_memory.json()["subject_user_id"] == str(identity.user_ids[1])
             assert stored_memory.json()["consent_recorded"] is True
+            assert stored_memory.json()["purpose"] == "personalization"
+            assert datetime.fromisoformat(stored_memory.json()["expires_at"]) < datetime.now(
+                UTC
+            ) + timedelta(days=6)
+            my_memories = client.get(f"/agents/{agent_id}/my-memories", headers=headers_b)
+            assert my_memories.status_code == 200
+            assert my_memories.json()[0]["id"] == stored_memory.json()["id"]
+            assert sensitive_memory not in str(my_memories.json())
+            assert "consent-test-2026" not in str(my_memories.json())
+            assert (
+                client.get(f"/agents/{agent_id}/my-memories", headers=headers_a).status_code == 404
+            )
+            other_subject_memories = client.get(
+                f"/agents/{agent_id}/my-memories",
+                headers=_login(client, identity.emails[2], identity.password),
+            )
+            assert other_subject_memories.status_code == 200
+            assert other_subject_memories.json() == []
+            exported = client.get(f"/agents/{agent_id}/my-memory-export", headers=headers_b)
+            assert exported.status_code == 200
+            assert exported.json()["total"] == 1
+            assert sensitive_memory not in str(exported.json())
+            assert "content_fingerprint" not in str(exported.json())
             memory_id = UUID(stored_memory.json()["id"])
             asyncio.run(
                 _assert_memory_storage(
@@ -450,6 +491,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     "scope": "user",
                     "classification": "confidential",
                     "subject_user_id": str(identity.user_ids[1]),
+                    "purpose": "personalization",
                     "consent_reference": "consent-test-2026",
                 },
             )
@@ -524,10 +566,40 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     "scope": "user",
                     "classification": "confidential",
                     "subject_user_id": str(identity.user_ids[1]),
+                    "purpose": "personalization",
                     "consent_reference": "consent-test-2026",
                 },
             )
             assert blocked_reuse.status_code == 409
+            forbidden_purpose = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": "Dado que não deve ser guardado",
+                    "scope": "conversation",
+                    "classification": "internal",
+                    "purpose": "compliance",
+                },
+            )
+            assert forbidden_purpose.status_code == 422
+            self_deletable = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": "Preferência removível pelo titular",
+                    "scope": "user",
+                    "classification": "internal",
+                    "subject_user_id": str(identity.user_ids[1]),
+                    "purpose": "personalization",
+                    "consent_reference": "consent-self-delete-2026",
+                },
+            )
+            assert self_deletable.status_code == 201
+            self_deleted = client.delete(
+                f"/agents/{agent_id}/my-memories/{self_deletable.json()['id']}",
+                headers=headers_b,
+            )
+            assert self_deleted.status_code == 204
 
             versions = client.get(f"/agents/{agent_id}/versions", headers=headers_b)
             assert versions.status_code == 200

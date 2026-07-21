@@ -24,6 +24,7 @@ import {
   type AgentMemoryPolicyResponse,
   type AgentMemoryResponse,
   type AgentMemoryConsentRevocationResponse,
+  type AgentMemoryMetadataExport,
   type AgentResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
@@ -149,6 +150,12 @@ export function AgentsPage() {
   const [memoryRetrievalScopes, setMemoryRetrievalScopes] = useState<string[]>(
     [],
   );
+  const [memoryPurposeRetention, setMemoryPurposeRetention] = useState<
+    Record<string, string>
+  >({});
+  const [enabledMemoryPurposes, setEnabledMemoryPurposes] = useState<string[]>(
+    [],
+  );
   const [memoryConsentSubjectUserId, setMemoryConsentSubjectUserId] =
     useState("");
   const [memoryConsentReference, setMemoryConsentReference] = useState("");
@@ -200,6 +207,12 @@ export function AgentsPage() {
     queryFn: () =>
       request<AgentMemoryResponse[]>(`/agents/${selectedId}/memories`),
     enabled: canConfigure && Boolean(selectedId),
+  });
+  const myMemories = useQuery({
+    queryKey: ["agent-my-memories", selectedId],
+    queryFn: () =>
+      request<AgentMemoryResponse[]>(`/agents/${selectedId}/my-memories`),
+    enabled: canExecute && Boolean(selectedId),
   });
   const companyUsers = useQuery({
     queryKey: ["company-users", me?.current_company?.id],
@@ -260,6 +273,19 @@ export function AgentsPage() {
         .filter((item) => item.retrieval_enabled)
         .map((item) => item.scope),
     );
+    setMemoryPurposeRetention(
+      Object.fromEntries(
+        memoryPolicy.data.purpose_policies.map((item) => [
+          item.purpose,
+          String(item.retention_days),
+        ]),
+      ),
+    );
+    setEnabledMemoryPurposes(
+      memoryPolicy.data.purpose_policies
+        .filter((item) => item.enabled)
+        .map((item) => item.purpose),
+    );
   }, [memoryPolicy.data]);
 
   const refresh = () => {
@@ -280,6 +306,9 @@ export function AgentsPage() {
     });
     void queryClient.invalidateQueries({
       queryKey: ["agent-memories", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-my-memories", selectedId],
     });
   };
   const create = useMutation({
@@ -424,6 +453,19 @@ export function AgentsPage() {
               ),
               retrieval_enabled: memoryRetrievalScopes.includes(scope),
             })),
+            purpose_policies: [
+              "service",
+              "personalization",
+              "operations",
+              "compliance",
+              "analytics",
+            ].map((purpose) => ({
+              purpose,
+              retention_days: Number(
+                memoryPurposeRetention[purpose] ?? memoryDefaultRetention,
+              ),
+              enabled: enabledMemoryPurposes.includes(purpose),
+            })),
           },
         },
       ),
@@ -480,6 +522,39 @@ export function AgentsPage() {
           : `${result.deleted_count} memória(s) pessoal(is) eliminada(s) e consentimento revogado.`,
       );
       refresh();
+    },
+    onError: (caught) => setMemoryFeedback(errorMessage(caught)),
+  });
+  const deleteMyMemory = useMutation({
+    mutationFn: (memoryId: string) =>
+      request<void>(`/agents/${selectedId}/my-memories/${memoryId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      setMemoryFeedback("Sua memória pessoal foi eliminada.");
+      refresh();
+    },
+    onError: (caught) => setMemoryFeedback(errorMessage(caught)),
+  });
+  const exportMyMemories = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryMetadataExport>(
+        `/agents/${selectedId}/my-memory-export`,
+      ),
+    onSuccess: (result) => {
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(result, null, 2)], {
+          type: "application/json",
+        }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orkestral-memorias-${selectedId}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setMemoryFeedback(
+        `${result.total} metadado(s) de memória exportado(s), sem conteúdo protegido.`,
+      );
     },
     onError: (caught) => setMemoryFeedback(errorMessage(caught)),
   });
@@ -951,6 +1026,50 @@ export function AgentsPage() {
                       </div>
                     ))}
                   </fieldset>
+                  <fieldset className="agent-memory-options">
+                    <legend>Retenção por finalidade</legend>
+                    {[
+                      ["service", "Atendimento"],
+                      ["personalization", "Personalização"],
+                      ["operations", "Operações"],
+                      ["compliance", "Conformidade"],
+                      ["analytics", "Análises"],
+                    ].map(([purpose, label]) => (
+                      <div key={purpose}>
+                        <TextField
+                          label={`${label} · retenção (dias)`}
+                          max={Number(memoryMaxRetention)}
+                          min={1}
+                          onChange={(event) =>
+                            setMemoryPurposeRetention((current) => ({
+                              ...current,
+                              [purpose]: event.target.value,
+                            }))
+                          }
+                          required
+                          type="number"
+                          value={
+                            memoryPurposeRetention[purpose] ??
+                            memoryDefaultRetention
+                          }
+                        />
+                        <label>
+                          <input
+                            checked={enabledMemoryPurposes.includes(purpose)}
+                            onChange={(event) =>
+                              setEnabledMemoryPurposes((current) =>
+                                event.target.checked
+                                  ? [...new Set([...current, purpose])]
+                                  : current.filter((item) => item !== purpose),
+                              )
+                            }
+                            type="checkbox"
+                          />
+                          Permitir esta finalidade
+                        </label>
+                      </div>
+                    ))}
+                  </fieldset>
                   <div className="form-actions">
                     <Button loading={saveMemoryPolicy.isPending} type="submit">
                       <BrainCircuit size={16} /> Salvar política
@@ -1033,6 +1152,7 @@ export function AgentsPage() {
                             {memory.consent_recorded
                               ? " · consentimento registrado"
                               : ""}
+                            {` · finalidade ${memory.purpose}`}
                             {" · expira em "}
                             {new Date(memory.expires_at).toLocaleString(
                               "pt-BR",
@@ -1058,14 +1178,62 @@ export function AgentsPage() {
                 </div>
               </Card>
             </PermissionGuard>
+            <PermissionGuard all={["agents.execute"]}>
+              <Card
+                eyebrow="Direitos do titular"
+                title="Minhas memórias pessoais"
+              >
+                <p>
+                  Revise e elimine metadados vinculados a você. O conteúdo
+                  criptografado nunca é exibido nem incluído na exportação.
+                </p>
+                {memoryFeedback ? <Alert>{memoryFeedback}</Alert> : null}
+                <Button
+                  loading={exportMyMemories.isPending}
+                  onClick={() => exportMyMemories.mutate()}
+                  type="button"
+                  variant="secondary"
+                >
+                  Exportar metadados
+                </Button>
+                <div className="agent-policy-list">
+                  {myMemories.data?.length ? (
+                    myMemories.data.map((memory) => (
+                      <article className="agent-policy-row" key={memory.id}>
+                        <div>
+                          <strong>
+                            {memory.purpose} · {memory.classification}
+                          </strong>
+                          <small>
+                            Expira em{" "}
+                            {new Date(memory.expires_at).toLocaleString(
+                              "pt-BR",
+                            )}
+                          </small>
+                        </div>
+                        <Button
+                          loading={
+                            deleteMyMemory.isPending &&
+                            deleteMyMemory.variables === memory.id
+                          }
+                          onClick={() => deleteMyMemory.mutate(memory.id)}
+                          variant="ghost"
+                        >
+                          <Trash2 size={16} /> Eliminar minha memória
+                        </Button>
+                      </article>
+                    ))
+                  ) : (
+                    <p>Nenhuma memória pessoal ativa vinculada a você.</p>
+                  )}
+                </div>
+              </Card>
+            </PermissionGuard>
             <PermissionGuard all={["agents.configure"]}>
               <Card
                 eyebrow="Princípio do menor privilégio"
                 title="Ferramentas autorizadas"
               >
-                {conversationFeedback ? (
-                  <Alert>{conversationFeedback}</Alert>
-                ) : null}
                 <div className="agent-tool-grid">
                   {catalog.data?.map((tool) => (
                     <label
@@ -1596,6 +1764,9 @@ export function AgentsPage() {
                 eyebrow="Conversa auditável"
                 title="Falar com o agente"
               >
+                {conversationFeedback ? (
+                  <Alert>{conversationFeedback}</Alert>
+                ) : null}
                 <div className="agent-chat-log">
                   {!conversationId ? (
                     <div className="empty-state">

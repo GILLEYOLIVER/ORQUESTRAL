@@ -455,6 +455,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/my-memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List My Agent Memories */
+        get: operations["list_my_agent_memories_agents__agent_id__my_memories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/my-memories/{memory_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete My Agent Memory */
+        delete: operations["delete_my_agent_memory_agents__agent_id__my_memories__memory_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/my-memory-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export My Agent Memory Metadata */
+        get: operations["export_my_agent_memory_metadata_agents__agent_id__my_memory_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/runs": {
         parameters: {
             query?: never;
@@ -4404,6 +4455,12 @@ export interface components {
             consent_reference?: string | null;
             /** Content */
             content: string;
+            /**
+             * Purpose
+             * @default operations
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
             /** Retention Days */
             retention_days?: number | null;
             /**
@@ -4421,6 +4478,23 @@ export interface components {
             source_type: "manual" | "conversation" | "task" | "tool";
             /** Subject User Id */
             subject_user_id?: string | null;
+        };
+        /** AgentMemoryMetadataExport */
+        AgentMemoryMetadataExport: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Memories */
+            memories: components["schemas"]["AgentMemoryResponse"][];
+            /** Total */
+            total: number;
         };
         /** AgentMemoryPolicyResponse */
         AgentMemoryPolicyResponse: {
@@ -4443,6 +4517,8 @@ export interface components {
             max_retention_days: number;
             /** Max Retrieval Entries */
             max_retrieval_entries: number;
+            /** Purpose Policies */
+            purpose_policies: components["schemas"]["AgentMemoryPurposePolicyInput"][];
             /** Require Consent For User Scope */
             require_consent_for_user_scope: boolean;
             /** Retrieval Enabled */
@@ -4478,6 +4554,8 @@ export interface components {
              * @default 5
              */
             max_retrieval_entries: number;
+            /** Purpose Policies */
+            purpose_policies?: components["schemas"]["AgentMemoryPurposePolicyInput"][];
             /**
              * Require Consent For User Scope
              * @default true
@@ -4508,6 +4586,21 @@ export interface components {
         AgentMemoryPurgeResponse: {
             /** Deleted Count */
             deleted_count: number;
+        };
+        /** AgentMemoryPurposePolicyInput */
+        AgentMemoryPurposePolicyInput: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
+            /** Retention Days */
+            retention_days: number;
         };
         /** AgentMemoryResponse */
         AgentMemoryResponse: {
@@ -4540,6 +4633,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "service" | "personalization" | "operations" | "compliance" | "analytics";
             /**
              * Scope
              * @enum {string}
@@ -11568,6 +11666,152 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryPurgeResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_my_agent_memories_agents__agent_id__my_memories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    delete_my_agent_memory_agents__agent_id__my_memories__memory_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                memory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    export_my_agent_memory_metadata_agents__agent_id__my_memory_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryMetadataExport"];
                 };
             };
             /** @description Solicitação inválida */

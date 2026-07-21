@@ -17,6 +17,7 @@ from app.core.security import utc_now
 from app.modules.agents.memory_models import (
     AgentMemoryEntry,
     AgentMemoryPolicy,
+    AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
 )
 from app.modules.agents.models import AgentDataPolicy
@@ -45,10 +46,13 @@ def memory_content_fingerprint(
     company_id: UUID,
     agent_id: UUID,
     scope: str,
+    purpose: str,
     subject_user_id: UUID | None,
     content: str,
 ) -> str:
-    payload = f"{company_id}:{agent_id}:{scope}:{subject_user_id or '-'}:{content}".encode()
+    payload = (
+        f"{company_id}:{agent_id}:{scope}:{purpose}:{subject_user_id or '-'}:{content}"
+    ).encode()
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
@@ -70,6 +74,7 @@ def estimate_memory_tokens(content: str) -> int:
 def memory_policy_values(
     policy: AgentMemoryPolicy | None,
     scope_policies: Sequence[AgentMemoryScopePolicy] = (),
+    purpose_policies: Sequence[AgentMemoryPurposePolicy] = (),
 ) -> dict[str, object]:
     if policy is None:
         return {
@@ -89,6 +94,13 @@ def memory_policy_values(
                 }
                 for scope in DEFAULT_SCOPES
             ],
+            "purpose_policies": [
+                {
+                    "purpose": "operations",
+                    "retention_days": 30,
+                    "enabled": True,
+                }
+            ],
         }
     configured = {item.scope: item for item in scope_policies}
     effective_scopes = [
@@ -103,6 +115,20 @@ def memory_policy_values(
         }
         for scope in policy.allowed_scopes
     ]
+    effective_purposes = [
+        {
+            "purpose": item.purpose,
+            "retention_days": item.retention_days,
+            "enabled": item.enabled,
+        }
+        for item in purpose_policies
+    ] or [
+        {
+            "purpose": "operations",
+            "retention_days": policy.default_retention_days,
+            "enabled": True,
+        }
+    ]
     return {
         "default_retention_days": policy.default_retention_days,
         "max_retention_days": policy.max_retention_days,
@@ -113,6 +139,7 @@ def memory_policy_values(
         "max_retrieval_entries": policy.max_retrieval_entries,
         "max_context_tokens": policy.max_context_tokens,
         "scope_policies": effective_scopes,
+        "purpose_policies": effective_purposes,
     }
 
 

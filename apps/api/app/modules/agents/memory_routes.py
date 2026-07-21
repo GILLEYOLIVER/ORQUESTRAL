@@ -14,19 +14,23 @@ from app.modules.agents.memory_models import (
     AgentMemoryConsentRevocation,
     AgentMemoryEntry,
     AgentMemoryPolicy,
+    AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
 )
 from app.modules.agents.memory_schemas import (
     AgentMemoryConsentRevocationResponse,
     AgentMemoryConsentRevoke,
     AgentMemoryCreate,
+    AgentMemoryMetadataExport,
     AgentMemoryPolicyResponse,
     AgentMemoryPolicyUpdate,
     AgentMemoryPurgeRequest,
     AgentMemoryPurgeResponse,
+    AgentMemoryPurposePolicyInput,
     AgentMemoryResponse,
     AgentMemoryScopePolicyInput,
     MemoryClassification,
+    MemoryPurpose,
     MemoryScope,
     MemorySource,
 )
@@ -45,6 +49,7 @@ from app.modules.users.models import CompanyUser
 
 router = APIRouter()
 CanConfigureAgentMemory = Annotated[Principal, Depends(require_permission("agents.configure"))]
+CanExecuteAgentMemory = Annotated[Principal, Depends(require_permission("agents.execute"))]
 
 
 async def _tenant_agent(database: DatabaseSession, *, company_id: UUID, agent_id: UUID) -> Agent:
@@ -81,6 +86,19 @@ async def _memory_scope_policies(
     )
 
 
+async def _memory_purpose_policies(
+    database: DatabaseSession, *, company_id: UUID, agent_id: UUID
+) -> list[AgentMemoryPurposePolicy]:
+    return list(
+        await database.scalars(
+            select(AgentMemoryPurposePolicy).where(
+                AgentMemoryPurposePolicy.company_id == company_id,
+                AgentMemoryPurposePolicy.agent_id == agent_id,
+            )
+        )
+    )
+
+
 async def _active_company_user(
     database: DatabaseSession, *, company_id: UUID, user_id: UUID
 ) -> CompanyUser:
@@ -100,8 +118,9 @@ def _policy_response(
     agent_id: UUID,
     policy: AgentMemoryPolicy | None,
     scope_policies: list[AgentMemoryScopePolicy],
+    purpose_policies: list[AgentMemoryPurposePolicy],
 ) -> AgentMemoryPolicyResponse:
-    values = memory_policy_values(policy, scope_policies)
+    values = memory_policy_values(policy, scope_policies, purpose_policies)
     return AgentMemoryPolicyResponse(
         id=policy.id if policy else None,
         agent_id=agent_id,
@@ -117,6 +136,10 @@ def _policy_response(
             AgentMemoryScopePolicyInput.model_validate(item)
             for item in cast(list[dict[str, object]], values["scope_policies"])
         ],
+        purpose_policies=[
+            AgentMemoryPurposePolicyInput.model_validate(item)
+            for item in cast(list[dict[str, object]], values["purpose_policies"])
+        ],
         updated_at=policy.updated_at if policy else None,
     )
 
@@ -129,6 +152,7 @@ def _memory_response(memory: AgentMemoryEntry) -> AgentMemoryResponse:
         classification=cast(MemoryClassification, memory.classification),
         source_type=cast(MemorySource, memory.source_type),
         source_id=memory.source_id,
+        purpose=cast(MemoryPurpose, memory.purpose),
         subject_user_id=memory.subject_user_id,
         consent_recorded=memory.consent_fingerprint is not None,
         expires_at=memory.expires_at,
@@ -149,7 +173,10 @@ async def get_agent_memory_policy(
     scope_policies = await _memory_scope_policies(
         database, company_id=context.company_id, agent_id=agent_id
     )
-    return _policy_response(agent_id, policy, scope_policies)
+    purpose_policies = await _memory_purpose_policies(
+        database, company_id=context.company_id, agent_id=agent_id
+    )
+    return _policy_response(agent_id, policy, scope_policies, purpose_policies)
 
 
 @router.put("/{agent_id}/memory-policy", response_model=AgentMemoryPolicyResponse)
@@ -169,7 +196,7 @@ async def update_agent_memory_policy(
             updated_by_user_id=context.user_id,
         )
         database.add(policy)
-    for field, value in payload.model_dump(exclude={"scope_policies"}).items():
+    for field, value in payload.model_dump(exclude={"scope_policies", "purpose_policies"}).items():
         setattr(policy, field, value)
     existing_scope_policies = await _memory_scope_policies(
         database, company_id=context.company_id, agent_id=agent_id
@@ -195,6 +222,30 @@ async def update_agent_memory_policy(
             scope_policy.retention_days = item.retention_days
             scope_policy.retrieval_enabled = item.retrieval_enabled
         saved_scope_policies.append(scope_policy)
+    existing_purpose_policies = await _memory_purpose_policies(
+        database, company_id=context.company_id, agent_id=agent_id
+    )
+    existing_by_purpose = {item.purpose: item for item in existing_purpose_policies}
+    requested_purposes = {item.purpose for item in payload.purpose_policies}
+    for existing_purpose in existing_purpose_policies:
+        if existing_purpose.purpose not in requested_purposes:
+            await database.delete(existing_purpose)
+    saved_purpose_policies: list[AgentMemoryPurposePolicy] = []
+    for purpose_item in payload.purpose_policies:
+        purpose_policy = existing_by_purpose.get(purpose_item.purpose)
+        if purpose_policy is None:
+            purpose_policy = AgentMemoryPurposePolicy(
+                company_id=context.company_id,
+                agent_id=agent_id,
+                purpose=purpose_item.purpose,
+                retention_days=purpose_item.retention_days,
+                enabled=purpose_item.enabled,
+            )
+            database.add(purpose_policy)
+        else:
+            purpose_policy.retention_days = purpose_item.retention_days
+            purpose_policy.enabled = purpose_item.enabled
+        saved_purpose_policies.append(purpose_policy)
     policy.updated_by_user_id = context.user_id
     record_authorization_audit(
         database,
@@ -210,11 +261,12 @@ async def update_agent_memory_policy(
             "allowed_classifications": payload.allowed_classifications,
             "max_context_tokens": payload.max_context_tokens,
             "scope_policy_count": len(payload.scope_policies),
+            "purpose_policy_count": len(payload.purpose_policies),
         },
     )
     await database.commit()
     await database.refresh(policy)
-    return _policy_response(agent_id, policy, saved_scope_policies)
+    return _policy_response(agent_id, policy, saved_scope_policies, saved_purpose_policies)
 
 
 @router.get("/{agent_id}/memories", response_model=list[AgentMemoryResponse])
@@ -258,7 +310,10 @@ async def create_agent_memory(
     scope_policies = await _memory_scope_policies(
         database, company_id=context.company_id, agent_id=agent_id
     )
-    values = memory_policy_values(policy, scope_policies)
+    purpose_policies = await _memory_purpose_policies(
+        database, company_id=context.company_id, agent_id=agent_id
+    )
+    values = memory_policy_values(policy, scope_policies, purpose_policies)
     if payload.scope not in cast(list[str], values["allowed_scopes"]):
         raise HTTPException(status_code=422, detail="Este escopo não é permitido pela política.")
     if payload.classification not in cast(list[str], values["allowed_classifications"]):
@@ -293,19 +348,38 @@ async def create_agent_memory(
         ),
         None,
     )
-    retention_days = payload.retention_days or cast(
+    effective_purpose = next(
+        (
+            item
+            for item in cast(list[dict[str, object]], values["purpose_policies"])
+            if item["purpose"] == payload.purpose
+        ),
+        None,
+    )
+    if effective_purpose is None or not bool(effective_purpose["enabled"]):
+        raise HTTPException(status_code=422, detail="Esta finalidade não é permitida.")
+    scope_retention = cast(
         int,
         effective_scope["retention_days"]
         if effective_scope is not None
         else values["default_retention_days"],
     )
-    if retention_days > cast(int, values["max_retention_days"]):
-        raise HTTPException(status_code=422, detail="A retenção supera o limite da política.")
+    purpose_retention = cast(int, effective_purpose["retention_days"])
+    retention_limit = min(
+        scope_retention, purpose_retention, cast(int, values["max_retention_days"])
+    )
+    retention_days = payload.retention_days or retention_limit
+    if retention_days > retention_limit:
+        raise HTTPException(
+            status_code=422,
+            detail="A retenção supera o limite do escopo ou da finalidade.",
+        )
     fingerprint = memory_content_fingerprint(
         secret=settings.encryption_key,
         company_id=context.company_id,
         agent_id=agent_id,
         scope=payload.scope,
+        purpose=payload.purpose,
         subject_user_id=payload.subject_user_id,
         content=payload.content,
     )
@@ -355,6 +429,7 @@ async def create_agent_memory(
         content_fingerprint=fingerprint,
         source_type=payload.source_type,
         source_id=payload.source_id,
+        purpose=payload.purpose,
         subject_user_id=payload.subject_user_id,
         subject_membership_id=subject_membership.id if subject_membership else None,
         consent_fingerprint=consent_fingerprint,
@@ -389,6 +464,105 @@ async def create_agent_memory(
     await database.commit()
     await database.refresh(memory)
     return _memory_response(memory)
+
+
+@router.get("/{agent_id}/my-memories", response_model=list[AgentMemoryResponse])
+async def list_my_agent_memories(
+    agent_id: UUID,
+    principal: CanExecuteAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    memories = list(
+        await database.scalars(
+            select(AgentMemoryEntry)
+            .where(
+                AgentMemoryEntry.company_id == context.company_id,
+                AgentMemoryEntry.agent_id == agent_id,
+                AgentMemoryEntry.scope == "user",
+                AgentMemoryEntry.subject_user_id == context.user_id,
+                AgentMemoryEntry.expires_at > utc_now(),
+            )
+            .order_by(AgentMemoryEntry.created_at.desc())
+            .limit(200)
+        )
+    )
+    return [_memory_response(memory) for memory in memories]
+
+
+@router.get("/{agent_id}/my-memory-export", response_model=AgentMemoryMetadataExport)
+async def export_my_agent_memory_metadata(
+    agent_id: UUID,
+    principal: CanExecuteAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryMetadataExport:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    memories = list(
+        await database.scalars(
+            select(AgentMemoryEntry)
+            .where(
+                AgentMemoryEntry.company_id == context.company_id,
+                AgentMemoryEntry.agent_id == agent_id,
+                AgentMemoryEntry.scope == "user",
+                AgentMemoryEntry.subject_user_id == context.user_id,
+                AgentMemoryEntry.expires_at > utc_now(),
+            )
+            .order_by(AgentMemoryEntry.created_at.desc())
+            .limit(200)
+        )
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_metadata.exported",
+        target_type="agent",
+        target_id=agent_id,
+        details={"record_count": len(memories)},
+    )
+    await database.commit()
+    return AgentMemoryMetadataExport(
+        agent_id=agent_id,
+        generated_at=utc_now(),
+        total=len(memories),
+        memories=[_memory_response(memory) for memory in memories],
+    )
+
+
+@router.delete("/{agent_id}/my-memories/{memory_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_agent_memory(
+    agent_id: UUID,
+    memory_id: UUID,
+    principal: CanExecuteAgentMemory,
+    database: DatabaseSession,
+) -> Response:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    memory = await database.scalar(
+        select(AgentMemoryEntry).where(
+            AgentMemoryEntry.id == memory_id,
+            AgentMemoryEntry.company_id == context.company_id,
+            AgentMemoryEntry.agent_id == agent_id,
+            AgentMemoryEntry.scope == "user",
+            AgentMemoryEntry.subject_user_id == context.user_id,
+        )
+    )
+    if memory is None:
+        raise HTTPException(status_code=404, detail="Memória pessoal não encontrada.")
+    await database.delete(memory)
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.personal_memory.deleted",
+        target_type="agent_memory",
+        target_id=memory_id,
+        details={"agent_id": str(agent_id)},
+    )
+    await database.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

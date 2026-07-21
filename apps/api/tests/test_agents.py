@@ -301,6 +301,7 @@ def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
         company_id=company_a,
         agent_id=agent_id,
         scope="user",
+        purpose="personalization",
         subject_user_id=company_a,
         content="dado sensível",
     )
@@ -309,6 +310,7 @@ def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
         company_id=company_a,
         agent_id=agent_id,
         scope="user",
+        purpose="personalization",
         subject_user_id=company_a,
         content="dado sensível",
     )
@@ -317,6 +319,7 @@ def test_agent_memory_contracts_enforce_retention_and_scoped_hmac() -> None:
         company_id=company_b,
         agent_id=agent_id,
         scope="user",
+        purpose="personalization",
         subject_user_id=company_a,
         content="dado sensível",
     )

@@ -11,12 +11,19 @@ from app.core.schemas import StrictSchema
 MemoryScope = Literal["conversation", "task", "user", "company", "operational"]
 MemoryClassification = Literal["public", "internal", "confidential", "restricted"]
 MemorySource = Literal["manual", "conversation", "task", "tool"]
+MemoryPurpose = Literal["service", "personalization", "operations", "compliance", "analytics"]
 
 
 class AgentMemoryScopePolicyInput(StrictSchema):
     scope: MemoryScope
     retention_days: int = Field(ge=1, le=3650)
     retrieval_enabled: bool = True
+
+
+class AgentMemoryPurposePolicyInput(StrictSchema):
+    purpose: MemoryPurpose
+    retention_days: int = Field(ge=1, le=3650)
+    enabled: bool = True
 
 
 class AgentMemoryPolicyUpdate(StrictSchema):
@@ -29,6 +36,9 @@ class AgentMemoryPolicyUpdate(StrictSchema):
     max_retrieval_entries: int = Field(default=5, ge=1, le=20)
     max_context_tokens: int = Field(default=1000, ge=128, le=16_000)
     scope_policies: list[AgentMemoryScopePolicyInput] = Field(default_factory=list, max_length=5)
+    purpose_policies: list[AgentMemoryPurposePolicyInput] = Field(
+        default_factory=list, max_length=5
+    )
 
     @model_validator(mode="after")
     def validate_policy(self) -> Self:
@@ -45,6 +55,11 @@ class AgentMemoryPolicyUpdate(StrictSchema):
             raise ValueError("Políticas por escopo exigem que o escopo esteja permitido.")
         if any(item.retention_days > self.max_retention_days for item in self.scope_policies):
             raise ValueError("A retenção do escopo supera o limite máximo da política.")
+        purposes = [item.purpose for item in self.purpose_policies]
+        if len(set(purposes)) != len(purposes):
+            raise ValueError("Cada finalidade pode possuir somente uma política.")
+        if any(item.retention_days > self.max_retention_days for item in self.purpose_policies):
+            raise ValueError("A retenção da finalidade supera o limite máximo da política.")
         return self
 
 
@@ -60,6 +75,7 @@ class AgentMemoryPolicyResponse(StrictSchema):
     max_retrieval_entries: int
     max_context_tokens: int
     scope_policies: list[AgentMemoryScopePolicyInput]
+    purpose_policies: list[AgentMemoryPurposePolicyInput]
     updated_at: datetime | None
 
 
@@ -70,6 +86,7 @@ class AgentMemoryCreate(StrictSchema):
     retention_days: int | None = Field(default=None, ge=1, le=3650)
     source_type: MemorySource = "manual"
     source_id: str | None = Field(default=None, max_length=160)
+    purpose: MemoryPurpose = "operations"
     subject_user_id: UUID | None = None
     consent_reference: str | None = Field(default=None, max_length=160)
 
@@ -86,6 +103,7 @@ class AgentMemoryResponse(StrictSchema):
     classification: MemoryClassification
     source_type: MemorySource
     source_id: str | None
+    purpose: MemoryPurpose
     subject_user_id: UUID | None
     consent_recorded: bool
     expires_at: datetime
@@ -122,3 +140,10 @@ class AgentMemoryConsentRevocationResponse(StrictSchema):
     revocation_id: UUID
     deleted_count: int
     already_revoked: bool
+
+
+class AgentMemoryMetadataExport(StrictSchema):
+    agent_id: UUID
+    generated_at: datetime
+    total: int
+    memories: list[AgentMemoryResponse]

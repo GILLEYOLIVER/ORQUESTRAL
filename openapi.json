@@ -2031,6 +2031,18 @@
             "title": "Content",
             "type": "string"
           },
+          "purpose": {
+            "default": "operations",
+            "enum": [
+              "service",
+              "personalization",
+              "operations",
+              "compliance",
+              "analytics"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
           "retention_days": {
             "anyOf": [
               {
@@ -2098,6 +2110,40 @@
         "title": "AgentMemoryCreate",
         "type": "object"
       },
+      "AgentMemoryMetadataExport": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMemoryResponse"
+            },
+            "title": "Memories",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "generated_at",
+          "total",
+          "memories"
+        ],
+        "title": "AgentMemoryMetadataExport",
+        "type": "object"
+      },
       "AgentMemoryPolicyResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2161,6 +2207,13 @@
             "title": "Max Retrieval Entries",
             "type": "integer"
           },
+          "purpose_policies": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMemoryPurposePolicyInput"
+            },
+            "title": "Purpose Policies",
+            "type": "array"
+          },
           "require_consent_for_user_scope": {
             "title": "Require Consent For User Scope",
             "type": "boolean"
@@ -2201,6 +2254,7 @@
           "max_retrieval_entries",
           "max_context_tokens",
           "scope_policies",
+          "purpose_policies",
           "updated_at"
         ],
         "title": "AgentMemoryPolicyResponse",
@@ -2268,6 +2322,14 @@
             "title": "Max Retrieval Entries",
             "type": "integer"
           },
+          "purpose_policies": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMemoryPurposePolicyInput"
+            },
+            "maxItems": 5,
+            "title": "Purpose Policies",
+            "type": "array"
+          },
           "require_consent_for_user_scope": {
             "default": true,
             "title": "Require Consent For User Scope",
@@ -2325,6 +2387,39 @@
         "title": "AgentMemoryPurgeResponse",
         "type": "object"
       },
+      "AgentMemoryPurposePolicyInput": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "purpose": {
+            "enum": [
+              "service",
+              "personalization",
+              "operations",
+              "compliance",
+              "analytics"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "retention_days": {
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Retention Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "purpose",
+          "retention_days"
+        ],
+        "title": "AgentMemoryPurposePolicyInput",
+        "type": "object"
+      },
       "AgentMemoryResponse": {
         "additionalProperties": false,
         "properties": {
@@ -2364,6 +2459,17 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "service",
+              "personalization",
+              "operations",
+              "compliance",
+              "analytics"
+            ],
+            "title": "Purpose",
             "type": "string"
           },
           "scope": {
@@ -2418,6 +2524,7 @@
           "classification",
           "source_type",
           "source_id",
+          "purpose",
           "subject_user_id",
           "consent_recorded",
           "expires_at",
@@ -19269,6 +19376,217 @@
           }
         ],
         "summary": "Purge Agent Memories",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/my-memories": {
+      "get": {
+        "operationId": "list_my_agent_memories_agents__agent_id__my_memories_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryResponse"
+                  },
+                  "title": "Response List My Agent Memories Agents  Agent Id  My Memories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List My Agent Memories",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/my-memories/{memory_id}": {
+      "delete": {
+        "operationId": "delete_my_agent_memory_agents__agent_id__my_memories__memory_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "memory_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Memory Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete My Agent Memory",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/my-memory-export": {
+      "get": {
+        "operationId": "export_my_agent_memory_metadata_agents__agent_id__my_memory_export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryMetadataExport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export My Agent Memory Metadata",
         "tags": [
           "agents"
         ]

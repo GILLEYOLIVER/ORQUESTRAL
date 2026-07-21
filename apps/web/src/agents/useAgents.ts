@@ -169,6 +169,12 @@ export interface AgentMemoryPolicyResponse {
     retention_days: number;
     retrieval_enabled: boolean;
   }>;
+  purpose_policies: Array<{
+    purpose:
+      "service" | "personalization" | "operations" | "compliance" | "analytics";
+    retention_days: number;
+    enabled: boolean;
+  }>;
   updated_at: string | null;
 }
 
@@ -179,6 +185,8 @@ export interface AgentMemoryResponse {
   classification: "public" | "internal" | "confidential" | "restricted";
   source_type: "manual" | "conversation" | "task" | "tool";
   source_id: string | null;
+  purpose:
+    "service" | "personalization" | "operations" | "compliance" | "analytics";
   subject_user_id: string | null;
   consent_recorded: boolean;
   expires_at: string;
@@ -190,6 +198,13 @@ export interface AgentMemoryConsentRevocationResponse {
   revocation_id: string;
   deleted_count: number;
   already_revoked: boolean;
+}
+
+export interface AgentMemoryMetadataExport {
+  agent_id: string;
+  generated_at: string;
+  total: number;
+  memories: AgentMemoryResponse[];
 }
 
 export function useAgents(enabled = true) {
