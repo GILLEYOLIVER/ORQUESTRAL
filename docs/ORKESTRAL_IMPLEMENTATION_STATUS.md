@@ -336,3 +336,12 @@ Data: 21 de julho de 2026.
 - Validação concluída: Ruff e MyPy aprovados; 124 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
 - Migração: `20260721_0035_agent_evaluation_gate.py`.
 - Próximo passo: ciclo 14, contratos de tarefa e coordenação multiagente.
+## Ciclo 14 - Coordenação multiagente
+
+- Contratos entre supervisor e especialista com propagação de ferramentas, passos e custo.
+- Delegações idempotentes com profundidade, prazo e máquina de estados controlada.
+- Handoffs aprováveis que revalidam o agente de destino sem ampliar privilégios.
+- Objetivos e resultados persistidos somente como fingerprints por empresa.
+- Validação concluída: Ruff e MyPy aprovados; 126 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0036_multiagent_coordination.py`.
+- Próximo passo: ciclo 15, fila assíncrona de delegações e execução coordenada.

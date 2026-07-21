@@ -135,7 +135,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             draft = client.post(
                 f"/agents/{agent_id}/versions",
                 headers=headers_b,
-                json={"autonomy_level": 3, "max_cost_per_run_microunits": 100},
+                json={"autonomy_level": 4, "max_cost_per_run_microunits": 100},
             )
             assert draft.status_code == 201
             assert draft.json()["status"] == "draft"
@@ -186,7 +186,99 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                 headers=headers_b,
             )
             assert published.status_code == 200
-            assert published.json()["autonomy_level"] == 3
+            assert published.json()["autonomy_level"] == 4
+            worker = client.post(
+                "/agents",
+                headers=headers_b,
+                json={
+                    "name": "Agente Especialista",
+                    "instructions": "Execute somente tarefas recebidas por contrato autorizado.",
+                },
+            )
+            assert worker.status_code == 201
+            worker_id = worker.json()["id"]
+            contract = client.post(
+                f"/agents/{agent_id}/task-contracts",
+                headers=headers_b,
+                json={
+                    "worker_agent_id": worker_id,
+                    "name": "Consulta empresarial",
+                    "allowed_tool_keys": ["orkestral.company.summary"],
+                    "required_context_keys": ["customer_id"],
+                    "max_steps": 2,
+                    "max_cost_microunits": 100,
+                    "deadline_seconds": 120,
+                },
+            )
+            assert contract.status_code == 201
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/task-contracts",
+                    headers=headers_a,
+                    json={
+                        "worker_agent_id": worker_id,
+                        "name": "Invasão",
+                        "max_steps": 1,
+                        "max_cost_microunits": 0,
+                    },
+                ).status_code
+                == 404
+            )
+            idempotency_key = str(uuid4())
+            delegation_payload = {
+                "contract_id": contract.json()["id"],
+                "objective": "SEGREDO-DO-AGENTE: consultar o cliente autorizado",
+                "context_keys": ["customer_id"],
+                "idempotency_key": idempotency_key,
+            }
+            delegation = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json=delegation_payload,
+            )
+            assert delegation.status_code == 201
+            repeated = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json=delegation_payload,
+            )
+            assert repeated.status_code == 201
+            assert repeated.json()["id"] == delegation.json()["id"]
+            assert "consultar o cliente" not in str(delegation.json())
+            delegation_id = delegation.json()["id"]
+            handoff = client.post(
+                f"/agents/{agent_id}/delegations/{delegation_id}/handoffs",
+                headers=headers_b,
+                json={"to_agent_id": agent_id, "reason_code": "specialist_unavailable"},
+            )
+            assert handoff.status_code == 201
+            accepted = client.post(
+                f"/agents/{agent_id}/delegations/{delegation_id}/handoffs/{handoff.json()['id']}/decision",
+                headers=headers_b,
+                json={"decision": "accepted"},
+            )
+            assert accepted.status_code == 200
+            assert accepted.json()["status"] == "accepted"
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/delegations/{delegation_id}/transition",
+                    headers=headers_b,
+                    json={"action": "start"},
+                ).status_code
+                == 200
+            )
+            completed = client.post(
+                f"/agents/{agent_id}/delegations/{delegation_id}/transition",
+                headers=headers_b,
+                json={
+                    "action": "complete",
+                    "result": "SEGREDO-DO-AGENTE: tarefa concluída",
+                    "consumed_cost_microunits": 50,
+                },
+            )
+            assert completed.status_code == 200
+            assert completed.json()["status"] == "completed"
+            assert "tarefa concluída" not in str(completed.json())
 
             budget = client.put(
                 f"/agents/{agent_id}/budget",

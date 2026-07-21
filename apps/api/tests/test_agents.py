@@ -7,6 +7,12 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 
+from app.modules.agents.coordination import (
+    AgentCoordinationError,
+    ContractLimits,
+    transition_delegation,
+    validate_task_contract,
+)
 from app.modules.agents.evaluation import evaluate_agent_case
 from app.modules.agents.governance import (
     agent_request_fingerprint,
@@ -182,3 +188,33 @@ def test_agent_evaluation_enforces_blocking_and_tool_contracts() -> None:
     )
     assert attack.passed
     assert tool.passed
+
+
+def test_multiagent_contract_never_expands_worker_limits() -> None:
+    valid = ContractLimits(
+        max_steps=4,
+        max_cost_microunits=100,
+        allowed_tool_keys=("orkestral.company.summary",),
+    )
+    validate_task_contract(
+        supervisor_autonomy_level=4,
+        worker_max_steps=5,
+        worker_max_cost_microunits=200,
+        worker_tool_keys={"orkestral.company.summary"},
+        requested=valid,
+    )
+    with pytest.raises(AgentCoordinationError, match="Ferramentas"):
+        validate_task_contract(
+            supervisor_autonomy_level=4,
+            worker_max_steps=5,
+            worker_max_cost_microunits=200,
+            worker_tool_keys={"orkestral.company.summary"},
+            requested=ContractLimits(2, 100, ("orkestral.workflow.deactivate",)),
+        )
+
+
+def test_delegation_state_machine_blocks_replay_after_completion() -> None:
+    assert transition_delegation("queued", "start") == "in_progress"
+    assert transition_delegation("in_progress", "complete") == "completed"
+    with pytest.raises(AgentCoordinationError, match="não permitida"):
+        transition_delegation("completed", "complete")

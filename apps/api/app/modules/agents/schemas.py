@@ -296,6 +296,86 @@ class AgentRunResponse(StrictSchema):
     finished_at: datetime | None
 
 
+class AgentTaskContractCreate(StrictSchema):
+    worker_agent_id: UUID
+    name: str = Field(min_length=2, max_length=160)
+    allowed_tool_keys: list[str] = Field(default_factory=list, max_length=50)
+    required_context_keys: list[str] = Field(default_factory=list, max_length=50)
+    max_steps: int = Field(ge=1, le=100)
+    max_cost_microunits: int = Field(ge=0, le=2_000_000_000)
+    deadline_seconds: int = Field(default=300, ge=1, le=86_400)
+    max_delegation_depth: int = Field(default=1, ge=1, le=5)
+
+
+class AgentTaskContractResponse(StrictSchema):
+    id: UUID
+    supervisor_agent_id: UUID
+    worker_agent_id: UUID
+    name: str
+    allowed_tool_keys: list[str]
+    required_context_keys: list[str]
+    max_steps: int
+    max_cost_microunits: int
+    deadline_seconds: int
+    max_delegation_depth: int
+    status: Literal["active", "inactive"]
+    created_at: datetime
+
+
+class AgentDelegationCreate(StrictSchema):
+    contract_id: UUID
+    objective: str = Field(min_length=2, max_length=5000)
+    context_keys: list[str] = Field(default_factory=list, max_length=50)
+    idempotency_key: UUID
+    parent_delegation_id: UUID | None = None
+
+
+class AgentDelegationTransition(StrictSchema):
+    action: Literal["start", "complete", "fail", "cancel"]
+    result: str | None = Field(default=None, max_length=5000)
+    consumed_cost_microunits: int = Field(default=0, ge=0, le=2_000_000_000)
+
+
+class AgentDelegationResponse(StrictSchema):
+    id: UUID
+    contract_id: UUID
+    parent_delegation_id: UUID | None
+    supervisor_agent_id: UUID
+    assigned_agent_id: UUID
+    idempotency_key: UUID
+    objective_fingerprint: str
+    result_fingerprint: str | None
+    context_keys: list[str]
+    status: Literal["queued", "in_progress", "completed", "failed", "cancelled"]
+    depth: int
+    reserved_cost_microunits: int
+    consumed_cost_microunits: int
+    due_at: datetime
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+
+
+class AgentHandoffCreate(StrictSchema):
+    to_agent_id: UUID
+    reason_code: str = Field(min_length=2, max_length=80, pattern=r"^[a-z0-9_.-]+$")
+
+
+class AgentHandoffDecision(StrictSchema):
+    decision: Literal["accepted", "rejected"]
+
+
+class AgentHandoffResponse(StrictSchema):
+    id: UUID
+    delegation_id: UUID
+    from_agent_id: UUID
+    to_agent_id: UUID
+    reason_code: str
+    status: Literal["requested", "accepted", "rejected"]
+    created_at: datetime
+    decided_at: datetime | None
+
+
 class AgentVersionCreate(StrictSchema):
     instructions: str | None = Field(default=None, min_length=10, max_length=20_000)
     provider: AgentProvider | None = None

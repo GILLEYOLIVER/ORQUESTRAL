@@ -48,7 +48,7 @@ Todos os acessos são filtrados por `company_id` e exigem `agents.configure`. A 
 
 ## Próximos incrementos
 
-- coordenação multiagente com contratos de tarefa.
+- execução assíncrona automática de filas de delegação.
 
 ## Observabilidade e execução segura
 
@@ -78,3 +78,18 @@ Quando `require_evaluation_for_publish=true`, uma versão somente pode ser publi
 
 - `POST /agents/{agent_id}/versions/{version_id}/evaluation-suites`
 - `POST /agents/{agent_id}/versions/{version_id}/evaluation-suites/{suite_id}/run`
+
+## Coordenação multiagente
+
+O ciclo 14 introduz contratos de tarefa entre um supervisor de autonomia nível 4 e agentes especialistas. O contrato limita ferramentas, contexto, passos, custo, prazo e profundidade de subdelegação. Nenhum contrato pode ampliar os limites da versão publicada do especialista.
+
+Delegações são idempotentes e seguem a máquina de estados `queued`, `in_progress`, `completed`, `failed` ou `cancelled`. Objetivo e resultado são convertidos em fingerprints SHA-256 com escopo da empresa; o texto não é armazenado em contratos, eventos ou respostas.
+
+Handoffs exigem decisão explícita e revalidam o agente de destino contra o contrato original. Contratos, delegações e handoffs geram auditoria e eventos mínimos com `company_id`.
+
+- `GET/POST /agents/{supervisor_id}/task-contracts`
+- `POST /agents/{supervisor_id}/delegations`
+- `GET /agents/{supervisor_id}/delegations/{delegation_id}`
+- `POST /agents/{supervisor_id}/delegations/{delegation_id}/transition`
+- `POST /agents/{supervisor_id}/delegations/{delegation_id}/handoffs`
+- `POST /agents/{supervisor_id}/delegations/{delegation_id}/handoffs/{handoff_id}/decision`

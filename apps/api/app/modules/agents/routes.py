@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from time import perf_counter
 from typing import Annotated, Any, Literal, cast
 from uuid import UUID
@@ -12,6 +13,18 @@ from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.agents.approvals import decide_agent_tool_run
+from app.modules.agents.coordination import (
+    AgentCoordinationError,
+    ContractLimits,
+    coordination_fingerprint,
+    transition_delegation,
+    validate_task_contract,
+)
+from app.modules.agents.coordination_models import (
+    AgentDelegation,
+    AgentHandoff,
+    AgentTaskContract,
+)
 from app.modules.agents.evaluation import evaluate_agent_case
 from app.modules.agents.evaluation_models import (
     AgentEvaluationCase,
@@ -59,15 +72,23 @@ from app.modules.agents.schemas import (
     AgentCreate,
     AgentDataPolicyResponse,
     AgentDataPolicyUpdate,
+    AgentDelegationCreate,
+    AgentDelegationResponse,
+    AgentDelegationTransition,
     AgentEvaluationCaseResponse,
     AgentEvaluationRunResponse,
     AgentEvaluationSuiteCreate,
     AgentEvaluationSuiteResponse,
+    AgentHandoffCreate,
+    AgentHandoffDecision,
+    AgentHandoffResponse,
     AgentMessageResponse,
     AgentProviderStatusResponse,
     AgentResponse,
     AgentRunResponse,
     AgentSecurityEventResponse,
+    AgentTaskContractCreate,
+    AgentTaskContractResponse,
     AgentToolCatalogResponse,
     AgentToolDecision,
     AgentToolResponse,
@@ -180,6 +201,27 @@ async def _data_policy(
     if policy is None:
         raise HTTPException(status_code=409, detail="Política de dados do agente não configurada.")
     return policy
+
+
+def _contract_response(contract: AgentTaskContract) -> AgentTaskContractResponse:
+    return AgentTaskContractResponse.model_validate(contract, from_attributes=True)
+
+
+def _delegation_response(delegation: AgentDelegation) -> AgentDelegationResponse:
+    return AgentDelegationResponse.model_validate(delegation, from_attributes=True)
+
+
+def _handoff_response(handoff: AgentHandoff) -> AgentHandoffResponse:
+    return AgentHandoffResponse.model_validate(handoff, from_attributes=True)
+
+
+async def _published_version_required(
+    database: DatabaseSession, *, agent: Agent, company_id: UUID
+) -> AgentVersion:
+    version = await active_agent_version(database, agent=agent, company_id=company_id)
+    if version is None:
+        raise HTTPException(status_code=409, detail="O agente não possui versão publicada.")
+    return version
 
 
 async def _budget(database: DatabaseSession, *, agent_id: UUID, company_id: UUID) -> AgentBudget:
@@ -1148,6 +1190,458 @@ async def run_agent_evaluation_suite(
     await database.commit()
     await database.refresh(evaluation_run)
     return AgentEvaluationRunResponse.model_validate(evaluation_run, from_attributes=True)
+
+
+@router.get("/{agent_id}/task-contracts", response_model=list[AgentTaskContractResponse])
+async def list_agent_task_contracts(
+    agent_id: UUID, principal: CanViewAgents, database: DatabaseSession
+) -> list[AgentTaskContractResponse]:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    contracts = (
+        await database.scalars(
+            select(AgentTaskContract)
+            .where(
+                AgentTaskContract.supervisor_agent_id == agent_id,
+                AgentTaskContract.company_id == context.company_id,
+            )
+            .order_by(AgentTaskContract.created_at.desc())
+        )
+    ).all()
+    return [_contract_response(contract) for contract in contracts]
+
+
+@router.post(
+    "/{agent_id}/task-contracts",
+    response_model=AgentTaskContractResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_task_contract(
+    agent_id: UUID,
+    payload: AgentTaskContractCreate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentTaskContractResponse:
+    context = get_request_context(principal)
+    supervisor = await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    worker = await _agent(database, agent_id=payload.worker_agent_id, company_id=context.company_id)
+    supervisor_version = await _published_version_required(
+        database, agent=supervisor, company_id=context.company_id
+    )
+    worker_version = await _published_version_required(
+        database, agent=worker, company_id=context.company_id
+    )
+    worker_tool_keys = set(
+        await database.scalars(
+            select(AgentTool.tool_key).where(
+                AgentTool.agent_id == worker.id,
+                AgentTool.company_id == context.company_id,
+                AgentTool.enabled.is_(True),
+            )
+        )
+    )
+    try:
+        validate_task_contract(
+            supervisor_autonomy_level=supervisor_version.autonomy_level,
+            worker_max_steps=worker_version.max_steps,
+            worker_max_cost_microunits=worker_version.max_cost_per_run_microunits,
+            worker_tool_keys=worker_tool_keys,
+            requested=ContractLimits(
+                max_steps=payload.max_steps,
+                max_cost_microunits=payload.max_cost_microunits,
+                allowed_tool_keys=tuple(payload.allowed_tool_keys),
+            ),
+        )
+    except AgentCoordinationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    contract = AgentTaskContract(
+        company_id=context.company_id,
+        supervisor_agent_id=supervisor.id,
+        created_by_user_id=context.user_id,
+        **payload.model_dump(),
+    )
+    database.add(contract)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.task_contract.created",
+        target_type="agent_task_contract",
+        target_id=contract.id,
+        details={
+            "supervisor_agent_id": str(supervisor.id),
+            "worker_agent_id": str(worker.id),
+            "max_steps": contract.max_steps,
+            "max_cost_microunits": contract.max_cost_microunits,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.task_contract.created",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={
+                "task_contract_id": str(contract.id),
+                "supervisor_agent_id": str(supervisor.id),
+                "worker_agent_id": str(worker.id),
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(contract)
+    return _contract_response(contract)
+
+
+@router.post(
+    "/{agent_id}/delegations",
+    response_model=AgentDelegationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_delegation(
+    agent_id: UUID,
+    payload: AgentDelegationCreate,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentDelegationResponse:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    existing = await database.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.company_id == context.company_id,
+            AgentDelegation.idempotency_key == payload.idempotency_key,
+        )
+    )
+    if existing is not None:
+        return _delegation_response(existing)
+    contract = await database.scalar(
+        select(AgentTaskContract).where(
+            AgentTaskContract.id == payload.contract_id,
+            AgentTaskContract.company_id == context.company_id,
+            AgentTaskContract.supervisor_agent_id == agent_id,
+            AgentTaskContract.status == "active",
+        )
+    )
+    if contract is None:
+        raise HTTPException(status_code=404, detail="Contrato de tarefa não encontrado.")
+    missing_context = sorted(set(contract.required_context_keys) - set(payload.context_keys))
+    if missing_context:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Contextos obrigatórios ausentes: {', '.join(missing_context)}.",
+        )
+    parent = None
+    depth = 1
+    if payload.parent_delegation_id is not None:
+        parent = await database.scalar(
+            select(AgentDelegation).where(
+                AgentDelegation.id == payload.parent_delegation_id,
+                AgentDelegation.company_id == context.company_id,
+            )
+        )
+        if parent is None:
+            raise HTTPException(status_code=404, detail="Delegação pai não encontrada.")
+        depth = parent.depth + 1
+    if depth > contract.max_delegation_depth:
+        raise HTTPException(status_code=422, detail="Profundidade máxima de delegação excedida.")
+    now = utc_now()
+    delegation = AgentDelegation(
+        company_id=context.company_id,
+        contract_id=contract.id,
+        parent_delegation_id=parent.id if parent else None,
+        supervisor_agent_id=contract.supervisor_agent_id,
+        assigned_agent_id=contract.worker_agent_id,
+        requested_by_user_id=context.user_id,
+        idempotency_key=payload.idempotency_key,
+        objective_fingerprint=coordination_fingerprint(
+            company_id=context.company_id, value=payload.objective
+        ),
+        context_keys=sorted(set(payload.context_keys)),
+        depth=depth,
+        reserved_cost_microunits=contract.max_cost_microunits,
+        due_at=now + timedelta(seconds=contract.deadline_seconds),
+    )
+    database.add(delegation)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.delegation.created",
+        target_type="agent_delegation",
+        target_id=delegation.id,
+        details={
+            "contract_id": str(contract.id),
+            "assigned_agent_id": str(delegation.assigned_agent_id),
+            "depth": depth,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.delegation.created",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "delegation_id": str(delegation.id),
+                "contract_id": str(contract.id),
+                "assigned_agent_id": str(delegation.assigned_agent_id),
+                "depth": depth,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(delegation)
+    return _delegation_response(delegation)
+
+
+@router.get("/{agent_id}/delegations/{delegation_id}", response_model=AgentDelegationResponse)
+async def get_agent_delegation(
+    agent_id: UUID,
+    delegation_id: UUID,
+    principal: CanViewAgents,
+    database: DatabaseSession,
+) -> AgentDelegationResponse:
+    context = get_request_context(principal)
+    delegation = await database.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.id == delegation_id,
+            AgentDelegation.supervisor_agent_id == agent_id,
+            AgentDelegation.company_id == context.company_id,
+        )
+    )
+    if delegation is None:
+        raise HTTPException(status_code=404, detail="Delegação não encontrada.")
+    return _delegation_response(delegation)
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/transition",
+    response_model=AgentDelegationResponse,
+)
+async def transition_agent_delegation(
+    agent_id: UUID,
+    delegation_id: UUID,
+    payload: AgentDelegationTransition,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentDelegationResponse:
+    context = get_request_context(principal)
+    delegation = await database.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.id == delegation_id,
+            AgentDelegation.supervisor_agent_id == agent_id,
+            AgentDelegation.company_id == context.company_id,
+        )
+    )
+    if delegation is None:
+        raise HTTPException(status_code=404, detail="Delegação não encontrada.")
+    contract = await database.scalar(
+        select(AgentTaskContract).where(
+            AgentTaskContract.id == delegation.contract_id,
+            AgentTaskContract.company_id == context.company_id,
+        )
+    )
+    if contract is None:
+        raise HTTPException(status_code=409, detail="Contrato da delegação indisponível.")
+    if payload.consumed_cost_microunits > contract.max_cost_microunits:
+        raise HTTPException(status_code=422, detail="Custo da tarefa excede o contrato.")
+    try:
+        delegation.status = transition_delegation(delegation.status, payload.action)
+    except AgentCoordinationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    now = utc_now()
+    if delegation.status == "in_progress":
+        delegation.started_at = now
+    else:
+        delegation.finished_at = now
+        delegation.consumed_cost_microunits = payload.consumed_cost_microunits
+        if payload.result:
+            delegation.result_fingerprint = coordination_fingerprint(
+                company_id=context.company_id, value=payload.result
+            )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.delegation.{delegation.status}",
+        target_type="agent_delegation",
+        target_id=delegation.id,
+        details={
+            "contract_id": str(contract.id),
+            "status": delegation.status,
+            "consumed_cost_microunits": delegation.consumed_cost_microunits,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.delegation.{delegation.status}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "delegation_id": str(delegation.id),
+                "status": delegation.status,
+                "consumed_cost_microunits": delegation.consumed_cost_microunits,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(delegation)
+    return _delegation_response(delegation)
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/handoffs",
+    response_model=AgentHandoffResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_handoff(
+    agent_id: UUID,
+    delegation_id: UUID,
+    payload: AgentHandoffCreate,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentHandoffResponse:
+    context = get_request_context(principal)
+    delegation = await database.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.id == delegation_id,
+            AgentDelegation.supervisor_agent_id == agent_id,
+            AgentDelegation.company_id == context.company_id,
+            AgentDelegation.status.in_(("queued", "in_progress")),
+        )
+    )
+    if delegation is None:
+        raise HTTPException(status_code=404, detail="Delegação ativa não encontrada.")
+    target = await _agent(database, agent_id=payload.to_agent_id, company_id=context.company_id)
+    if target.id == delegation.assigned_agent_id:
+        raise HTTPException(status_code=422, detail="O handoff exige outro agente.")
+    target_version = await _published_version_required(
+        database, agent=target, company_id=context.company_id
+    )
+    supervisor = await _agent(
+        database, agent_id=delegation.supervisor_agent_id, company_id=context.company_id
+    )
+    supervisor_version = await _published_version_required(
+        database, agent=supervisor, company_id=context.company_id
+    )
+    contract = await database.scalar(
+        select(AgentTaskContract).where(
+            AgentTaskContract.id == delegation.contract_id,
+            AgentTaskContract.company_id == context.company_id,
+        )
+    )
+    if contract is None:
+        raise HTTPException(status_code=409, detail="Contrato da delegação indisponível.")
+    target_tools = set(
+        await database.scalars(
+            select(AgentTool.tool_key).where(
+                AgentTool.agent_id == target.id,
+                AgentTool.company_id == context.company_id,
+                AgentTool.enabled.is_(True),
+            )
+        )
+    )
+    try:
+        validate_task_contract(
+            supervisor_autonomy_level=supervisor_version.autonomy_level,
+            worker_max_steps=target_version.max_steps,
+            worker_max_cost_microunits=target_version.max_cost_per_run_microunits,
+            worker_tool_keys=target_tools,
+            requested=ContractLimits(
+                max_steps=contract.max_steps,
+                max_cost_microunits=contract.max_cost_microunits,
+                allowed_tool_keys=tuple(contract.allowed_tool_keys),
+            ),
+        )
+    except AgentCoordinationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    handoff = AgentHandoff(
+        company_id=context.company_id,
+        delegation_id=delegation.id,
+        from_agent_id=delegation.assigned_agent_id,
+        to_agent_id=target.id,
+        reason_code=payload.reason_code,
+        requested_by_user_id=context.user_id,
+    )
+    database.add(handoff)
+    await database.commit()
+    await database.refresh(handoff)
+    return _handoff_response(handoff)
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/handoffs/{handoff_id}/decision",
+    response_model=AgentHandoffResponse,
+)
+async def decide_agent_handoff(
+    agent_id: UUID,
+    delegation_id: UUID,
+    handoff_id: UUID,
+    payload: AgentHandoffDecision,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentHandoffResponse:
+    context = get_request_context(principal)
+    delegation = await database.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.id == delegation_id,
+            AgentDelegation.supervisor_agent_id == agent_id,
+            AgentDelegation.company_id == context.company_id,
+        )
+    )
+    handoff = await database.scalar(
+        select(AgentHandoff).where(
+            AgentHandoff.id == handoff_id,
+            AgentHandoff.delegation_id == delegation_id,
+            AgentHandoff.company_id == context.company_id,
+        )
+    )
+    if delegation is None or handoff is None:
+        raise HTTPException(status_code=404, detail="Handoff não encontrado.")
+    if handoff.status != "requested":
+        raise HTTPException(status_code=409, detail="Este handoff já foi decidido.")
+    handoff.status = payload.decision
+    handoff.decided_by_user_id = context.user_id
+    handoff.decided_at = utc_now()
+    if payload.decision == "accepted":
+        delegation.assigned_agent_id = handoff.to_agent_id
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.handoff.{handoff.status}",
+        target_type="agent_handoff",
+        target_id=handoff.id,
+        details={
+            "delegation_id": str(delegation.id),
+            "from_agent_id": str(handoff.from_agent_id),
+            "to_agent_id": str(handoff.to_agent_id),
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.handoff.{handoff.status}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={
+                "delegation_id": str(delegation.id),
+                "handoff_id": str(handoff.id),
+                "status": handoff.status,
+                "to_agent_id": str(handoff.to_agent_id),
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(handoff)
+    return _handoff_response(handoff)
 
 
 @router.get("/{agent_id}/conversations", response_model=list[AgentConversationResponse])
