@@ -157,7 +157,7 @@ async def _notify_memory_incident_reviewers(
                 if escalated
                 else "Um incidente exige revisão independente dentro do SLA configurado."
             ),
-            severity="critical" if incident.severity == "critical" or escalated else "warning",
+            severity="error" if incident.severity == "critical" or escalated else "warning",
             resource_type="agent_task_memory_access_incident",
             resource_id=incident.id,
             data={

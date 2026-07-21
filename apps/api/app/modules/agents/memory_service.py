@@ -649,7 +649,7 @@ async def run_due_agent_memory_response_exercises(
                 event_type="agent.memory_response_exercise.failed",
                 title="Exercício de segurança exige revisão",
                 message="Um controle da memória do agente não passou no exercício agendado.",
-                severity="critical",
+                severity="error",
                 resource_type="agent_memory_response_exercise",
                 resource_id=exercise.id,
                 data={"agent_id": str(schedule.agent_id)},
@@ -692,7 +692,6 @@ async def process_agent_memory_reencryption_jobs(
         now = utc_now()
         if job.target_master_key_id != active_key_id:
             job.status = "failed"
-            job.failed_count += 1
             job.error_code = "target_key_changed"
             job.completed_at = now
             failed += 1
