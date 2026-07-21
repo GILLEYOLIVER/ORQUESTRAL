@@ -53,7 +53,10 @@ from app.modules.agents.memory_models import (
     AgentMemoryScopePolicy,
 )
 from app.modules.agents.memory_routes import router as memory_router
-from app.modules.agents.memory_service import retrieve_authorized_memories
+from app.modules.agents.memory_service import (
+    purge_terminal_task_memories,
+    retrieve_authorized_memories,
+)
 from app.modules.agents.models import (
     Agent,
     AgentBudget,
@@ -1481,6 +1484,7 @@ async def transition_agent_delegation(
     except AgentCoordinationError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     now = utc_now()
+    deleted_task_memories = 0
     if delegation.status == "in_progress":
         delegation.started_at = now
     else:
@@ -1500,6 +1504,11 @@ async def transition_agent_delegation(
         if encrypted_payload is not None:
             encrypted_payload.encrypted_objective = None
             encrypted_payload.destroyed_at = now
+        deleted_task_memories = await purge_terminal_task_memories(
+            database,
+            company_id=context.company_id,
+            delegation_id=delegation.id,
+        )
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -1511,6 +1520,7 @@ async def transition_agent_delegation(
             "contract_id": str(contract.id),
             "status": delegation.status,
             "consumed_cost_microunits": delegation.consumed_cost_microunits,
+            "deleted_task_memories": deleted_task_memories,
         },
     )
     enqueue_domain_event(
@@ -1524,6 +1534,7 @@ async def transition_agent_delegation(
                 "delegation_id": str(delegation.id),
                 "status": delegation.status,
                 "consumed_cost_microunits": delegation.consumed_cost_microunits,
+                "deleted_task_memories": deleted_task_memories,
             },
         ),
     )

@@ -5,14 +5,16 @@ from typing import Annotated, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.agents.coordination_models import AgentDelegation
 from app.modules.agents.memory_models import (
     AgentMemoryConsentRevocation,
     AgentMemoryEntry,
+    AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
@@ -21,6 +23,9 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryConsentRevocationResponse,
     AgentMemoryConsentRevoke,
     AgentMemoryCreate,
+    AgentMemoryLegalHoldCreate,
+    AgentMemoryLegalHoldDecision,
+    AgentMemoryLegalHoldResponse,
     AgentMemoryMetadataExport,
     AgentMemoryPolicyResponse,
     AgentMemoryPolicyUpdate,
@@ -29,15 +34,18 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurposePolicyInput,
     AgentMemoryResponse,
     AgentMemoryScopePolicyInput,
+    LegalHoldStatus,
     MemoryClassification,
     MemoryPurpose,
     MemoryScope,
     MemorySource,
 )
 from app.modules.agents.memory_service import (
+    has_active_memory_legal_hold,
     memory_consent_fingerprint,
     memory_content_fingerprint,
     memory_is_expired,
+    memory_legal_reference_fingerprint,
     memory_policy_values,
 )
 from app.modules.agents.models import Agent
@@ -152,12 +160,53 @@ def _memory_response(memory: AgentMemoryEntry) -> AgentMemoryResponse:
         classification=cast(MemoryClassification, memory.classification),
         source_type=cast(MemorySource, memory.source_type),
         source_id=memory.source_id,
+        task_delegation_id=memory.task_delegation_id,
         purpose=cast(MemoryPurpose, memory.purpose),
         subject_user_id=memory.subject_user_id,
         consent_recorded=memory.consent_fingerprint is not None,
         expires_at=memory.expires_at,
         expired=memory_is_expired(memory),
         created_at=memory.created_at,
+    )
+
+
+async def _active_task_delegation(
+    database: DatabaseSession,
+    *,
+    company_id: UUID,
+    agent_id: UUID,
+    delegation_id: UUID,
+) -> AgentDelegation:
+    delegation = await database.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.id == delegation_id,
+            AgentDelegation.company_id == company_id,
+            or_(
+                AgentDelegation.supervisor_agent_id == agent_id,
+                AgentDelegation.assigned_agent_id == agent_id,
+            ),
+            AgentDelegation.status.in_(("queued", "in_progress", "awaiting_approval")),
+        )
+    )
+    if delegation is None:
+        raise HTTPException(status_code=404, detail="Delegação ativa não encontrada.")
+    return delegation
+
+
+def _legal_hold_response(hold: AgentMemoryLegalHold) -> AgentMemoryLegalHoldResponse:
+    effective_status = "expired" if hold.expires_at <= utc_now() else hold.status
+    return AgentMemoryLegalHoldResponse(
+        id=hold.id,
+        agent_id=hold.agent_id,
+        task_delegation_id=hold.task_delegation_id,
+        reason_code=hold.reason_code,
+        retention_days=hold.retention_days,
+        status=cast(LegalHoldStatus, effective_status),
+        requested_by_user_id=hold.requested_by_user_id,
+        decided_by_user_id=hold.decided_by_user_id,
+        expires_at=hold.expires_at,
+        created_at=hold.created_at,
+        decided_at=hold.decided_at,
     )
 
 
@@ -326,6 +375,14 @@ async def create_agent_memory(
         raise HTTPException(
             status_code=422, detail="Somente memórias pessoais podem possuir titular."
         )
+    task_delegation = None
+    if payload.task_delegation_id is not None:
+        task_delegation = await _active_task_delegation(
+            database,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            delegation_id=payload.task_delegation_id,
+        )
     subject_membership = None
     if payload.subject_user_id is not None:
         subject_membership = await _active_company_user(
@@ -381,6 +438,7 @@ async def create_agent_memory(
         scope=payload.scope,
         purpose=payload.purpose,
         subject_user_id=payload.subject_user_id,
+        task_delegation_id=payload.task_delegation_id,
         content=payload.content,
     )
     consent_fingerprint = (
@@ -427,8 +485,9 @@ async def create_agent_memory(
             {"content": payload.content}
         ),
         content_fingerprint=fingerprint,
-        source_type=payload.source_type,
-        source_id=payload.source_id,
+        source_type="task" if task_delegation is not None else payload.source_type,
+        source_id=str(task_delegation.id) if task_delegation is not None else payload.source_id,
+        task_delegation_id=task_delegation.id if task_delegation is not None else None,
         purpose=payload.purpose,
         subject_user_id=payload.subject_user_id,
         subject_membership_id=subject_membership.id if subject_membership else None,
@@ -449,6 +508,9 @@ async def create_agent_memory(
             "scope": memory.scope,
             "classification": memory.classification,
             "expires_at": memory.expires_at.isoformat(),
+            "task_delegation_id": str(memory.task_delegation_id)
+            if memory.task_delegation_id
+            else None,
         },
     )
     enqueue_domain_event(
@@ -464,6 +526,176 @@ async def create_agent_memory(
     await database.commit()
     await database.refresh(memory)
     return _memory_response(memory)
+
+
+@router.get(
+    "/{agent_id}/delegations/{delegation_id}/memory-legal-holds",
+    response_model=list[AgentMemoryLegalHoldResponse],
+)
+async def list_agent_memory_legal_holds(
+    agent_id: UUID,
+    delegation_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryLegalHoldResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    holds = list(
+        await database.scalars(
+            select(AgentMemoryLegalHold)
+            .where(
+                AgentMemoryLegalHold.company_id == context.company_id,
+                AgentMemoryLegalHold.agent_id == agent_id,
+                AgentMemoryLegalHold.task_delegation_id == delegation_id,
+            )
+            .order_by(AgentMemoryLegalHold.created_at.desc())
+        )
+    )
+    return [_legal_hold_response(hold) for hold in holds]
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/memory-legal-holds",
+    response_model=AgentMemoryLegalHoldResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_agent_memory_legal_hold(
+    agent_id: UUID,
+    delegation_id: UUID,
+    payload: AgentMemoryLegalHoldCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryLegalHoldResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    await _active_task_delegation(
+        database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        delegation_id=delegation_id,
+    )
+    existing = await database.scalar(
+        select(AgentMemoryLegalHold)
+        .where(
+            AgentMemoryLegalHold.company_id == context.company_id,
+            AgentMemoryLegalHold.agent_id == agent_id,
+            AgentMemoryLegalHold.task_delegation_id == delegation_id,
+            AgentMemoryLegalHold.status.in_(("pending", "approved")),
+            AgentMemoryLegalHold.expires_at > utc_now(),
+        )
+        .with_for_update()
+    )
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="A delegação já possui retenção legal ativa.")
+    hold = AgentMemoryLegalHold(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        task_delegation_id=delegation_id,
+        reason_code=payload.reason_code,
+        legal_reference_fingerprint=memory_legal_reference_fingerprint(
+            secret=settings.encryption_key,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            delegation_id=delegation_id,
+            reference=payload.legal_reference,
+        ),
+        retention_days=payload.retention_days,
+        requested_by_user_id=context.user_id,
+        expires_at=utc_now() + timedelta(days=payload.retention_days),
+    )
+    database.add(hold)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_legal_hold.requested",
+        target_type="agent_memory_legal_hold",
+        target_id=hold.id,
+        details={
+            "agent_id": str(agent_id),
+            "delegation_id": str(delegation_id),
+            "reason_code": hold.reason_code,
+            "retention_days": hold.retention_days,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_legal_hold.requested",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"hold_id": str(hold.id), "delegation_id": str(delegation_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(hold)
+    return _legal_hold_response(hold)
+
+
+@router.post(
+    "/{agent_id}/delegations/{delegation_id}/memory-legal-holds/{hold_id}/decision",
+    response_model=AgentMemoryLegalHoldResponse,
+)
+async def decide_agent_memory_legal_hold(
+    agent_id: UUID,
+    delegation_id: UUID,
+    hold_id: UUID,
+    payload: AgentMemoryLegalHoldDecision,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> AgentMemoryLegalHoldResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    hold = await database.scalar(
+        select(AgentMemoryLegalHold)
+        .where(
+            AgentMemoryLegalHold.id == hold_id,
+            AgentMemoryLegalHold.company_id == context.company_id,
+            AgentMemoryLegalHold.agent_id == agent_id,
+            AgentMemoryLegalHold.task_delegation_id == delegation_id,
+        )
+        .with_for_update()
+    )
+    if hold is None:
+        raise HTTPException(status_code=404, detail="Retenção legal não encontrada.")
+    if hold.status != "pending" or hold.expires_at <= utc_now():
+        raise HTTPException(status_code=409, detail="A retenção legal não está pendente.")
+    if hold.requested_by_user_id == context.user_id:
+        raise HTTPException(status_code=409, detail="A solicitação exige aprovação independente.")
+    await _active_task_delegation(
+        database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        delegation_id=delegation_id,
+    )
+    hold.status = payload.decision
+    hold.decided_by_user_id = context.user_id
+    hold.decided_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.memory_legal_hold.{payload.decision}",
+        target_type="agent_memory_legal_hold",
+        target_id=hold.id,
+        details={"agent_id": str(agent_id), "delegation_id": str(delegation_id)},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.memory_legal_hold.{payload.decision}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"hold_id": str(hold.id), "delegation_id": str(delegation_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(hold)
+    return _legal_hold_response(hold)
 
 
 @router.get("/{agent_id}/my-memories", response_model=list[AgentMemoryResponse])
@@ -671,6 +903,13 @@ async def delete_agent_memory(
     )
     if memory is None:
         raise HTTPException(status_code=404, detail="Memória não encontrada.")
+    if memory.task_delegation_id is not None and await has_active_memory_legal_hold(
+        database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        delegation_id=memory.task_delegation_id,
+    ):
+        raise HTTPException(status_code=409, detail="A memória possui retenção legal aprovada.")
     await database.delete(memory)
     record_authorization_audit(
         database,
@@ -701,8 +940,17 @@ async def purge_agent_memories(
     if payload.expired_only:
         statement = statement.where(AgentMemoryEntry.expires_at <= utc_now())
     rows = list(await database.scalars(statement.with_for_update()))
+    deleted_count = 0
     for memory in rows:
+        if memory.task_delegation_id is not None and await has_active_memory_legal_hold(
+            database,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            delegation_id=memory.task_delegation_id,
+        ):
+            continue
         await database.delete(memory)
+        deleted_count += 1
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -710,7 +958,7 @@ async def purge_agent_memories(
         action="agent.memory.purged",
         target_type="agent",
         target_id=agent_id,
-        details={"expired_only": payload.expired_only, "deleted_count": len(rows)},
+        details={"expired_only": payload.expired_only, "deleted_count": deleted_count},
     )
     await database.commit()
-    return AgentMemoryPurgeResponse(deleted_count=len(rows))
+    return AgentMemoryPurgeResponse(deleted_count=deleted_count)

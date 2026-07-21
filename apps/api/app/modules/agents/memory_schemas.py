@@ -86,6 +86,7 @@ class AgentMemoryCreate(StrictSchema):
     retention_days: int | None = Field(default=None, ge=1, le=3650)
     source_type: MemorySource = "manual"
     source_id: str | None = Field(default=None, max_length=160)
+    task_delegation_id: UUID | None = None
     purpose: MemoryPurpose = "operations"
     subject_user_id: UUID | None = None
     consent_reference: str | None = Field(default=None, max_length=160)
@@ -95,6 +96,20 @@ class AgentMemoryCreate(StrictSchema):
     def trim_content(cls, value: str) -> str:
         return value.strip()
 
+    @model_validator(mode="after")
+    def validate_task_scope(self) -> Self:
+        if self.scope == "task" and self.task_delegation_id is None:
+            raise ValueError("Memórias de tarefa exigem uma delegação vinculada.")
+        if self.scope != "task" and self.task_delegation_id is not None:
+            raise ValueError("A delegação somente pode ser vinculada a memórias de tarefa.")
+        if (
+            self.task_delegation_id is not None
+            and self.source_id is not None
+            and self.source_id != str(self.task_delegation_id)
+        ):
+            raise ValueError("A origem informada não corresponde à delegação vinculada.")
+        return self
+
 
 class AgentMemoryResponse(StrictSchema):
     id: UUID
@@ -103,6 +118,7 @@ class AgentMemoryResponse(StrictSchema):
     classification: MemoryClassification
     source_type: MemorySource
     source_id: str | None
+    task_delegation_id: UUID | None
     purpose: MemoryPurpose
     subject_user_id: UUID | None
     consent_recorded: bool
@@ -147,3 +163,36 @@ class AgentMemoryMetadataExport(StrictSchema):
     generated_at: datetime
     total: int
     memories: list[AgentMemoryResponse]
+
+
+LegalHoldReason = Literal["legal_claim", "regulatory_request", "audit_preservation"]
+LegalHoldStatus = Literal["pending", "approved", "rejected", "expired"]
+
+
+class AgentMemoryLegalHoldCreate(StrictSchema):
+    reason_code: LegalHoldReason
+    legal_reference: str = Field(min_length=8, max_length=160)
+    retention_days: int = Field(ge=1, le=3650)
+
+    @field_validator("legal_reference")
+    @classmethod
+    def trim_legal_reference(cls, value: str) -> str:
+        return value.strip()
+
+
+class AgentMemoryLegalHoldDecision(StrictSchema):
+    decision: Literal["approved", "rejected"]
+
+
+class AgentMemoryLegalHoldResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    task_delegation_id: UUID
+    reason_code: LegalHoldReason
+    retention_days: int
+    status: LegalHoldStatus
+    requested_by_user_id: UUID
+    decided_by_user_id: UUID | None
+    expires_at: datetime
+    created_at: datetime
+    decided_at: datetime | None

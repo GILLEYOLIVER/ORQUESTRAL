@@ -14,8 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.resources import create_resources
 from app.core.security import utc_now
+from app.modules.agents.coordination_models import AgentDelegation
 from app.modules.agents.memory_models import (
     AgentMemoryEntry,
+    AgentMemoryLegalHold,
     AgentMemoryPolicy,
     AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
@@ -49,9 +51,11 @@ def memory_content_fingerprint(
     purpose: str,
     subject_user_id: UUID | None,
     content: str,
+    task_delegation_id: UUID | None = None,
 ) -> str:
     payload = (
-        f"{company_id}:{agent_id}:{scope}:{purpose}:{subject_user_id or '-'}:{content}"
+        f"{company_id}:{agent_id}:{scope}:{purpose}:{subject_user_id or '-'}:"
+        f"{task_delegation_id or '-'}:{content}"
     ).encode()
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
@@ -60,6 +64,13 @@ def memory_consent_fingerprint(
     *, secret: str, company_id: UUID, agent_id: UUID, subject_user_id: UUID, reference: str
 ) -> str:
     payload = f"{company_id}:{agent_id}:{subject_user_id}:{reference}".encode()
+    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
+def memory_legal_reference_fingerprint(
+    *, secret: str, company_id: UUID, agent_id: UUID, delegation_id: UUID, reference: str
+) -> str:
+    payload = f"{company_id}:{agent_id}:{delegation_id}:{reference}".encode()
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
 
@@ -172,6 +183,10 @@ async def retrieve_authorized_memories(
     ]
     if not retrieval_scopes:
         return AuthorizedMemoryContext((), (), (), 0)
+    active_task_ids = select(AgentDelegation.id).where(
+        AgentDelegation.company_id == company_id,
+        AgentDelegation.status.in_(("queued", "in_progress", "awaiting_approval")),
+    )
     rows = list(
         await database.scalars(
             select(AgentMemoryEntry)
@@ -184,6 +199,10 @@ async def retrieve_authorized_memories(
                 or_(
                     AgentMemoryEntry.scope != "user",
                     AgentMemoryEntry.subject_user_id == user_id,
+                ),
+                or_(
+                    AgentMemoryEntry.scope != "task",
+                    AgentMemoryEntry.task_delegation_id.in_(active_task_ids),
                 ),
             )
             .order_by(AgentMemoryEntry.created_at.desc())
@@ -220,20 +239,84 @@ async def retrieve_authorized_memories(
     )
 
 
-async def purge_expired_agent_memories(database: AsyncSession, *, limit: int = 1_000) -> int:
+async def has_active_memory_legal_hold(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    agent_id: UUID,
+    delegation_id: UUID,
+) -> bool:
+    hold_id = await database.scalar(
+        select(AgentMemoryLegalHold.id).where(
+            AgentMemoryLegalHold.company_id == company_id,
+            AgentMemoryLegalHold.agent_id == agent_id,
+            AgentMemoryLegalHold.task_delegation_id == delegation_id,
+            AgentMemoryLegalHold.status == "approved",
+            AgentMemoryLegalHold.expires_at > utc_now(),
+        )
+    )
+    return hold_id is not None
+
+
+async def purge_terminal_task_memories(
+    database: AsyncSession, *, company_id: UUID, delegation_id: UUID
+) -> int:
     rows = list(
         await database.scalars(
             select(AgentMemoryEntry)
-            .where(AgentMemoryEntry.expires_at <= utc_now())
+            .where(
+                AgentMemoryEntry.company_id == company_id,
+                AgentMemoryEntry.scope == "task",
+                AgentMemoryEntry.task_delegation_id == delegation_id,
+            )
+            .with_for_update()
+        )
+    )
+    deleted = 0
+    for row in rows:
+        if await has_active_memory_legal_hold(
+            database,
+            company_id=company_id,
+            agent_id=row.agent_id,
+            delegation_id=delegation_id,
+        ):
+            continue
+        await database.delete(row)
+        deleted += 1
+    return deleted
+
+
+async def purge_expired_agent_memories(database: AsyncSession, *, limit: int = 1_000) -> int:
+    terminal_task_ids = select(AgentDelegation.id).where(
+        AgentDelegation.status.in_(("completed", "failed", "cancelled"))
+    )
+    rows = list(
+        await database.scalars(
+            select(AgentMemoryEntry)
+            .where(
+                or_(
+                    AgentMemoryEntry.expires_at <= utc_now(),
+                    AgentMemoryEntry.task_delegation_id.in_(terminal_task_ids),
+                )
+            )
             .order_by(AgentMemoryEntry.expires_at)
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
     )
+    deleted = 0
     for row in rows:
+        if row.task_delegation_id is not None and await has_active_memory_legal_hold(
+            database,
+            company_id=row.company_id,
+            agent_id=row.agent_id,
+            delegation_id=row.task_delegation_id,
+        ):
+            continue
         await database.delete(row)
+        deleted += 1
     await database.commit()
-    return len(rows)
+    return deleted
 
 
 async def _purge_expired_agent_memories_once(settings: Settings) -> int:

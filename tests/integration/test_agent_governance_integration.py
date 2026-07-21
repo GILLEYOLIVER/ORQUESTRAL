@@ -351,6 +351,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
         with TestClient(create_app(settings)) as client:
             headers_a = _login(client, identity.emails[0], identity.password)
             headers_b = _login(client, identity.emails[1], identity.password)
+            headers_reviewer = _login(client, identity.emails[2], identity.password)
             created = client.post(
                 "/agents",
                 headers=headers_b,
@@ -393,7 +394,7 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                         {
                             "scope": "task",
                             "retention_days": 5,
-                            "retrieval_enabled": False,
+                            "retrieval_enabled": True,
                         },
                         {
                             "scope": "user",
@@ -720,6 +721,63 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             assert repeated.json()["id"] == delegation.json()["id"]
             assert "consultar o cliente" not in str(delegation.json())
             delegation_id = delegation.json()["id"]
+            missing_task_link = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": "Contexto de tarefa sem vínculo",
+                    "scope": "task",
+                    "classification": "internal",
+                },
+            )
+            assert missing_task_link.status_code == 422
+            held_task_content = "Contexto operacional sujeito a preservação legal"
+            held_task_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": held_task_content,
+                    "scope": "task",
+                    "classification": "internal",
+                    "task_delegation_id": delegation_id,
+                },
+            )
+            assert held_task_memory.status_code == 201
+            assert held_task_memory.json()["task_delegation_id"] == delegation_id
+            legal_hold = client.post(
+                f"/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds",
+                headers=headers_b,
+                json={
+                    "reason_code": "legal_claim",
+                    "legal_reference": "PROCESSO-LEGAL-SIGILOSO-2026",
+                    "retention_days": 30,
+                },
+            )
+            assert legal_hold.status_code == 201
+            assert legal_hold.json()["status"] == "pending"
+            assert "PROCESSO-LEGAL-SIGILOSO-2026" not in str(legal_hold.json())
+            hold_id = legal_hold.json()["id"]
+            self_approval = client.post(
+                f"/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds/{hold_id}/decision",
+                headers=headers_b,
+                json={"decision": "approved"},
+            )
+            assert self_approval.status_code == 409
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds/{hold_id}/decision",
+                    headers=headers_a,
+                    json={"decision": "approved"},
+                ).status_code
+                == 404
+            )
+            approved_hold = client.post(
+                f"/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds/{hold_id}/decision",
+                headers=headers_reviewer,
+                json={"decision": "approved"},
+            )
+            assert approved_hold.status_code == 200
+            assert approved_hold.json()["status"] == "approved"
             handoff = client.post(
                 f"/agents/{agent_id}/delegations/{delegation_id}/handoffs",
                 headers=headers_b,
@@ -758,6 +816,29 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     settings, identity.company_ids[1], UUID(delegation_id)
                 )
             )
+            asyncio.run(
+                _assert_memory_storage(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    memory_id=UUID(held_task_memory.json()["id"]),
+                    secret_text=held_task_content,
+                    exists=True,
+                )
+            )
+            held_retrieval = asyncio.run(
+                _retrieve_memory_context(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    agent_id=UUID(agent_id),
+                    user_id=identity.user_ids[1],
+                )
+            )
+            assert held_task_content not in held_retrieval.contents
+            protected_delete = client.delete(
+                f"/agents/{agent_id}/memories/{held_task_memory.json()['id']}",
+                headers=headers_b,
+            )
+            assert protected_delete.status_code == 409
             queued = client.post(
                 f"/agents/{agent_id}/delegations",
                 headers=headers_b,
@@ -769,6 +850,18 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                 },
             )
             assert queued.status_code == 201
+            disposable_task_content = "Contexto descartável da tarefa automática"
+            disposable_task_memory = client.post(
+                f"/agents/{agent_id}/memories",
+                headers=headers_b,
+                json={
+                    "content": disposable_task_content,
+                    "scope": "task",
+                    "classification": "internal",
+                    "task_delegation_id": queued.json()["id"],
+                },
+            )
+            assert disposable_task_memory.status_code == 201
             processed = asyncio.run(
                 process_delegation(UUID(queued.json()["id"]), settings=settings)
             )
@@ -782,6 +875,15 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
             asyncio.run(
                 _assert_delegation_payload_destroyed(
                     settings, identity.company_ids[1], UUID(queued.json()["id"])
+                )
+            )
+            asyncio.run(
+                _assert_memory_storage(
+                    settings,
+                    company_id=identity.company_ids[1],
+                    memory_id=UUID(disposable_task_memory.json()["id"]),
+                    secret_text=disposable_task_content,
+                    exists=False,
                 )
             )
             approval_delegation = client.post(

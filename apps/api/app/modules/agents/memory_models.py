@@ -162,6 +162,14 @@ class AgentMemoryEntry(Base):
             "scope = 'user' OR (subject_user_id IS NULL AND subject_membership_id IS NULL AND consent_fingerprint IS NULL)",
             name="ck_agent_memory_non_user_subject",
         ),
+        CheckConstraint(
+            "scope <> 'task' OR task_delegation_id IS NOT NULL",
+            name="ck_agent_memory_task_delegation_required",
+        ),
+        CheckConstraint(
+            "scope = 'task' OR task_delegation_id IS NULL",
+            name="ck_agent_memory_task_delegation_scope",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -180,6 +188,9 @@ class AgentMemoryEntry(Base):
     content_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
     source_type: Mapped[str] = mapped_column(String(24), default="manual", server_default="manual")
     source_id: Mapped[str | None] = mapped_column(String(160))
+    task_delegation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_delegations.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     purpose: Mapped[str] = mapped_column(
         String(24), default="operations", server_default="operations", index=True
     )
@@ -194,6 +205,65 @@ class AgentMemoryEntry(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
+
+
+class AgentMemoryLegalHold(Base):
+    __tablename__ = "agent_memory_legal_holds"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_agent_memory_legal_hold_status",
+        ),
+        CheckConstraint(
+            "reason_code IN ('legal_claim', 'regulatory_request', 'audit_preservation')",
+            name="ck_agent_memory_legal_hold_reason",
+        ),
+        CheckConstraint(
+            "retention_days BETWEEN 1 AND 3650",
+            name="ck_agent_memory_legal_hold_retention",
+        ),
+        CheckConstraint(
+            "expires_at > created_at",
+            name="ck_agent_memory_legal_hold_expiration",
+        ),
+        CheckConstraint(
+            "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id",
+            name="ck_agent_memory_legal_hold_separation",
+        ),
+        CheckConstraint(
+            "(status = 'pending' AND decided_by_user_id IS NULL AND decided_at IS NULL) OR "
+            "(status IN ('approved', 'rejected') AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL)",
+            name="ck_agent_memory_legal_hold_decision",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    task_delegation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_delegations.id", ondelete="CASCADE"), index=True
+    )
+    reason_code: Mapped[str] = mapped_column(String(32), index=True)
+    legal_reference_fingerprint: Mapped[str] = mapped_column(String(64), index=True)
+    retention_days: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(
+        String(16), default="pending", server_default="pending", index=True
+    )
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    decided_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AgentMemoryConsentRevocation(Base):

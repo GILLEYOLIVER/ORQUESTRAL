@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pytest import MonkeyPatch
+
 from worker.tasks import (
     diagnostic_ping,
     maintain_agent_delegations_task,
@@ -14,7 +16,7 @@ def test_diagnostic_task_can_run_eagerly() -> None:
     assert result.result == {"status": "ok", "service": "orkestral-worker"}
 
 
-def test_delegation_tasks_delegate_to_domain_services(monkeypatch) -> None:
+def test_delegation_tasks_delegate_to_domain_services(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(
         "worker.tasks.process_delegation_sync",
         lambda value: {"status": "completed", "delegation_id": value},
@@ -30,7 +32,7 @@ def test_delegation_tasks_delegate_to_domain_services(monkeypatch) -> None:
     assert maintained.result == {"status": "ok", "expired": 1, "recovered": 2}
 
 
-def test_memory_maintenance_delegates_to_domain_service(monkeypatch) -> None:
+def test_memory_maintenance_delegates_to_domain_service(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr("worker.tasks.purge_expired_agent_memories_sync", lambda: 3)
     result = purge_expired_agent_memories_task.apply()
     assert result.successful()

@@ -185,6 +185,7 @@ export interface AgentMemoryResponse {
   classification: "public" | "internal" | "confidential" | "restricted";
   source_type: "manual" | "conversation" | "task" | "tool";
   source_id: string | null;
+  task_delegation_id: string | null;
   purpose:
     "service" | "personalization" | "operations" | "compliance" | "analytics";
   subject_user_id: string | null;

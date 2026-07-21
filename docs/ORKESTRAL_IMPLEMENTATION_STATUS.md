@@ -533,3 +533,13 @@ Data: 21 de julho de 2026.
 - Runtime local: `/health`, `/ready` e `/app` responderam `200`.
 - Segurança comprovada: exportação não contém segredo, fingerprint ou consentimento; finalidade desabilitada é rejeitada; titular remove a própria memória sem alcançar dados alheios.
 - Próximo passo: ciclo 27, memória de tarefa vinculada, conclusão com eliminação e política de retenção legal para exceções aprovadas.
+
+## Ciclo 27 - memória de tarefa e retenção legal aprovada
+
+- Memórias de escopo `task` agora exigem vínculo relacional com uma delegação ativa da mesma empresa e do agente supervisor ou executor.
+- Encerramentos manuais, automáticos, por falha e por expiração eliminam a memória operacional da tarefa.
+- Retenção excepcional exige solicitação registrada e aprovação de uma segunda pessoa; autoaprovação e acesso entre empresas são bloqueados.
+- Referências jurídicas são armazenadas somente como HMAC, sem texto original em respostas, eventos ou auditoria.
+- Memória preservada por obrigação legal deixa de ser recuperável pelo agente depois do encerramento da tarefa.
+- Migração: `20260721_0048`.
+- Próximo passo: memória de tarefa compartilhada entre agentes com contrato de acesso explícito, minimização de contexto e revogação.

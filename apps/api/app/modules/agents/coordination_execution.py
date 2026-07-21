@@ -34,6 +34,7 @@ from app.modules.agents.coordination_payload import (
     encrypt_approval_arguments,
 )
 from app.modules.agents.governance import active_agent_version, evaluate_tool_autonomy
+from app.modules.agents.memory_service import purge_terminal_task_memories
 from app.modules.agents.models import Agent, AgentDataPolicy, AgentRun, AgentTool, AgentVersion
 from app.modules.agents.providers.base import (
     LanguageModelProviderError,
@@ -95,6 +96,11 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                 if payload is not None:
                     payload.encrypted_objective = None
                     payload.destroyed_at = now
+                await purge_terminal_task_memories(
+                    database,
+                    company_id=delegation.company_id,
+                    delegation_id=delegation.id,
+                )
                 await database.commit()
                 return {"status": "failed", "delegation_id": str(delegation.id)}
             objective = decrypt_delegation_objective(
@@ -493,6 +499,11 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
             delegation.lease_expires_at = None
             payload.encrypted_objective = None
             payload.destroyed_at = utc_now()
+            deleted_task_memories = await purge_terminal_task_memories(
+                database,
+                company_id=delegation.company_id,
+                delegation_id=delegation.id,
+            )
             record_authorization_audit(
                 database,
                 company_id=delegation.company_id,
@@ -504,6 +515,7 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                     "agent_run_id": str(agent_run.id),
                     "status": run_status,
                     "error_code": error_code,
+                    "deleted_task_memories": deleted_task_memories,
                 },
             )
             enqueue_domain_event(
@@ -628,6 +640,11 @@ async def _execute_approved_tool(
     approval.encrypted_arguments = None
     payload.encrypted_objective = None
     payload.destroyed_at = utc_now()
+    deleted_task_memories = await purge_terminal_task_memories(
+        database,
+        company_id=delegation.company_id,
+        delegation_id=delegation.id,
+    )
     record_authorization_audit(
         database,
         company_id=delegation.company_id,
@@ -635,7 +652,11 @@ async def _execute_approved_tool(
         action="agent.delegation.completed",
         target_type="agent_delegation",
         target_id=delegation.id,
-        details={"agent_run_id": str(agent_run.id), "approval_id": str(approval.id)},
+        details={
+            "agent_run_id": str(agent_run.id),
+            "approval_id": str(approval.id),
+            "deleted_task_memories": deleted_task_memories,
+        },
     )
     enqueue_domain_event(
         database,
@@ -689,6 +710,11 @@ async def _fail(
             if request is not None and request.status == "pending":
                 request.status = "expired"
                 request.decided_at = utc_now()
+    await purge_terminal_task_memories(
+        database,
+        company_id=delegation.company_id,
+        delegation_id=delegation.id,
+    )
     await database.commit()
     return {"status": "failed", "delegation_id": str(delegation.id)}
 
@@ -741,6 +767,11 @@ async def maintain_delegations(*, settings: Settings) -> dict[str, int]:
                             if request is not None and request.status == "pending":
                                 request.status = "expired"
                                 request.decided_at = now
+                    await purge_terminal_task_memories(
+                        database,
+                        company_id=delegation.company_id,
+                        delegation_id=delegation.id,
+                    )
                     expired += 1
                 elif (
                     delegation.status == "in_progress"

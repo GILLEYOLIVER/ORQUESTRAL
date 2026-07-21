@@ -1153,6 +1153,9 @@ export function AgentsPage() {
                               ? " · consentimento registrado"
                               : ""}
                             {` · finalidade ${memory.purpose}`}
+                            {memory.task_delegation_id
+                              ? ` · tarefa ${memory.task_delegation_id.slice(0, 8)}`
+                              : ""}
                             {" · expira em "}
                             {new Date(memory.expires_at).toLocaleString(
                               "pt-BR",
