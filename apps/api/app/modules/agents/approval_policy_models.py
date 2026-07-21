@@ -58,6 +58,19 @@ class AgentApprovalPolicyVersion(Base):
             "OR max_amount_microunits >= min_amount_microunits",
             name="ck_agent_approval_policy_amount_range",
         ),
+        CheckConstraint(
+            "(escalation_user_id IS NULL AND escalation_after_minutes IS NULL) OR "
+            "(escalation_user_id IS NOT NULL AND assigned_user_id IS NOT NULL "
+            "AND escalation_after_minutes BETWEEN 5 AND approval_ttl_minutes - 1 "
+            "AND escalation_user_id <> assigned_user_id)",
+            name="ck_agent_approval_policy_escalation",
+        ),
+        CheckConstraint(
+            "effect = 'require_approval' OR "
+            "(assigned_user_id IS NULL AND escalation_user_id IS NULL "
+            "AND escalation_after_minutes IS NULL)",
+            name="ck_agent_approval_policy_approvers_effect",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -87,6 +100,10 @@ class AgentApprovalPolicyVersion(Base):
     assigned_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
+    escalation_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    escalation_after_minutes: Mapped[int | None] = mapped_column(Integer)
     created_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )

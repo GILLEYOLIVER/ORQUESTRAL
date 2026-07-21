@@ -26,6 +26,8 @@ class AgentApprovalPolicyCreate(StrictSchema):
     context_conditions: dict[str, JsonScalar] = Field(default_factory=dict, max_length=20)
     approval_ttl_minutes: int = Field(default=30, ge=5, le=10_080)
     assigned_user_id: UUID | None = None
+    escalation_user_id: UUID | None = None
+    escalation_after_minutes: int | None = Field(default=None, ge=5, le=10_079)
 
     @field_validator("currency")
     @classmethod
@@ -40,7 +42,7 @@ class AgentApprovalPolicyCreate(StrictSchema):
         return value
 
     @model_validator(mode="after")
-    def validate_amount_range(self) -> Self:
+    def validate_policy(self) -> Self:
         if (
             self.min_amount_microunits is not None or self.max_amount_microunits is not None
         ) and not self.amount_field:
@@ -51,6 +53,28 @@ class AgentApprovalPolicyCreate(StrictSchema):
             and self.max_amount_microunits < self.min_amount_microunits
         ):
             raise ValueError("O valor máximo não pode ser menor que o mínimo.")
+        if self.effect != "require_approval" and any(
+            value is not None
+            for value in (
+                self.assigned_user_id,
+                self.escalation_user_id,
+                self.escalation_after_minutes,
+            )
+        ):
+            raise ValueError(
+                "Aprovadores só podem ser definidos quando a política exige aprovação."
+            )
+        if (self.escalation_user_id is None) != (self.escalation_after_minutes is None):
+            raise ValueError("Informe o aprovador substituto e o prazo de escalonamento.")
+        if self.escalation_user_id is not None and self.assigned_user_id is None:
+            raise ValueError("Defina o aprovador principal antes do substituto.")
+        if self.escalation_user_id == self.assigned_user_id and self.escalation_user_id is not None:
+            raise ValueError("O aprovador substituto deve ser diferente do principal.")
+        if (
+            self.escalation_after_minutes is not None
+            and self.escalation_after_minutes >= self.approval_ttl_minutes
+        ):
+            raise ValueError("O escalonamento deve ocorrer antes da expiração da aprovação.")
         return self
 
 
@@ -71,6 +95,8 @@ class AgentApprovalPolicyResponse(StrictSchema):
     context_conditions: dict[str, JsonScalar]
     approval_ttl_minutes: int
     assigned_user_id: UUID | None
+    escalation_user_id: UUID | None
+    escalation_after_minutes: int | None
     created_at: datetime
     published_at: datetime | None
 
@@ -88,3 +114,5 @@ class AgentApprovalPolicyEvaluationResponse(StrictSchema):
     reason: str
     approval_ttl_minutes: int
     assigned_user_id: UUID | None
+    escalation_user_id: UUID | None
+    escalation_after_minutes: int | None

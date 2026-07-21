@@ -63,6 +63,13 @@ test("administrador publica e simula política de aprovação de agente", async 
     await policyCard
       .getByLabel("Ferramenta da política")
       .selectOption("orkestral.company.summary");
+    await expect(policyCard.getByLabel("Aprovador principal")).toBeVisible();
+    await expect(
+      policyCard.getByRole("spinbutton", {
+        name: "Validade da aprovação (minutos)",
+      }),
+    ).toHaveValue("60");
+    await expect(policyCard.getByLabel("Aprovador substituto")).toBeDisabled();
     await policyCard.getByRole("button", { name: "Criar rascunho" }).click();
 
     const policyRow = policyCard.locator(".agent-policy-row", {

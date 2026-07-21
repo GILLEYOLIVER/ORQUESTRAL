@@ -405,3 +405,18 @@ Data: 21 de julho de 2026.
   testes do front-end e E2E com 7 aprovados e 2 cenários explicitamente
   ignorados; MyPy, lint, Prettier, build e auditoria de segurança aprovados.
 - Próximo passo: ciclo 19, aprovação por alçada e escalonamento.
+
+## Ciclo 19 - Alçadas e escalonamento de aprovações
+
+- Alçadas configuráveis pela prioridade, ferramenta, contexto e faixa de valor já versionadas.
+- Aprovador principal e substituto validados como membros ativos com `approvals.decide`.
+- Escalonamento automático antes da expiração, com reatribuição idempotente pelo worker.
+- Revogação de acesso revalidada no momento do escalonamento, sem ampliar privilégios.
+- Notificação dedicada, ação de auditoria e evento transacional sem argumentos empresariais.
+- Interface em português para prazo, aprovador principal, substituto e simulação da decisão.
+- Migração: `20260721_0040_agent_approval_escalation.py`.
+- Validação local: Ruff, MyPy, ESLint, TypeScript e Prettier aprovados; 133 testes da
+  API, 11 integrações, 2 testes do worker e 12 testes do front-end aprovados;
+  build, migração reversível, auditoria de segurança e E2E com 7 aprovados e 2
+  cenários explicitamente ignorados concluídos sem bloqueios.
+- Próximo passo: ciclo 20, cadeias com múltiplos estágios e quórum de aprovação.

@@ -22,6 +22,7 @@ from app.modules.agents.tools import TOOL_CATALOG
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
+from app.modules.notifications.service import is_company_approver
 from app.modules.users.models import CompanyUser
 
 router = APIRouter()
@@ -83,16 +84,26 @@ async def create_agent_approval_policy(
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
     if payload.tool_key is not None and payload.tool_key not in TOOL_CATALOG:
         raise HTTPException(status_code=422, detail="Ferramenta desconhecida.")
-    if payload.assigned_user_id is not None:
+    for user_id, label in (
+        (payload.assigned_user_id, "Aprovador principal"),
+        (payload.escalation_user_id, "Aprovador substituto"),
+    ):
+        if user_id is None:
+            continue
         member = await database.scalar(
             select(CompanyUser).where(
                 CompanyUser.company_id == context.company_id,
-                CompanyUser.user_id == payload.assigned_user_id,
+                CompanyUser.user_id == user_id,
                 CompanyUser.status == "active",
             )
         )
         if member is None:
-            raise HTTPException(status_code=422, detail="Aprovador não pertence à empresa.")
+            raise HTTPException(status_code=422, detail=f"{label} não pertence à empresa.")
+        if not await is_company_approver(database, company_id=context.company_id, user_id=user_id):
+            raise HTTPException(
+                status_code=422,
+                detail=f"{label} não possui permissão para decidir aprovações.",
+            )
     current_version = await database.scalar(
         select(func.max(AgentApprovalPolicyVersion.version)).where(
             AgentApprovalPolicyVersion.company_id == context.company_id,
@@ -234,4 +245,6 @@ async def evaluate_agent_approval_policy_endpoint(
         reason=decision.reason,
         approval_ttl_minutes=decision.approval_ttl_minutes,
         assigned_user_id=decision.assigned_user_id,
+        escalation_user_id=decision.escalation_user_id,
+        escalation_after_minutes=decision.escalation_after_minutes,
     )

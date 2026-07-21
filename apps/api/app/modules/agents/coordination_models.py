@@ -163,6 +163,15 @@ class AgentDelegationApproval(Base):
             "status IN ('pending', 'approved', 'rejected', 'expired')",
             name="ck_agent_delegation_approval_status",
         ),
+        CheckConstraint(
+            "(escalation_user_id IS NULL AND escalate_at IS NULL) OR "
+            "(escalation_user_id IS NOT NULL AND escalate_at IS NOT NULL)",
+            name="ck_agent_delegation_approval_escalation",
+        ),
+        CheckConstraint(
+            "escalate_at IS NULL OR escalate_at < expires_at",
+            name="ck_agent_delegation_approval_escalation_deadline",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -193,6 +202,11 @@ class AgentDelegationApproval(Base):
     decided_by_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    escalation_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    escalate_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True

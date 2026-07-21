@@ -116,6 +116,8 @@ export interface AgentApprovalPolicyResponse {
   context_conditions: Record<string, string | number | boolean | null>;
   approval_ttl_minutes: number;
   assigned_user_id: string | null;
+  escalation_user_id: string | null;
+  escalation_after_minutes: number | null;
   created_at: string;
   published_at: string | null;
 }
@@ -128,6 +130,8 @@ export interface AgentApprovalPolicyEvaluationResponse {
   reason: string;
   approval_ttl_minutes: number;
   assigned_user_id: string | null;
+  escalation_user_id: string | null;
+  escalation_after_minutes: number | null;
 }
 
 export function useAgents(enabled = true) {

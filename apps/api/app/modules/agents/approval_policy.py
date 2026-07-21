@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -20,6 +21,25 @@ class ApprovalPolicyDecision:
     reason: str
     approval_ttl_minutes: int = 30
     assigned_user_id: UUID | None = None
+    escalation_user_id: UUID | None = None
+    escalation_after_minutes: int | None = None
+
+
+def approval_escalation_due(
+    *,
+    status: str,
+    escalation_user_id: UUID | None,
+    escalate_at: datetime | None,
+    escalated_at: datetime | None,
+    now: datetime,
+) -> bool:
+    return (
+        status == "pending"
+        and escalation_user_id is not None
+        and escalate_at is not None
+        and escalated_at is None
+        and escalate_at <= now
+    )
 
 
 def _value_at_path(arguments: Mapping[str, Any], path: str) -> tuple[bool, Any]:
@@ -92,6 +112,8 @@ def evaluate_published_policies(
             reason="A política empresarial bloqueia esta chamada.",
             approval_ttl_minutes=matched.approval_ttl_minutes,
             assigned_user_id=matched.assigned_user_id,
+            escalation_user_id=matched.escalation_user_id,
+            escalation_after_minutes=matched.escalation_after_minutes,
         )
     return ApprovalPolicyDecision(
         allowed=True,
@@ -105,6 +127,8 @@ def evaluate_published_policies(
         ),
         approval_ttl_minutes=matched.approval_ttl_minutes,
         assigned_user_id=matched.assigned_user_id,
+        escalation_user_id=matched.escalation_user_id,
+        escalation_after_minutes=matched.escalation_after_minutes,
     )
 
 

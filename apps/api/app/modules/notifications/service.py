@@ -138,6 +138,10 @@ async def _approver_user_ids(database: AsyncSession, company_id: UUID) -> list[U
     return sorted(owner_ids, key=str)
 
 
+async def is_company_approver(database: AsyncSession, *, company_id: UUID, user_id: UUID) -> bool:
+    return user_id in await _approver_user_ids(database, company_id)
+
+
 async def create_approval_request(
     database: AsyncSession,
     *,

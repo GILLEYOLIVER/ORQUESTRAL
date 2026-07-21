@@ -3554,6 +3554,10 @@ export interface components {
              * @enum {string}
              */
             effect: "allow" | "require_approval" | "deny";
+            /** Escalation After Minutes */
+            escalation_after_minutes?: number | null;
+            /** Escalation User Id */
+            escalation_user_id?: string | null;
             /** Max Amount Microunits */
             max_amount_microunits?: number | null;
             /** Min Amount Microunits */
@@ -3587,6 +3591,10 @@ export interface components {
             approval_ttl_minutes: number;
             /** Assigned User Id */
             assigned_user_id: string | null;
+            /** Escalation After Minutes */
+            escalation_after_minutes: number | null;
+            /** Escalation User Id */
+            escalation_user_id: string | null;
             /** Policy Key */
             policy_key: string | null;
             /** Policy Version Id */
@@ -3625,6 +3633,10 @@ export interface components {
              * @enum {string}
              */
             effect: "allow" | "require_approval" | "deny";
+            /** Escalation After Minutes */
+            escalation_after_minutes: number | null;
+            /** Escalation User Id */
+            escalation_user_id: string | null;
             /**
              * Id
              * Format: uuid

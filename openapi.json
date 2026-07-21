@@ -298,6 +298,31 @@
             "title": "Effect",
             "type": "string"
           },
+          "escalation_after_minutes": {
+            "anyOf": [
+              {
+                "maximum": 10079.0,
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation After Minutes"
+          },
+          "escalation_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation User Id"
+          },
           "max_amount_microunits": {
             "anyOf": [
               {
@@ -410,6 +435,29 @@
             ],
             "title": "Assigned User Id"
           },
+          "escalation_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation After Minutes"
+          },
+          "escalation_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation User Id"
+          },
           "policy_key": {
             "anyOf": [
               {
@@ -449,7 +497,9 @@
           "policy_key",
           "reason",
           "approval_ttl_minutes",
-          "assigned_user_id"
+          "assigned_user_id",
+          "escalation_user_id",
+          "escalation_after_minutes"
         ],
         "title": "AgentApprovalPolicyEvaluationResponse",
         "type": "object"
@@ -536,6 +586,29 @@
             ],
             "title": "Effect",
             "type": "string"
+          },
+          "escalation_after_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation After Minutes"
+          },
+          "escalation_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalation User Id"
           },
           "id": {
             "format": "uuid",
@@ -630,6 +703,8 @@
           "context_conditions",
           "approval_ttl_minutes",
           "assigned_user_id",
+          "escalation_user_id",
+          "escalation_after_minutes",
           "created_at",
           "published_at"
         ],

@@ -63,12 +63,21 @@ function parseArguments(value: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+interface CompanyUserOption {
+  user_id: string;
+  name: string;
+  email: string;
+  user_status: string;
+  membership_status: string;
+}
+
 export function AgentsPage() {
   const queryClient = useQueryClient();
   const { me } = useSession();
   const agents = useAgents();
   const canConfigure = me?.permissions.includes("agents.configure") ?? false;
   const canExecute = me?.permissions.includes("agents.execute") ?? false;
+  const canViewUsers = me?.permissions.includes("users.view") ?? false;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -94,6 +103,10 @@ export function AgentsPage() {
   const [policyCurrency, setPolicyCurrency] = useState("");
   const [policyContextPath, setPolicyContextPath] = useState("");
   const [policyContextValue, setPolicyContextValue] = useState("");
+  const [policyApprovalTtl, setPolicyApprovalTtl] = useState("60");
+  const [policyAssignedUserId, setPolicyAssignedUserId] = useState("");
+  const [policyEscalationUserId, setPolicyEscalationUserId] = useState("");
+  const [policyEscalationAfter, setPolicyEscalationAfter] = useState("30");
   const [simulationToolKey, setSimulationToolKey] = useState("");
   const [simulationArguments, setSimulationArguments] = useState("{}");
   const [policyDecision, setPolicyDecision] =
@@ -130,6 +143,11 @@ export function AgentsPage() {
         `/agents/${selectedId}/approval-policies`,
       ),
     enabled: canConfigure && Boolean(selectedId),
+  });
+  const companyUsers = useQuery({
+    queryKey: ["company-users", me?.current_company?.id],
+    queryFn: () => request<CompanyUserOption[]>("/company/users"),
+    enabled: canConfigure && canViewUsers,
   });
   const messages = useQuery({
     queryKey: ["agent-messages", selectedId, conversationId],
@@ -293,8 +311,40 @@ export function AgentsPage() {
     const priority = Number(policyPriority);
     const minAmount = policyMinAmount ? Number(policyMinAmount) : null;
     const maxAmount = policyMaxAmount ? Number(policyMaxAmount) : null;
+    const approvalTtl = Number(policyApprovalTtl);
+    const escalationAfter = policyEscalationUserId
+      ? Number(policyEscalationAfter)
+      : null;
     if (!Number.isInteger(priority)) {
       setPolicyFormError("A prioridade deve ser um número inteiro.");
+      return;
+    }
+    if (!Number.isInteger(approvalTtl) || approvalTtl < 5) {
+      setPolicyFormError("A validade deve ser de pelo menos 5 minutos.");
+      return;
+    }
+    if (policyEscalationUserId && !policyAssignedUserId) {
+      setPolicyFormError("Defina o aprovador principal antes do substituto.");
+      return;
+    }
+    if (
+      policyEscalationUserId &&
+      policyEscalationUserId === policyAssignedUserId
+    ) {
+      setPolicyFormError(
+        "O aprovador substituto deve ser diferente do principal.",
+      );
+      return;
+    }
+    if (
+      escalationAfter !== null &&
+      (!Number.isInteger(escalationAfter) ||
+        escalationAfter < 5 ||
+        escalationAfter >= approvalTtl)
+    ) {
+      setPolicyFormError(
+        "O escalonamento deve ocorrer entre 5 minutos e antes da expiração.",
+      );
       return;
     }
     if (
@@ -317,8 +367,17 @@ export function AgentsPage() {
       context_conditions: policyContextPath
         ? { [policyContextPath]: parseContextValue(policyContextValue) }
         : {},
-      approval_ttl_minutes: 30,
-      assigned_user_id: null,
+      approval_ttl_minutes: approvalTtl,
+      assigned_user_id:
+        policyEffect === "require_approval" && policyAssignedUserId
+          ? policyAssignedUserId
+          : null,
+      escalation_user_id:
+        policyEffect === "require_approval" && policyEscalationUserId
+          ? policyEscalationUserId
+          : null,
+      escalation_after_minutes:
+        policyEffect === "require_approval" ? escalationAfter : null,
     });
   };
   const simulatePolicy = () => {
@@ -652,6 +711,83 @@ export function AgentsPage() {
                     placeholder="sudeste"
                     value={policyContextValue}
                   />
+                  <TextField
+                    disabled={policyEffect !== "require_approval"}
+                    label="Validade da aprovação (minutos)"
+                    min={5}
+                    onChange={(event) =>
+                      setPolicyApprovalTtl(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={policyApprovalTtl}
+                  />
+                  <label className="native-field">
+                    <span>Aprovador principal</span>
+                    <select
+                      className="agent-native-select"
+                      disabled={
+                        policyEffect !== "require_approval" || !canViewUsers
+                      }
+                      onChange={(event) =>
+                        setPolicyAssignedUserId(event.target.value)
+                      }
+                      value={policyAssignedUserId}
+                    >
+                      <option value="">Fila geral de aprovadores</option>
+                      {companyUsers.data
+                        ?.filter(
+                          (user) =>
+                            user.user_status === "active" &&
+                            user.membership_status === "active",
+                        )
+                        .map((user) => (
+                          <option key={user.user_id} value={user.user_id}>
+                            {user.name} · {user.email}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label className="native-field">
+                    <span>Aprovador substituto</span>
+                    <select
+                      className="agent-native-select"
+                      disabled={
+                        policyEffect !== "require_approval" ||
+                        !canViewUsers ||
+                        !policyAssignedUserId
+                      }
+                      onChange={(event) =>
+                        setPolicyEscalationUserId(event.target.value)
+                      }
+                      value={policyEscalationUserId}
+                    >
+                      <option value="">Sem escalonamento automático</option>
+                      {companyUsers.data
+                        ?.filter(
+                          (user) =>
+                            user.user_status === "active" &&
+                            user.membership_status === "active" &&
+                            user.user_id !== policyAssignedUserId,
+                        )
+                        .map((user) => (
+                          <option key={user.user_id} value={user.user_id}>
+                            {user.name} · {user.email}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <TextField
+                    disabled={!policyEscalationUserId}
+                    label="Escalonar após (minutos)"
+                    min={5}
+                    onChange={(event) =>
+                      setPolicyEscalationAfter(event.target.value)
+                    }
+                    required={Boolean(policyEscalationUserId)}
+                    type="number"
+                    value={policyEscalationAfter}
+                  />
                   <Button loading={createPolicy.isPending} type="submit">
                     Criar rascunho
                   </Button>
@@ -682,6 +818,17 @@ export function AgentsPage() {
                               ? "Bloquear"
                               : "Exigir aprovação"}
                         </small>
+                        {policy.effect === "require_approval" ? (
+                          <small>
+                            {policy.assigned_user_id
+                              ? `Aprovador principal definido · validade ${policy.approval_ttl_minutes} min`
+                              : `Fila geral · validade ${policy.approval_ttl_minutes} min`}
+                            {policy.escalation_user_id &&
+                            policy.escalation_after_minutes
+                              ? ` · escala após ${policy.escalation_after_minutes} min`
+                              : ""}
+                          </small>
+                        ) : null}
                       </div>
                       <div className="agent-policy-row__actions">
                         <span
@@ -759,6 +906,13 @@ export function AgentsPage() {
                             : "Permitida"}
                       </strong>
                       <span>{policyDecision.reason}</span>
+                      {policyDecision.escalation_user_id &&
+                      policyDecision.escalation_after_minutes ? (
+                        <small>
+                          Escalonamento automático após{" "}
+                          {policyDecision.escalation_after_minutes} minutos.
+                        </small>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>

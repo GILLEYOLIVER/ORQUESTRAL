@@ -13,7 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.resources import create_resources
 from app.core.security import utc_now
-from app.modules.agents.approval_policy import evaluate_agent_approval_policy
+from app.modules.agents.approval_policy import (
+    approval_escalation_due,
+    evaluate_agent_approval_policy,
+)
 from app.modules.agents.coordination import coordination_fingerprint
 from app.modules.agents.coordination_models import (
     AgentDelegation,
@@ -52,8 +55,12 @@ from app.modules.authorization.models import Permission, RolePermission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
-from app.modules.notifications.models import ApprovalRequest
-from app.modules.notifications.service import create_approval_request
+from app.modules.notifications.models import ApprovalAction, ApprovalRequest
+from app.modules.notifications.service import (
+    create_approval_request,
+    create_notification,
+    is_company_approver,
+)
 from app.modules.users.models import CompanyUser
 
 
@@ -252,10 +259,25 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                     autonomy.requires_approval or policy_decision.requires_approval
                 ):
                     approval_id = uuid4()
+                    approval_requested_at = utc_now()
                     approval_expires_at = min(
                         delegation.due_at,
-                        utc_now() + timedelta(minutes=policy_decision.approval_ttl_minutes),
+                        approval_requested_at
+                        + timedelta(minutes=policy_decision.approval_ttl_minutes),
                     )
+                    escalation_user_id = policy_decision.escalation_user_id
+                    escalate_at = None
+                    if (
+                        escalation_user_id is not None
+                        and policy_decision.escalation_after_minutes is not None
+                    ):
+                        candidate = approval_requested_at + timedelta(
+                            minutes=policy_decision.escalation_after_minutes
+                        )
+                        if candidate < approval_expires_at:
+                            escalate_at = candidate
+                        else:
+                            escalation_user_id = None
                     linked = AgentDelegationApproval(
                         id=approval_id,
                         company_id=delegation.company_id,
@@ -270,6 +292,8 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                             arguments=call.arguments,
                         ),
                         requested_by_user_id=delegation.requested_by_user_id,
+                        escalation_user_id=escalation_user_id,
+                        escalate_at=escalate_at,
                         expires_at=approval_expires_at,
                     )
                     database.add(linked)
@@ -620,15 +644,17 @@ async def _fail(
 
 async def maintain_delegations(*, settings: Settings) -> dict[str, int]:
     resources = create_resources(settings)
-    expired = recovered = 0
+    expired = recovered = escalated = 0
     try:
         async with resources.sessions() as database:
             now = utc_now()
             rows = list(
                 await database.scalars(
-                    select(AgentDelegation).where(
+                    select(AgentDelegation)
+                    .where(
                         AgentDelegation.status.in_(("queued", "in_progress", "awaiting_approval"))
                     )
+                    .with_for_update(skip_locked=True)
                 )
             )
             for delegation in rows:
@@ -674,8 +700,97 @@ async def maintain_delegations(*, settings: Settings) -> dict[str, int]:
                     delegation.claimed_by = None
                     delegation.lease_expires_at = None
                     recovered += 1
+                elif delegation.status == "awaiting_approval":
+                    approvals = list(
+                        await database.scalars(
+                            select(AgentDelegationApproval).where(
+                                AgentDelegationApproval.company_id == delegation.company_id,
+                                AgentDelegationApproval.delegation_id == delegation.id,
+                                AgentDelegationApproval.status == "pending",
+                            )
+                        )
+                    )
+                    for approval in approvals:
+                        if not approval_escalation_due(
+                            status=approval.status,
+                            escalation_user_id=approval.escalation_user_id,
+                            escalate_at=approval.escalate_at,
+                            escalated_at=approval.escalated_at,
+                            now=now,
+                        ):
+                            continue
+                        escalation_user_id = approval.escalation_user_id
+                        if escalation_user_id is None:
+                            continue
+                        if not await is_company_approver(
+                            database,
+                            company_id=delegation.company_id,
+                            user_id=escalation_user_id,
+                        ):
+                            continue
+                        request = (
+                            await database.get(ApprovalRequest, approval.approval_request_id)
+                            if approval.approval_request_id is not None
+                            else None
+                        )
+                        if (
+                            request is None
+                            or request.company_id != delegation.company_id
+                            or request.status != "pending"
+                        ):
+                            continue
+                        previous_user_id = request.assigned_user_id
+                        request.assigned_user_id = escalation_user_id
+                        request.reminder_at = now + timedelta(
+                            minutes=settings.notification_reminder_minutes
+                        )
+                        approval.escalated_at = now
+                        database.add(
+                            ApprovalAction(
+                                company_id=delegation.company_id,
+                                approval_request_id=request.id,
+                                action="escalated",
+                                details={
+                                    "previous_assigned_user_id": (
+                                        str(previous_user_id) if previous_user_id else None
+                                    ),
+                                    "assigned_user_id": str(escalation_user_id),
+                                },
+                            )
+                        )
+                        await create_notification(
+                            database,
+                            company_id=delegation.company_id,
+                            recipient_user_id=escalation_user_id,
+                            event_type="approval.escalated",
+                            title="Aprovação escalonada para você",
+                            message=request.title,
+                            severity="warning",
+                            resource_type="approval_request",
+                            resource_id=request.id,
+                            data={"source_type": request.source_type},
+                        )
+                        enqueue_domain_event(
+                            database,
+                            DomainEventCreate(
+                                event_type="agent.delegation.approval_escalated",
+                                company_id=delegation.company_id,
+                                actor_user_id=None,
+                                classification="confidential",
+                                payload={
+                                    "delegation_id": str(delegation.id),
+                                    "approval_request_id": str(request.id),
+                                    "policy_version_id": (
+                                        str(approval.policy_version_id)
+                                        if approval.policy_version_id
+                                        else None
+                                    ),
+                                },
+                            ),
+                        )
+                        escalated += 1
             await database.commit()
-            return {"expired": expired, "recovered": recovered}
+            return {"expired": expired, "recovered": recovered, "escalated": escalated}
     finally:
         await resources.close()
 

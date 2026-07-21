@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import cast
 from uuid import UUID
@@ -8,8 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
-from app.modules.agents.approval_policy import evaluate_published_policies
+from app.modules.agents.approval_policy import (
+    approval_escalation_due,
+    evaluate_published_policies,
+)
 from app.modules.agents.approval_policy_models import AgentApprovalPolicyVersion
+from app.modules.agents.approval_policy_schemas import AgentApprovalPolicyCreate
 from app.modules.agents.coordination import (
     AgentCoordinationError,
     ContractLimits,
@@ -179,6 +184,8 @@ def test_enterprise_approval_policy_prioritizes_deny_by_value_and_context() -> N
 
 
 def test_enterprise_approval_policy_requires_human_for_matching_context() -> None:
+    primary_user_id = UUID("00000000-0000-0000-0000-000000000038")
+    escalation_user_id = UUID("00000000-0000-0000-0000-000000000039")
     policy = AgentApprovalPolicyVersion(
         id=UUID("00000000-0000-0000-0000-000000000035"),
         company_id=UUID("00000000-0000-0000-0000-000000000036"),
@@ -190,7 +197,10 @@ def test_enterprise_approval_policy_requires_human_for_matching_context() -> Non
         effect="require_approval",
         priority=500,
         context_conditions={"environment": "production"},
-        approval_ttl_minutes=15,
+        approval_ttl_minutes=30,
+        assigned_user_id=primary_user_id,
+        escalation_user_id=escalation_user_id,
+        escalation_after_minutes=15,
     )
     decision = evaluate_published_policies(
         [policy],
@@ -200,7 +210,60 @@ def test_enterprise_approval_policy_requires_human_for_matching_context() -> Non
     )
     assert decision.allowed
     assert decision.requires_approval
-    assert decision.approval_ttl_minutes == 15
+    assert decision.approval_ttl_minutes == 30
+    assert decision.assigned_user_id == primary_user_id
+    assert decision.escalation_user_id == escalation_user_id
+    assert decision.escalation_after_minutes == 15
+
+
+def test_approval_policy_rejects_invalid_escalation_chain() -> None:
+    user_id = UUID("00000000-0000-0000-0000-000000000051")
+    with pytest.raises(ValueError, match="diferente"):
+        AgentApprovalPolicyCreate(
+            policy_key="finance.escalation",
+            name="Escalonamento financeiro",
+            effect="require_approval",
+            approval_ttl_minutes=30,
+            assigned_user_id=user_id,
+            escalation_user_id=user_id,
+            escalation_after_minutes=15,
+        )
+    with pytest.raises(ValueError, match="antes da expiração"):
+        AgentApprovalPolicyCreate(
+            policy_key="finance.late",
+            name="Escalonamento tardio",
+            effect="require_approval",
+            approval_ttl_minutes=30,
+            assigned_user_id=user_id,
+            escalation_user_id=UUID("00000000-0000-0000-0000-000000000052"),
+            escalation_after_minutes=30,
+        )
+
+
+def test_approval_escalation_is_due_only_once() -> None:
+    now = datetime(2026, 7, 21, 12, 0, tzinfo=UTC)
+    user_id = UUID("00000000-0000-0000-0000-000000000053")
+    assert approval_escalation_due(
+        status="pending",
+        escalation_user_id=user_id,
+        escalate_at=now - timedelta(seconds=1),
+        escalated_at=None,
+        now=now,
+    )
+    assert not approval_escalation_due(
+        status="pending",
+        escalation_user_id=user_id,
+        escalate_at=now - timedelta(seconds=1),
+        escalated_at=now,
+        now=now,
+    )
+    assert not approval_escalation_due(
+        status="approved",
+        escalation_user_id=user_id,
+        escalate_at=now - timedelta(seconds=1),
+        escalated_at=None,
+        now=now,
+    )
 
 
 def test_enterprise_approval_policy_ignores_other_tenants_and_agents() -> None:
