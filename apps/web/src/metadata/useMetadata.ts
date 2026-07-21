@@ -66,6 +66,59 @@ export interface MetadataEntityDetail extends MetadataEntitySummary {
   };
 }
 
+export type MetadataComparisonOperator =
+  | "equals"
+  | "not_equals"
+  | "greater_than"
+  | "less_than"
+  | "contains"
+  | "is_empty"
+  | "is_not_empty";
+
+export interface MetadataLayoutInput {
+  key: string;
+  label: string;
+  sections: Array<{
+    key: string;
+    label: string;
+    fields: string[];
+    columns: number;
+  }>;
+  is_default: boolean;
+}
+
+export interface MetadataViewInput {
+  key: string;
+  label: string;
+  columns: string[];
+  filters: Array<{
+    field_key: string;
+    operator: MetadataComparisonOperator;
+    value: MetadataValue;
+  }>;
+  sorting: Array<{ field_key: string; direction: "asc" | "desc" }>;
+  is_default: boolean;
+}
+
+export interface MetadataValidationRuleInput {
+  key: string;
+  label: string;
+  field_key: string;
+  operator: MetadataComparisonOperator;
+  comparison_value: MetadataValue;
+  message: string;
+  active: boolean;
+}
+
+export interface MetadataDesignResponse {
+  layouts: MetadataLayoutInput[];
+  views: MetadataViewInput[];
+  validation_rules: MetadataValidationRuleInput[];
+  version: number;
+  version_status: "draft" | "validated" | "published" | "retired";
+  checksum: string;
+}
+
 export interface MetadataValidationResponse {
   entity_id: string;
   version: number;
@@ -110,6 +163,17 @@ export function useMetadataEntity(definitionId: string | null) {
     queryKey: ["metadata-entity", definitionId],
     queryFn: () =>
       request<MetadataEntityDetail>(`/metadata/entities/${definitionId}`),
+    enabled: Boolean(definitionId),
+  });
+}
+
+export function useMetadataDesign(definitionId: string | null) {
+  return useQuery({
+    queryKey: ["metadata-design", definitionId],
+    queryFn: () =>
+      request<MetadataDesignResponse>(
+        `/metadata/entities/${definitionId}/design`,
+      ),
     enabled: Boolean(definitionId),
   });
 }

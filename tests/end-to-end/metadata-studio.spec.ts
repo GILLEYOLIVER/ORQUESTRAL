@@ -40,6 +40,20 @@ test("administrador publica schema e opera registro no Orkestral Studio", async 
   await page.getByRole("button", { name: "Salvar rascunho" }).click();
 
   await expect(page.getByRole("heading", { name: entityPlural })).toBeVisible();
+  await expect(page.getByText("0 regras ativas")).toBeVisible();
+  await page.getByRole("button", { name: "Configurar experiência" }).click();
+  await page.getByRole("button", { name: "Adicionar regra" }).click();
+  await page.getByLabel("Nome da regra").fill("Nome obrigatório");
+  await page
+    .getByRole("combobox", { name: "Campo", exact: true })
+    .selectOption("name");
+  await page
+    .getByRole("combobox", { name: "Condição", exact: true })
+    .selectOption("is_not_empty");
+  await page
+    .getByLabel("Mensagem mostrada ao usuário")
+    .fill("Informe o nome do registro.");
+  await page.getByRole("button", { name: "Salvar experiência" }).click();
   await page.getByRole("button", { name: "Validar versão" }).click();
   await expect(
     page.getByRole("button", { name: "Publicar versão" }),
@@ -49,7 +63,9 @@ test("administrador publica schema e opera registro no Orkestral Studio", async 
   await expect(
     page.getByText("Dados publicados", { exact: true }),
   ).toBeVisible();
-  await page.getByLabel(/^Nome/).fill(recordName);
+  await page
+    .getByRole("textbox", { name: "Nome obrigatório", exact: true })
+    .fill(recordName);
   await page.getByRole("button", { name: `Criar ${entityLabel}` }).click();
   const recordRow = page.getByRole("row").filter({ hasText: recordName });
   await expect(recordRow).toBeVisible();

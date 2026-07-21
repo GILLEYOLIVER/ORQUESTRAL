@@ -27,7 +27,7 @@ class Notification(Base):
     __tablename__ = "notifications"
     __table_args__ = (
         CheckConstraint(
-            "severity IN ('info', 'success', 'warning', 'error')",
+            "severity IN ('info', 'success', 'warning', 'error', 'critical')",
             name="ck_notifications_severity",
         ),
         Index(

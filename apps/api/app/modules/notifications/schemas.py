@@ -8,7 +8,7 @@ from pydantic import Field, model_validator
 
 from app.core.schemas import StrictSchema
 
-NotificationSeverity = Literal["info", "success", "warning", "error"]
+NotificationSeverity = Literal["info", "success", "warning", "error", "critical"]
 ApprovalStatus = Literal["pending", "approved", "rejected", "cancelled", "expired"]
 
 

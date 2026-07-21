@@ -539,6 +539,101 @@
   color: #7b6c4e;
 }
 
+.metadata-design-card {
+  border-top: 4px solid var(--studio-amber);
+}
+
+.metadata-design-summary,
+.metadata-rule-heading {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metadata-design-summary {
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.metadata-design-summary span {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #cdded8;
+  border-radius: 999px;
+  color: #315b51;
+  background: #f1f8f5;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.metadata-design-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--studio-line);
+}
+
+.metadata-design-names,
+.metadata-field-selection {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metadata-field-selection {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metadata-field-selection fieldset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid #d4e1dc;
+  border-radius: 14px;
+}
+
+.metadata-field-selection legend {
+  padding: 0 0.35rem;
+  color: var(--studio-ink);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.metadata-field-selection label {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: #49635c;
+  font-size: 0.76rem;
+}
+
+.metadata-rule-heading small {
+  display: block;
+  color: #6d7e79;
+}
+
+.metadata-rule-stack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.metadata-rule-row {
+  display: grid;
+  grid-template-columns: 1fr 0.8fr 0.8fr 0.8fr 1.4fr auto;
+  gap: 0.55rem;
+  align-items: end;
+  padding: 0.75rem;
+  border: 1px solid #d9e4e0;
+  border-radius: 14px;
+  background: #fbfdfa;
+}
+
 @media (max-width: 1100px) {
   .metadata-studio__workspace,
   .metadata-record-workspace {
@@ -561,6 +656,10 @@
 
   .metadata-field-row {
     grid-template-columns: auto repeat(2, minmax(0, 1fr));
+  }
+
+  .metadata-rule-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -590,5 +689,12 @@
 
   .metadata-record-actions {
     flex-direction: row;
+  }
+
+  .metadata-design-names,
+  .metadata-field-selection,
+  .metadata-field-selection fieldset,
+  .metadata-rule-row {
+    grid-template-columns: 1fr;
   }
 }

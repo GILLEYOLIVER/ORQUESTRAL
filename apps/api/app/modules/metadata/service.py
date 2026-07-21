@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Sequence
+from decimal import Decimal, InvalidOperation
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -24,6 +26,9 @@ from app.modules.metadata.models import (
     MetadataEntityDefinition,
     MetadataEntityVersion,
     MetadataFieldDefinition,
+    MetadataLayoutDefinition,
+    MetadataValidationRule,
+    MetadataViewDefinition,
 )
 from app.modules.metadata.repository import (
     entity_key_exists,
@@ -33,6 +38,8 @@ from app.modules.metadata.repository import (
     list_version_fields,
 )
 from app.modules.metadata.schemas import (
+    MetadataDesignResponse,
+    MetadataDesignUpdate,
     MetadataEntityCreate,
     MetadataEntityDetail,
     MetadataEntityDraftUpdate,
@@ -40,7 +47,11 @@ from app.modules.metadata.schemas import (
     MetadataEntityVersionResponse,
     MetadataFieldInput,
     MetadataFieldResponse,
+    MetadataLayoutInput,
+    MetadataLayoutSectionInput,
     MetadataValidationResponse,
+    MetadataValidationRuleInput,
+    MetadataViewInput,
 )
 
 RESERVED_FIELD_KEYS = frozenset({"id", "company_id", "created_at", "updated_at", "deleted_at"})
@@ -78,6 +89,285 @@ def validate_field_contracts(fields: Sequence[MetadataFieldInput]) -> list[str]:
         if field.required and field.default_value is None and field.data_type == "boolean":
             errors.append(f"O campo booleano obrigatorio '{field.key}' precisa de valor padrao.")
     return errors
+
+
+def _default_design(fields: Sequence[MetadataFieldDefinition]) -> MetadataDesignUpdate:
+    field_keys = [field.key for field in sorted(fields, key=lambda item: item.position)]
+    return MetadataDesignUpdate(
+        layouts=[
+            MetadataLayoutInput(
+                key="default_layout",
+                label="Formulario principal",
+                is_default=True,
+                sections=[
+                    MetadataLayoutSectionInput(
+                        key="main_section",
+                        label="Informacoes principais",
+                        fields=field_keys,
+                        columns=2,
+                    )
+                ],
+            )
+        ],
+        views=[
+            MetadataViewInput(
+                key="default_view",
+                label="Lista principal",
+                columns=field_keys[: min(6, len(field_keys))],
+                is_default=True,
+            )
+        ],
+    )
+
+
+def calculate_design_checksum(payload: MetadataDesignUpdate) -> str:
+    serialized = json.dumps(
+        payload.model_dump(mode="json"),
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def validate_design_contracts(
+    payload: MetadataDesignUpdate, fields: Sequence[MetadataFieldDefinition]
+) -> list[str]:
+    errors: list[str] = []
+    field_keys = {field.key for field in fields}
+    for layout in payload.layouts:
+        referenced = {field_key for section in layout.sections for field_key in section.fields}
+        unknown = sorted(referenced - field_keys)
+        if unknown:
+            errors.append(
+                f"O layout '{layout.key}' usa campos desconhecidos: {', '.join(unknown)}."
+            )
+    for view in payload.views:
+        referenced = set(view.columns)
+        referenced.update(item.field_key for item in view.filters)
+        referenced.update(item.field_key for item in view.sorting)
+        unknown = sorted(referenced - field_keys)
+        if unknown:
+            errors.append(
+                f"A visualizacao '{view.key}' usa campos desconhecidos: {', '.join(unknown)}."
+            )
+    for rule in payload.validation_rules:
+        if rule.field_key not in field_keys:
+            errors.append(f"A regra '{rule.key}' usa o campo desconhecido '{rule.field_key}'.")
+    return errors
+
+
+def _is_empty(value: Any) -> bool:
+    return value is None or value == "" or value == [] or value == {}
+
+
+def _decimal_compare(left: Any, right: Any, operator: str) -> bool:
+    try:
+        left_value = Decimal(str(left))
+        right_value = Decimal(str(right))
+    except (InvalidOperation, TypeError, ValueError):
+        return False
+    return left_value > right_value if operator == "greater_than" else left_value < right_value
+
+
+def evaluate_record_validation_rules(
+    rules: Sequence[MetadataValidationRuleInput], values: dict[str, Any]
+) -> list[str]:
+    errors: list[str] = []
+    for rule in rules:
+        if not rule.active:
+            continue
+        value = values.get(rule.field_key)
+        expected = rule.comparison_value
+        valid = True
+        if rule.operator == "equals":
+            valid = value == expected
+        elif rule.operator == "not_equals":
+            valid = value != expected
+        elif rule.operator in {"greater_than", "less_than"}:
+            valid = _decimal_compare(value, expected, rule.operator)
+        elif rule.operator == "contains":
+            valid = isinstance(value, (str, list, dict)) and expected in value
+        elif rule.operator == "is_empty":
+            valid = _is_empty(value)
+        elif rule.operator == "is_not_empty":
+            valid = not _is_empty(value)
+        if not valid:
+            errors.append(rule.message)
+    return errors
+
+
+async def _load_design_rows(
+    database: AsyncSession, company_id: UUID, version_id: UUID
+) -> tuple[
+    list[MetadataLayoutDefinition],
+    list[MetadataViewDefinition],
+    list[MetadataValidationRule],
+]:
+    layouts = list(
+        (
+            await database.scalars(
+                select(MetadataLayoutDefinition)
+                .where(
+                    MetadataLayoutDefinition.company_id == company_id,
+                    MetadataLayoutDefinition.version_id == version_id,
+                )
+                .order_by(MetadataLayoutDefinition.key)
+            )
+        ).all()
+    )
+    views = list(
+        (
+            await database.scalars(
+                select(MetadataViewDefinition)
+                .where(
+                    MetadataViewDefinition.company_id == company_id,
+                    MetadataViewDefinition.version_id == version_id,
+                )
+                .order_by(MetadataViewDefinition.key)
+            )
+        ).all()
+    )
+    rules = list(
+        (
+            await database.scalars(
+                select(MetadataValidationRule)
+                .where(
+                    MetadataValidationRule.company_id == company_id,
+                    MetadataValidationRule.version_id == version_id,
+                )
+                .order_by(MetadataValidationRule.key)
+            )
+        ).all()
+    )
+    return layouts, views, rules
+
+
+def _design_from_rows(
+    layouts: Sequence[MetadataLayoutDefinition],
+    views: Sequence[MetadataViewDefinition],
+    rules: Sequence[MetadataValidationRule],
+) -> MetadataDesignUpdate:
+    return MetadataDesignUpdate(
+        layouts=[
+            MetadataLayoutInput(
+                key=item.key,
+                label=item.label,
+                sections=item.sections,
+                is_default=item.is_default,
+            )
+            for item in layouts
+        ],
+        views=[
+            MetadataViewInput(
+                key=item.key,
+                label=item.label,
+                columns=item.columns,
+                filters=item.filters,
+                sorting=item.sorting,
+                is_default=item.is_default,
+            )
+            for item in views
+        ],
+        validation_rules=[
+            MetadataValidationRuleInput(
+                key=item.key,
+                label=item.label,
+                field_key=item.field_key,
+                operator=item.operator,
+                comparison_value=item.comparison_value,
+                message=item.message,
+                active=item.active,
+            )
+            for item in rules
+        ],
+    )
+
+
+async def _load_design(
+    database: AsyncSession,
+    company_id: UUID,
+    version: MetadataEntityVersion,
+    fields: Sequence[MetadataFieldDefinition],
+) -> tuple[MetadataDesignUpdate, bool]:
+    layouts, views, rules = await _load_design_rows(database, company_id, version.id)
+    if not layouts and not views and not rules:
+        return _default_design(fields), False
+    return _design_from_rows(layouts, views, rules), True
+
+
+async def _replace_design(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    version_id: UUID,
+    payload: MetadataDesignUpdate,
+) -> None:
+    for model in (MetadataLayoutDefinition, MetadataViewDefinition, MetadataValidationRule):
+        await database.execute(
+            delete(model).where(
+                model.company_id == company_id,
+                model.version_id == version_id,
+            )
+        )
+    database.add_all(
+        [
+            MetadataLayoutDefinition(
+                company_id=company_id,
+                version_id=version_id,
+                key=item.key,
+                label=item.label,
+                sections=[section.model_dump(mode="json") for section in item.sections],
+                is_default=item.is_default,
+            )
+            for item in payload.layouts
+        ]
+        + [
+            MetadataViewDefinition(
+                company_id=company_id,
+                version_id=version_id,
+                key=item.key,
+                label=item.label,
+                columns=item.columns,
+                filters=[entry.model_dump(mode="json") for entry in item.filters],
+                sorting=[entry.model_dump(mode="json") for entry in item.sorting],
+                is_default=item.is_default,
+            )
+            for item in payload.views
+        ]
+        + [
+            MetadataValidationRule(
+                company_id=company_id,
+                version_id=version_id,
+                key=item.key,
+                label=item.label,
+                field_key=item.field_key,
+                operator=item.operator,
+                comparison_value=item.comparison_value,
+                message=item.message,
+                active=item.active,
+            )
+            for item in payload.validation_rules
+        ]
+    )
+
+
+async def validation_rules_for_version(
+    database: AsyncSession, company_id: UUID, version_id: UUID
+) -> list[MetadataValidationRuleInput]:
+    _, _, rules = await _load_design_rows(database, company_id, version_id)
+    return [
+        MetadataValidationRuleInput(
+            key=item.key,
+            label=item.label,
+            field_key=item.field_key,
+            operator=item.operator,
+            comparison_value=item.comparison_value,
+            message=item.message,
+            active=item.active,
+        )
+        for item in rules
+    ]
 
 
 async def _authorize(
@@ -269,6 +559,97 @@ async def get_entity(
     return _detail(entity, version, fields)
 
 
+async def get_design(
+    database: AsyncSession,
+    context: RequestContext,
+    definition_id: UUID,
+    correlation_id: UUID,
+) -> MetadataDesignResponse:
+    _, version, fields = await _load_current(database, context.company_id, definition_id)
+    await _authorize(
+        database,
+        context,
+        correlation_id=correlation_id,
+        action="view",
+        permission="metadata.view",
+        resource_id=definition_id,
+    )
+    payload, _ = await _load_design(database, context.company_id, version, fields)
+    await database.commit()
+    return MetadataDesignResponse(
+        **payload.model_dump(),
+        version=version.version,
+        version_status=version.status,
+        checksum=calculate_design_checksum(payload),
+    )
+
+
+async def update_design(
+    database: AsyncSession,
+    context: RequestContext,
+    definition_id: UUID,
+    payload: MetadataDesignUpdate,
+    correlation_id: UUID,
+) -> MetadataDesignResponse:
+    entity, version, fields = await _load_current(database, context.company_id, definition_id)
+    if version.status != "draft":
+        raise MetadataServiceError(
+            "Crie uma nova versao antes de alterar layouts, visualizacoes ou regras.",
+            status_code=409,
+        )
+    await _authorize(
+        database,
+        context,
+        correlation_id=correlation_id,
+        action="update",
+        permission="metadata.configure",
+        resource_id=definition_id,
+    )
+    errors = validate_design_contracts(payload, fields)
+    if errors:
+        await database.commit()
+        raise MetadataServiceError(" ".join(errors), status_code=422)
+    await _replace_design(
+        database,
+        company_id=context.company_id,
+        version_id=version.id,
+        payload=payload,
+    )
+    version.status = "draft"
+    version.updated_at = utc_now()
+    checksum = calculate_design_checksum(payload)
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="metadata.design.updated",
+        target_type="metadata_entity_definition",
+        target_id=entity.id,
+        details={
+            "version": version.version,
+            "layout_count": len(payload.layouts),
+            "view_count": len(payload.views),
+            "rule_count": len(payload.validation_rules),
+            "checksum": checksum,
+        },
+    )
+    await _emit(
+        database,
+        event_type="metadata.design.updated",
+        context=context,
+        correlation_id=correlation_id,
+        entity=entity,
+        version=version.version,
+    )
+    await database.commit()
+    return MetadataDesignResponse(
+        **payload.model_dump(),
+        version=version.version,
+        version_status=version.status,
+        checksum=checksum,
+    )
+
+
 async def create_entity(
     database: AsyncSession,
     context: RequestContext,
@@ -415,6 +796,7 @@ async def create_draft_version(
     entity, current, current_fields = await _load_current(
         database, context.company_id, definition_id
     )
+    current_design, _ = await _load_design(database, context.company_id, current, current_fields)
     await _authorize(
         database,
         context,
@@ -444,6 +826,12 @@ async def create_draft_version(
     await database.flush()
     fields = _field_rows(company_id=context.company_id, version_id=version.id, fields=inputs)
     database.add_all(fields)
+    await _replace_design(
+        database,
+        company_id=context.company_id,
+        version_id=version.id,
+        payload=current_design,
+    )
     entity.current_version = next_number
     entity.updated_at = utc_now()
     record_authorization_audit(
@@ -487,6 +875,15 @@ async def validate_entity(
         raise MetadataServiceError("A versao publicada e imutavel.", status_code=409)
     inputs = _field_inputs_from_models(fields)
     errors = validate_field_contracts(inputs)
+    design, persisted = await _load_design(database, context.company_id, version, fields)
+    errors.extend(validate_design_contracts(design, fields))
+    if not errors and not persisted:
+        await _replace_design(
+            database,
+            company_id=context.company_id,
+            version_id=version.id,
+            payload=design,
+        )
     checksum = calculate_schema_checksum(inputs)
     version.schema_checksum = checksum
     version.status = "validated" if not errors else "draft"

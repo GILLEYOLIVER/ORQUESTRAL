@@ -2975,6 +2975,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metadata/entities/{definition_id}/design": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Metadata Design */
+        get: operations["get_metadata_design_metadata_entities__definition_id__design_get"];
+        /** Update Metadata Design */
+        put: operations["update_metadata_design_metadata_entities__definition_id__design_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metadata/entities/{definition_id}/draft": {
         parameters: {
             query?: never;
@@ -9682,6 +9700,33 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** MetadataDesignResponse */
+        MetadataDesignResponse: {
+            /** Checksum */
+            checksum: string;
+            /** Layouts */
+            layouts: components["schemas"]["MetadataLayoutInput"][];
+            /** Validation Rules */
+            validation_rules?: components["schemas"]["MetadataValidationRuleInput"][];
+            /** Version */
+            version: number;
+            /**
+             * Version Status
+             * @enum {string}
+             */
+            version_status: "draft" | "validated" | "published" | "retired";
+            /** Views */
+            views: components["schemas"]["MetadataViewInput"][];
+        };
+        /** MetadataDesignUpdate */
+        MetadataDesignUpdate: {
+            /** Layouts */
+            layouts: components["schemas"]["MetadataLayoutInput"][];
+            /** Validation Rules */
+            validation_rules?: components["schemas"]["MetadataValidationRuleInput"][];
+            /** Views */
+            views: components["schemas"]["MetadataViewInput"][];
+        };
         /** MetadataEntityCreate */
         MetadataEntityCreate: {
             /** Description */
@@ -9885,6 +9930,34 @@ export interface components {
              */
             unique_values: boolean;
         };
+        /** MetadataLayoutInput */
+        MetadataLayoutInput: {
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Sections */
+            sections: components["schemas"]["MetadataLayoutSectionInput"][];
+        };
+        /** MetadataLayoutSectionInput */
+        MetadataLayoutSectionInput: {
+            /**
+             * Columns
+             * @default 2
+             */
+            columns: number;
+            /** Fields */
+            fields: string[];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
         /** MetadataRecordCreate */
         MetadataRecordCreate: {
             /** Idempotency Key */
@@ -9964,6 +10037,68 @@ export interface components {
             valid: boolean;
             /** Version */
             version: number;
+        };
+        /** MetadataValidationRuleInput */
+        MetadataValidationRuleInput: {
+            /**
+             * Active
+             * @default true
+             */
+            active: boolean;
+            comparison_value?: components["schemas"]["JsonValue"] | null;
+            /** Field Key */
+            field_key: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Message */
+            message: string;
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: "equals" | "not_equals" | "greater_than" | "less_than" | "contains" | "is_empty" | "is_not_empty";
+        };
+        /** MetadataViewFilterInput */
+        MetadataViewFilterInput: {
+            /** Field Key */
+            field_key: string;
+            /**
+             * Operator
+             * @enum {string}
+             */
+            operator: "equals" | "not_equals" | "greater_than" | "less_than" | "contains" | "is_empty" | "is_not_empty";
+            value?: components["schemas"]["JsonValue"] | null;
+        };
+        /** MetadataViewInput */
+        MetadataViewInput: {
+            /** Columns */
+            columns: string[];
+            /** Filters */
+            filters?: components["schemas"]["MetadataViewFilterInput"][];
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Sorting */
+            sorting?: components["schemas"]["MetadataViewSortInput"][];
+        };
+        /** MetadataViewSortInput */
+        MetadataViewSortInput: {
+            /**
+             * Direction
+             * @default asc
+             * @enum {string}
+             */
+            direction: "asc" | "desc";
+            /** Field Key */
+            field_key: string;
         };
         /** MetricPeriod */
         MetricPeriod: {
@@ -23811,6 +23946,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_metadata_design_metadata_entities__definition_id__design_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataDesignResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    update_metadata_design_metadata_entities__definition_id__design_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataDesignUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataDesignResponse"];
                 };
             };
             /** @description Solicitação inválida */
