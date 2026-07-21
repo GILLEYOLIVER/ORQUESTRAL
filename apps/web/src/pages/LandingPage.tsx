@@ -11,8 +11,11 @@ export function LandingPage() {
           </span>
           <h1>Automação empresarial em uma só orquestra.</h1>
           <p>
-            Conecte processos, integrações e agentes de inteligência artificial
-            sem expor a complexidade técnica para sua equipe.
+            A Orkestral reúne clientes, vendas, atendimento, marketing,
+            projetos, estoque, finanças e gestão de pessoas em uma única
+            plataforma. Conecte seus sistemas, automatize processos e use
+            agentes de inteligência artificial para executar tarefas com
+            segurança, permissões, supervisão humana e auditoria completa.
           </p>
           <Link className="hero__cta" to="/login">
             Conhecer a plataforma <ArrowRight size={18} />
