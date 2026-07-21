@@ -857,3 +857,11 @@ Data: 21 de julho de 2026.
 - Sessão `Administrador Somente Leitura` com empresa fixa, interface administrativa e bloqueio universal de escrita no backend.
 - Auditoria de criação, uso e tentativas mutáveis bloqueadas.
 - Migração `20260721_0074`, integração de ponta a ponta e documentação operacional.
+
+## Ciclo 54 - relacionamentos, formulas e tipos de registro
+
+- Relacionamentos UUID tipados e isolados por empresa validam o registro de destino e impedem exclusao enquanto houver referencia ativa.
+- Formulas declarativas calculam campos no servidor com operadores permitidos, deteccao de ciclos, limite de operandos e bloqueio de escrita manual.
+- Tipos de registro versionados selecionam layouts condicionais e acompanham o registro e seu historico de revisoes.
+- O Orkestral Studio configura e opera os tres recursos sem expor JSON ou codigo executavel ao usuario.
+- Migracao `20260721_0075`, contratos OpenAPI, testes multiempresa e documentacao correspondentes.

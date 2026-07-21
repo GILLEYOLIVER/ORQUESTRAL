@@ -33,6 +33,8 @@ MetadataComparisonOperator = Literal[
     "is_empty",
     "is_not_empty",
 ]
+MetadataRelationshipType = Literal["many_to_one", "one_to_one"]
+MetadataFormulaOperator = Literal["add", "subtract", "multiply", "divide", "concat", "coalesce"]
 
 
 class MetadataFieldInput(StrictSchema):
@@ -154,10 +156,58 @@ class MetadataValidationRuleInput(StrictSchema):
     active: bool = True
 
 
+class MetadataRelationshipInput(StrictSchema):
+    key: str = Field(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_]*$")
+    label: str = Field(min_length=2, max_length=120)
+    source_field_key: str = Field(min_length=2, max_length=80)
+    target_definition_id: UUID
+    relationship_type: MetadataRelationshipType = "many_to_one"
+    on_delete: Literal["restrict"] = "restrict"
+
+
+class MetadataFormulaOperandInput(StrictSchema):
+    type: Literal["field", "literal"]
+    field_key: str | None = Field(default=None, min_length=2, max_length=80)
+    value: JsonValue | None = None
+
+    @model_validator(mode="after")
+    def validate_operand(self) -> MetadataFormulaOperandInput:
+        if self.type == "field" and not self.field_key:
+            raise ValueError("Um operando de campo exige field_key.")
+        if self.type == "literal" and self.field_key is not None:
+            raise ValueError("Um operando literal nao aceita field_key.")
+        return self
+
+
+class MetadataFormulaExpressionInput(StrictSchema):
+    operator: MetadataFormulaOperator
+    operands: list[MetadataFormulaOperandInput] = Field(min_length=2, max_length=8)
+
+
+class MetadataFormulaInput(StrictSchema):
+    key: str = Field(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_]*$")
+    label: str = Field(min_length=2, max_length=120)
+    target_field_key: str = Field(min_length=2, max_length=80)
+    expression: MetadataFormulaExpressionInput
+    active: bool = True
+
+
+class MetadataRecordTypeInput(StrictSchema):
+    key: str = Field(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_]*$")
+    label: str = Field(min_length=2, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
+    layout_key: str = Field(min_length=2, max_length=80)
+    is_default: bool = False
+    active: bool = True
+
+
 class MetadataDesignUpdate(StrictSchema):
     layouts: list[MetadataLayoutInput] = Field(min_length=1, max_length=12)
     views: list[MetadataViewInput] = Field(min_length=1, max_length=12)
     validation_rules: list[MetadataValidationRuleInput] = Field(default_factory=list, max_length=50)
+    relationships: list[MetadataRelationshipInput] = Field(default_factory=list, max_length=50)
+    formulas: list[MetadataFormulaInput] = Field(default_factory=list, max_length=50)
+    record_types: list[MetadataRecordTypeInput] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def validate_unique_defaults_and_keys(self) -> MetadataDesignUpdate:
@@ -170,6 +220,18 @@ class MetadataDesignUpdate(StrictSchema):
         rule_keys = [rule.key for rule in self.validation_rules]
         if len(rule_keys) != len(set(rule_keys)):
             raise ValueError("As chaves das regras devem ser unicas.")
+        for name, keys in (
+            ("relacionamentos", [item.key for item in self.relationships]),
+            ("formulas", [item.key for item in self.formulas]),
+            ("tipos de registro", [item.key for item in self.record_types]),
+        ):
+            if len(keys) != len(set(keys)):
+                raise ValueError(f"As chaves de {name} devem ser unicas.")
+        formula_targets = [item.target_field_key for item in self.formulas]
+        if len(formula_targets) != len(set(formula_targets)):
+            raise ValueError("Cada campo calculado pode possuir somente uma formula.")
+        if self.record_types and sum(item.is_default for item in self.record_types) != 1:
+            raise ValueError("Defina exatamente um tipo de registro padrao.")
         return self
 
 

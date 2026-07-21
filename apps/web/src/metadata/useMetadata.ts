@@ -110,10 +110,49 @@ export interface MetadataValidationRuleInput {
   active: boolean;
 }
 
+export interface MetadataRelationshipInput {
+  key: string;
+  label: string;
+  source_field_key: string;
+  target_definition_id: string;
+  relationship_type: "many_to_one" | "one_to_one";
+  on_delete: "restrict";
+}
+
+export interface MetadataFormulaOperandInput {
+  type: "field" | "literal";
+  field_key: string | null;
+  value: MetadataValue;
+}
+
+export interface MetadataFormulaInput {
+  key: string;
+  label: string;
+  target_field_key: string;
+  expression: {
+    operator:
+      "add" | "subtract" | "multiply" | "divide" | "concat" | "coalesce";
+    operands: MetadataFormulaOperandInput[];
+  };
+  active: boolean;
+}
+
+export interface MetadataRecordTypeInput {
+  key: string;
+  label: string;
+  description: string | null;
+  layout_key: string;
+  is_default: boolean;
+  active: boolean;
+}
+
 export interface MetadataDesignResponse {
   layouts: MetadataLayoutInput[];
   views: MetadataViewInput[];
   validation_rules: MetadataValidationRuleInput[];
+  relationships: MetadataRelationshipInput[];
+  formulas: MetadataFormulaInput[];
+  record_types: MetadataRecordTypeInput[];
   version: number;
   version_status: "draft" | "validated" | "published" | "retired";
   checksum: string;
@@ -131,6 +170,7 @@ export interface MetadataRecordResponse {
   id: string;
   definition_id: string;
   schema_version: number;
+  record_type_key: string | null;
   values: Record<string, MetadataValue>;
   masked_fields: string[];
   record_version: number;

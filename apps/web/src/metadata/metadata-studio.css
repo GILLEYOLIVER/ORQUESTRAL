@@ -623,6 +623,52 @@
   gap: 0.65rem;
 }
 
+.metadata-advanced-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.metadata-advanced-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid #d9e4e0;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fbfdfa 0%, #f2f7f4 100%);
+}
+
+.metadata-advanced-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.5fr) auto;
+  gap: 0.7rem;
+  align-items: end;
+  padding: 0.8rem;
+  border: 1px solid #e1e9e6;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.metadata-advanced-row--columns {
+  grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
+}
+
+.metadata-advanced-row fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  margin: 0;
+  padding: 0.65rem;
+  border: 1px solid #d9e4e0;
+  border-radius: 12px;
+}
+
+.metadata-advanced-row fieldset label {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.76rem;
+}
+
 .metadata-rule-row {
   display: grid;
   grid-template-columns: 1fr 0.8fr 0.8fr 0.8fr 1.4fr auto;
@@ -661,6 +707,11 @@
   .metadata-rule-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .metadata-advanced-row,
+  .metadata-advanced-row--columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
@@ -695,6 +746,11 @@
   .metadata-field-selection,
   .metadata-field-selection fieldset,
   .metadata-rule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .metadata-advanced-row,
+  .metadata-advanced-row--columns {
     grid-template-columns: 1fr;
   }
 }

@@ -234,6 +234,102 @@ class MetadataValidationRule(Base):
     )
 
 
+class MetadataRelationshipDefinition(Base):
+    __tablename__ = "metadata_relationship_definitions"
+    __table_args__ = (
+        UniqueConstraint("company_id", "version_id", "key", name="uq_metadata_relationship_key"),
+        CheckConstraint(
+            "relationship_type IN ('many_to_one', 'one_to_one')",
+            name="ck_metadata_relationship_type",
+        ),
+        CheckConstraint("on_delete = 'restrict'", name="ck_metadata_relationship_on_delete"),
+        Index("ix_metadata_relationship_company_version", "company_id", "version_id"),
+        Index("ix_metadata_relationship_target", "company_id", "target_definition_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(80))
+    label: Mapped[str] = mapped_column(String(120))
+    source_field_key: Mapped[str] = mapped_column(String(80))
+    target_definition_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_definitions.id", ondelete="RESTRICT"), index=True
+    )
+    relationship_type: Mapped[str] = mapped_column(String(24))
+    on_delete: Mapped[str] = mapped_column(
+        String(16), default="restrict", server_default="restrict"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class MetadataFormulaDefinition(Base):
+    __tablename__ = "metadata_formula_definitions"
+    __table_args__ = (
+        UniqueConstraint("company_id", "version_id", "key", name="uq_metadata_formula_key"),
+        UniqueConstraint(
+            "company_id",
+            "version_id",
+            "target_field_key",
+            name="uq_metadata_formula_target",
+        ),
+        Index("ix_metadata_formula_company_version", "company_id", "version_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(80))
+    label: Mapped[str] = mapped_column(String(120))
+    target_field_key: Mapped[str] = mapped_column(String(80))
+    expression: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class MetadataRecordTypeDefinition(Base):
+    __tablename__ = "metadata_record_type_definitions"
+    __table_args__ = (
+        UniqueConstraint("company_id", "version_id", "key", name="uq_metadata_record_type_key"),
+        Index("ix_metadata_record_type_company_version", "company_id", "version_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("metadata_entity_versions.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(80))
+    label: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(Text)
+    layout_key: Mapped[str] = mapped_column(String(80))
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
 class MetadataRecord(Base):
     __tablename__ = "metadata_records"
     __table_args__ = (
@@ -265,6 +361,7 @@ class MetadataRecord(Base):
         ForeignKey("metadata_entity_versions.id", ondelete="RESTRICT"), index=True
     )
     schema_version: Mapped[int] = mapped_column(Integer)
+    record_type_key: Mapped[str | None] = mapped_column(String(80))
     values: Mapped[dict[str, Any]] = mapped_column(JSONB)
     record_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     idempotency_key: Mapped[UUID | None]
@@ -318,6 +415,7 @@ class MetadataRecordRevision(Base):
         ForeignKey("metadata_entity_versions.id", ondelete="RESTRICT")
     )
     schema_version: Mapped[int] = mapped_column(Integer)
+    record_type_key: Mapped[str | None] = mapped_column(String(80))
     revision: Mapped[int] = mapped_column(Integer)
     change_type: Mapped[str] = mapped_column(String(16))
     values: Mapped[dict[str, Any]] = mapped_column(JSONB)

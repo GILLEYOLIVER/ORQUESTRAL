@@ -88,3 +88,23 @@ async def unique_value_exists(
     if excluding_record_id is not None:
         filters.append(MetadataRecord.id != excluding_record_id)
     return await database.scalar(select(MetadataRecord.id).where(*filters)) is not None
+
+
+async def relationship_reference_exists(
+    database: AsyncSession,
+    company_id: UUID,
+    source_definition_id: UUID,
+    field_key: str,
+    target_record_id: UUID,
+) -> bool:
+    return (
+        await database.scalar(
+            select(MetadataRecord.id).where(
+                MetadataRecord.company_id == company_id,
+                MetadataRecord.definition_id == source_definition_id,
+                MetadataRecord.deleted_at.is_(None),
+                MetadataRecord.values[field_key].astext == str(target_record_id),
+            )
+        )
+        is not None
+    )
