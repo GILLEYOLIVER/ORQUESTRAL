@@ -728,3 +728,15 @@ Data: 21 de julho de 2026.
 - Segurança comprovada: catálogo não lista credenciais de outro tenant, autoaprovação retorna `409`, decisão cruzada retorna `404`, referência jurídica não aparece na resposta e hold ativo bloqueia o expurgo.
 - Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno permanece em `503`; investigar separadamente sem reduzir as proteções do gateway.
 - Próximo passo: alertas prévios de vencimento de segredo, notificações do legal hold e conectores nativos para cofres gerenciados.
+
+## Ciclo 43 - alertas de rotação, notificações e cofres gerenciados
+
+- O probe HMAC informa estado de rotação `healthy`, `due_soon` ou `not_configured`; o script externo emite aviso antes do prazo configurado sem expor datas ou segredos.
+- Solicitações de retenção legal notificam revisores independentes autorizados da empresa e decisões notificam o solicitante, sem transportar a referência jurídica.
+- O catálogo reconhece credenciais gerenciadas e apresenta o provedor na interface, preservando compatibilidade com conectores personalizados.
+- AWS Secrets Manager, Azure Key Vault, Google Secret Manager e HashiCorp Vault possuem contratos nativos, referências com esquema próprio e bloqueio de segredo embutido na URI.
+- Testes de conexão desses cofres não simulam sucesso: validam o contrato local e informam claramente quando a leitura remota não foi executada.
+- Migração: `20260721_0064_managed_vault_connectors.py`.
+- Validação local concluída: Ruff nos 232 arquivos não históricos e na migração nova; MyPy em 193 arquivos; API `148 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados; migração `0064 -> 0063 -> 0064`; `/health`, `/ready`, `/app` e monitor HMAC validados.
+- Dívida anterior não alterada: 24 avisos Ruff de ordenação de imports em migrações históricas e em `app/scripts/migrate.py`; nenhum pertence aos arquivos deste ciclo.
+- Próximo passo: resolução real por identidade gerenciada, lembretes de hold próximos do vencimento e política de rotação por ambiente.

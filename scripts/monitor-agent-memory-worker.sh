@@ -38,4 +38,19 @@ if ! response="$(curl --fail-with-body --silent --show-error \
   exit 1
 fi
 
+rotation_warning="$(
+  ORKESTRAL_MONITOR_RESPONSE="$response" python3 - <<'PY'
+import json
+import os
+
+payload = json.loads(os.environ["ORKESTRAL_MONITOR_RESPONSE"])
+if payload.get("monitor_secret_rotation_state") == "due_soon":
+    days = payload.get("monitor_secret_rotation_days_remaining")
+    print(f"O segredo do monitor vence em {days} dia(s); programe a rotação.")
+PY
+)"
+if [[ -n "$rotation_warning" ]]; then
+  printf 'AVISO: %s\n' "$rotation_warning" >&2
+fi
+
 printf '%s\n' "$response"

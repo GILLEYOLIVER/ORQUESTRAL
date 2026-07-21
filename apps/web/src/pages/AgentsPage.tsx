@@ -2235,7 +2235,10 @@ export function AgentsPage() {
                       <option value="">Nenhuma (ambiente local)</option>
                       {memoryVaultCredentials.data?.map((credential) => (
                         <option key={credential.id} value={credential.id}>
-                          {credential.name} · {credential.plugin_code}
+                          {credential.name} · {credential.provider_name}
+                          {credential.managed_provider
+                            ? " · gerenciado"
+                            : " · personalizado"}
                         </option>
                       ))}
                     </select>

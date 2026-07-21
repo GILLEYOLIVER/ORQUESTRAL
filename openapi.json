@@ -3914,6 +3914,10 @@
             "title": "Id",
             "type": "string"
           },
+          "managed_provider": {
+            "title": "Managed Provider",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -3921,12 +3925,18 @@
           "plugin_code": {
             "title": "Plugin Code",
             "type": "string"
+          },
+          "provider_name": {
+            "title": "Provider Name",
+            "type": "string"
           }
         },
         "required": [
           "id",
           "name",
           "plugin_code",
+          "provider_name",
+          "managed_provider",
           "expires_at"
         ],
         "title": "AgentMemoryVaultCredentialOption",
@@ -17966,6 +17976,26 @@
             "title": "Component",
             "type": "string"
           },
+          "monitor_secret_rotation_days_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monitor Secret Rotation Days Remaining"
+          },
+          "monitor_secret_rotation_state": {
+            "enum": [
+              "not_configured",
+              "healthy",
+              "due_soon"
+            ],
+            "title": "Monitor Secret Rotation State",
+            "type": "string"
+          },
           "request_id": {
             "title": "Request Id",
             "type": "string"
@@ -17992,6 +18022,8 @@
           "status",
           "component",
           "state",
+          "monitor_secret_rotation_state",
+          "monitor_secret_rotation_days_remaining",
           "request_id"
         ],
         "title": "WorkerHealthResponse",

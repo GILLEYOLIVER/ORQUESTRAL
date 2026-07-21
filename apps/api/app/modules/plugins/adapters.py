@@ -295,6 +295,106 @@ class ExternalPostgresAdapter(BasePlugin):
         return ConnectionTestResult(True, "Conexão PostgreSQL validada com sucesso.")
 
 
+MANAGED_VAULT_PROVIDERS: dict[str, tuple[str, str]] = {
+    "aws_secrets_manager": ("AWS Secrets Manager", "aws-sm://"),
+    "azure_key_vault": ("Azure Key Vault", "azure-kv://"),
+    "google_secret_manager": ("Google Secret Manager", "gcp-sm://"),
+    "hashicorp_vault": ("HashiCorp Vault", "vault://"),
+}
+
+
+def managed_vault_provider(plugin_code: str) -> tuple[str, str] | None:
+    return MANAGED_VAULT_PROVIDERS.get(plugin_code.lower())
+
+
+def _managed_vault_definition(code: str, description: str) -> PluginDefinition:
+    provider_name, reference_prefix = MANAGED_VAULT_PROVIDERS[code]
+    return PluginDefinition(
+        code=code,
+        name=provider_name,
+        version="1.0.0",
+        description=description,
+        authentication_type="workload_identity",
+        credential_fields=(
+            PluginField(
+                "key_reference",
+                "Referência da chave",
+                "password",
+                secret=True,
+                placeholder=f"{reference_prefix}caminho/da/chave",
+            ),
+            PluginField(
+                "identity_reference",
+                "Identidade gerenciada ou papel",
+                required=False,
+            ),
+        ),
+    )
+
+
+class ManagedVaultAdapter(BasePlugin):
+    reference_prefix: str
+
+    def validate_credentials(self, credentials: Mapping[str, Any]) -> None:
+        super().validate_credentials(credentials)
+        reference = str(credentials.get("key_reference", ""))
+        invalid = (
+            len(reference) > 512
+            or not reference.startswith(self.reference_prefix)
+            or reference == self.reference_prefix
+            or reference != reference.strip()
+            or any(character.isspace() for character in reference)
+            or any(character in reference for character in ("?", "#", "@"))
+        )
+        if invalid:
+            raise PluginAdapterError(
+                f"Use uma referência protegida iniciada por {self.reference_prefix}, sem segredo embutido."
+            )
+
+    async def test_connection(
+        self,
+        credentials: Mapping[str, Any],
+        configuration: Mapping[str, Any] | None = None,
+    ) -> ConnectionTestResult:
+        self.validate_credentials(credentials)
+        return ConnectionTestResult(
+            False,
+            "Referência válida; a leitura remota não foi executada. Configure a identidade gerenciada no ambiente.",
+        )
+
+
+class AwsSecretsManagerAdapter(ManagedVaultAdapter):
+    reference_prefix = "aws-sm://"
+    definition = _managed_vault_definition(
+        "aws_secrets_manager",
+        "Referências de chaves protegidas pelo AWS Secrets Manager com identidade gerenciada.",
+    )
+
+
+class AzureKeyVaultAdapter(ManagedVaultAdapter):
+    reference_prefix = "azure-kv://"
+    definition = _managed_vault_definition(
+        "azure_key_vault",
+        "Referências de chaves protegidas pelo Azure Key Vault com identidade gerenciada.",
+    )
+
+
+class GoogleSecretManagerAdapter(ManagedVaultAdapter):
+    reference_prefix = "gcp-sm://"
+    definition = _managed_vault_definition(
+        "google_secret_manager",
+        "Referências de chaves protegidas pelo Google Secret Manager com identidade gerenciada.",
+    )
+
+
+class HashicorpVaultAdapter(ManagedVaultAdapter):
+    reference_prefix = "vault://"
+    definition = _managed_vault_definition(
+        "hashicorp_vault",
+        "Referências de chaves protegidas pelo HashiCorp Vault sem armazenar tokens na URI.",
+    )
+
+
 _RUNTIME = PluginRegistry()
 for _adapter in (
     WebhookAdapter(),
@@ -304,6 +404,10 @@ for _adapter in (
     WhatsAppBusinessAdapter(),
     ExternalPostgresAdapter(),
     HttpAdapter(),
+    AwsSecretsManagerAdapter(),
+    AzureKeyVaultAdapter(),
+    GoogleSecretManagerAdapter(),
+    HashicorpVaultAdapter(),
 ):
     _RUNTIME.register(_adapter)
 

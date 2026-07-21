@@ -103,10 +103,15 @@ async def agent_memory_scheduler_health(
         )
         for last_heartbeat, next_run_at, heartbeat_slo_minutes in schedules
     )
+    rotation_state, rotation_days_remaining = (
+        request.app.state.settings.agent_memory_monitor_rotation_status(now=now)
+    )
     payload = WorkerHealthResponse(
         status="degraded" if overdue else "ok",
         component="agent-memory-worker",
         state="overdue" if overdue else ("healthy" if schedules else "idle"),
+        monitor_secret_rotation_state=rotation_state,
+        monitor_secret_rotation_days_remaining=rotation_days_remaining,
         request_id=request.state.request_id,
     )
     if overdue:

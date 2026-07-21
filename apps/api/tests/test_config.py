@@ -107,3 +107,11 @@ def test_local_monitor_secret_rotation_accepts_empty_environment_value() -> None
         Settings(agent_memory_monitor_secret_rotated_at="").agent_memory_monitor_secret_rotated_at
         is None
     )
+
+
+def test_monitor_secret_rotation_warning_precedes_expiration() -> None:
+    with pytest.raises(ValidationError, match="antes da idade máxima"):
+        Settings(
+            agent_memory_monitor_secret_max_age_days=14,
+            agent_memory_monitor_secret_rotation_warning_days=14,
+        )

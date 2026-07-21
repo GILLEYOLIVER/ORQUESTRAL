@@ -370,6 +370,8 @@ export interface AgentMemoryVaultCredentialOption {
   id: string;
   name: string;
   plugin_code: string;
+  provider_name: string;
+  managed_provider: boolean;
   expires_at: string | null;
 }
 

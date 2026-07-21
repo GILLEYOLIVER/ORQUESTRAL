@@ -44,7 +44,24 @@ def test_agent_memory_scheduler_health_is_generic(client: TestClient) -> None:
     assert response.json()["status"] == "ok"
     assert response.json()["component"] == "agent-memory-worker"
     assert response.json()["state"] in {"idle", "healthy"}
-    assert set(response.json()) == {"status", "component", "state", "request_id"}
+    assert response.json()["monitor_secret_rotation_state"] == "not_configured"
+    assert response.json()["monitor_secret_rotation_days_remaining"] is None
+    assert set(response.json()) == {
+        "status",
+        "component",
+        "state",
+        "monitor_secret_rotation_state",
+        "monitor_secret_rotation_days_remaining",
+        "request_id",
+    }
+
+    client.app.state.settings.agent_memory_monitor_secret_rotated_at = datetime.now(
+        UTC
+    ) - timedelta(days=80)
+    due_response = client.get("/health/agent-memory-scheduler", headers=_monitor_headers())
+    assert due_response.status_code == 200
+    assert due_response.json()["monitor_secret_rotation_state"] == "due_soon"
+    assert 0 <= due_response.json()["monitor_secret_rotation_days_remaining"] <= 14
 
     previous_secret = "previous-monitor-secret-with-at-least-32-characters"
     client.app.state.settings.agent_memory_monitor_previous_secrets = [previous_secret]

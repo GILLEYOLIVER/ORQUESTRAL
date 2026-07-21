@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 from orkestral_plugin_sdk import BasePlugin, PluginDefinition, PluginExecutionError, PluginRegistry
 
-from app.modules.plugins.adapters import HttpAdapter, PluginAdapterError, get_plugin_adapter
+from app.modules.plugins.adapters import (
+    HttpAdapter,
+    ManagedVaultAdapter,
+    PluginAdapterError,
+    get_plugin_adapter,
+)
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError, mask_credentials
 
 
@@ -43,6 +48,34 @@ def test_adapter_registry() -> None:
 async def test_http_adapter_rejects_invalid_url() -> None:
     with pytest.raises(PluginAdapterError):
         await HttpAdapter().test_connection({"base_url": "ftp://example.com"})
+
+
+@pytest.mark.parametrize(
+    ("plugin_code", "reference"),
+    [
+        ("aws_secrets_manager", "aws-sm://sa-east-1/orkestral/active"),
+        ("azure_key_vault", "azure-kv://orkestral-vault/active"),
+        ("google_secret_manager", "gcp-sm://project/secrets/active"),
+        ("hashicorp_vault", "vault://orkestral/active"),
+    ],
+)
+def test_managed_vault_adapters_validate_protected_references(
+    plugin_code: str, reference: str
+) -> None:
+    adapter = get_plugin_adapter(plugin_code)
+    assert isinstance(adapter, ManagedVaultAdapter)
+    adapter.validate_credentials({"key_reference": reference})
+    with pytest.raises(PluginAdapterError, match="sem segredo embutido"):
+        adapter.validate_credentials({"key_reference": f"{reference}?token=segredo"})
+
+
+@pytest.mark.asyncio
+async def test_managed_vault_test_does_not_claim_remote_access() -> None:
+    result = await get_plugin_adapter("aws_secrets_manager").test_connection(
+        {"key_reference": "aws-sm://sa-east-1/orkestral/active"}
+    )
+    assert result.success is False
+    assert "não foi executada" in result.message
 
 
 def test_credential_vault_rotates_from_previous_key() -> None:

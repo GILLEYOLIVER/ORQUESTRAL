@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
+from math import ceil
 from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, RedisDsn, field_validator, model_validator
@@ -50,6 +51,7 @@ class Settings(BaseSettings):
     agent_memory_monitor_previous_secrets: list[str] = Field(default_factory=list)
     agent_memory_monitor_secret_rotated_at: datetime | None = None
     agent_memory_monitor_secret_max_age_days: int = Field(default=90, ge=7, le=365)
+    agent_memory_monitor_secret_rotation_warning_days: int = Field(default=14, ge=1, le=90)
     agent_memory_reencryption_terminal_retention_days: int = Field(default=90, ge=7, le=3_650)
     n8n_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:5678")
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
@@ -134,6 +136,11 @@ class Settings(BaseSettings):
         )
         if len(set(monitor_secrets)) != len(monitor_secrets):
             raise ValueError("Segredos ativos e anteriores do monitor devem ser únicos")
+        if (
+            self.agent_memory_monitor_secret_rotation_warning_days
+            >= self.agent_memory_monitor_secret_max_age_days
+        ):
+            raise ValueError("O alerta de rotação deve ocorrer antes da idade máxima do segredo")
         if self.agent_memory_monitor_secret_rotated_at is not None:
             rotated_at = self.agent_memory_monitor_secret_rotated_at
             if rotated_at.tzinfo is None:
@@ -334,6 +341,27 @@ class Settings(BaseSettings):
     @property
     def jwt_verification_secrets(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys((self.jwt_secret, *self.jwt_previous_secrets)))
+
+    def agent_memory_monitor_rotation_status(
+        self, *, now: datetime | None = None
+    ) -> tuple[Literal["not_configured", "healthy", "due_soon"], int | None]:
+        if self.agent_memory_monitor_secret_rotated_at is None:
+            return "not_configured", None
+        rotated_at = self.agent_memory_monitor_secret_rotated_at
+        if rotated_at.tzinfo is None:
+            rotated_at = rotated_at.replace(tzinfo=UTC)
+        remaining_seconds = (
+            rotated_at
+            + timedelta(days=self.agent_memory_monitor_secret_max_age_days)
+            - (now or datetime.now(UTC))
+        ).total_seconds()
+        remaining_days = max(0, ceil(remaining_seconds / 86_400))
+        state: Literal["healthy", "due_soon"] = (
+            "due_soon"
+            if remaining_days <= self.agent_memory_monitor_secret_rotation_warning_days
+            else "healthy"
+        )
+        return state, remaining_days
 
     def readiness_is_configured(self) -> bool:
         required = [bool(self.database_url), bool(self.redis_url)]

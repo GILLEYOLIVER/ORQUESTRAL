@@ -5706,10 +5706,14 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Managed Provider */
+            managed_provider: boolean;
             /** Name */
             name: string;
             /** Plugin Code */
             plugin_code: string;
+            /** Provider Name */
+            provider_name: string;
         };
         /** AgentMessageResponse */
         AgentMessageResponse: {
@@ -10944,6 +10948,13 @@ export interface components {
              * @constant
              */
             component: "agent-memory-worker";
+            /** Monitor Secret Rotation Days Remaining */
+            monitor_secret_rotation_days_remaining: number | null;
+            /**
+             * Monitor Secret Rotation State
+             * @enum {string}
+             */
+            monitor_secret_rotation_state: "not_configured" | "healthy" | "due_soon";
             /** Request Id */
             request_id: string;
             /**

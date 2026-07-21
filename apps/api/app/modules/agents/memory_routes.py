@@ -108,6 +108,7 @@ from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.notifications.service import company_approver_user_ids, create_notification
+from app.modules.plugins.adapters import managed_vault_provider
 from app.modules.plugins.crypto import CredentialVault
 from app.modules.plugins.models import IntegrationCredential, Plugin
 from app.modules.users.models import CompanyUser
@@ -2389,6 +2390,29 @@ async def list_agent_memory_reencryption_jobs(
     return [_memory_reencryption_job_response(job) for job in jobs]
 
 
+async def _notify_memory_reencryption_legal_hold_reviewers(
+    database: DatabaseSession, *, hold: AgentMemoryReencryptionLegalHold
+) -> None:
+    reviewer_ids = [
+        user_id
+        for user_id in await company_approver_user_ids(database, hold.company_id)
+        if user_id != hold.requested_by_user_id
+    ]
+    for reviewer_id in reviewer_ids:
+        await create_notification(
+            database,
+            company_id=hold.company_id,
+            recipient_user_id=reviewer_id,
+            event_type="agent.memory_reencryption_legal_hold.requested",
+            title="Retenção legal aguardando decisão",
+            message="Um job terminal de memória exige revisão independente.",
+            severity="warning",
+            resource_type="agent_memory_reencryption_legal_hold",
+            resource_id=hold.id,
+            data={"agent_id": str(hold.agent_id), "job_id": str(hold.job_id)},
+        )
+
+
 @router.get(
     "/{agent_id}/memory-vault-credentials",
     response_model=list[AgentMemoryVaultCredentialOption],
@@ -2402,7 +2426,7 @@ async def list_agent_memory_vault_credentials(
     await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
     rows = (
         await database.execute(
-            select(IntegrationCredential, Plugin.code)
+            select(IntegrationCredential, Plugin.code, Plugin.name)
             .join(Plugin, Plugin.id == IntegrationCredential.plugin_id)
             .where(
                 IntegrationCredential.company_id == context.company_id,
@@ -2415,16 +2439,22 @@ async def list_agent_memory_vault_credentials(
             .order_by(IntegrationCredential.name, IntegrationCredential.created_at)
         )
     ).all()
-    return [
-        AgentMemoryVaultCredentialOption(
-            id=credential.id,
-            name=credential.name,
-            plugin_code=str(plugin_code),
-            expires_at=credential.expires_at,
+    options: list[AgentMemoryVaultCredentialOption] = []
+    for credential, plugin_code, plugin_name in rows:
+        if "key_reference" not in credential.credential_fields:
+            continue
+        provider = managed_vault_provider(str(plugin_code))
+        options.append(
+            AgentMemoryVaultCredentialOption(
+                id=credential.id,
+                name=credential.name,
+                plugin_code=str(plugin_code),
+                provider_name=provider[0] if provider is not None else str(plugin_name),
+                managed_provider=provider is not None,
+                expires_at=credential.expires_at,
+            )
         )
-        for credential, plugin_code in rows
-        if "key_reference" in credential.credential_fields
-    ]
+    return options
 
 
 @router.get(
@@ -2545,6 +2575,7 @@ async def request_agent_memory_reencryption_legal_hold(
             payload={"hold_id": str(hold.id), "job_id": str(job_id)},
         ),
     )
+    await _notify_memory_reencryption_legal_hold_reviewers(database, hold=hold)
     await database.commit()
     await database.refresh(hold)
     return _memory_reencryption_legal_hold_response(hold)
@@ -2601,6 +2632,22 @@ async def decide_agent_memory_reencryption_legal_hold(
             classification="confidential",
             payload={"hold_id": str(hold.id), "job_id": str(job_id)},
         ),
+    )
+    await create_notification(
+        database,
+        company_id=context.company_id,
+        recipient_user_id=hold.requested_by_user_id,
+        event_type=f"agent.memory_reencryption_legal_hold.{payload.decision}",
+        title="Retenção legal decidida",
+        message=(
+            "A retenção legal do job foi aprovada."
+            if payload.decision == "approved"
+            else "A retenção legal do job foi rejeitada."
+        ),
+        severity="success" if payload.decision == "approved" else "warning",
+        resource_type="agent_memory_reencryption_legal_hold",
+        resource_id=hold.id,
+        data={"agent_id": str(agent_id), "job_id": str(job_id)},
     )
     await database.commit()
     await database.refresh(hold)

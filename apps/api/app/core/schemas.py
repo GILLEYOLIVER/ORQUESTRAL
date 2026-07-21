@@ -20,6 +20,8 @@ class WorkerHealthResponse(StrictSchema):
     status: Literal["ok", "degraded"]
     component: Literal["agent-memory-worker"]
     state: Literal["idle", "healthy", "overdue"]
+    monitor_secret_rotation_state: Literal["not_configured", "healthy", "due_soon"]
+    monitor_secret_rotation_days_remaining: int | None
     request_id: str
 
 

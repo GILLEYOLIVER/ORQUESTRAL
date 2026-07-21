@@ -545,6 +545,8 @@ class AgentMemoryVaultCredentialOption(StrictSchema):
     id: UUID
     name: str
     plugin_code: str
+    provider_name: str
+    managed_provider: bool
     expires_at: datetime | None
 
 
