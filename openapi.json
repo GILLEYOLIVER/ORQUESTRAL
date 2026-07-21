@@ -14398,6 +14398,39 @@
         "title": "MetadataEntityDraftUpdate",
         "type": "object"
       },
+      "MetadataEntityPackage": {
+        "additionalProperties": false,
+        "properties": {
+          "checksum": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Checksum",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/MetadataPackageDefinition"
+          },
+          "exported_at": {
+            "format": "date-time",
+            "title": "Exported At",
+            "type": "string"
+          },
+          "format_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Format Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exported_at",
+          "definition",
+          "checksum"
+        ],
+        "title": "MetadataEntityPackage",
+        "type": "object"
+      },
       "MetadataEntitySummary": {
         "additionalProperties": false,
         "properties": {
@@ -14897,6 +14930,231 @@
           "fields"
         ],
         "title": "MetadataLayoutSectionInput",
+        "type": "object"
+      },
+      "MetadataPackageDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "design": {
+            "$ref": "#/components/schemas/MetadataPortableDesign"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataFieldInput"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "plural_label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Plural Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "plural_label",
+          "fields",
+          "design"
+        ],
+        "title": "MetadataPackageDefinition",
+        "type": "object"
+      },
+      "MetadataPackageImportRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "key_override": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 2,
+                "pattern": "^[a-z][a-z0-9_]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Override"
+          },
+          "label_override": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Override"
+          },
+          "package": {
+            "$ref": "#/components/schemas/MetadataEntityPackage"
+          },
+          "plural_label_override": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plural Label Override"
+          }
+        },
+        "required": [
+          "package"
+        ],
+        "title": "MetadataPackageImportRequest",
+        "type": "object"
+      },
+      "MetadataPortableDesign": {
+        "additionalProperties": false,
+        "properties": {
+          "formulas": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataFormulaInput"
+            },
+            "maxItems": 50,
+            "title": "Formulas",
+            "type": "array"
+          },
+          "layouts": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataLayoutInput"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Layouts",
+            "type": "array"
+          },
+          "record_types": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataRecordTypeInput"
+            },
+            "maxItems": 20,
+            "title": "Record Types",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataPortableRelationship"
+            },
+            "maxItems": 50,
+            "title": "Relationships",
+            "type": "array"
+          },
+          "validation_rules": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataValidationRuleInput"
+            },
+            "maxItems": 50,
+            "title": "Validation Rules",
+            "type": "array"
+          },
+          "views": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataViewInput"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "layouts",
+          "views"
+        ],
+        "title": "MetadataPortableDesign",
+        "type": "object"
+      },
+      "MetadataPortableRelationship": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Label",
+            "type": "string"
+          },
+          "on_delete": {
+            "const": "restrict",
+            "default": "restrict",
+            "title": "On Delete",
+            "type": "string"
+          },
+          "relationship_type": {
+            "default": "many_to_one",
+            "enum": [
+              "many_to_one",
+              "one_to_one"
+            ],
+            "title": "Relationship Type",
+            "type": "string"
+          },
+          "source_field_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Source Field Key",
+            "type": "string"
+          },
+          "target_entity_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "title": "Target Entity Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "source_field_key",
+          "target_entity_key"
+        ],
+        "title": "MetadataPortableRelationship",
         "type": "object"
       },
       "MetadataRecordCreate": {
@@ -38490,6 +38748,74 @@
         ]
       }
     },
+    "/metadata/entities/{definition_id}/package": {
+      "get": {
+        "operationId": "export_metadata_package_metadata_entities__definition_id__package_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataEntityPackage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Metadata Package",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
     "/metadata/entities/{definition_id}/publish": {
       "post": {
         "operationId": "publish_metadata_entity_metadata_entities__definition_id__publish_post",
@@ -38593,6 +38919,25 @@
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 2,
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "View Key"
             }
           }
         ],
@@ -39099,6 +39444,72 @@
           }
         ],
         "summary": "Create Metadata Draft Version",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/packages/import": {
+      "post": {
+        "operationId": "import_metadata_package_metadata_packages_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataPackageImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataEntityDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Import Metadata Package",
         "tags": [
           "metadata"
         ]

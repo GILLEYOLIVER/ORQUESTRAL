@@ -67,3 +67,23 @@ O Orkestral Studio permite que cada empresa modele registros proprios sem altera
 - multiplas visualizacoes escolhidas pelo usuario;
 - filtros salvos executados no repositorio com paginacao segura;
 - importacao, exportacao e empacotamento de metadados.
+
+## Ciclo 55 - visualizacoes operacionais e portabilidade
+
+O Studio passa a operar multiplas visualizacoes versionadas por entidade. Cada visualizacao
+define colunas, filtros e ordenacao com operadores permitidos por tipo de campo. A API aplica
+essas definicoes somente sobre a versao publicada, com SQL parametrizado, paginacao no servidor
+e bloqueio quando um filtro tenta usar campo que o usuario nao pode consultar.
+
+Entidades tambem podem ser exportadas como pacotes `1.0` e importadas em outra empresa ou
+ambiente. O pacote inclui schema, layouts, visualizacoes, validacoes, formulas, tipos de registro
+e relacionamentos por chave tecnica. Ele nao inclui registros, `company_id`, credenciais ou IDs
+internos. Um checksum SHA-256 detecta alteracoes antes da importacao.
+
+Limites conscientes deste ciclo:
+
+- a importacao cria uma nova entidade em rascunho; atualizacao ou mesclagem ficam para pacotes
+  versionados do marketplace;
+- destinos externos de relacionamentos devem existir na empresa receptora;
+- filtros livres enviados pelo cliente nao sao aceitos: somente visualizacoes publicadas podem
+  controlar a consulta.

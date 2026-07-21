@@ -3061,6 +3061,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metadata/entities/{definition_id}/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Metadata Package */
+        get: operations["export_metadata_package_metadata_entities__definition_id__package_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metadata/entities/{definition_id}/publish": {
         parameters: {
             query?: never;
@@ -3143,6 +3160,23 @@ export interface paths {
         put?: never;
         /** Create Metadata Draft Version */
         post: operations["create_metadata_draft_version_metadata_entities__definition_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metadata/packages/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Metadata Package */
+        post: operations["import_metadata_package_metadata_packages_import_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9864,6 +9898,23 @@ export interface components {
             /** Plural Label */
             plural_label?: string | null;
         };
+        /** MetadataEntityPackage */
+        MetadataEntityPackage: {
+            /** Checksum */
+            checksum: string;
+            definition: components["schemas"]["MetadataPackageDefinition"];
+            /**
+             * Exported At
+             * Format: date-time
+             */
+            exported_at: string;
+            /**
+             * Format Version
+             * @default 1.0
+             * @constant
+             */
+            format_version: "1.0";
+        };
         /** MetadataEntitySummary */
         MetadataEntitySummary: {
             /**
@@ -10070,6 +10121,68 @@ export interface components {
             key: string;
             /** Label */
             label: string;
+        };
+        /** MetadataPackageDefinition */
+        MetadataPackageDefinition: {
+            /** Description */
+            description?: string | null;
+            design: components["schemas"]["MetadataPortableDesign"];
+            /** Fields */
+            fields: components["schemas"]["MetadataFieldInput"][];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Plural Label */
+            plural_label: string;
+        };
+        /** MetadataPackageImportRequest */
+        MetadataPackageImportRequest: {
+            /** Key Override */
+            key_override?: string | null;
+            /** Label Override */
+            label_override?: string | null;
+            package: components["schemas"]["MetadataEntityPackage"];
+            /** Plural Label Override */
+            plural_label_override?: string | null;
+        };
+        /** MetadataPortableDesign */
+        MetadataPortableDesign: {
+            /** Formulas */
+            formulas?: components["schemas"]["MetadataFormulaInput"][];
+            /** Layouts */
+            layouts: components["schemas"]["MetadataLayoutInput"][];
+            /** Record Types */
+            record_types?: components["schemas"]["MetadataRecordTypeInput"][];
+            /** Relationships */
+            relationships?: components["schemas"]["MetadataPortableRelationship"][];
+            /** Validation Rules */
+            validation_rules?: components["schemas"]["MetadataValidationRuleInput"][];
+            /** Views */
+            views: components["schemas"]["MetadataViewInput"][];
+        };
+        /** MetadataPortableRelationship */
+        MetadataPortableRelationship: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * On Delete
+             * @default restrict
+             * @constant
+             */
+            on_delete: "restrict";
+            /**
+             * Relationship Type
+             * @default many_to_one
+             * @enum {string}
+             */
+            relationship_type: "many_to_one" | "one_to_one";
+            /** Source Field Key */
+            source_field_key: string;
+            /** Target Entity Key */
+            target_entity_key: string;
         };
         /** MetadataRecordCreate */
         MetadataRecordCreate: {
@@ -24532,6 +24645,55 @@ export interface operations {
             };
         };
     };
+    export_metadata_package_metadata_entities__definition_id__package_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                definition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntityPackage"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     publish_metadata_entity_metadata_entities__definition_id__publish_post: {
         parameters: {
             query?: never;
@@ -24586,6 +24748,7 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                view_key?: string | null;
             };
             header?: never;
             path: {
@@ -24899,6 +25062,57 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataEntityDetail"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    import_metadata_package_metadata_packages_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataPackageImportRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             201: {

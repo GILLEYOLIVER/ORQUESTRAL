@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from math import ceil
-from typing import Literal
+from typing import Literal, cast
 from uuid import UUID
 
 from pydantic import AnyUrl, EmailStr, JsonValue, TypeAdapter, ValidationError
@@ -30,6 +30,7 @@ from app.modules.metadata.models import (
     MetadataFieldDefinition,
     MetadataRecord,
     MetadataRecordRevision,
+    MetadataViewDefinition,
 )
 from app.modules.metadata.record_repository import (
     get_record,
@@ -45,6 +46,7 @@ from app.modules.metadata.record_schemas import (
     MetadataRecordUpdate,
 )
 from app.modules.metadata.repository import get_entity_definition, list_version_fields
+from app.modules.metadata.schemas import MetadataViewInput
 from app.modules.metadata.service import (
     MetadataServiceError,
     evaluate_record_validation_rules,
@@ -54,6 +56,14 @@ from app.modules.metadata.service import (
     record_types_for_version,
     relationships_for_version,
     validation_rules_for_version,
+    views_for_version,
+)
+from app.modules.metadata.view_engine import (
+    VALUELESS_OPERATORS,
+    MetadataFieldType,
+    MetadataRecordFilterSpec,
+    MetadataRecordSortSpec,
+    validate_view_contract,
 )
 
 PolicyAction = Literal["view", "list", "create", "update", "delete"]
@@ -394,8 +404,9 @@ async def list_custom_records(
     *,
     page: int,
     page_size: int,
+    view_key: str | None = None,
 ) -> MetadataRecordPage:
-    _, _, fields = await _load_published_schema(database, context.company_id, definition_id)
+    _, version, fields = await _load_published_schema(database, context.company_id, definition_id)
     decision = await _evaluate_record_policy(
         database,
         context,
@@ -406,12 +417,78 @@ async def list_custom_records(
         mode="read",
         requested_fields=[field.key for field in fields],
     )
+    stored_views = await views_for_version(database, context.company_id, version.id)
+    selected_view: MetadataViewDefinition | None = None
+    if view_key is not None:
+        selected_view = next((item for item in stored_views if item.key == view_key), None)
+        if selected_view is None:
+            await database.commit()
+            raise MetadataServiceError("Visualizacao nao encontrada.", status_code=404)
+    elif stored_views:
+        selected_view = next((item for item in stored_views if item.is_default), stored_views[0])
+
+    filter_specs: list[MetadataRecordFilterSpec] = []
+    sort_specs: list[MetadataRecordSortSpec] = []
+    if selected_view is not None:
+        view = MetadataViewInput(
+            key=selected_view.key,
+            label=selected_view.label,
+            columns=selected_view.columns,
+            filters=selected_view.filters,
+            sorting=selected_view.sorting,
+            is_default=selected_view.is_default,
+        )
+        field_by_key = {field.key: field for field in fields}
+        errors = validate_view_contract(
+            view, {key: field.data_type for key, field in field_by_key.items()}
+        )
+        if errors:
+            await database.commit()
+            raise MetadataServiceError(" ".join(errors), status_code=422)
+        referenced_fields = {
+            *(item.field_key for item in view.filters),
+            *(item.field_key for item in view.sorting),
+        }
+        denied_references = sorted(referenced_fields - set(decision.allowed_fields))
+        if denied_references:
+            await database.commit()
+            raise MetadataServiceError(
+                "A visualizacao usa campos que nao podem ser consultados.", status_code=403
+            )
+        for item in view.filters:
+            field = field_by_key[item.field_key]
+            value = item.value
+            if item.operator not in VALUELESS_OPERATORS:
+                try:
+                    value = _normalize_value(field, item.value)
+                except ValueError as exc:
+                    await database.commit()
+                    raise MetadataServiceError(str(exc), status_code=422) from exc
+            filter_specs.append(
+                MetadataRecordFilterSpec(
+                    field_key=item.field_key,
+                    data_type=cast(MetadataFieldType, field.data_type),
+                    operator=item.operator,
+                    value=value,
+                )
+            )
+        sort_specs = [
+            MetadataRecordSortSpec(
+                field_key=item.field_key,
+                data_type=cast(MetadataFieldType, field_by_key[item.field_key].data_type),
+                direction=item.direction,
+            )
+            for item in view.sorting
+        ]
+
     records, total = await list_records(
         database,
         context.company_id,
         definition_id,
         page=page,
         page_size=page_size,
+        view_filters=filter_specs,
+        view_sorting=sort_specs,
     )
     await database.commit()
     return MetadataRecordPage(

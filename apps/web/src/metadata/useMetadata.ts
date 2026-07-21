@@ -186,6 +186,34 @@ export interface MetadataRecordPage {
   pages: number;
 }
 
+export interface MetadataEntityPackage {
+  format_version: "1.0";
+  exported_at: string;
+  definition: {
+    key: string;
+    label: string;
+    plural_label: string;
+    description: string | null;
+    fields: MetadataFieldInput[];
+    design: {
+      layouts: MetadataLayoutInput[];
+      views: MetadataViewInput[];
+      validation_rules: MetadataValidationRuleInput[];
+      relationships: Array<{
+        key: string;
+        label: string;
+        source_field_key: string;
+        target_entity_key: string;
+        relationship_type: "many_to_one" | "one_to_one";
+        on_delete: "restrict";
+      }>;
+      formulas: MetadataFormulaInput[];
+      record_types: MetadataRecordTypeInput[];
+    };
+  };
+  checksum: string;
+}
+
 export function useMetadataEntities() {
   const { me, status } = useSession();
   return useQuery({
@@ -221,13 +249,22 @@ export function useMetadataDesign(definitionId: string | null) {
 export function useMetadataRecords(
   definitionId: string | null,
   enabled: boolean,
+  viewKey: string | null,
+  page: number,
+  pageSize: number,
 ) {
   return useQuery({
-    queryKey: ["metadata-records", definitionId],
-    queryFn: () =>
-      request<MetadataRecordPage>(
-        `/metadata/entities/${definitionId}/records?page=1&page_size=100`,
-      ),
+    queryKey: ["metadata-records", definitionId, viewKey, page, pageSize],
+    queryFn: () => {
+      const parameters = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      });
+      if (viewKey) parameters.set("view_key", viewKey);
+      return request<MetadataRecordPage>(
+        `/metadata/entities/${definitionId}/records?${parameters.toString()}`,
+      );
+    },
     enabled: Boolean(definitionId) && enabled,
   });
 }
