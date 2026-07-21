@@ -6,6 +6,7 @@ from typing import cast
 import pytest
 from fastapi.testclient import TestClient
 
+from app.modules.agents.governance import evaluate_tool_autonomy, version_checksum
 from app.modules.agents.models import AgentTool
 from app.modules.agents.providers.base import ModelMessage, ToolDefinition
 from app.modules.agents.providers.local import LocalLanguageModelProvider
@@ -85,3 +86,29 @@ def test_tool_access_blocks_disabled_or_unauthorized_tool() -> None:
 def test_agents_route_requires_authentication(client: TestClient) -> None:
     assert client.get("/agents").status_code == 401
     assert client.delete("/agents/00000000-0000-0000-0000-000000000000").status_code == 401
+
+
+@pytest.mark.parametrize(
+    ("level", "risk", "allowed", "approval"),
+    [
+        (0, "low", False, False),
+        (1, "low", False, False),
+        (2, "low", True, True),
+        (3, "low", True, False),
+        (3, "high", True, True),
+        (4, "critical", True, True),
+    ],
+)
+def test_agent_autonomy_policy(level: int, risk: str, allowed: bool, approval: bool) -> None:
+    decision = evaluate_tool_autonomy(autonomy_level=level, risk_level=risk)
+    assert decision.allowed is allowed
+    assert decision.requires_approval is approval
+
+
+def test_agent_version_checksum_is_stable_and_sensitive_to_changes() -> None:
+    first = version_checksum({"model": "local", "autonomy_level": 2})
+    reordered = version_checksum({"autonomy_level": 2, "model": "local"})
+    changed = version_checksum({"model": "local", "autonomy_level": 3})
+    assert first == reordered
+    assert first != changed
+    assert len(first) == 64

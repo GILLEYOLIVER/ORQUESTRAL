@@ -299,3 +299,13 @@ Data: 21 de julho de 2026.
 - Studio E2E: login, schema, validacao, publicacao, registro e exclusao aprovados.
 - Seguranca: segredos, Actions, Node, Bandit e dependencias Python sem bloqueios.
 - Divida tecnica: bundle principal possui aviso de 853 kB; aplicar code splitting em ciclo futuro.
+## Ciclo 10 - Governança de agentes
+
+- Versões de agentes com rascunho, publicação, aposentadoria, checksum e migração de agentes existentes.
+- Níveis de autonomia 0 a 4 aplicados no back-end conforme o risco de cada ferramenta.
+- Orçamento mensal por agente com reserva preventiva, limite rígido e consumo rastreável.
+- Eventos e auditoria sem instruções, prompts ou credenciais.
+- Testes unitários de política/checksum e integração multiempresa adicionados.
+- Validação concluída: Ruff e MyPy aprovados; 119 testes unitários e 11 testes de integração aprovados; auditoria de segurança sem bloqueios; migração validada em downgrade e upgrade.
+- Migração: `20260721_0032_agent_governance.py`.
+- Próximo passo: ciclo 11, trace de execuções, limites de passos/tempo e modo sombra.

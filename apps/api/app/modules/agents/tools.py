@@ -34,6 +34,7 @@ class BuiltinToolDefinition:
     description: str
     input_schema: dict[str, Any]
     required_permission: str
+    risk_level: str = "low"
     is_sensitive: bool = False
 
 
@@ -68,6 +69,7 @@ BUILTIN_TOOLS = (
             "additionalProperties": False,
         },
         "workflows.configure",
+        "high",
         True,
     ),
 )

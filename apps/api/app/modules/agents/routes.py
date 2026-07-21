@@ -5,19 +5,30 @@ from typing import Annotated, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.agents.approvals import decide_agent_tool_run
+from app.modules.agents.governance import (
+    AgentBudgetExceededError,
+    active_agent_version,
+    agent_version_payload,
+    evaluate_tool_autonomy,
+    reserve_agent_budget,
+    settle_agent_budget,
+    version_checksum,
+)
 from app.modules.agents.models import (
     Agent,
+    AgentBudget,
     AgentConversation,
     AgentMessage,
     AgentTool,
     AgentToolRun,
     AgentUsageRecord,
+    AgentVersion,
 )
 from app.modules.agents.providers.base import (
     LanguageModelProviderError,
@@ -26,6 +37,8 @@ from app.modules.agents.providers.base import (
 )
 from app.modules.agents.providers.factory import create_language_model_provider
 from app.modules.agents.schemas import (
+    AgentBudgetResponse,
+    AgentBudgetUpdate,
     AgentChatRequest,
     AgentChatResponse,
     AgentConversationCreate,
@@ -41,6 +54,8 @@ from app.modules.agents.schemas import (
     AgentToolsUpdate,
     AgentUpdate,
     AgentUsageResponse,
+    AgentVersionCreate,
+    AgentVersionResponse,
 )
 from app.modules.agents.tools import (
     BUILTIN_TOOLS,
@@ -54,6 +69,8 @@ from app.modules.agents.tools import (
 )
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
+from app.modules.events.schemas import DomainEventCreate
+from app.modules.events.service import enqueue_domain_event
 from app.modules.knowledge.models import KnowledgeBase
 from app.modules.knowledge.processing import search_knowledge
 from app.modules.notifications.service import create_approval_request
@@ -80,6 +97,69 @@ def _message_response(message: AgentMessage) -> AgentMessageResponse:
 
 def _tool_response(tool: AgentTool) -> AgentToolResponse:
     return AgentToolResponse.model_validate(tool, from_attributes=True)
+
+
+def _version_response(version: AgentVersion) -> AgentVersionResponse:
+    return AgentVersionResponse.model_validate(version, from_attributes=True)
+
+
+def _budget_response(budget: AgentBudget) -> AgentBudgetResponse:
+    return AgentBudgetResponse.model_validate(budget, from_attributes=True)
+
+
+async def _budget(database: DatabaseSession, *, agent_id: UUID, company_id: UUID) -> AgentBudget:
+    budget = await database.scalar(
+        select(AgentBudget).where(
+            AgentBudget.agent_id == agent_id, AgentBudget.company_id == company_id
+        )
+    )
+    if budget is None:
+        raise HTTPException(status_code=404, detail="Orçamento do agente não encontrado.")
+    return budget
+
+
+async def _next_agent_version(database: DatabaseSession, agent_id: UUID) -> int:
+    current = await database.scalar(
+        select(func.max(AgentVersion.version)).where(AgentVersion.agent_id == agent_id)
+    )
+    return int(current or 0) + 1
+
+
+async def _publish_agent_version(
+    database: DatabaseSession,
+    *,
+    agent: Agent,
+    version: AgentVersion,
+    actor_user_id: UUID,
+) -> None:
+    published = (
+        await database.scalars(
+            select(AgentVersion).where(
+                AgentVersion.agent_id == agent.id,
+                AgentVersion.company_id == agent.company_id,
+                AgentVersion.status == "published",
+                AgentVersion.id != version.id,
+            )
+        )
+    ).all()
+    for previous in published:
+        previous.status = "retired"
+    version.status = "published"
+    version.published_by_user_id = actor_user_id
+    version.published_at = utc_now()
+    for field in (
+        "instructions",
+        "provider",
+        "model",
+        "temperature",
+        "max_input_tokens",
+        "max_output_tokens",
+        "memory_enabled",
+        "knowledge_base_id",
+    ):
+        setattr(agent, field, getattr(version, field))
+    agent.active_version_id = version.id
+    agent.updated_at = utc_now()
 
 
 async def _agent(database: DatabaseSession, *, agent_id: UUID, company_id: UUID) -> Agent:
@@ -252,6 +332,35 @@ async def create_agent(
     )
     database.add(agent)
     await database.flush()
+    version_payload = agent_version_payload(agent)
+    version = AgentVersion(
+        company_id=context.company_id,
+        agent_id=agent.id,
+        version=1,
+        status="published",
+        created_by_user_id=context.user_id,
+        published_by_user_id=context.user_id,
+        published_at=utc_now(),
+        checksum=version_checksum(version_payload),
+        **version_payload,
+    )
+    database.add(version)
+    await database.flush()
+    agent.active_version_id = version.id
+    now = utc_now()
+    next_month = (
+        now.replace(year=now.year + 1, month=1, day=1)
+        if now.month == 12
+        else now.replace(month=now.month + 1, day=1)
+    )
+    database.add(
+        AgentBudget(
+            company_id=context.company_id,
+            agent_id=agent.id,
+            cycle_started_at=now,
+            cycle_ends_at=next_month,
+        )
+    )
     definition = TOOL_CATALOG["orkestral.company.summary"]
     database.add(
         AgentTool(
@@ -262,6 +371,7 @@ async def create_agent(
             description=definition.description,
             input_schema=definition.input_schema,
             required_permission=definition.required_permission,
+            risk_level=definition.risk_level,
             is_sensitive=definition.is_sensitive,
         )
     )
@@ -314,8 +424,46 @@ async def update_agent(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Base de conhecimento ativa nao encontrada para esta empresa",
             )
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changed = payload.model_dump(exclude_unset=True)
+    for field, value in changed.items():
         setattr(agent, field, value)
+    versioned_fields = {
+        "instructions",
+        "provider",
+        "model",
+        "temperature",
+        "max_input_tokens",
+        "max_output_tokens",
+        "memory_enabled",
+        "knowledge_base_id",
+    }
+    if versioned_fields.intersection(changed):
+        current = await active_agent_version(database, agent=agent, company_id=context.company_id)
+        controls = (
+            {
+                "autonomy_level": current.autonomy_level,
+                "max_steps": current.max_steps,
+                "max_runtime_seconds": current.max_runtime_seconds,
+                "max_cost_per_run_microunits": current.max_cost_per_run_microunits,
+            }
+            if current
+            else {}
+        )
+        version_payload = agent_version_payload(agent, **controls)
+        version = AgentVersion(
+            company_id=context.company_id,
+            agent_id=agent.id,
+            version=await _next_agent_version(database, agent.id),
+            status="draft",
+            created_by_user_id=context.user_id,
+            checksum=version_checksum(version_payload),
+            **version_payload,
+        )
+        database.add(version)
+        await database.flush()
+        await _publish_agent_version(
+            database, agent=agent, version=version, actor_user_id=context.user_id
+        )
     agent.updated_at = utc_now()
     record_authorization_audit(
         database,
@@ -403,6 +551,7 @@ async def configure_agent_tools(
                 description=definition.description,
                 input_schema=definition.input_schema,
                 required_permission=definition.required_permission,
+                risk_level=definition.risk_level,
                 is_sensitive=definition.is_sensitive,
                 enabled=True,
             )
@@ -429,6 +578,200 @@ async def configure_agent_tools(
         )
     ).all()
     return [_tool_response(tool) for tool in tools]
+
+
+@router.get("/{agent_id}/versions", response_model=list[AgentVersionResponse])
+async def list_agent_versions(
+    agent_id: UUID, principal: CanConfigureAgents, database: DatabaseSession
+) -> list[AgentVersionResponse]:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    versions = (
+        await database.scalars(
+            select(AgentVersion)
+            .where(
+                AgentVersion.agent_id == agent_id,
+                AgentVersion.company_id == context.company_id,
+            )
+            .order_by(AgentVersion.version.desc())
+        )
+    ).all()
+    return [_version_response(version) for version in versions]
+
+
+@router.post(
+    "/{agent_id}/versions",
+    response_model=AgentVersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_version(
+    agent_id: UUID,
+    payload: AgentVersionCreate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentVersionResponse:
+    context = get_request_context(principal)
+    agent = await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    active = await active_agent_version(database, agent=agent, company_id=context.company_id)
+    controls = (
+        {
+            "autonomy_level": active.autonomy_level,
+            "max_steps": active.max_steps,
+            "max_runtime_seconds": active.max_runtime_seconds,
+            "max_cost_per_run_microunits": active.max_cost_per_run_microunits,
+        }
+        if active
+        else {}
+    )
+    version_payload = agent_version_payload(agent, **controls)
+    version_payload.update(payload.model_dump(exclude_unset=True))
+    if version_payload.get("knowledge_base_id") is not None:
+        knowledge_base = await database.scalar(
+            select(KnowledgeBase).where(
+                KnowledgeBase.id == version_payload["knowledge_base_id"],
+                KnowledgeBase.company_id == context.company_id,
+                KnowledgeBase.status == "active",
+            )
+        )
+        if knowledge_base is None:
+            raise HTTPException(status_code=422, detail="Base de conhecimento inválida.")
+    version = AgentVersion(
+        company_id=context.company_id,
+        agent_id=agent.id,
+        version=await _next_agent_version(database, agent.id),
+        status="draft",
+        created_by_user_id=context.user_id,
+        checksum=version_checksum(version_payload),
+        **version_payload,
+    )
+    database.add(version)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.version.created",
+        target_type="agent_version",
+        target_id=version.id,
+        details={"agent_id": str(agent.id), "version": version.version},
+    )
+    await database.commit()
+    await database.refresh(version)
+    return _version_response(version)
+
+
+@router.post("/{agent_id}/versions/{version_id}/publish", response_model=AgentVersionResponse)
+async def publish_agent_version(
+    agent_id: UUID,
+    version_id: UUID,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentVersionResponse:
+    context = get_request_context(principal)
+    agent = await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    version = await database.scalar(
+        select(AgentVersion).where(
+            AgentVersion.id == version_id,
+            AgentVersion.agent_id == agent.id,
+            AgentVersion.company_id == context.company_id,
+        )
+    )
+    if version is None:
+        raise HTTPException(status_code=404, detail="Versão do agente não encontrada.")
+    if version.status != "draft":
+        raise HTTPException(
+            status_code=409, detail="Somente versões em rascunho podem ser publicadas."
+        )
+    await _publish_agent_version(
+        database, agent=agent, version=version, actor_user_id=context.user_id
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.version.published",
+        target_type="agent_version",
+        target_id=version.id,
+        details={
+            "agent_id": str(agent.id),
+            "version": version.version,
+            "autonomy_level": version.autonomy_level,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.version.published",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={
+                "agent_id": str(agent.id),
+                "agent_version_id": str(version.id),
+                "version": version.version,
+                "autonomy_level": version.autonomy_level,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(version)
+    return _version_response(version)
+
+
+@router.get("/{agent_id}/budget", response_model=AgentBudgetResponse)
+async def get_agent_budget(
+    agent_id: UUID, principal: CanConfigureAgents, database: DatabaseSession
+) -> AgentBudgetResponse:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    return _budget_response(
+        await _budget(database, agent_id=agent_id, company_id=context.company_id)
+    )
+
+
+@router.put("/{agent_id}/budget", response_model=AgentBudgetResponse)
+async def update_agent_budget(
+    agent_id: UUID,
+    payload: AgentBudgetUpdate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentBudgetResponse:
+    context = get_request_context(principal)
+    await _agent(database, agent_id=agent_id, company_id=context.company_id)
+    budget = await _budget(database, agent_id=agent_id, company_id=context.company_id)
+    budget.limit_microunits = payload.limit_microunits
+    budget.hard_limit = payload.hard_limit
+    budget.updated_at = utc_now()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.budget.updated",
+        target_type="agent_budget",
+        target_id=budget.id,
+        details={
+            "agent_id": str(agent_id),
+            "limit_microunits": budget.limit_microunits,
+            "hard_limit": budget.hard_limit,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.budget.updated",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "agent_id": str(agent_id),
+                "limit_microunits": budget.limit_microunits,
+                "hard_limit": budget.hard_limit,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(budget)
+    return _budget_response(budget)
 
 
 @router.get("/{agent_id}/conversations", response_model=list[AgentConversationResponse])
@@ -512,6 +855,9 @@ async def chat_with_agent(
     agent = await _agent(database, agent_id=agent_id, company_id=context.company_id)
     if agent.status != "active":
         raise HTTPException(status_code=409, detail="Este agente está inativo.")
+    version = await active_agent_version(database, agent=agent, company_id=context.company_id)
+    if version is None:
+        raise HTTPException(status_code=409, detail="Este agente não possui versão publicada.")
     projected_tokens = max(1, len(payload.message) // 4) + agent.max_output_tokens
     await enforce_limit(
         database,
@@ -520,6 +866,17 @@ async def chat_with_agent(
         increment=projected_tokens,
         enforcement_enabled=settings.billing_enforcement_enabled,
     )
+    try:
+        _, budget_reservation = await reserve_agent_budget(
+            database,
+            company_id=context.company_id,
+            agent_id=agent.id,
+            requested_microunits=version.max_cost_per_run_microunits,
+        )
+        await database.commit()
+    except AgentBudgetExceededError as exc:
+        await database.rollback()
+        raise HTTPException(status_code=402, detail=str(exc)) from exc
     if payload.conversation_id:
         conversation = await _conversation(
             database,
@@ -572,6 +929,7 @@ async def chat_with_agent(
             input_schema=tool.input_schema,
         )
         for tool in tools
+        if version.autonomy_level >= 2
     ]
     sources = (
         await search_knowledge(
@@ -589,7 +947,7 @@ async def chat_with_agent(
         for item in sources
     )
     provider_messages = (
-        [ModelMessage(role="system", content=agent.instructions)]
+        [ModelMessage(role="system", content=version.instructions)]
         + (
             [
                 ModelMessage(
@@ -613,17 +971,34 @@ async def chat_with_agent(
     )
     started = perf_counter()
     try:
-        provider = create_language_model_provider(agent.provider, settings)
+        provider = create_language_model_provider(version.provider, settings)
         result = await provider.generate(
             messages=provider_messages,
             tools=provider_tools,
-            model=agent.model,
-            temperature=agent.temperature,
-            max_output_tokens=agent.max_output_tokens,
+            model=version.model,
+            temperature=version.temperature,
+            max_output_tokens=version.max_output_tokens,
         )
         usage = await provider.calculate_usage(result)
     except LanguageModelProviderError as exc:
+        await database.rollback()
+        await settle_agent_budget(
+            database,
+            company_id=context.company_id,
+            agent_id=agent.id,
+            reserved_microunits=budget_reservation,
+            consumed_microunits=0,
+        )
+        await database.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    await settle_agent_budget(
+        database,
+        company_id=context.company_id,
+        agent_id=agent.id,
+        reserved_microunits=budget_reservation,
+        consumed_microunits=usage.cost_microunits,
+    )
+    await database.flush()
     tool_by_key = {tool.tool_key: tool for tool in tools}
     created_runs: list[AgentToolRun] = []
     result_messages: list[str] = []
@@ -643,21 +1018,29 @@ async def chat_with_agent(
             result_status = "failed"
             result_messages.append(f"Ferramenta bloqueada: {exc}")
             continue
+        autonomy = evaluate_tool_autonomy(
+            autonomy_level=version.autonomy_level, risk_level=tool.risk_level
+        )
+        if not autonomy.allowed:
+            result_status = "failed"
+            result_messages.append(f"Ferramenta bloqueada: {autonomy.reason}")
+            continue
         run = AgentToolRun(
             company_id=context.company_id,
             agent_id=agent.id,
+            agent_version_id=version.id,
             conversation_id=conversation.id,
             tool_id=tool.id,
             requested_by_user_id=context.user_id,
-            state="awaiting_confirmation" if tool.is_sensitive else "executing",
+            state="awaiting_confirmation" if autonomy.requires_approval else "executing",
             arguments=as_summary_object(call.arguments),
-            requires_confirmation=tool.is_sensitive,
-            started_at=None if tool.is_sensitive else utc_now(),
+            requires_confirmation=autonomy.requires_approval,
+            started_at=None if autonomy.requires_approval else utc_now(),
         )
         database.add(run)
         await database.flush()
         created_runs.append(run)
-        if tool.is_sensitive:
+        if autonomy.requires_approval:
             await create_approval_request(
                 database,
                 company_id=context.company_id,
@@ -713,8 +1096,8 @@ async def chat_with_agent(
             "calls": [{"tool_key": call.key, "state": result_status} for call in result.tool_calls],
             "sources": sources,
         },
-        provider=agent.provider,
-        model=agent.model,
+        provider=version.provider,
+        model=version.model,
         input_tokens=usage.input_tokens,
         output_tokens=usage.output_tokens,
         total_tokens=usage.total_tokens,
@@ -731,9 +1114,10 @@ async def chat_with_agent(
             company_id=context.company_id,
             user_id=context.user_id,
             agent_id=agent.id,
+            agent_version_id=version.id,
             conversation_id=conversation.id,
-            provider=agent.provider,
-            model=agent.model,
+            provider=version.provider,
+            model=version.model,
             input_tokens=usage.input_tokens,
             output_tokens=usage.output_tokens,
             total_tokens=usage.total_tokens,

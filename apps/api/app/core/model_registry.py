@@ -2,11 +2,13 @@
 
 from app.modules.agents.models import (
     Agent,
+    AgentBudget,
     AgentConversation,
     AgentMessage,
     AgentTool,
     AgentToolRun,
     AgentUsageRecord,
+    AgentVersion,
 )
 from app.modules.analytics.models import AnalyticsIndicator, AnalyticsMeasurement
 from app.modules.audit.models import AuditEvent
@@ -87,11 +89,13 @@ from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVe
 
 __all__ = [
     "Agent",
+    "AgentBudget",
     "AgentConversation",
     "AgentMessage",
     "AgentTool",
     "AgentToolRun",
     "AgentUsageRecord",
+    "AgentVersion",
     "AnalyticsIndicator",
     "AnalyticsMeasurement",
     "ApprovalAction",

@@ -10,6 +10,8 @@ from app.core.schemas import StrictSchema
 
 AgentProvider = Literal["local", "openai_compatible"]
 AgentStatus = Literal["active", "inactive"]
+AgentVersionStatus = Literal["draft", "published", "retired"]
+AgentRiskLevel = Literal["low", "medium", "high", "critical"]
 ToolRunState = Literal[
     "requested", "awaiting_confirmation", "approved", "rejected", "executing", "completed", "failed"
 ]
@@ -59,6 +61,7 @@ class AgentResponse(StrictSchema):
     memory_enabled: bool
     knowledge_base_id: UUID | None
     status: AgentStatus
+    active_version_id: UUID | None
     created_at: datetime
     updated_at: datetime
 
@@ -79,6 +82,7 @@ class AgentToolResponse(StrictSchema):
     description: str
     input_schema: dict[str, Any]
     required_permission: str | None
+    risk_level: AgentRiskLevel
     is_sensitive: bool
     enabled: bool
 
@@ -154,6 +158,7 @@ class AgentToolDecision(StrictSchema):
 class AgentUsageResponse(StrictSchema):
     id: UUID
     agent_id: UUID
+    agent_version_id: UUID | None
     conversation_id: UUID | None
     provider: str
     model: str
@@ -171,3 +176,58 @@ class AgentProviderStatusResponse(StrictSchema):
     provider: AgentProvider
     configured: bool
     message: str
+
+
+class AgentVersionCreate(StrictSchema):
+    instructions: str | None = Field(default=None, min_length=10, max_length=20_000)
+    provider: AgentProvider | None = None
+    model: str | None = Field(default=None, min_length=2, max_length=120)
+    temperature: float | None = Field(default=None, ge=0, le=2)
+    max_input_tokens: int | None = Field(default=None, ge=256, le=200_000)
+    max_output_tokens: int | None = Field(default=None, ge=64, le=32_000)
+    memory_enabled: bool | None = None
+    knowledge_base_id: UUID | None = None
+    autonomy_level: int | None = Field(default=None, ge=0, le=4)
+    max_steps: int | None = Field(default=None, ge=1, le=100)
+    max_runtime_seconds: int | None = Field(default=None, ge=1, le=3600)
+    max_cost_per_run_microunits: int | None = Field(default=None, ge=0, le=2_000_000_000)
+
+
+class AgentVersionResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    version: int
+    status: AgentVersionStatus
+    instructions: str
+    provider: AgentProvider
+    model: str
+    temperature: float
+    max_input_tokens: int
+    max_output_tokens: int
+    memory_enabled: bool
+    knowledge_base_id: UUID | None
+    autonomy_level: int
+    max_steps: int
+    max_runtime_seconds: int
+    max_cost_per_run_microunits: int
+    checksum: str
+    created_at: datetime
+    published_at: datetime | None
+
+
+class AgentBudgetUpdate(StrictSchema):
+    limit_microunits: int = Field(ge=0, le=2_000_000_000)
+    hard_limit: bool = True
+
+
+class AgentBudgetResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    currency: str
+    limit_microunits: int
+    reserved_microunits: int
+    consumed_microunits: int
+    hard_limit: bool
+    cycle_started_at: datetime
+    cycle_ends_at: datetime
+    updated_at: datetime

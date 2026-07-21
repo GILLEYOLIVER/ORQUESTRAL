@@ -1,0 +1,55 @@
+# Runtime Agentico do Orkestral
+
+## Objetivo
+
+O runtime executa agentes empresariais dentro de limites explícitos de empresa, permissão, versão, risco e orçamento. O modelo de IA interpreta solicitações, mas não recebe autoridade direta sobre o banco nem substitui as políticas determinísticas.
+
+## Contratos implantados no ciclo 10
+
+### Versões
+
+- Cada agente possui uma versão publicada identificada por `active_version_id`.
+- Instruções, provedor, modelo, memória, base de conhecimento e limites são congelados em `agent_versions`.
+- Novas versões começam como `draft` e somente a publicação altera a configuração executada.
+- A versão anteriormente publicada passa para `retired`.
+- Um checksum SHA-256 permite verificar a integridade da configuração.
+- O histórico não guarda credenciais e eventos de publicação contêm somente identificadores e controles não secretos.
+
+### Autonomia
+
+| Nível | Comportamento |
+| --- | --- |
+| 0 | Consulta, sem chamada de ferramenta |
+| 1 | Recomendação, sem execução |
+| 2 | Toda execução exige aprovação humana |
+| 3 | Ações de baixo e médio risco podem executar; alto risco exige aprovação |
+| 4 | Coordenação controlada; ações de alto risco continuam exigindo aprovação |
+
+Ferramentas possuem risco `low`, `medium`, `high` ou `critical`. O back-end aplica a decisão mesmo que um cliente tente contornar a interface.
+
+### Orçamento
+
+- Cada agente possui orçamento mensal em microunidades de dólar.
+- `hard_limit=true` impede uma execução antes de chamar o provedor quando a reserva ultrapassaria o saldo.
+- A reserva usa `max_cost_per_run_microunits` da versão publicada.
+- Depois da resposta do provedor, a reserva é trocada pelo custo real.
+- Falhas conhecidas do provedor liberam a reserva.
+- O ciclo é reiniciado automaticamente na primeira execução após o vencimento.
+
+## API administrativa
+
+- `GET /agents/{agent_id}/versions`
+- `POST /agents/{agent_id}/versions`
+- `POST /agents/{agent_id}/versions/{version_id}/publish`
+- `GET /agents/{agent_id}/budget`
+- `PUT /agents/{agent_id}/budget`
+
+Todos os acessos são filtrados por `company_id` e exigem `agents.configure`. A execução continua exigindo `agents.execute` e a permissão específica de cada ferramenta.
+
+## Próximos incrementos
+
+- rastreamento de passos e tempo máximo por execução;
+- modo sombra e simulação;
+- políticas de dados por provedor;
+- suites de avaliação e testes de prompt injection;
+- coordenação multiagente com contratos de tarefa.

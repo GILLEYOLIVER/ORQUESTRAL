@@ -89,11 +89,12 @@ async def _exercise(settings: Settings) -> None:
 
             transport = CapturingTransport()
             result = await dispatch_outbox_batch(
-                database, transport, worker_id="integration-test", limit=10
+                database, transport, worker_id="integration-test", limit=1000
             )
-            assert result.published == 1
+            matching = [event for event in transport.events if event.event_id == pending.id]
+            assert len(matching) == 1
+            assert result.published == len(transport.events)
             assert result.failed == 0
-            assert len(transport.events) == 1
 
         async with resources.sessions() as database:
             published = await database.scalar(
@@ -124,6 +125,9 @@ async def _exercise(settings: Settings) -> None:
     finally:
         if company_id is not None:
             async with resources.sessions() as database:
+                await database.execute(
+                    delete(OutboxEvent).where(OutboxEvent.company_id == company_id)
+                )
                 await database.execute(delete(Company).where(Company.id == company_id))
                 await database.execute(delete(User).where(User.email == user_email))
                 await database.commit()
