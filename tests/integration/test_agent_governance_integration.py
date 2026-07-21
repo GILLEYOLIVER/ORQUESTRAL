@@ -8,21 +8,27 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.resources import create_resources
 from app.core.security import hash_password
 from app.main import create_app
+from app.modules.agents import coordination_execution as coordination_execution_module
 from app.modules.agents.coordination_execution import process_delegation
 from app.modules.agents.coordination_models import AgentDelegationPayload
 from app.modules.agents.memory_models import (
     AgentMemoryEntry,
     AgentMemoryPolicy,
     AgentMemoryScopePolicy,
+    AgentTaskMemoryAccessGrant,
 )
 from app.modules.agents.memory_service import (
     AuthorizedMemoryContext,
+    SharedTaskMemoryContext,
+    memory_access_revocation_fingerprint,
     retrieve_authorized_memories,
+    retrieve_shared_task_memories,
 )
 from app.modules.agents.models import AgentDataPolicy
 from app.modules.authorization.service import ensure_company_system_roles
@@ -207,6 +213,37 @@ async def _assert_memory_storage(
         await resources.close()
 
 
+async def _revoke_memory_grant_during_execution(
+    settings: Settings,
+    *,
+    company_id: UUID,
+    grant_id: UUID,
+    user_id: UUID,
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            grant = await database.scalar(
+                select(AgentTaskMemoryAccessGrant).where(
+                    AgentTaskMemoryAccessGrant.id == grant_id,
+                    AgentTaskMemoryAccessGrant.company_id == company_id,
+                )
+            )
+            assert grant is not None
+            grant.status = "revoked"
+            grant.revoked_by_user_id = user_id
+            grant.revoked_at = datetime.now(UTC)
+            grant.revocation_reason_fingerprint = memory_access_revocation_fingerprint(
+                secret=settings.encryption_key,
+                company_id=company_id,
+                grant_id=grant_id,
+                reason="revogação concorrente de teste",
+            )
+            await database.commit()
+    finally:
+        await resources.close()
+
+
 async def _retrieve_memory_context(
     settings: Settings,
     *,
@@ -344,7 +381,9 @@ def test_approval_absence_delegation_is_tenant_scoped_and_revocable() -> None:
 
 
 @pytest.mark.integration
-def test_agent_versions_budgets_and_tenant_boundaries() -> None:
+def test_agent_versions_budgets_and_tenant_boundaries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     settings = Settings(app_env="testing")
     identity = asyncio.run(_seed(settings))
     try:
@@ -964,6 +1003,138 @@ def test_agent_versions_budgets_and_tenant_boundaries() -> None:
                     exists=False,
                 )
             )
+            executor_delegation = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json={
+                    "contract_id": contract.json()["id"],
+                    "objective": "Resuma somente o contexto autorizado da tarefa.",
+                    "context_keys": ["customer_id"],
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert executor_delegation.status_code == 201
+            executor_content = "Contexto executor mínimo e rastreável " * 4
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memories",
+                    headers=headers_b,
+                    json={
+                        "content": executor_content,
+                        "scope": "task",
+                        "classification": "internal",
+                        "task_delegation_id": executor_delegation.json()["id"],
+                    },
+                ).status_code
+                == 201
+            )
+            executor_grant = client.post(
+                f"/agents/{agent_id}/delegations/{executor_delegation.json()['id']}/memory-access-grants",
+                headers=headers_b,
+                json={
+                    "recipient_agent_id": worker_id,
+                    "purpose": "coordination",
+                    "allowed_classifications": ["internal"],
+                    "max_entries": 1,
+                    "max_content_characters": 64,
+                    "expires_in_minutes": 30,
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert executor_grant.status_code == 201
+            executor_result = asyncio.run(
+                process_delegation(UUID(executor_delegation.json()["id"]), settings=settings)
+            )
+            assert executor_result["status"] == "completed"
+            executor_traces = client.get(
+                f"/agents/{agent_id}/delegations/{executor_delegation.json()['id']}/memory-access-traces",
+                headers=headers_b,
+            )
+            assert executor_traces.status_code == 200
+            assert executor_traces.json()[0]["outcome"] == "consumed"
+            assert executor_traces.json()[0]["item_count"] == 1
+            assert executor_traces.json()[0]["total_characters"] == 64
+            assert executor_traces.json()[0]["agent_run_id"]
+            assert executor_content not in str(executor_traces.json())
+
+            race_delegation = client.post(
+                f"/agents/{agent_id}/delegations",
+                headers=headers_b,
+                json={
+                    "contract_id": contract.json()["id"],
+                    "objective": "Continue com segurança se o contexto for revogado.",
+                    "context_keys": ["customer_id"],
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert race_delegation.status_code == 201
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/memories",
+                    headers=headers_b,
+                    json={
+                        "content": "Contexto que será revogado durante o preparo da execução.",
+                        "scope": "task",
+                        "classification": "internal",
+                        "task_delegation_id": race_delegation.json()["id"],
+                    },
+                ).status_code
+                == 201
+            )
+            race_grant = client.post(
+                f"/agents/{agent_id}/delegations/{race_delegation.json()['id']}/memory-access-grants",
+                headers=headers_b,
+                json={
+                    "recipient_agent_id": worker_id,
+                    "purpose": "coordination",
+                    "allowed_classifications": ["internal"],
+                    "max_entries": 1,
+                    "max_content_characters": 64,
+                    "expires_in_minutes": 30,
+                    "idempotency_key": str(uuid4()),
+                },
+            )
+            assert race_grant.status_code == 201
+
+            async def revoke_after_retrieval(
+                database: AsyncSession,
+                *,
+                settings: Settings,
+                company_id: UUID,
+                grant: AgentTaskMemoryAccessGrant,
+            ) -> SharedTaskMemoryContext:
+                shared = await retrieve_shared_task_memories(
+                    database,
+                    settings=settings,
+                    company_id=company_id,
+                    grant=grant,
+                )
+                await _revoke_memory_grant_during_execution(
+                    settings,
+                    company_id=company_id,
+                    grant_id=grant.id,
+                    user_id=identity.user_ids[1],
+                )
+                return shared
+
+            monkeypatch.setattr(
+                coordination_execution_module,
+                "retrieve_shared_task_memories",
+                revoke_after_retrieval,
+            )
+            race_result = asyncio.run(
+                process_delegation(UUID(race_delegation.json()["id"]), settings=settings)
+            )
+            monkeypatch.undo()
+            assert race_result["status"] == "completed"
+            race_traces = client.get(
+                f"/agents/{agent_id}/delegations/{race_delegation.json()['id']}/memory-access-traces",
+                headers=headers_b,
+            )
+            assert race_traces.status_code == 200
+            assert race_traces.json()[0]["outcome"] == "revoked_before_use"
+            assert race_traces.json()[0]["item_count"] == 0
+            assert race_traces.json()[0]["total_characters"] == 0
             approval_delegation = client.post(
                 f"/agents/{agent_id}/delegations",
                 headers=headers_b,

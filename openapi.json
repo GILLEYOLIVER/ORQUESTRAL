@@ -3594,6 +3594,91 @@
         "title": "AgentTaskMemoryAccessRevoke",
         "type": "object"
       },
+      "AgentTaskMemoryAccessTraceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Run Id"
+          },
+          "blocked_items": {
+            "title": "Blocked Items",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "grant_id": {
+            "format": "uuid",
+            "title": "Grant Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "consumed",
+              "blocked",
+              "empty",
+              "revoked_before_use",
+              "expired_before_use"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "owner_agent_id": {
+            "format": "uuid",
+            "title": "Owner Agent Id",
+            "type": "string"
+          },
+          "recipient_agent_id": {
+            "format": "uuid",
+            "title": "Recipient Agent Id",
+            "type": "string"
+          },
+          "task_delegation_id": {
+            "format": "uuid",
+            "title": "Task Delegation Id",
+            "type": "string"
+          },
+          "total_characters": {
+            "title": "Total Characters",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "grant_id",
+          "task_delegation_id",
+          "agent_run_id",
+          "owner_agent_id",
+          "recipient_agent_id",
+          "outcome",
+          "item_count",
+          "total_characters",
+          "blocked_items",
+          "created_at"
+        ],
+        "title": "AgentTaskMemoryAccessTraceResponse",
+        "type": "object"
+      },
       "AgentTaskMemoryContextItem": {
         "additionalProperties": false,
         "properties": {
@@ -19542,6 +19627,88 @@
           }
         ],
         "summary": "Revoke Agent Task Memory Access Grant",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-traces": {
+      "get": {
+        "operationId": "list_agent_task_memory_access_traces_agents__agent_id__delegations__delegation_id__memory_access_traces_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentTaskMemoryAccessTraceResponse"
+                  },
+                  "title": "Response List Agent Task Memory Access Traces Agents  Agent Id  Delegations  Delegation Id  Memory Access Traces Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Task Memory Access Traces",
         "tags": [
           "agents"
         ]

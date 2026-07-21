@@ -344,6 +344,54 @@ class AgentTaskMemoryAccessGrant(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class AgentTaskMemoryAccessTrace(Base):
+    __tablename__ = "agent_task_memory_access_traces"
+    __table_args__ = (
+        CheckConstraint(
+            "outcome IN ('consumed', 'blocked', 'empty', 'revoked_before_use', 'expired_before_use')",
+            name="ck_agent_task_memory_trace_outcome",
+        ),
+        CheckConstraint(
+            "item_count >= 0 AND total_characters >= 0 AND blocked_items >= 0",
+            name="ck_agent_task_memory_trace_counters",
+        ),
+        CheckConstraint(
+            "outcome NOT IN ('revoked_before_use', 'expired_before_use') OR "
+            "(item_count = 0 AND total_characters = 0)",
+            name="ck_agent_task_memory_trace_denied_empty",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    grant_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_task_memory_access_grants.id", ondelete="CASCADE"), index=True
+    )
+    task_delegation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_delegations.id", ondelete="CASCADE"), index=True
+    )
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    owner_agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="RESTRICT"), index=True
+    )
+    recipient_agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="RESTRICT"), index=True
+    )
+    outcome: Mapped[str] = mapped_column(String(32), index=True)
+    item_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    total_characters: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    blocked_items: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+
+
 class AgentMemoryConsentRevocation(Base):
     __tablename__ = "agent_memory_consent_revocations"
     __table_args__ = (

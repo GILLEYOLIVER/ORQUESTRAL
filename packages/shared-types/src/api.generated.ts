@@ -386,6 +386,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/delegations/{delegation_id}/memory-access-traces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Task Memory Access Traces */
+        get: operations["list_agent_task_memory_access_traces_agents__agent_id__delegations__delegation_id__memory_access_traces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/delegations/{delegation_id}/memory-legal-holds": {
         parameters: {
             query?: never;
@@ -5201,6 +5218,52 @@ export interface components {
         AgentTaskMemoryAccessRevoke: {
             /** Reason */
             reason: string;
+        };
+        /** AgentTaskMemoryAccessTraceResponse */
+        AgentTaskMemoryAccessTraceResponse: {
+            /** Agent Run Id */
+            agent_run_id: string | null;
+            /** Blocked Items */
+            blocked_items: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Grant Id
+             * Format: uuid
+             */
+            grant_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Item Count */
+            item_count: number;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "consumed" | "blocked" | "empty" | "revoked_before_use" | "expired_before_use";
+            /**
+             * Owner Agent Id
+             * Format: uuid
+             */
+            owner_agent_id: string;
+            /**
+             * Recipient Agent Id
+             * Format: uuid
+             */
+            recipient_agent_id: string;
+            /**
+             * Task Delegation Id
+             * Format: uuid
+             */
+            task_delegation_id: string;
+            /** Total Characters */
+            total_characters: number;
         };
         /** AgentTaskMemoryContextItem */
         AgentTaskMemoryContextItem: {
@@ -11743,6 +11806,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentTaskMemoryAccessGrantResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_task_memory_access_traces_agents__agent_id__delegations__delegation_id__memory_access_traces_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                delegation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryAccessTraceResponse"][];
                 };
             };
             /** @description Solicitação inválida */

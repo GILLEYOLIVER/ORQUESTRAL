@@ -19,6 +19,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryPurposePolicy,
     AgentMemoryScopePolicy,
     AgentTaskMemoryAccessGrant,
+    AgentTaskMemoryAccessTrace,
 )
 from app.modules.agents.memory_schemas import (
     AgentMemoryConsentRevocationResponse,
@@ -38,6 +39,7 @@ from app.modules.agents.memory_schemas import (
     AgentTaskMemoryAccessGrantCreate,
     AgentTaskMemoryAccessGrantResponse,
     AgentTaskMemoryAccessRevoke,
+    AgentTaskMemoryAccessTraceResponse,
     AgentTaskMemoryContextItem,
     AgentTaskMemoryContextRequest,
     AgentTaskMemoryContextResponse,
@@ -47,6 +49,7 @@ from app.modules.agents.memory_schemas import (
     MemoryScope,
     MemorySource,
     TaskMemoryAccessStatus,
+    TaskMemoryTraceOutcome,
 )
 from app.modules.agents.memory_service import (
     has_active_memory_legal_hold,
@@ -239,6 +242,24 @@ def _task_memory_access_response(
         expires_at=grant.expires_at,
         created_at=grant.created_at,
         revoked_at=grant.revoked_at,
+    )
+
+
+def _task_memory_trace_response(
+    trace: AgentTaskMemoryAccessTrace,
+) -> AgentTaskMemoryAccessTraceResponse:
+    return AgentTaskMemoryAccessTraceResponse(
+        id=trace.id,
+        grant_id=trace.grant_id,
+        task_delegation_id=trace.task_delegation_id,
+        agent_run_id=trace.agent_run_id,
+        owner_agent_id=trace.owner_agent_id,
+        recipient_agent_id=trace.recipient_agent_id,
+        outcome=cast(TaskMemoryTraceOutcome, trace.outcome),
+        item_count=trace.item_count,
+        total_characters=trace.total_characters,
+        blocked_items=trace.blocked_items,
+        created_at=trace.created_at,
     )
 
 
@@ -1041,6 +1062,43 @@ async def get_agent_shared_task_memory_context(
         total_characters=shared.total_characters,
         blocked_items=shared.blocked_items,
     )
+
+
+@router.get(
+    "/{agent_id}/delegations/{delegation_id}/memory-access-traces",
+    response_model=list[AgentTaskMemoryAccessTraceResponse],
+)
+async def list_agent_task_memory_access_traces(
+    agent_id: UUID,
+    delegation_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentTaskMemoryAccessTraceResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    delegation = await database.scalar(
+        select(AgentDelegation).where(
+            AgentDelegation.id == delegation_id,
+            AgentDelegation.company_id == context.company_id,
+            or_(
+                AgentDelegation.supervisor_agent_id == agent_id,
+                AgentDelegation.assigned_agent_id == agent_id,
+            ),
+        )
+    )
+    if delegation is None:
+        raise HTTPException(status_code=404, detail="Delegação não encontrada.")
+    traces = list(
+        await database.scalars(
+            select(AgentTaskMemoryAccessTrace)
+            .where(
+                AgentTaskMemoryAccessTrace.company_id == context.company_id,
+                AgentTaskMemoryAccessTrace.task_delegation_id == delegation_id,
+            )
+            .order_by(AgentTaskMemoryAccessTrace.created_at.desc())
+        )
+    )
+    return [_task_memory_trace_response(trace) for trace in traces]
 
 
 @router.get("/{agent_id}/my-memories", response_model=list[AgentMemoryResponse])

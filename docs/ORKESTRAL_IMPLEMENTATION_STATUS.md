@@ -553,3 +553,13 @@ Data: 21 de julho de 2026.
 - Eventos e auditorias registram apenas identificadores, limites e contagens, sem conteúdo compartilhado.
 - Migração: `20260721_0049`.
 - Próximo passo: consumir o contrato diretamente no executor da delegação, registrar o uso no trace operacional e testar revogação concorrente durante a execução.
+
+## Ciclo 29 - consumo seguro e trace de memória na delegação
+
+- O executor usa automaticamente apenas o contrato ativo de finalidade `coordination` destinado ao agente responsável pela delegação.
+- O conteúdo minimizado é protegido pela política do provedor e enviado como dados de apoio, com instrução explícita para nunca tratar o trecho como comando.
+- Um checkpoint final relê o contrato depois da recuperação; revogação ou expiração durante o preparo remove todo o contexto antes da chamada ao modelo.
+- Cada tentativa gera trace sem conteúdo com contrato, delegação, execução, desfecho, quantidade de itens, caracteres e bloqueios.
+- Auditoria e evento operacional registram somente identificadores e contadores seguros.
+- Migração: `20260721_0050`.
+- Próximo passo: adicionar políticas de compartilhamento por ferramenta, limites agregados por delegação e alertas para tentativas repetidas de contexto bloqueado.

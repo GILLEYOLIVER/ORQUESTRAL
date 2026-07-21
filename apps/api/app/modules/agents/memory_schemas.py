@@ -273,3 +273,22 @@ class AgentTaskMemoryContextResponse(StrictSchema):
     items: list[AgentTaskMemoryContextItem]
     total_characters: int
     blocked_items: int
+
+
+TaskMemoryTraceOutcome = Literal[
+    "consumed", "blocked", "empty", "revoked_before_use", "expired_before_use"
+]
+
+
+class AgentTaskMemoryAccessTraceResponse(StrictSchema):
+    id: UUID
+    grant_id: UUID
+    task_delegation_id: UUID
+    agent_run_id: UUID | None
+    owner_agent_id: UUID
+    recipient_agent_id: UUID
+    outcome: TaskMemoryTraceOutcome
+    item_count: int
+    total_characters: int
+    blocked_items: int
+    created_at: datetime
