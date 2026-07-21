@@ -409,8 +409,31 @@ export interface AgentMemoryKeyringPolicy {
   automatic_exit_batch_size: number;
   vault_failure_alert_threshold: number;
   vault_slo_minutes: number;
+  on_call_user_ids: string[];
   configured: boolean;
   updated_at: string | null;
+}
+
+export interface AgentMemoryVaultAvailability {
+  provider_code: string;
+  window_started_at: string;
+  total_checks: number;
+  successful_checks: number;
+  failed_checks: number;
+  slo_breaches: number;
+  availability_percent: number;
+}
+
+export interface AgentMemoryWorkloadIdentityRotation {
+  id: string;
+  agent_id: string;
+  provider_code: string;
+  status: "pending" | "approved" | "rejected";
+  requested_by_user_id: string;
+  decided_by_user_id: string | null;
+  verified: boolean;
+  created_at: string;
+  decided_at: string | null;
 }
 
 export interface AgentMemoryCredentialRenewal {

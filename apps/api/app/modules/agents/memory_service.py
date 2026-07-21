@@ -10,6 +10,7 @@ from typing import cast
 from uuid import UUID
 
 from sqlalchemy import and_, delete, exists, func, not_, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -29,6 +30,7 @@ from app.modules.agents.memory_models import (
     AgentMemoryResponseExercise,
     AgentMemoryRiskReportRecord,
     AgentMemoryScopePolicy,
+    AgentMemoryVaultAvailabilityWindow,
     AgentMemoryVaultIncident,
     AgentTaskMemoryAccessGrant,
     AgentTaskMemoryAccessIncident,
@@ -50,6 +52,7 @@ from app.modules.plugins.managed_vault import (
     ManagedVaultSecretResolver,
 )
 from app.modules.plugins.models import IntegrationCredential, Plugin
+from app.modules.users.models import CompanyUser
 
 DEFAULT_SCOPES = ["conversation", "task", "operational"]
 DEFAULT_CLASSIFICATIONS = ["public", "internal"]
@@ -62,6 +65,7 @@ class AgentMemoryKeyringPolicyValues:
     automatic_exit_batch_size: int
     vault_failure_alert_threshold: int
     vault_slo_minutes: int
+    on_call_user_ids: tuple[UUID, ...]
     configured: bool
     updated_at: datetime | None
 
@@ -82,15 +86,31 @@ async def agent_memory_keyring_policy_values(
             automatic_exit_batch_size=settings.agent_memory_keyring_automatic_exit_batch_size,
             vault_failure_alert_threshold=settings.agent_memory_vault_failure_alert_threshold,
             vault_slo_minutes=30,
+            on_call_user_ids=(),
             configured=False,
             updated_at=None,
         )
+    configured_on_call_ids = tuple(UUID(value) for value in policy.on_call_user_ids)
+    active_on_call_ids = (
+        tuple(
+            await database.scalars(
+                select(CompanyUser.user_id).where(
+                    CompanyUser.company_id == company_id,
+                    CompanyUser.user_id.in_(configured_on_call_ids),
+                    CompanyUser.status == "active",
+                )
+            )
+        )
+        if configured_on_call_ids
+        else ()
+    )
     return AgentMemoryKeyringPolicyValues(
         expiry_warning_days=policy.expiry_warning_days,
         automatic_exit_enabled=policy.automatic_exit_enabled,
         automatic_exit_batch_size=policy.automatic_exit_batch_size,
         vault_failure_alert_threshold=policy.vault_failure_alert_threshold,
         vault_slo_minutes=policy.vault_slo_minutes,
+        on_call_user_ids=active_on_call_ids,
         configured=True,
         updated_at=policy.updated_at,
     )
@@ -101,6 +121,49 @@ def memory_credential_renewal_reason_fingerprint(
 ) -> str:
     payload = f"{company_id}:{binding_id}:{reason}".encode()
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
+def memory_workload_identity_fingerprint(
+    *, secret: str, company_id: UUID, credential_id: UUID, value: str
+) -> str:
+    payload = f"{company_id}:{credential_id}:workload_identity:{value}".encode()
+    return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+
+
+async def record_agent_memory_vault_availability(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    provider_code: str,
+    checked_at: datetime,
+    successful: bool,
+    slo_breached: bool,
+) -> None:
+    window_started_at = checked_at.replace(minute=0, second=0, microsecond=0)
+    statement = pg_insert(AgentMemoryVaultAvailabilityWindow).values(
+        company_id=company_id,
+        provider_code=provider_code,
+        window_started_at=window_started_at,
+        total_checks=1,
+        successful_checks=1 if successful else 0,
+        failed_checks=0 if successful else 1,
+        slo_breaches=1 if slo_breached else 0,
+        updated_at=checked_at,
+    )
+    statement = statement.on_conflict_do_update(
+        constraint="uq_agent_memory_vault_availability_window",
+        set_={
+            "total_checks": AgentMemoryVaultAvailabilityWindow.total_checks + 1,
+            "successful_checks": AgentMemoryVaultAvailabilityWindow.successful_checks
+            + (1 if successful else 0),
+            "failed_checks": AgentMemoryVaultAvailabilityWindow.failed_checks
+            + (0 if successful else 1),
+            "slo_breaches": AgentMemoryVaultAvailabilityWindow.slo_breaches
+            + (1 if slo_breached else 0),
+            "updated_at": checked_at,
+        },
+    )
+    await database.execute(statement)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1652,6 +1715,7 @@ async def monitor_agent_memory_keyrings(
                 resolver=resolver,
             )
         except ManagedVaultResolutionError:
+            slo_breached_now = False
             unavailable += 1
             binding.health_status = "unavailable"
             incident = await database.scalar(
@@ -1686,6 +1750,7 @@ async def monitor_agent_memory_keyrings(
                         (
                             binding.activated_by_user_id,
                             *await company_approver_user_ids(database, binding.company_id),
+                            *policy.on_call_user_ids,
                         )
                     )
                 )
@@ -1746,6 +1811,7 @@ async def monitor_agent_memory_keyrings(
                         (
                             binding.activated_by_user_id,
                             *await company_approver_user_ids(database, binding.company_id),
+                            *policy.on_call_user_ids,
                         )
                     )
                 )
@@ -1767,6 +1833,7 @@ async def monitor_agent_memory_keyrings(
                         },
                     )
                 incident.slo_breached_at = current
+                slo_breached_now = True
                 slo_breaches += 1
                 record_authorization_audit(
                     database,
@@ -1796,8 +1863,24 @@ async def monitor_agent_memory_keyrings(
                         },
                     ),
                 )
+            await record_agent_memory_vault_availability(
+                database,
+                company_id=binding.company_id,
+                provider_code=binding.provider_code,
+                checked_at=current,
+                successful=False,
+                slo_breached=slo_breached_now,
+            )
             continue
         binding.health_status = "healthy"
+        await record_agent_memory_vault_availability(
+            database,
+            company_id=binding.company_id,
+            provider_code=binding.provider_code,
+            checked_at=current,
+            successful=True,
+            slo_breached=False,
+        )
         incident = await database.scalar(
             select(AgentMemoryVaultIncident)
             .where(

@@ -884,6 +884,9 @@ class AgentMemoryKeyringPolicy(Base):
     automatic_exit_batch_size: Mapped[int] = mapped_column(Integer)
     vault_failure_alert_threshold: Mapped[int] = mapped_column(Integer)
     vault_slo_minutes: Mapped[int] = mapped_column(Integer)
+    on_call_user_ids: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
     updated_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -955,6 +958,109 @@ class AgentMemoryCredentialRenewal(Base):
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentMemoryVaultAvailabilityWindow(Base):
+    __tablename__ = "agent_memory_vault_availability_windows"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "provider_code",
+            "window_started_at",
+            name="uq_agent_memory_vault_availability_window",
+        ),
+        CheckConstraint(
+            "total_checks >= 1 AND successful_checks >= 0 AND failed_checks >= 0 "
+            "AND total_checks = successful_checks + failed_checks",
+            name="ck_agent_memory_vault_availability_counts",
+        ),
+        CheckConstraint(
+            "slo_breaches >= 0",
+            name="ck_agent_memory_vault_availability_slo",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    provider_code: Mapped[str] = mapped_column(String(64), index=True)
+    window_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    total_checks: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    successful_checks: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    failed_checks: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    slo_breaches: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AgentMemoryWorkloadIdentityRotation(Base):
+    __tablename__ = "agent_memory_workload_identity_rotations"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_agent_memory_workload_identity_rotation_status",
+        ),
+        CheckConstraint(
+            "char_length(previous_identity_fingerprint) = 64 "
+            "AND char_length(proposed_identity_fingerprint) = 64 "
+            "AND char_length(reason_fingerprint) = 64",
+            name="ck_agent_memory_workload_identity_rotation_fingerprints",
+        ),
+        CheckConstraint(
+            "decided_by_user_id IS NULL OR decided_by_user_id <> requested_by_user_id",
+            name="ck_agent_memory_workload_identity_rotation_separation",
+        ),
+        Index(
+            "uq_agent_memory_workload_identity_rotation_pending",
+            "company_id",
+            "binding_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+        Index("ix_am_wir_agent", "agent_id"),
+        Index("ix_am_wir_binding", "binding_id"),
+        Index("ix_am_wir_credential", "credential_id"),
+        Index("ix_am_wir_provider", "provider_code"),
+        Index("ix_am_wir_status", "status"),
+        Index("ix_am_wir_requester", "requested_by_user_id"),
+        Index("ix_am_wir_decider", "decided_by_user_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"))
+    binding_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_memory_keyring_bindings.id", ondelete="CASCADE")
+    )
+    credential_id: Mapped[UUID] = mapped_column(
+        ForeignKey("integration_credentials.id", ondelete="RESTRICT")
+    )
+    provider_code: Mapped[str] = mapped_column(String(64))
+    encrypted_identity_reference: Mapped[bytes] = mapped_column(LargeBinary)
+    previous_identity_fingerprint: Mapped[str] = mapped_column(String(64))
+    proposed_identity_fingerprint: Mapped[str] = mapped_column(String(64))
+    reason_fingerprint: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), default="pending", server_default="pending")
+    requested_by_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    decided_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AgentMemoryReencryptionLegalHold(Base):

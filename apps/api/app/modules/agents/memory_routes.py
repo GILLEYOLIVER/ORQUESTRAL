@@ -31,7 +31,9 @@ from app.modules.agents.memory_models import (
     AgentMemoryRiskReportRecord,
     AgentMemoryRiskSigningKeyVersion,
     AgentMemoryScopePolicy,
+    AgentMemoryVaultAvailabilityWindow,
     AgentMemoryVaultIncident,
+    AgentMemoryWorkloadIdentityRotation,
     AgentTaskMemoryAccessGrant,
     AgentTaskMemoryAccessIncident,
     AgentTaskMemoryAccessTrace,
@@ -79,8 +81,11 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryRiskSummary,
     AgentMemorySchedulerMetricsResponse,
     AgentMemoryScopePolicyInput,
+    AgentMemoryVaultAvailabilityResponse,
     AgentMemoryVaultCredentialOption,
     AgentMemoryVaultIncidentResponse,
+    AgentMemoryWorkloadIdentityRotationCreate,
+    AgentMemoryWorkloadIdentityRotationResponse,
     AgentTaskMemoryAccessDecision,
     AgentTaskMemoryAccessGrantCreate,
     AgentTaskMemoryAccessGrantResponse,
@@ -111,6 +116,7 @@ from app.modules.agents.memory_service import (
     memory_consent_fingerprint,
     memory_content_fingerprint,
     memory_credential_renewal_reason_fingerprint,
+    memory_credential_vault,
     memory_external_target_key_id,
     memory_incident_value_fingerprint,
     memory_is_expired,
@@ -119,6 +125,7 @@ from app.modules.agents.memory_service import (
     memory_master_key_id,
     memory_policy_values,
     memory_signing_secrets,
+    memory_workload_identity_fingerprint,
     record_agent_memory_response_exercise,
     retrieve_shared_task_memories,
 )
@@ -128,7 +135,11 @@ from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
 from app.modules.notifications.service import company_approver_user_ids, create_notification
 from app.modules.plugins.adapters import managed_vault_provider
-from app.modules.plugins.managed_vault import ManagedVaultResolutionError
+from app.modules.plugins.crypto import CredentialVaultError
+from app.modules.plugins.managed_vault import (
+    ManagedVaultResolutionError,
+    ManagedVaultSecretResolver,
+)
 from app.modules.plugins.models import IntegrationCredential, Plugin
 from app.modules.users.models import CompanyUser
 
@@ -167,6 +178,7 @@ async def get_agent_memory_keyring_policy(
         automatic_exit_batch_size=policy.automatic_exit_batch_size,
         vault_failure_alert_threshold=policy.vault_failure_alert_threshold,
         vault_slo_minutes=policy.vault_slo_minutes,
+        on_call_user_ids=list(policy.on_call_user_ids),
         configured=policy.configured,
         updated_at=policy.updated_at,
     )
@@ -182,6 +194,26 @@ async def update_agent_memory_keyring_policy(
     database: DatabaseSession,
 ) -> AgentMemoryKeyringPolicyResponse:
     context = get_request_context(principal)
+    requested_on_call_ids = tuple(payload.on_call_user_ids)
+    active_on_call_ids = (
+        set(
+            await database.scalars(
+                select(CompanyUser.user_id).where(
+                    CompanyUser.company_id == context.company_id,
+                    CompanyUser.user_id.in_(requested_on_call_ids),
+                    CompanyUser.status == "active",
+                )
+            )
+        )
+        if requested_on_call_ids
+        else set()
+    )
+    if active_on_call_ids != set(requested_on_call_ids):
+        raise HTTPException(
+            status_code=422,
+            detail="Todos os plantonistas devem ser usuários ativos desta empresa.",
+        )
+    policy_values = payload.model_dump(mode="json")
     policy = await database.scalar(
         select(AgentMemoryKeyringPolicy)
         .where(AgentMemoryKeyringPolicy.company_id == context.company_id)
@@ -191,11 +223,11 @@ async def update_agent_memory_keyring_policy(
         policy = AgentMemoryKeyringPolicy(
             company_id=context.company_id,
             updated_by_user_id=context.user_id,
-            **payload.model_dump(),
+            **policy_values,
         )
         database.add(policy)
     else:
-        for field, value in payload.model_dump().items():
+        for field, value in policy_values.items():
             setattr(policy, field, value)
         policy.updated_by_user_id = context.user_id
     await database.flush()
@@ -206,7 +238,14 @@ async def update_agent_memory_keyring_policy(
         action="agent.memory_keyring.policy_updated",
         target_type="agent_memory_keyring_policy",
         target_id=policy.id,
-        details=payload.model_dump(),
+        details={
+            "expiry_warning_days": payload.expiry_warning_days,
+            "automatic_exit_enabled": payload.automatic_exit_enabled,
+            "automatic_exit_batch_size": payload.automatic_exit_batch_size,
+            "vault_failure_alert_threshold": payload.vault_failure_alert_threshold,
+            "vault_slo_minutes": payload.vault_slo_minutes,
+            "on_call_user_count": len(payload.on_call_user_ids),
+        },
     )
     enqueue_domain_event(
         database,
@@ -225,6 +264,45 @@ async def update_agent_memory_keyring_policy(
         configured=True,
         updated_at=policy.updated_at,
     )
+
+
+@router.get(
+    "/memory-keyring/availability",
+    response_model=list[AgentMemoryVaultAvailabilityResponse],
+)
+async def list_agent_memory_vault_availability(
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    days: int = Query(default=7, ge=1, le=90),
+) -> list[AgentMemoryVaultAvailabilityResponse]:
+    context = get_request_context(principal)
+    windows = list(
+        await database.scalars(
+            select(AgentMemoryVaultAvailabilityWindow)
+            .where(
+                AgentMemoryVaultAvailabilityWindow.company_id == context.company_id,
+                AgentMemoryVaultAvailabilityWindow.window_started_at
+                >= utc_now() - timedelta(days=days),
+            )
+            .order_by(AgentMemoryVaultAvailabilityWindow.window_started_at.desc())
+            .limit(days * 24 * 10)
+        )
+    )
+    return [
+        AgentMemoryVaultAvailabilityResponse(
+            provider_code=window.provider_code,
+            window_started_at=window.window_started_at,
+            total_checks=window.total_checks,
+            successful_checks=window.successful_checks,
+            failed_checks=window.failed_checks,
+            slo_breaches=window.slo_breaches,
+            availability_percent=round(
+                window.successful_checks / window.total_checks * 100,
+                2,
+            ),
+        )
+        for window in windows
+    ]
 
 
 async def _notify_memory_incident_reviewers(
@@ -2350,6 +2428,22 @@ def _memory_credential_renewal_response(
     )
 
 
+def _memory_workload_identity_rotation_response(
+    rotation: AgentMemoryWorkloadIdentityRotation,
+) -> AgentMemoryWorkloadIdentityRotationResponse:
+    return AgentMemoryWorkloadIdentityRotationResponse(
+        id=rotation.id,
+        agent_id=rotation.agent_id,
+        provider_code=rotation.provider_code,
+        status=cast(Literal["pending", "approved", "rejected"], rotation.status),
+        requested_by_user_id=rotation.requested_by_user_id,
+        decided_by_user_id=rotation.decided_by_user_id,
+        verified=rotation.verified_at is not None,
+        created_at=rotation.created_at,
+        decided_at=rotation.decided_at,
+    )
+
+
 @router.get(
     "/{agent_id}/memory-keyring",
     response_model=AgentMemoryKeyringStatusResponse,
@@ -2710,6 +2804,301 @@ async def decide_agent_memory_credential_renewal(
     await database.commit()
     await database.refresh(renewal)
     return _memory_credential_renewal_response(renewal)
+
+
+@router.get(
+    "/{agent_id}/memory-keyring/identity-rotations",
+    response_model=list[AgentMemoryWorkloadIdentityRotationResponse],
+)
+async def list_agent_memory_workload_identity_rotations(
+    agent_id: UUID,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+) -> list[AgentMemoryWorkloadIdentityRotationResponse]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    rotations = list(
+        await database.scalars(
+            select(AgentMemoryWorkloadIdentityRotation)
+            .where(
+                AgentMemoryWorkloadIdentityRotation.company_id == context.company_id,
+                AgentMemoryWorkloadIdentityRotation.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryWorkloadIdentityRotation.created_at.desc())
+            .limit(50)
+        )
+    )
+    return [_memory_workload_identity_rotation_response(rotation) for rotation in rotations]
+
+
+@router.post(
+    "/{agent_id}/memory-keyring/identity-rotations",
+    response_model=AgentMemoryWorkloadIdentityRotationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_agent_memory_workload_identity_rotation(
+    agent_id: UUID,
+    payload: AgentMemoryWorkloadIdentityRotationCreate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryWorkloadIdentityRotationResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    binding = await database.scalar(
+        select(AgentMemoryKeyringBinding)
+        .where(
+            AgentMemoryKeyringBinding.company_id == context.company_id,
+            AgentMemoryKeyringBinding.agent_id == agent_id,
+            AgentMemoryKeyringBinding.status == "active",
+        )
+        .with_for_update()
+    )
+    if binding is None:
+        raise HTTPException(status_code=409, detail="O agente não possui keyring gerenciado ativo.")
+    if binding.automatic_exit_job_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="A identidade não pode ser rotacionada durante a saída segura.",
+        )
+    credential = await database.scalar(
+        select(IntegrationCredential)
+        .where(
+            IntegrationCredential.id == binding.credential_id,
+            IntegrationCredential.company_id == context.company_id,
+            IntegrationCredential.status == "active",
+            or_(
+                IntegrationCredential.expires_at.is_(None),
+                IntegrationCredential.expires_at > utc_now(),
+            ),
+        )
+        .with_for_update()
+    )
+    if credential is None:
+        raise HTTPException(status_code=409, detail="A credencial vinculada não está ativa.")
+    vault = memory_credential_vault(settings)
+    try:
+        credential_values = vault.decrypt(credential.encrypted_credentials)
+    except CredentialVaultError as exc:
+        raise HTTPException(status_code=409, detail="A credencial não pôde ser aberta.") from exc
+    current_identity = str(credential_values.get("identity_reference", "")).strip()
+    if not current_identity:
+        raise HTTPException(
+            status_code=409,
+            detail="A credencial não possui identidade de carga configurada.",
+        )
+    if compare_digest(current_identity, payload.identity_reference):
+        raise HTTPException(status_code=409, detail="Informe uma identidade diferente da atual.")
+    pending = await database.scalar(
+        select(AgentMemoryWorkloadIdentityRotation.id).where(
+            AgentMemoryWorkloadIdentityRotation.company_id == context.company_id,
+            AgentMemoryWorkloadIdentityRotation.binding_id == binding.id,
+            AgentMemoryWorkloadIdentityRotation.status == "pending",
+        )
+    )
+    if pending is not None:
+        raise HTTPException(status_code=409, detail="Já existe uma rotação pendente.")
+    secret = memory_signing_secrets(
+        settings,
+        memory_master_key_id(settings.encryption_key),
+    )[0]
+    rotation = AgentMemoryWorkloadIdentityRotation(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        binding_id=binding.id,
+        credential_id=credential.id,
+        provider_code=binding.provider_code,
+        encrypted_identity_reference=vault.encrypt(
+            {"identity_reference": payload.identity_reference}
+        ),
+        previous_identity_fingerprint=memory_workload_identity_fingerprint(
+            secret=secret,
+            company_id=context.company_id,
+            credential_id=credential.id,
+            value=current_identity,
+        ),
+        proposed_identity_fingerprint=memory_workload_identity_fingerprint(
+            secret=secret,
+            company_id=context.company_id,
+            credential_id=credential.id,
+            value=payload.identity_reference,
+        ),
+        reason_fingerprint=memory_incident_value_fingerprint(
+            secret=secret,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            value_type="workload_identity_rotation_reason",
+            value=payload.reason,
+        ),
+        requested_by_user_id=context.user_id,
+    )
+    database.add(rotation)
+    await database.flush()
+    reviewer_ids = [
+        user_id
+        for user_id in await company_approver_user_ids(database, context.company_id)
+        if user_id != context.user_id
+    ]
+    for recipient_user_id in reviewer_ids:
+        await create_notification(
+            database,
+            company_id=context.company_id,
+            recipient_user_id=recipient_user_id,
+            event_type="agent.memory_keyring.identity_rotation_requested",
+            title="Rotação da identidade do cofre aguardando aprovação",
+            message="Revise a troca da identidade da carga antes da ativação.",
+            severity="warning",
+            resource_type="agent_memory_workload_identity_rotation",
+            resource_id=rotation.id,
+            data={"agent_id": str(agent_id), "provider_code": binding.provider_code},
+        )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_keyring.identity_rotation_requested",
+        target_type="agent_memory_workload_identity_rotation",
+        target_id=rotation.id,
+        details={"agent_id": str(agent_id), "provider_code": binding.provider_code},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_keyring.identity_rotation_requested",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"rotation_id": str(rotation.id), "agent_id": str(agent_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(rotation)
+    return _memory_workload_identity_rotation_response(rotation)
+
+
+@router.post(
+    "/{agent_id}/memory-keyring/identity-rotations/{rotation_id}/decision",
+    response_model=AgentMemoryWorkloadIdentityRotationResponse,
+)
+async def decide_agent_memory_workload_identity_rotation(
+    agent_id: UUID,
+    rotation_id: UUID,
+    payload: AgentMemoryLegalHoldDecision,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryWorkloadIdentityRotationResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    rotation = await database.scalar(
+        select(AgentMemoryWorkloadIdentityRotation)
+        .where(
+            AgentMemoryWorkloadIdentityRotation.id == rotation_id,
+            AgentMemoryWorkloadIdentityRotation.company_id == context.company_id,
+            AgentMemoryWorkloadIdentityRotation.agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if rotation is None:
+        raise HTTPException(status_code=404, detail="Rotação não encontrada.")
+    if rotation.status != "pending":
+        raise HTTPException(status_code=409, detail="A rotação já foi decidida.")
+    if rotation.requested_by_user_id == context.user_id:
+        raise HTTPException(status_code=409, detail="Outro usuário deve decidir a rotação.")
+    binding = await database.scalar(
+        select(AgentMemoryKeyringBinding)
+        .where(
+            AgentMemoryKeyringBinding.id == rotation.binding_id,
+            AgentMemoryKeyringBinding.company_id == context.company_id,
+            AgentMemoryKeyringBinding.agent_id == agent_id,
+            AgentMemoryKeyringBinding.status == "active",
+        )
+        .with_for_update()
+    )
+    if binding is None or binding.automatic_exit_job_id is not None:
+        raise HTTPException(status_code=409, detail="O vínculo não permite mais a rotação.")
+    if payload.decision == "approved":
+        credential = await database.scalar(
+            select(IntegrationCredential)
+            .where(
+                IntegrationCredential.id == rotation.credential_id,
+                IntegrationCredential.company_id == context.company_id,
+                IntegrationCredential.status == "active",
+                or_(
+                    IntegrationCredential.expires_at.is_(None),
+                    IntegrationCredential.expires_at > utc_now(),
+                ),
+            )
+            .with_for_update()
+        )
+        if credential is None:
+            raise HTTPException(status_code=409, detail="A credencial não está mais ativa.")
+        vault = memory_credential_vault(settings)
+        try:
+            proposed_values = vault.decrypt(rotation.encrypted_identity_reference)
+            credential_values = vault.decrypt(credential.encrypted_credentials)
+            proposed_identity = str(proposed_values.get("identity_reference", "")).strip()
+            key_reference = str(credential_values.get("key_reference", "")).strip()
+            provider = managed_vault_provider(rotation.provider_code)
+            if (
+                not proposed_identity
+                or provider is None
+                or not key_reference.startswith(provider[1])
+            ):
+                raise ManagedVaultResolutionError("Contrato de identidade inválido.")
+            await ManagedVaultSecretResolver().resolve_keyring(
+                (key_reference,),
+                identity_reference=proposed_identity,
+            )
+        except (CredentialVaultError, ManagedVaultResolutionError) as exc:
+            raise HTTPException(
+                status_code=409,
+                detail="A identidade proposta não conseguiu acessar o cofre.",
+            ) from exc
+        credential_values["identity_reference"] = proposed_identity
+        credential.encrypted_credentials = vault.encrypt(credential_values)
+        rotation.verified_at = utc_now()
+    rotation.status = payload.decision
+    rotation.decided_by_user_id = context.user_id
+    rotation.decided_at = utc_now()
+    await create_notification(
+        database,
+        company_id=context.company_id,
+        recipient_user_id=rotation.requested_by_user_id,
+        event_type="agent.memory_keyring.identity_rotation_decided",
+        title="Rotação da identidade do cofre revisada",
+        message=(
+            "A nova identidade foi validada e ativada."
+            if payload.decision == "approved"
+            else "A rotação foi rejeitada e a identidade atual foi preservada."
+        ),
+        severity="success" if payload.decision == "approved" else "warning",
+        resource_type="agent_memory_workload_identity_rotation",
+        resource_id=rotation.id,
+        data={"agent_id": str(agent_id), "decision": payload.decision},
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action=f"agent.memory_keyring.identity_rotation_{payload.decision}",
+        target_type="agent_memory_workload_identity_rotation",
+        target_id=rotation.id,
+        details={"agent_id": str(agent_id), "provider_code": rotation.provider_code},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type=f"agent.memory_keyring.identity_rotation_{payload.decision}",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={"rotation_id": str(rotation.id), "agent_id": str(agent_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(rotation)
+    return _memory_workload_identity_rotation_response(rotation)
 
 
 @router.post(

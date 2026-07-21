@@ -588,6 +588,14 @@ class AgentMemoryKeyringPolicyUpdate(StrictSchema):
     automatic_exit_batch_size: int = Field(ge=1, le=500)
     vault_failure_alert_threshold: int = Field(ge=1, le=20)
     vault_slo_minutes: int = Field(ge=1, le=1440)
+    on_call_user_ids: list[UUID] = Field(default_factory=list, max_length=20)
+
+    @field_validator("on_call_user_ids")
+    @classmethod
+    def unique_on_call_users(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Cada usuário de plantão pode aparecer somente uma vez.")
+        return value
 
 
 class AgentMemoryKeyringPolicyResponse(AgentMemoryKeyringPolicyUpdate):
@@ -613,6 +621,38 @@ class AgentMemoryCredentialRenewalResponse(StrictSchema):
     status: Literal["pending", "approved", "rejected"]
     requested_by_user_id: UUID
     decided_by_user_id: UUID | None
+    created_at: datetime
+    decided_at: datetime | None
+
+
+class AgentMemoryVaultAvailabilityResponse(StrictSchema):
+    provider_code: str
+    window_started_at: datetime
+    total_checks: int
+    successful_checks: int
+    failed_checks: int
+    slo_breaches: int
+    availability_percent: float
+
+
+class AgentMemoryWorkloadIdentityRotationCreate(StrictSchema):
+    identity_reference: str = Field(min_length=4, max_length=500)
+    reason: str = Field(min_length=4, max_length=240)
+
+    @field_validator("identity_reference", "reason")
+    @classmethod
+    def trim_rotation_values(cls, value: str) -> str:
+        return value.strip()
+
+
+class AgentMemoryWorkloadIdentityRotationResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    provider_code: str
+    status: Literal["pending", "approved", "rejected"]
+    requested_by_user_id: UUID
+    decided_by_user_id: UUID | None
+    verified: bool
     created_at: datetime
     decided_at: datetime | None
 

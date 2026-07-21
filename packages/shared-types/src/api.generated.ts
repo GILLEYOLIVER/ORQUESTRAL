@@ -56,6 +56,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/memory-keyring/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Vault Availability */
+        get: operations["list_agent_memory_vault_availability_agents_memory_keyring_availability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/memory-keyring/policy": {
         parameters: {
             query?: never;
@@ -707,6 +724,41 @@ export interface paths {
         put?: never;
         /** Request Agent Memory Keyring Exit */
         post: operations["request_agent_memory_keyring_exit_agents__agent_id__memory_keyring_exit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/identity-rotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Memory Workload Identity Rotations */
+        get: operations["list_agent_memory_workload_identity_rotations_agents__agent_id__memory_keyring_identity_rotations_get"];
+        put?: never;
+        /** Request Agent Memory Workload Identity Rotation */
+        post: operations["request_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-keyring/identity-rotations/{rotation_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Agent Memory Workload Identity Rotation */
+        post: operations["decide_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations__rotation_id__decision_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5252,6 +5304,8 @@ export interface components {
             configured: boolean;
             /** Expiry Warning Days */
             expiry_warning_days: number;
+            /** On Call User Ids */
+            on_call_user_ids?: string[];
             /** Updated At */
             updated_at: string | null;
             /** Vault Failure Alert Threshold */
@@ -5270,6 +5324,8 @@ export interface components {
             automatic_exit_enabled: boolean;
             /** Expiry Warning Days */
             expiry_warning_days: number;
+            /** On Call User Ids */
+            on_call_user_ids?: string[];
             /** Vault Failure Alert Threshold */
             vault_failure_alert_threshold: number;
             /** Vault Slo Minutes */
@@ -6040,6 +6096,26 @@ export interface components {
              */
             scope: "conversation" | "task" | "user" | "company" | "operational";
         };
+        /** AgentMemoryVaultAvailabilityResponse */
+        AgentMemoryVaultAvailabilityResponse: {
+            /** Availability Percent */
+            availability_percent: number;
+            /** Failed Checks */
+            failed_checks: number;
+            /** Provider Code */
+            provider_code: string;
+            /** Slo Breaches */
+            slo_breaches: number;
+            /** Successful Checks */
+            successful_checks: number;
+            /** Total Checks */
+            total_checks: number;
+            /**
+             * Window Started At
+             * Format: date-time
+             */
+            window_started_at: string;
+        };
         /** AgentMemoryVaultCredentialOption */
         AgentMemoryVaultCredentialOption: {
             /** Expires At */
@@ -6090,6 +6166,49 @@ export interface components {
              * @enum {string}
              */
             status: "open" | "resolved";
+        };
+        /** AgentMemoryWorkloadIdentityRotationCreate */
+        AgentMemoryWorkloadIdentityRotationCreate: {
+            /** Identity Reference */
+            identity_reference: string;
+            /** Reason */
+            reason: string;
+        };
+        /** AgentMemoryWorkloadIdentityRotationResponse */
+        AgentMemoryWorkloadIdentityRotationResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By User Id */
+            decided_by_user_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Provider Code */
+            provider_code: string;
+            /**
+             * Requested By User Id
+             * Format: uuid
+             */
+            requested_by_user_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+            /** Verified */
+            verified: boolean;
         };
         /** AgentMessageResponse */
         AgentMessageResponse: {
@@ -11980,6 +12099,55 @@ export interface operations {
             };
         };
     };
+    list_agent_memory_vault_availability_agents_memory_keyring_availability_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryVaultAvailabilityResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     get_agent_memory_keyring_policy_agents_memory_keyring_policy_get: {
         parameters: {
             query?: never;
@@ -14466,6 +14634,162 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_memory_workload_identity_rotations_agents__agent_id__memory_keyring_identity_rotations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    request_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decide_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations__rotation_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                rotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryLegalHoldDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryWorkloadIdentityRotationResponse"];
                 };
             };
             /** @description Solicitação inválida */

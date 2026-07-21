@@ -154,3 +154,12 @@ expurgo gera um novo evento. Solicitações legais devem ser aprovadas e registr
 - O solicitante não pode aprovar a própria renovação. Aprovação após vencimento ou após início da saída segura é bloqueada.
 - O primeiro rompimento do SLO por incidente gera alerta, auditoria e evento uma única vez; recuperações encerram o incidente sem apagar seu histórico.
 - A interface mostra a política, o estado do SLO, solicitações de renovação e decisões, sem revelar credencial, referência de chave ou material criptográfico.
+
+## Plantão, disponibilidade e identidade da carga
+
+- A empresa escolhe até 20 usuários ativos para o plantão do cofre. IDs de outra empresa, usuários inativos e duplicidades são recusados no back-end.
+- Alertas de indisponibilidade e violações do SLO incluem o plantão ativo, os aprovadores e o responsável pelo vínculo, sem copiar mensagens do provedor.
+- Cada verificação alimenta uma janela horária agregada por empresa e provedor, com sucessos, falhas, violações e percentual de disponibilidade. Não são armazenadas referências, identidades ou segredos nesse histórico.
+- A identidade proposta para um cofre fica cifrada até a decisão. A justificativa e as identidades recebem impressões HMAC separadas para auditoria sem recuperação do texto.
+- O solicitante não decide a própria rotação. Antes da aprovação, o Orkestral exige uma leitura real da chave pela nova identidade; falha, vencimento, saída segura ou troca de tenant bloqueiam a ativação.
+- A credencial existente é atualizada atomicamente somente após a validação, preservando os demais campos cifrados e mantendo a identidade anterior em uso quando a solicitação é rejeitada.

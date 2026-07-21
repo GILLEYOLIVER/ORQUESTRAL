@@ -1356,6 +1356,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert metrics_a.json()[0]["failed_tests"] == 1
 
             managed_secret = "managed-memory-keyring-secret-material-2026"  # noqa: S105
+            resolved_identity_references: list[str | None] = []
 
             async def resolve_test_keyring(
                 self,  # type: ignore[no-untyped-def]
@@ -1364,7 +1365,11 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 identity_reference=None,  # type: ignore[no-untyped-def]
             ) -> tuple[str, ...]:
                 assert str(references[0]).startswith("gcp-sm://")
-                assert identity_reference == "orkestral-test@example.iam.gserviceaccount.com"
+                assert identity_reference in {
+                    "orkestral-test@example.iam.gserviceaccount.com",
+                    "orkestral-rotated@example.iam.gserviceaccount.com",
+                }
+                resolved_identity_references.append(identity_reference)
                 return tuple(
                     managed_secret if index == 0 else f"{managed_secret}-previous-{index}"
                     for index, _reference in enumerate(references)
@@ -1415,16 +1420,34 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                     "automatic_exit_batch_size": 250,
                     "vault_failure_alert_threshold": 1,
                     "vault_slo_minutes": 1,
+                    "on_call_user_ids": [str(identity.user_ids[3])],
                 },
             )
             assert keyring_policy.status_code == 200, keyring_policy.text
             assert keyring_policy.json()["configured"] is True
             assert keyring_policy.json()["automatic_exit_batch_size"] == 250
+            assert keyring_policy.json()["on_call_user_ids"] == [
+                str(identity.user_ids[3])
+            ]
+            invalid_on_call_policy = client.put(
+                "/agents/memory-keyring/policy",
+                headers=headers_b,
+                json={
+                    "expiry_warning_days": 5,
+                    "automatic_exit_enabled": True,
+                    "automatic_exit_batch_size": 250,
+                    "vault_failure_alert_threshold": 1,
+                    "vault_slo_minutes": 1,
+                    "on_call_user_ids": [str(identity.user_ids[0])],
+                },
+            )
+            assert invalid_on_call_policy.status_code == 422
             other_tenant_policy = client.get(
                 "/agents/memory-keyring/policy", headers=headers_a
             )
             assert other_tenant_policy.status_code == 200
             assert other_tenant_policy.json()["configured"] is False
+            assert other_tenant_policy.json()["on_call_user_ids"] == []
             asyncio.run(
                 _set_managed_credential_expiry(
                     settings,
@@ -1481,6 +1504,59 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert listed_credential_renewals.status_code == 200
             assert listed_credential_renewals.json()[0]["status"] == "approved"
             assert "Continuidade aprovada" not in str(listed_credential_renewals.json())
+            identity_rotation = client.post(
+                f"/agents/{agent_id}/memory-keyring/identity-rotations",
+                headers=headers_b,
+                json={
+                    "identity_reference": (
+                        "orkestral-rotated@example.iam.gserviceaccount.com"
+                    ),
+                    "reason": "Rotação periódica da identidade da carga",
+                },
+            )
+            assert identity_rotation.status_code == 201, identity_rotation.text
+            rotation_payload = identity_rotation.json()
+            assert rotation_payload["status"] == "pending"
+            assert rotation_payload["verified"] is False
+            assert "identity_reference" not in rotation_payload
+            assert "reason" not in rotation_payload
+            rotation_path = (
+                f"/agents/{agent_id}/memory-keyring/identity-rotations/"
+                f"{rotation_payload['id']}/decision"
+            )
+            assert (
+                client.post(
+                    rotation_path,
+                    headers=headers_b,
+                    json={"decision": "approved"},
+                ).status_code
+                == 409
+            )
+            assert (
+                client.post(
+                    rotation_path,
+                    headers=headers_a,
+                    json={"decision": "approved"},
+                ).status_code
+                == 404
+            )
+            approved_identity_rotation = client.post(
+                rotation_path,
+                headers=headers_reviewer,
+                json={"decision": "approved"},
+            )
+            assert approved_identity_rotation.status_code == 200
+            assert approved_identity_rotation.json()["status"] == "approved"
+            assert approved_identity_rotation.json()["verified"] is True
+            assert (
+                "orkestral-rotated@example.iam.gserviceaccount.com"
+                not in str(approved_identity_rotation.json())
+            )
+            assert (
+                "orkestral-rotated@example.iam.gserviceaccount.com"
+                in resolved_identity_references
+            )
+            resolved_identity_references.clear()
             managed_memory_content = "Memória cifrada pelo keyring gerenciado."
             managed_memory = client.post(
                 f"/agents/{agent_id}/memories",
@@ -1493,6 +1569,9 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 },
             )
             assert managed_memory.status_code == 201, managed_memory.text
+            assert resolved_identity_references == [
+                "orkestral-rotated@example.iam.gserviceaccount.com"
+            ]
             asyncio.run(
                 _assert_memory_requires_external_keyring(
                     settings,
@@ -1585,6 +1664,22 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 f"/agents/{agent_id}/memory-vault-incidents", headers=headers_b
             )
             assert resolved_incidents.json()[0]["status"] == "resolved"
+            availability = client.get(
+                "/agents/memory-keyring/availability?days=7", headers=headers_b
+            )
+            assert availability.status_code == 200
+            provider_availability = availability.json()[0]
+            assert provider_availability["provider_code"] == "google_secret_manager"
+            assert provider_availability["total_checks"] >= 4
+            assert provider_availability["successful_checks"] >= 1
+            assert provider_availability["failed_checks"] >= 3
+            assert provider_availability["slo_breaches"] == 1
+            assert 0 <= provider_availability["availability_percent"] <= 100
+            other_tenant_availability = client.get(
+                "/agents/memory-keyring/availability?days=7", headers=headers_a
+            )
+            assert other_tenant_availability.status_code == 200
+            assert other_tenant_availability.json() == []
             environment_exit = client.post(
                 f"/agents/{agent_id}/memory-keyring/exit",
                 headers=headers_b,

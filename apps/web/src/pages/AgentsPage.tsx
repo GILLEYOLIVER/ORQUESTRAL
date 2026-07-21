@@ -41,7 +41,9 @@ import {
   type AgentMemoryReencryptionRecoveryAssessment,
   type AgentMemorySchedulerMetrics,
   type AgentMemoryVaultCredentialOption,
+  type AgentMemoryVaultAvailability,
   type AgentMemoryVaultIncident,
+  type AgentMemoryWorkloadIdentityRotation,
   type ManagedVaultMetric,
   type AgentResponse,
   type AgentToolCatalog,
@@ -222,8 +224,15 @@ export function AgentsPage() {
   const [keyringFailureAlertThreshold, setKeyringFailureAlertThreshold] =
     useState("3");
   const [keyringSloMinutes, setKeyringSloMinutes] = useState("30");
+  const [keyringOnCallUserIds, setKeyringOnCallUserIds] = useState<string[]>(
+    [],
+  );
   const [credentialRenewalDays, setCredentialRenewalDays] = useState("30");
   const [credentialRenewalReason, setCredentialRenewalReason] = useState("");
+  const [workloadIdentityReference, setWorkloadIdentityReference] =
+    useState("");
+  const [workloadIdentityRotationReason, setWorkloadIdentityRotationReason] =
+    useState("");
   const [memoryVaultCredentialId, setMemoryVaultCredentialId] = useState("");
   const [memoryJobLegalHoldReason, setMemoryJobLegalHoldReason] = useState<
     "legal_claim" | "regulatory_request" | "audit_preservation"
@@ -374,6 +383,23 @@ export function AgentsPage() {
     queryFn: () =>
       request<AgentMemoryCredentialRenewal[]>(
         `/agents/${selectedId}/memory-keyring/credential-renewals`,
+      ),
+    enabled: canConfigure && Boolean(selectedId),
+  });
+  const memoryVaultAvailability = useQuery({
+    queryKey: ["agent-memory-vault-availability", me?.current_company?.id],
+    queryFn: () =>
+      request<AgentMemoryVaultAvailability[]>(
+        "/agents/memory-keyring/availability?days=7",
+      ),
+    enabled: canConfigure && Boolean(me?.current_company),
+    refetchInterval: 60_000,
+  });
+  const workloadIdentityRotations = useQuery({
+    queryKey: ["agent-memory-workload-identity-rotations", selectedId],
+    queryFn: () =>
+      request<AgentMemoryWorkloadIdentityRotation[]>(
+        `/agents/${selectedId}/memory-keyring/identity-rotations`,
       ),
     enabled: canConfigure && Boolean(selectedId),
   });
@@ -542,6 +568,7 @@ export function AgentsPage() {
       String(memoryKeyringPolicy.data.vault_failure_alert_threshold),
     );
     setKeyringSloMinutes(String(memoryKeyringPolicy.data.vault_slo_minutes));
+    setKeyringOnCallUserIds(memoryKeyringPolicy.data.on_call_user_ids);
   }, [memoryKeyringPolicy.data]);
 
   const refresh = () => {
@@ -1004,6 +1031,7 @@ export function AgentsPage() {
           automatic_exit_batch_size: Number(keyringAutomaticExitBatchSize),
           vault_failure_alert_threshold: Number(keyringFailureAlertThreshold),
           vault_slo_minutes: Number(keyringSloMinutes),
+          on_call_user_ids: keyringOnCallUserIds,
         },
       }),
     onSuccess: (policy) => {
@@ -1016,6 +1044,7 @@ export function AgentsPage() {
         String(policy.vault_failure_alert_threshold),
       );
       setKeyringSloMinutes(String(policy.vault_slo_minutes));
+      setKeyringOnCallUserIds(policy.on_call_user_ids);
       setMemoryIncidentFeedback(
         "Política do cofre atualizada para esta empresa.",
       );
@@ -1066,6 +1095,52 @@ export function AgentsPage() {
       );
       void credentialRenewals.refetch();
       void memoryKeyringStatus.refetch();
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const requestWorkloadIdentityRotation = useMutation({
+    mutationFn: () =>
+      request<AgentMemoryWorkloadIdentityRotation>(
+        `/agents/${selectedId}/memory-keyring/identity-rotations`,
+        {
+          method: "POST",
+          body: {
+            identity_reference: workloadIdentityReference,
+            reason: workloadIdentityRotationReason,
+          },
+        },
+      ),
+    onSuccess: () => {
+      setWorkloadIdentityReference("");
+      setWorkloadIdentityRotationReason("");
+      setMemoryIncidentFeedback(
+        "Rotação solicitada. Outro administrador deve validar e aprovar.",
+      );
+      void workloadIdentityRotations.refetch();
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const decideWorkloadIdentityRotation = useMutation({
+    mutationFn: ({
+      rotationId,
+      decision,
+    }: {
+      rotationId: string;
+      decision: "approved" | "rejected";
+    }) =>
+      request<AgentMemoryWorkloadIdentityRotation>(
+        `/agents/${selectedId}/memory-keyring/identity-rotations/${rotationId}/decision`,
+        { method: "POST", body: { decision } },
+      ),
+    onSuccess: (rotation) => {
+      setMemoryIncidentFeedback(
+        rotation.status === "approved"
+          ? "Nova identidade validada no cofre e ativada."
+          : "Rotação rejeitada; a identidade atual foi preservada.",
+      );
+      void workloadIdentityRotations.refetch();
       refresh();
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
@@ -2491,6 +2566,33 @@ export function AgentsPage() {
                         </small>
                       </span>
                     </label>
+                    <div className="agent-policy-list">
+                      <strong>Equipe de plantão</strong>
+                      {companyUsers.data?.map((user) => (
+                        <label
+                          className="agent-checkbox-card"
+                          key={user.user_id}
+                        >
+                          <input
+                            checked={keyringOnCallUserIds.includes(
+                              user.user_id,
+                            )}
+                            onChange={(event) =>
+                              setKeyringOnCallUserIds((current) =>
+                                event.target.checked
+                                  ? [...current, user.user_id]
+                                  : current.filter((id) => id !== user.user_id),
+                              )
+                            }
+                            type="checkbox"
+                          />
+                          <span>
+                            <strong>{user.name}</strong>
+                            <small>{user.email}</small>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                     <Button
                       loading={updateMemoryKeyringPolicy.isPending}
                       onClick={() => updateMemoryKeyringPolicy.mutate()}
@@ -2602,6 +2704,90 @@ export function AgentsPage() {
                           )}
                         </article>
                       ))}
+                      <div className="agent-policy-form">
+                        <TextField
+                          label="Nova identidade da carga"
+                          onChange={(event) =>
+                            setWorkloadIdentityReference(event.target.value)
+                          }
+                          placeholder="conta-servico@projeto.iam.gserviceaccount.com"
+                          value={workloadIdentityReference}
+                        />
+                        <TextField
+                          label="Motivo da rotação"
+                          onChange={(event) =>
+                            setWorkloadIdentityRotationReason(
+                              event.target.value,
+                            )
+                          }
+                          value={workloadIdentityRotationReason}
+                        />
+                        <Button
+                          disabled={
+                            workloadIdentityReference.trim().length < 4 ||
+                            workloadIdentityRotationReason.trim().length < 4
+                          }
+                          loading={requestWorkloadIdentityRotation.isPending}
+                          onClick={() =>
+                            requestWorkloadIdentityRotation.mutate()
+                          }
+                          type="button"
+                          variant="secondary"
+                        >
+                          Solicitar rotação da identidade
+                        </Button>
+                      </div>
+                      {workloadIdentityRotations.data?.map((rotation) => (
+                        <article className="agent-policy-row" key={rotation.id}>
+                          <div>
+                            <strong>Identidade {rotation.status}</strong>
+                            <small>
+                              {rotation.provider_code} ·{" "}
+                              {rotation.verified
+                                ? "acesso ao cofre verificado"
+                                : "aguardando validação"}
+                            </small>
+                          </div>
+                          {rotation.status === "pending" ? (
+                            <div className="button-row">
+                              <Button
+                                loading={
+                                  decideWorkloadIdentityRotation.isPending
+                                }
+                                onClick={() =>
+                                  decideWorkloadIdentityRotation.mutate({
+                                    rotationId: rotation.id,
+                                    decision: "approved",
+                                  })
+                                }
+                                type="button"
+                                variant="secondary"
+                              >
+                                Validar e aprovar
+                              </Button>
+                              <Button
+                                loading={
+                                  decideWorkloadIdentityRotation.isPending
+                                }
+                                onClick={() =>
+                                  decideWorkloadIdentityRotation.mutate({
+                                    rotationId: rotation.id,
+                                    decision: "rejected",
+                                  })
+                                }
+                                type="button"
+                                variant="secondary"
+                              >
+                                Rejeitar
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="status-badge">
+                              {rotation.status}
+                            </span>
+                          )}
+                        </article>
+                      ))}
                       <Button
                         disabled={Boolean(
                           memoryKeyringStatus.data.automatic_exit_status &&
@@ -2636,6 +2822,26 @@ export function AgentsPage() {
                         </small>
                       </div>
                       <span className="status-badge">{incident.status}</span>
+                    </article>
+                  ))}
+                  {memoryVaultAvailability.data?.slice(0, 12).map((window) => (
+                    <article
+                      className="agent-policy-row"
+                      key={`${window.provider_code}-${window.window_started_at}`}
+                    >
+                      <div>
+                        <strong>
+                          Disponibilidade {window.availability_percent}%
+                        </strong>
+                        <small>
+                          {window.provider_code} · {window.successful_checks}/
+                          {window.total_checks} verificações ·{" "}
+                          {window.slo_breaches} violação(ões) de SLO ·{" "}
+                          {new Date(window.window_started_at).toLocaleString(
+                            "pt-BR",
+                          )}
+                        </small>
+                      </div>
                     </article>
                   ))}
                   {managedVaultMetrics.data?.map((metric) => (

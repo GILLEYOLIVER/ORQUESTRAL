@@ -801,3 +801,17 @@ Data: 21 de julho de 2026.
 - A dependência transitiva vulnerável `js-yaml 4.2.0` foi substituída por `4.3.0` via override central do workspace; as auditorias Node e Python não encontraram vulnerabilidades conhecidas.
 - Risco operacional anterior não alterado: o health check interno do n8n permanece em `unhealthy`, embora o contrato E2E de disponibilidade continue aprovado.
 - Próximo passo: escalonamento por plantão, histórico de disponibilidade e rotação coordenada da identidade da carga.
+
+## Ciclo 49 - plantão, disponibilidade e rotação da identidade
+
+- A política do cofre aceita plantonistas ativos da própria empresa e inclui essa equipe nos alertas operacionais, sem permitir IDs duplicados ou de outro tenant.
+- O monitor mantém janelas horárias agregadas por empresa e provedor com sucessos, falhas, violações de SLO e disponibilidade percentual por sete a noventa dias de consulta.
+- A identidade da carga possui rotação cifrada e governada: solicitação, aprovação independente, teste real de acesso ao cofre, ativação atômica, auditoria, evento e notificação.
+- Identidade atual, identidade proposta e justificativa nunca são retornadas; autoaprovação, acesso cruzado, credencial inválida e rotação durante saída segura são bloqueados.
+- A tela de agentes permite escolher o plantão, acompanhar disponibilidade e solicitar/decidir rotações sem revelar dados do cofre.
+- Migração: `20260721_0070_vault_oncall_availability_identity.py`.
+- Validação local concluída: Ruff e MyPy aprovados em 198 arquivos; API `156 passed`; worker `5 passed`; integração multiempresa `13 passed`; web `12 passed`; E2E `7 passed` e `2 skipped`; ESLint, TypeScript, Prettier, build e auditoria de segurança aprovados.
+- Migração reversível `0070 -> 0069 -> 0070` aprovada; banco em `20260721_0070 (head)`; contratos idempotentes e `/health`, `/ready`, `/app` e probe HMAC do worker aprovados.
+- Segurança comprovada: plantonista de outro tenant retorna `422`, autoaprovação retorna `409`, decisão cruzada retorna `404`, a identidade proposta é validada no cofre e nenhum texto de identidade ou justificativa aparece na API.
+- Risco operacional anterior não alterado: o health check interno do n8n permanece em `unhealthy`, embora o contrato E2E de disponibilidade continue aprovado.
+- Próximo passo: retenção do histórico, escala de plantão com horários e teste canário automatizado da identidade antes do vencimento.

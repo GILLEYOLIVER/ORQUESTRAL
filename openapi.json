@@ -2469,6 +2469,15 @@
             "title": "Expiry Warning Days",
             "type": "integer"
           },
+          "on_call_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "On Call User Ids",
+            "type": "array"
+          },
           "updated_at": {
             "anyOf": [
               {
@@ -2524,6 +2533,15 @@
             "minimum": 1.0,
             "title": "Expiry Warning Days",
             "type": "integer"
+          },
+          "on_call_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "On Call User Ids",
+            "type": "array"
           },
           "vault_failure_alert_threshold": {
             "maximum": 20.0,
@@ -4373,6 +4391,51 @@
         "title": "AgentMemoryScopePolicyInput",
         "type": "object"
       },
+      "AgentMemoryVaultAvailabilityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "availability_percent": {
+            "title": "Availability Percent",
+            "type": "number"
+          },
+          "failed_checks": {
+            "title": "Failed Checks",
+            "type": "integer"
+          },
+          "provider_code": {
+            "title": "Provider Code",
+            "type": "string"
+          },
+          "slo_breaches": {
+            "title": "Slo Breaches",
+            "type": "integer"
+          },
+          "successful_checks": {
+            "title": "Successful Checks",
+            "type": "integer"
+          },
+          "total_checks": {
+            "title": "Total Checks",
+            "type": "integer"
+          },
+          "window_started_at": {
+            "format": "date-time",
+            "title": "Window Started At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_code",
+          "window_started_at",
+          "total_checks",
+          "successful_checks",
+          "failed_checks",
+          "slo_breaches",
+          "availability_percent"
+        ],
+        "title": "AgentMemoryVaultAvailabilityResponse",
+        "type": "object"
+      },
       "AgentMemoryVaultCredentialOption": {
         "additionalProperties": false,
         "properties": {
@@ -4488,6 +4551,108 @@
           "resolved_at"
         ],
         "title": "AgentMemoryVaultIncidentResponse",
+        "type": "object"
+      },
+      "AgentMemoryWorkloadIdentityRotationCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "identity_reference": {
+            "maxLength": 500,
+            "minLength": 4,
+            "title": "Identity Reference",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 240,
+            "minLength": 4,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "identity_reference",
+          "reason"
+        ],
+        "title": "AgentMemoryWorkloadIdentityRotationCreate",
+        "type": "object"
+      },
+      "AgentMemoryWorkloadIdentityRotationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By User Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "provider_code": {
+            "title": "Provider Code",
+            "type": "string"
+          },
+          "requested_by_user_id": {
+            "format": "uuid",
+            "title": "Requested By User Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "provider_code",
+          "status",
+          "requested_by_user_id",
+          "decided_by_user_id",
+          "verified",
+          "created_at",
+          "decided_at"
+        ],
+        "title": "AgentMemoryWorkloadIdentityRotationResponse",
         "type": "object"
       },
       "AgentMessageResponse": {
@@ -19969,6 +20134,80 @@
         ]
       }
     },
+    "/agents/memory-keyring/availability": {
+      "get": {
+        "operationId": "list_agent_memory_vault_availability_agents_memory_keyring_availability_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryVaultAvailabilityResponse"
+                  },
+                  "title": "Response List Agent Memory Vault Availability Agents Memory Keyring Availability Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Memory Vault Availability",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/agents/memory-keyring/policy": {
       "get": {
         "operationId": "get_agent_memory_keyring_policy_agents_memory_keyring_policy_get",
@@ -23758,6 +23997,242 @@
           }
         ],
         "summary": "Request Agent Memory Keyring Exit",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-keyring/identity-rotations": {
+      "get": {
+        "operationId": "list_agent_memory_workload_identity_rotations_agents__agent_id__memory_keyring_identity_rotations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentMemoryWorkloadIdentityRotationResponse"
+                  },
+                  "title": "Response List Agent Memory Workload Identity Rotations Agents  Agent Id  Memory Keyring Identity Rotations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Memory Workload Identity Rotations",
+        "tags": [
+          "agents"
+        ]
+      },
+      "post": {
+        "operationId": "request_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryWorkloadIdentityRotationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryWorkloadIdentityRotationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Agent Memory Workload Identity Rotation",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-keyring/identity-rotations/{rotation_id}/decision": {
+      "post": {
+        "operationId": "decide_agent_memory_workload_identity_rotation_agents__agent_id__memory_keyring_identity_rotations__rotation_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rotation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rotation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryLegalHoldDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryWorkloadIdentityRotationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Agent Memory Workload Identity Rotation",
         "tags": [
           "agents"
         ]
