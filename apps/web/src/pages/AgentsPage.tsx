@@ -187,12 +187,22 @@ export function AgentsPage() {
     memoryIncidentResponsibleUserIds,
     setMemoryIncidentResponsibleUserIds,
   ] = useState<string[]>([]);
+  const [
+    memoryIncidentReassignmentReason,
+    setMemoryIncidentReassignmentReason,
+  ] = useState("");
   const [memoryExerciseScheduleEnabled, setMemoryExerciseScheduleEnabled] =
     useState(false);
   const [memoryExerciseCadenceHours, setMemoryExerciseCadenceHours] =
     useState("168");
+  const [
+    memoryExerciseHeartbeatSloMinutes,
+    setMemoryExerciseHeartbeatSloMinutes,
+  ] = useState("15");
   const [memoryReencryptionBatchSize, setMemoryReencryptionBatchSize] =
     useState("100");
+  const [memoryReencryptionRetryReason, setMemoryReencryptionRetryReason] =
+    useState("");
   const [memoryIncidentIdempotencyKey, setMemoryIncidentIdempotencyKey] =
     useState(() => crypto.randomUUID());
   const [memoryIncidentFeedback, setMemoryIncidentFeedback] = useState<
@@ -294,6 +304,7 @@ export function AgentsPage() {
       ),
     enabled: canConfigure && Boolean(selectedId),
   });
+  const latestMemoryReencryptionJob = memoryReencryptionJobs.data?.[0];
   const myMemories = useQuery({
     queryKey: ["agent-my-memories", selectedId],
     queryFn: () =>
@@ -387,6 +398,9 @@ export function AgentsPage() {
     setMemoryExerciseScheduleEnabled(memoryExerciseSchedule.data.enabled);
     setMemoryExerciseCadenceHours(
       String(memoryExerciseSchedule.data.cadence_hours),
+    );
+    setMemoryExerciseHeartbeatSloMinutes(
+      String(memoryExerciseSchedule.data.heartbeat_slo_minutes),
     );
   }, [memoryExerciseSchedule.data]);
 
@@ -670,6 +684,27 @@ export function AgentsPage() {
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
   });
+  const reassignMemoryIncident = useMutation({
+    mutationFn: (incidentId: string) =>
+      request<AgentTaskMemoryIncidentResponse>(
+        `/agents/${selectedId}/memory-access-incidents/${incidentId}/responsibles`,
+        {
+          method: "PUT",
+          body: {
+            responsible_user_ids: memoryIncidentResponsibleUserIds,
+            reason: memoryIncidentReassignmentReason,
+          },
+        },
+      ),
+    onSuccess: () => {
+      setMemoryIncidentFeedback(
+        "Responsáveis atualizados com cadeia de custódia preservada.",
+      );
+      setMemoryIncidentReassignmentReason("");
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
   const escalateOverdueMemoryIncidents = useMutation({
     mutationFn: () =>
       request<{ escalated_count: number; escalated_at: string }>(
@@ -745,6 +780,7 @@ export function AgentsPage() {
           body: {
             enabled: memoryExerciseScheduleEnabled,
             cadence_hours: Number(memoryExerciseCadenceHours),
+            heartbeat_slo_minutes: Number(memoryExerciseHeartbeatSloMinutes),
           },
         },
       ),
@@ -789,6 +825,24 @@ export function AgentsPage() {
           ? `Recriptografia iniciada para ${result.total_count} memória(s).`
           : "Job criado; não há memórias para recriptografar.",
       );
+      refresh();
+    },
+    onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
+  });
+  const retryMemoryReencryption = useMutation({
+    mutationFn: (jobId: string) =>
+      request<AgentMemoryReencryptionJob>(
+        `/agents/${selectedId}/memory-reencryption-jobs/${jobId}/retry`,
+        {
+          method: "POST",
+          body: { reason: memoryReencryptionRetryReason },
+        },
+      ),
+    onSuccess: () => {
+      setMemoryIncidentFeedback(
+        "Job retomado a partir do último checkpoint seguro.",
+      );
+      setMemoryReencryptionRetryReason("");
       refresh();
     },
     onError: (caught) => setMemoryIncidentFeedback(errorMessage(caught)),
@@ -1766,6 +1820,19 @@ export function AgentsPage() {
                     <ShieldAlert size={16} /> Revogar acessos por incidente
                   </Button>
                 </form>
+                <TextField
+                  label="Justificativa para reatribuição"
+                  maxLength={160}
+                  onChange={(event) =>
+                    setMemoryIncidentReassignmentReason(event.target.value)
+                  }
+                  value={memoryIncidentReassignmentReason}
+                />
+                <small>
+                  Para reatribuir, selecione acima os novos responsáveis e
+                  informe a justificativa. Pessoas que já votaram não podem ser
+                  removidas.
+                </small>
                 <div className="agent-policy-list">
                   {memoryIncidents.data?.length ? (
                     memoryIncidents.data.map((incident) => (
@@ -1830,6 +1897,25 @@ export function AgentsPage() {
                             >
                               Descartar
                             </Button>
+                            <Button
+                              loading={reassignMemoryIncident.isPending}
+                              onClick={() => {
+                                if (
+                                  !memoryIncidentResponsibleUserIds.length ||
+                                  memoryIncidentReassignmentReason.trim()
+                                    .length < 3
+                                ) {
+                                  setMemoryIncidentFeedback(
+                                    "Selecione responsáveis e informe uma justificativa.",
+                                  );
+                                  return;
+                                }
+                                reassignMemoryIncident.mutate(incident.id);
+                              }}
+                              variant="ghost"
+                            >
+                              Reatribuir
+                            </Button>
                           </div>
                         ) : null}
                       </article>
@@ -1865,6 +1951,17 @@ export function AgentsPage() {
                     required
                     type="number"
                     value={memoryExerciseCadenceHours}
+                  />
+                  <TextField
+                    label="SLO do heartbeat (minutos)"
+                    max={1440}
+                    min={5}
+                    onChange={(event) =>
+                      setMemoryExerciseHeartbeatSloMinutes(event.target.value)
+                    }
+                    required
+                    type="number"
+                    value={memoryExerciseHeartbeatSloMinutes}
                   />
                   <div className="form-actions">
                     <Button
@@ -1903,6 +2000,19 @@ export function AgentsPage() {
                     {(memorySchedulerMetrics.data?.overdue_seconds ?? 0) > 0
                       ? ` · atraso ${memorySchedulerMetrics.data?.overdue_seconds}s`
                       : " · sem atraso"}
+                  </small>
+                  <small>
+                    Heartbeat:{" "}
+                    {memorySchedulerMetrics.data?.heartbeat_status === "healthy"
+                      ? "saudável"
+                      : memorySchedulerMetrics.data?.heartbeat_status ===
+                          "overdue"
+                        ? "SLO vencido"
+                        : memorySchedulerMetrics.data?.heartbeat_status ===
+                            "waiting"
+                          ? "aguardando primeira leitura"
+                          : "desativado"}
+                    {` · violações ${memorySchedulerMetrics.data?.slo_breach_count ?? 0}`}
                   </small>
                 </form>
                 <div className="agent-policy-list">
@@ -1971,18 +2081,48 @@ export function AgentsPage() {
                   >
                     <LockKeyhole size={16} /> Iniciar recriptografia
                   </Button>
-                  {memoryReencryptionJobs.data?.[0] ? (
+                  {latestMemoryReencryptionJob ? (
                     <small>
-                      Último job: {memoryReencryptionJobs.data[0].status} ·{" "}
-                      {memoryReencryptionJobs.data[0].rotated_count}/
-                      {memoryReencryptionJobs.data[0].total_count} protegida(s)
-                      {memoryReencryptionJobs.data[0].error_code
-                        ? ` · erro ${memoryReencryptionJobs.data[0].error_code}`
+                      Último job: {latestMemoryReencryptionJob.status} ·{" "}
+                      {latestMemoryReencryptionJob.rotated_count}/
+                      {latestMemoryReencryptionJob.total_count} protegida(s)
+                      {latestMemoryReencryptionJob.error_code
+                        ? ` · erro ${latestMemoryReencryptionJob.error_code}`
                         : ""}
                     </small>
                   ) : (
                     <small>Nenhuma recriptografia solicitada.</small>
                   )}
+                  {latestMemoryReencryptionJob?.status === "failed" ? (
+                    <>
+                      <TextField
+                        label="Justificativa para retomar"
+                        maxLength={160}
+                        onChange={(event) =>
+                          setMemoryReencryptionRetryReason(event.target.value)
+                        }
+                        value={memoryReencryptionRetryReason}
+                      />
+                      <Button
+                        loading={retryMemoryReencryption.isPending}
+                        onClick={() => {
+                          if (memoryReencryptionRetryReason.trim().length < 3) {
+                            setMemoryIncidentFeedback(
+                              "Informe a justificativa antes de retomar o job.",
+                            );
+                            return;
+                          }
+                          retryMemoryReencryption.mutate(
+                            latestMemoryReencryptionJob.id,
+                          );
+                        }}
+                        type="button"
+                        variant="ghost"
+                      >
+                        Retomar do checkpoint
+                      </Button>
+                    </>
+                  ) : null}
                 </form>
               </Card>
             </PermissionGuard>

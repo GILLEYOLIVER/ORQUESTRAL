@@ -648,3 +648,22 @@ Data: 21 de julho de 2026.
 - Runtime local: `/health`, `/ready` e `/app` responderam `200`; E2E com 7 cenários aprovados e 2 explicitamente ignorados.
 - Segurança comprovada: outra empresa recebe `404`, responsável não atribuído é bloqueado, ciphertext permanece legível somente com a chave ativa depois da recriptografia e nenhum segredo é exposto por API, auditoria ou evento.
 - Próximo passo: retomada operacional de jobs falhos, reatribuição auditada de responsáveis e alerta automático de heartbeat/SLO do scheduler.
+
+## Ciclo 38 - retomada, reatribuição e SLO operacional
+
+- Jobs de recriptografia registram o último item existente no momento da solicitação; memórias novas, já protegidas pela chave ativa, ficam fora do snapshot e não alteram o total durante a execução.
+- Um job falho pode ser retomado somente por pessoa autorizada, com keyring histórico disponível, justificativa protegida por HMAC e continuidade no checkpoint confirmado.
+- A retomada zera somente a tentativa falha, preserva a quantidade já recriptografada e atualiza a chave-alvo sem persistir material secreto.
+- Incidentes pendentes permitem reatribuição explícita para revisores autorizados da mesma empresa; autorrevisão e usuários externos continuam bloqueados.
+- Pessoas que já votaram não podem ser removidas da cadeia de custódia, e a justificativa da mudança nunca é armazenada em texto puro.
+- O contrato idempotente do incidente mantém uma impressão digital HMAC imutável da solicitação original, permitindo replay seguro mesmo depois da reatribuição sem aceitar colisões de payload.
+- A agenda registra heartbeat do worker, SLO de 5 minutos a 24 horas, último alerta e quantidade de violações.
+- Ao retornar depois de uma indisponibilidade acima do SLO, o worker emite notificação crítica e evento seguro; a API diferencia heartbeat aguardando, saudável, vencido ou desativado.
+- A interface oferece retomada do checkpoint, reatribuição com justificativa e leitura operacional do heartbeat.
+- Migração: `20260721_0059_agent_memory_recovery_ownership_slo.py`.
+- Validação local: Ruff e MyPy aprovados em 197 arquivos de produção; ESLint, TypeScript e Prettier aprovados; 142 testes da API/worker, 13 integrações e 12 testes do front-end aprovados; build e auditoria de segurança concluídos sem vulnerabilidades conhecidas.
+- Migração reversível `0059 -> 0058 -> 0059` aprovada; banco em `20260721_0059 (head)`.
+- Runtime local: `/health`, `/ready` e `/app` responderam `200`; worker saudável; E2E com 7 cenários aprovados e 2 explicitamente ignorados.
+- Segurança comprovada: falhas de recriptografia respeitam os invariantes do banco, retomadas preservam o checkpoint, reatribuições continuam isoladas por empresa e justificativas são persistidas somente por HMAC.
+- Risco operacional preexistente: o container n8n responde ao contrato E2E, mas seu health check interno retorna `503`; investigar separadamente sem enfraquecer o readiness obrigatório da API.
+- Próximo passo: monitor externo do heartbeat, política de tentativas máximas e runbook assistido de recuperação de chave.

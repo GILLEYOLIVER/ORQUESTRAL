@@ -46,8 +46,8 @@ from app.modules.users.models import CompanyUser, User
 @dataclass(frozen=True, slots=True)
 class AgentGovernanceIdentity:
     company_ids: tuple[UUID, UUID]
-    user_ids: tuple[UUID, UUID, UUID]
-    emails: tuple[str, str, str]
+    user_ids: tuple[UUID, UUID, UUID, UUID]
+    emails: tuple[str, str, str, str]
     password: str
 
 
@@ -84,6 +84,14 @@ async def _seed(settings: Settings) -> AgentGovernanceIdentity:
                     status="active",
                 )
             )
+            users.append(
+                User(
+                    name="Aprovador de contingência",
+                    email=f"agent-governance-contingency-{suffix}@example.com",
+                    password_hash=hash_password(password),
+                    status="active",
+                )
+            )
             database.add_all((*companies, *users))
             await database.flush()
             for company, user in zip(companies, users[:2], strict=True):
@@ -98,20 +106,23 @@ async def _seed(settings: Settings) -> AgentGovernanceIdentity:
                     )
                 )
             owner_b, _ = await ensure_company_system_roles(database, companies[1].id)
-            database.add(
-                CompanyUser(
-                    company_id=companies[1].id,
-                    user_id=users[2].id,
-                    role_id=owner_b.id,
-                    status="active",
-                    is_owner=False,
-                )
+            database.add_all(
+                [
+                    CompanyUser(
+                        company_id=companies[1].id,
+                        user_id=user.id,
+                        role_id=owner_b.id,
+                        status="active",
+                        is_owner=False,
+                    )
+                    for user in users[2:]
+                ]
             )
             await database.commit()
             return AgentGovernanceIdentity(
                 company_ids=(companies[0].id, companies[1].id),
-                user_ids=(users[0].id, users[1].id, users[2].id),
-                emails=(users[0].email, users[1].email, users[2].email),
+                user_ids=(users[0].id, users[1].id, users[2].id, users[3].id),
+                emails=(users[0].email, users[1].email, users[2].email, users[3].email),
                 password=password,
             )
     finally:
@@ -411,6 +422,7 @@ def test_critical_memory_incident_requires_independent_quorum() -> None:
             headers_a = _login(client, identity.emails[0], identity.password)
             headers_b = _login(client, identity.emails[1], identity.password)
             headers_reviewer = _login(client, identity.emails[2], identity.password)
+            headers_reviewer_two = _login(client, identity.emails[3], identity.password)
             agent = client.post(
                 "/agents",
                 headers=headers_b,
@@ -430,7 +442,10 @@ def test_critical_memory_incident_requires_independent_quorum() -> None:
                     "quarantine_minutes": 5,
                     "severity": "critical",
                     "required_review_quorum": 2,
-                    "responsible_user_ids": [str(identity.user_ids[2])],
+                    "responsible_user_ids": [
+                        str(identity.user_ids[2]),
+                        str(identity.user_ids[3]),
+                    ],
                     "idempotency_key": str(uuid4()),
                 },
             )
@@ -464,6 +479,14 @@ def test_critical_memory_incident_requires_independent_quorum() -> None:
                 ).status_code
                 == 404
             )
+            second_vote = client.post(
+                review_path,
+                headers=headers_reviewer_two,
+                json={"decision": "confirmed"},
+            )
+            assert second_vote.status_code == 200
+            assert second_vote.json()["review_status"] == "confirmed"
+            assert second_vote.json()["review_count"] == 2
     finally:
         asyncio.run(_remove(settings, identity))
 
@@ -695,6 +718,31 @@ def test_agent_versions_budgets_and_tenant_boundaries(
                 )
             )
             assert rotated_only_retrieval.contents == (sensitive_memory,)
+            settings.encryption_key = original_encryption_key
+            settings.encryption_previous_keys = [rotated_encryption_key]
+            retry_candidate = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs",
+                headers=headers_b,
+                json={"batch_size": 1},
+            )
+            assert retry_candidate.status_code == 201
+            settings.encryption_key = rotated_encryption_key
+            settings.encryption_previous_keys = [original_encryption_key]
+            failed_rotation = asyncio.run(
+                maintain_agent_memory_reencryption_jobs(settings=settings)
+            )
+            assert failed_rotation["failed"] == 1
+            retried_rotation = client.post(
+                f"/agents/{agent_id}/memory-reencryption-jobs/{retry_candidate.json()['id']}/retry",
+                headers=headers_b,
+                json={"reason": "Keyring corrigido após validação operacional."},
+            )
+            assert retried_rotation.status_code == 200
+            assert retried_rotation.json()["status"] == "pending"
+            assert retried_rotation.json()["retry_count"] == 1
+            assert "reason" not in retried_rotation.json()
+            for _ in range(3):
+                asyncio.run(maintain_agent_memory_reencryption_jobs(settings=settings))
             settings.encryption_key = original_encryption_key
             settings.encryption_previous_keys = [rotated_encryption_key]
             other_user_retrieval = asyncio.run(
@@ -1510,6 +1558,22 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert incident.status_code == 201
             assert incident.json()["revoked_grants"] >= 1
             assert incident.json()["responsible_user_ids"] == [str(identity.user_ids[2])]
+            reassigned_incident = client.put(
+                f"/agents/{agent_id}/memory-access-incidents/{incident.json()['id']}/responsibles",
+                headers=headers_b,
+                json={
+                    "responsible_user_ids": [
+                        str(identity.user_ids[2]),
+                        str(identity.user_ids[3]),
+                    ],
+                    "reason": "Cobertura de contingência para o prazo de revisão.",
+                },
+            )
+            assert reassigned_incident.status_code == 200
+            assert set(reassigned_incident.json()["responsible_user_ids"]) == {
+                str(identity.user_ids[2]),
+                str(identity.user_ids[3]),
+            }
             assert "incident_reference" not in incident.json()
             assert (
                 asyncio.run(
@@ -1580,7 +1644,10 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             )
             assert incident_queue.status_code == 200
             assert incident_queue.json()[0]["review_status"] == "pending"
-            assert incident_queue.json()[0]["responsible_user_ids"] == [str(identity.user_ids[2])]
+            assert set(incident_queue.json()[0]["responsible_user_ids"]) == {
+                str(identity.user_ids[2]),
+                str(identity.user_ids[3]),
+            }
             monkeypatch.setattr(
                 memory_routes_module,
                 "utc_now",
@@ -1775,7 +1842,13 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             scheduled_result = asyncio.run(
                 maintain_due_agent_memory_response_exercises(settings=settings)
             )
-            assert scheduled_result == {"processed": 1, "passed": 1, "failed": 0}
+            assert scheduled_result == {
+                "processed": 1,
+                "passed": 1,
+                "failed": 0,
+                "heartbeat_checked": 1,
+                "slo_breaches": 0,
+            }
             scheduler_metrics = client.get(
                 f"/agents/{agent_id}/memory-response-exercise-scheduler-metrics",
                 headers=headers_b,
@@ -1785,6 +1858,7 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert scheduler_metrics.json()["worker_passed"] >= 1
             assert scheduler_metrics.json()["worker_failed"] == 0
             assert scheduler_metrics.json()["last_worker_run_at"] is not None
+            assert scheduler_metrics.json()["heartbeat_status"] == "healthy"
             assert (
                 client.get(
                     f"/agents/{agent_id}/memory-response-exercise-scheduler-metrics",
@@ -1806,6 +1880,26 @@ def test_agent_versions_budgets_and_tenant_boundaries(
             assert due.json()["executed"] is True
             assert due.json()["exercise"]["status"] == "passed"
             monkeypatch.setattr(memory_routes_module, "utc_now", current_memory_route_time)
+            monkeypatch.setattr(
+                memory_service_module,
+                "utc_now",
+                lambda: current_memory_service_time() + timedelta(hours=6),
+            )
+            breached_scheduler = asyncio.run(
+                maintain_due_agent_memory_response_exercises(settings=settings)
+            )
+            assert breached_scheduler["slo_breaches"] == 1
+            assert (
+                asyncio.run(
+                    _notification_count(
+                        settings,
+                        company_id=identity.company_ids[1],
+                        event_type="agent.memory_scheduler.slo_breached",
+                    )
+                )
+                >= 1
+            )
+            monkeypatch.setattr(memory_service_module, "utc_now", current_memory_service_time)
             for attempt in range(2):
                 blocked_delegation = client.post(
                     f"/agents/{agent_id}/delegations",

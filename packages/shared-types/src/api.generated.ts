@@ -575,6 +575,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/memory-access-incidents/{incident_id}/responsibles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Agent Task Memory Incident Responsibles */
+        put: operations["update_agent_task_memory_incident_responsibles_agents__agent_id__memory_access_incidents__incident_id__responsibles_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/memory-access-incidents/{incident_id}/review": {
         parameters: {
             query?: never;
@@ -656,6 +673,23 @@ export interface paths {
         put?: never;
         /** Create Agent Memory Reencryption Job */
         post: operations["create_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Agent Memory Reencryption Job */
+        post: operations["retry_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__retry_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4845,12 +4879,20 @@ export interface components {
             cadence_hours: number;
             /** Enabled */
             enabled: boolean;
+            /** Heartbeat Slo Minutes */
+            heartbeat_slo_minutes: number;
             /** Id */
             id: string | null;
             /** Last Run At */
             last_run_at: string | null;
+            /** Last Slo Alert At */
+            last_slo_alert_at: string | null;
+            /** Last Worker Heartbeat At */
+            last_worker_heartbeat_at: string | null;
             /** Next Run At */
             next_run_at: string | null;
+            /** Slo Breach Count */
+            slo_breach_count: number;
             /** Updated At */
             updated_at: string | null;
         };
@@ -4863,6 +4905,11 @@ export interface components {
             cadence_hours: number;
             /** Enabled */
             enabled: boolean;
+            /**
+             * Heartbeat Slo Minutes
+             * @default 15
+             */
+            heartbeat_slo_minutes: number;
         };
         /** AgentMemoryIncidentEscalationResponse */
         AgentMemoryIncidentEscalationResponse: {
@@ -5120,11 +5167,15 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Retry At */
+            last_retry_at: string | null;
             /**
              * Requested By User Id
              * Format: uuid
              */
             requested_by_user_id: string;
+            /** Retry Count */
+            retry_count: number;
             /** Rotated Count */
             rotated_count: number;
             /** Scanned Count */
@@ -5145,6 +5196,11 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** AgentMemoryReencryptionJobRetry */
+        AgentMemoryReencryptionJobRetry: {
+            /** Reason */
+            reason: string;
         };
         /** AgentMemoryResponse */
         AgentMemoryResponse: {
@@ -5380,6 +5436,17 @@ export interface components {
             agent_id: string;
             /** Average Duration Ms */
             average_duration_ms: number;
+            /** Heartbeat Slo Minutes */
+            heartbeat_slo_minutes: number;
+            /**
+             * Heartbeat Status
+             * @enum {string}
+             */
+            heartbeat_status: "disabled" | "waiting" | "healthy" | "overdue";
+            /** Last Slo Alert At */
+            last_slo_alert_at: string | null;
+            /** Last Worker Heartbeat At */
+            last_worker_heartbeat_at: string | null;
             /** Last Worker Run At */
             last_worker_run_at: string | null;
             /** Next Run At */
@@ -5388,6 +5455,8 @@ export interface components {
             overdue_seconds: number;
             /** Schedule Enabled */
             schedule_enabled: boolean;
+            /** Slo Breach Count */
+            slo_breach_count: number;
             /** Worker Exercises */
             worker_exercises: number;
             /** Worker Failed */
@@ -5955,6 +6024,13 @@ export interface components {
             task_delegation_id: string;
             /** Total Characters */
             total_characters: number;
+        };
+        /** AgentTaskMemoryIncidentAssigneesUpdate */
+        AgentTaskMemoryIncidentAssigneesUpdate: {
+            /** Reason */
+            reason: string;
+            /** Responsible User Ids */
+            responsible_user_ids: string[];
         };
         /** AgentTaskMemoryIncidentResponse */
         AgentTaskMemoryIncidentResponse: {
@@ -13241,6 +13317,60 @@ export interface operations {
             };
         };
     };
+    update_agent_task_memory_incident_responsibles_agents__agent_id__memory_access_incidents__incident_id__responsibles_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                incident_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskMemoryIncidentAssigneesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskMemoryIncidentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     review_agent_task_memory_access_incident_agents__agent_id__memory_access_incidents__incident_id__review_post: {
         parameters: {
             query?: never;
@@ -13569,6 +13699,60 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentMemoryReencryptionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    retry_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentMemoryReencryptionJobRetry"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

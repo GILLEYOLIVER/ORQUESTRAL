@@ -340,6 +340,7 @@ class AgentTaskMemoryAccessIncident(Base):
         ForeignKey("agents.id", ondelete="CASCADE"), index=True
     )
     idempotency_key: Mapped[UUID] = mapped_column(index=True)
+    request_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     incident_reference_fingerprint: Mapped[str] = mapped_column(String(64))
     reason_fingerprint: Mapped[str] = mapped_column(String(64))
     revoked_grants: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
@@ -550,6 +551,10 @@ class AgentMemoryExerciseSchedule(Base):
             "cadence_hours BETWEEN 1 AND 720",
             name="ck_agent_memory_exercise_schedule_cadence",
         ),
+        CheckConstraint(
+            "heartbeat_slo_minutes BETWEEN 5 AND 1440 AND slo_breach_count >= 0",
+            name="ck_agent_memory_exercise_schedule_slo",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -561,8 +566,14 @@ class AgentMemoryExerciseSchedule(Base):
     agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     cadence_hours: Mapped[int] = mapped_column(Integer, default=168, server_default="168")
+    heartbeat_slo_minutes: Mapped[int] = mapped_column(Integer, default=15, server_default="15")
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_worker_heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
+    last_slo_alert_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    slo_breach_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     updated_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -599,6 +610,18 @@ class AgentMemoryReencryptionJob(Base):
             "(checkpoint_created_at IS NOT NULL AND checkpoint_memory_id IS NOT NULL)",
             name="ck_agent_memory_reencryption_job_checkpoint",
         ),
+        CheckConstraint(
+            "(snapshot_created_at IS NULL AND snapshot_memory_id IS NULL) OR "
+            "(snapshot_created_at IS NOT NULL AND snapshot_memory_id IS NOT NULL)",
+            name="ck_agent_memory_reencryption_job_snapshot",
+        ),
+        CheckConstraint(
+            "(retry_count = 0 AND last_retry_at IS NULL "
+            "AND retry_reason_fingerprint IS NULL) OR "
+            "(retry_count > 0 AND last_retry_at IS NOT NULL "
+            "AND char_length(retry_reason_fingerprint) = 64)",
+            name="ck_agent_memory_reencryption_job_retry",
+        ),
         Index(
             "uq_agent_memory_reencryption_job_active",
             "company_id",
@@ -626,7 +649,12 @@ class AgentMemoryReencryptionJob(Base):
     failed_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     checkpoint_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     checkpoint_memory_id: Mapped[UUID | None] = mapped_column(nullable=True)
+    snapshot_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    snapshot_memory_id: Mapped[UUID | None] = mapped_column(nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(64))
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retry_reason_fingerprint: Mapped[str | None] = mapped_column(String(64))
     requested_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )

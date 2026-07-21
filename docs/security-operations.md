@@ -39,8 +39,19 @@ devem preservar o SHA completo e registrar a versão legível em comentário.
    controlada sem a chave antiga antes de retirá-la do gerenciador de segredos.
 9. Não remova a chave anterior enquanto existir job `pending`, `running` ou `failed`; corrija a
    causa e preserve o keyring para impedir perda definitiva de dados criptografados.
+   Jobs falhos podem ser retomados por `POST /agents/{agent_id}/memory-reencryption-jobs/{job_id}/retry`;
+   a justificativa é armazenada somente como fingerprint e o processamento continua do checkpoint.
 10. Remova chaves anteriores somente depois da recriptografia e da janela de retenção aprovada.
 11. Nunca registre valores de segredo em tickets, logs, PRs ou comandos versionados.
+
+## SLO do scheduler de memória
+
+- Cada agenda registra o último heartbeat do worker, o SLO configurado e a quantidade de violações.
+- O endpoint de métricas diferencia `waiting`, `healthy`, `overdue` e `disabled`.
+- Quando o worker retorna depois de superar o SLO, o responsável recebe alerta crítico e um evento
+  interno sem conteúdo de memória.
+- Um monitor externo deve consultar as métricas em produção, porque o próprio worker não consegue
+  emitir alertas enquanto estiver completamente indisponível.
 
 ## Backup
 

@@ -611,7 +611,7 @@ def purge_expired_agent_memories_sync() -> int:
 
 
 async def run_due_agent_memory_response_exercises(
-    database: AsyncSession, *, limit: int = 100
+    database: AsyncSession, *, limit: int = 5000
 ) -> dict[str, int]:
     now = utc_now()
     schedules = list(
@@ -619,16 +619,57 @@ async def run_due_agent_memory_response_exercises(
             select(AgentMemoryExerciseSchedule)
             .where(
                 AgentMemoryExerciseSchedule.enabled.is_(True),
-                AgentMemoryExerciseSchedule.next_run_at.is_not(None),
-                AgentMemoryExerciseSchedule.next_run_at <= now,
             )
-            .order_by(AgentMemoryExerciseSchedule.next_run_at)
+            .order_by(AgentMemoryExerciseSchedule.updated_at)
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
     )
-    passed = failed = 0
+    due_schedules: list[AgentMemoryExerciseSchedule] = []
+    slo_breaches = 0
     for schedule in schedules:
+        previous_heartbeat = schedule.last_worker_heartbeat_at
+        heartbeat_overdue = bool(
+            previous_heartbeat
+            and now - previous_heartbeat > timedelta(minutes=schedule.heartbeat_slo_minutes)
+        )
+        if heartbeat_overdue:
+            schedule.slo_breach_count += 1
+            schedule.last_slo_alert_at = now
+            slo_breaches += 1
+            await create_notification(
+                database,
+                company_id=schedule.company_id,
+                recipient_user_id=schedule.updated_by_user_id,
+                event_type="agent.memory_scheduler.slo_breached",
+                title="Agenda de segurança retomada após atraso",
+                message="O worker voltou a responder depois de ultrapassar o SLO configurado.",
+                severity="error",
+                resource_type="agent_memory_exercise_schedule",
+                resource_id=schedule.id,
+                data={
+                    "agent_id": str(schedule.agent_id),
+                    "heartbeat_slo_minutes": schedule.heartbeat_slo_minutes,
+                },
+            )
+            enqueue_domain_event(
+                database,
+                DomainEventCreate(
+                    event_type="agent.memory_scheduler.slo_breached",
+                    company_id=schedule.company_id,
+                    actor_user_id=schedule.updated_by_user_id,
+                    classification="internal",
+                    payload={
+                        "agent_id": str(schedule.agent_id),
+                        "schedule_id": str(schedule.id),
+                    },
+                ),
+            )
+        schedule.last_worker_heartbeat_at = now
+        if schedule.next_run_at is not None and schedule.next_run_at <= now:
+            due_schedules.append(schedule)
+    passed = failed = 0
+    for schedule in due_schedules:
         exercise = await record_agent_memory_response_exercise(
             database,
             company_id=schedule.company_id,
@@ -649,13 +690,19 @@ async def run_due_agent_memory_response_exercises(
                 event_type="agent.memory_response_exercise.failed",
                 title="Exercício de segurança exige revisão",
                 message="Um controle da memória do agente não passou no exercício agendado.",
-                severity="critical",
+                severity="error",
                 resource_type="agent_memory_response_exercise",
                 resource_id=exercise.id,
                 data={"agent_id": str(schedule.agent_id)},
             )
     await database.commit()
-    return {"processed": len(schedules), "passed": passed, "failed": failed}
+    return {
+        "processed": len(due_schedules),
+        "passed": passed,
+        "failed": failed,
+        "heartbeat_checked": len(schedules),
+        "slo_breaches": slo_breaches,
+    }
 
 
 async def maintain_due_agent_memory_response_exercises(*, settings: Settings) -> dict[str, int]:
@@ -692,7 +739,6 @@ async def process_agent_memory_reencryption_jobs(
         now = utc_now()
         if job.target_master_key_id != active_key_id:
             job.status = "failed"
-            job.failed_count += 1
             job.error_code = "target_key_changed"
             job.completed_at = now
             failed += 1
@@ -711,6 +757,17 @@ async def process_agent_memory_reencryption_jobs(
                     ),
                 )
             )
+        snapshot_conditions = []
+        if job.snapshot_created_at is not None and job.snapshot_memory_id is not None:
+            snapshot_conditions.append(
+                or_(
+                    AgentMemoryEntry.created_at < job.snapshot_created_at,
+                    and_(
+                        AgentMemoryEntry.created_at == job.snapshot_created_at,
+                        AgentMemoryEntry.id <= job.snapshot_memory_id,
+                    ),
+                )
+            )
         rows = list(
             await database.scalars(
                 select(AgentMemoryEntry)
@@ -718,6 +775,7 @@ async def process_agent_memory_reencryption_jobs(
                     AgentMemoryEntry.company_id == job.company_id,
                     AgentMemoryEntry.agent_id == job.agent_id,
                     *checkpoint_conditions,
+                    *snapshot_conditions,
                 )
                 .order_by(AgentMemoryEntry.created_at, AgentMemoryEntry.id)
                 .limit(job.batch_size)

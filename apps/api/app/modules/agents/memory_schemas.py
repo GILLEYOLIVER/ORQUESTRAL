@@ -346,6 +346,23 @@ class AgentTaskMemoryIncidentReview(StrictSchema):
     decision: Literal["confirmed", "dismissed"]
 
 
+class AgentTaskMemoryIncidentAssigneesUpdate(StrictSchema):
+    responsible_user_ids: list[UUID] = Field(min_length=1, max_length=5)
+    reason: str = Field(min_length=3, max_length=160)
+
+    @field_validator("responsible_user_ids")
+    @classmethod
+    def validate_responsibles(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Cada responsável pode ser selecionado somente uma vez.")
+        return value
+
+    @field_validator("reason")
+    @classmethod
+    def trim_assignment_reason(cls, value: str) -> str:
+        return value.strip()
+
+
 class AgentMemoryRiskSummary(StrictSchema):
     agent_id: UUID
     generated_at: datetime
@@ -419,6 +436,7 @@ class AgentMemoryRiskSigningKeyResponse(StrictSchema):
 class AgentMemoryExerciseScheduleUpdate(StrictSchema):
     enabled: bool
     cadence_hours: int = Field(default=168, ge=1, le=720)
+    heartbeat_slo_minutes: int = Field(default=15, ge=5, le=1440)
 
 
 class AgentMemoryExerciseScheduleResponse(StrictSchema):
@@ -426,8 +444,12 @@ class AgentMemoryExerciseScheduleResponse(StrictSchema):
     agent_id: UUID
     enabled: bool
     cadence_hours: int
+    heartbeat_slo_minutes: int
     next_run_at: datetime | None
     last_run_at: datetime | None
+    last_worker_heartbeat_at: datetime | None
+    last_slo_alert_at: datetime | None
+    slo_breach_count: int
     updated_at: datetime | None
 
 
@@ -447,10 +469,24 @@ class AgentMemorySchedulerMetricsResponse(StrictSchema):
     schedule_enabled: bool
     next_run_at: datetime | None
     overdue_seconds: int
+    heartbeat_status: Literal["disabled", "waiting", "healthy", "overdue"]
+    heartbeat_slo_minutes: int
+    last_worker_heartbeat_at: datetime | None
+    last_slo_alert_at: datetime | None
+    slo_breach_count: int
 
 
 class AgentMemoryReencryptionJobCreate(StrictSchema):
     batch_size: int = Field(default=100, ge=1, le=500)
+
+
+class AgentMemoryReencryptionJobRetry(StrictSchema):
+    reason: str = Field(min_length=3, max_length=160)
+
+    @field_validator("reason")
+    @classmethod
+    def trim_retry_reason(cls, value: str) -> str:
+        return value.strip()
 
 
 class AgentMemoryReencryptionJobResponse(StrictSchema):
@@ -463,6 +499,8 @@ class AgentMemoryReencryptionJobResponse(StrictSchema):
     scanned_count: int
     rotated_count: int
     failed_count: int
+    retry_count: int
+    last_retry_at: datetime | None
     error_code: str | None
     requested_by_user_id: UUID
     created_at: datetime

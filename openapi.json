@@ -2176,6 +2176,10 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "heartbeat_slo_minutes": {
+            "title": "Heartbeat Slo Minutes",
+            "type": "integer"
+          },
           "id": {
             "anyOf": [
               {
@@ -2200,6 +2204,30 @@
             ],
             "title": "Last Run At"
           },
+          "last_slo_alert_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Slo Alert At"
+          },
+          "last_worker_heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Worker Heartbeat At"
+          },
           "next_run_at": {
             "anyOf": [
               {
@@ -2211,6 +2239,10 @@
               }
             ],
             "title": "Next Run At"
+          },
+          "slo_breach_count": {
+            "title": "Slo Breach Count",
+            "type": "integer"
           },
           "updated_at": {
             "anyOf": [
@@ -2230,8 +2262,12 @@
           "agent_id",
           "enabled",
           "cadence_hours",
+          "heartbeat_slo_minutes",
           "next_run_at",
           "last_run_at",
+          "last_worker_heartbeat_at",
+          "last_slo_alert_at",
+          "slo_breach_count",
           "updated_at"
         ],
         "title": "AgentMemoryExerciseScheduleResponse",
@@ -2250,6 +2286,13 @@
           "enabled": {
             "title": "Enabled",
             "type": "boolean"
+          },
+          "heartbeat_slo_minutes": {
+            "default": 15,
+            "maximum": 1440.0,
+            "minimum": 5.0,
+            "title": "Heartbeat Slo Minutes",
+            "type": "integer"
           }
         },
         "required": [
@@ -2835,10 +2878,26 @@
             "title": "Id",
             "type": "string"
           },
+          "last_retry_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Retry At"
+          },
           "requested_by_user_id": {
             "format": "uuid",
             "title": "Requested By User Id",
             "type": "string"
+          },
+          "retry_count": {
+            "title": "Retry Count",
+            "type": "integer"
           },
           "rotated_count": {
             "title": "Rotated Count",
@@ -2894,6 +2953,8 @@
           "scanned_count",
           "rotated_count",
           "failed_count",
+          "retry_count",
+          "last_retry_at",
           "error_code",
           "requested_by_user_id",
           "created_at",
@@ -2902,6 +2963,22 @@
           "updated_at"
         ],
         "title": "AgentMemoryReencryptionJobResponse",
+        "type": "object"
+      },
+      "AgentMemoryReencryptionJobRetry": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "AgentMemoryReencryptionJobRetry",
         "type": "object"
       },
       "AgentMemoryResponse": {
@@ -3378,6 +3455,44 @@
             "title": "Average Duration Ms",
             "type": "number"
           },
+          "heartbeat_slo_minutes": {
+            "title": "Heartbeat Slo Minutes",
+            "type": "integer"
+          },
+          "heartbeat_status": {
+            "enum": [
+              "disabled",
+              "waiting",
+              "healthy",
+              "overdue"
+            ],
+            "title": "Heartbeat Status",
+            "type": "string"
+          },
+          "last_slo_alert_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Slo Alert At"
+          },
+          "last_worker_heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Worker Heartbeat At"
+          },
           "last_worker_run_at": {
             "anyOf": [
               {
@@ -3410,6 +3525,10 @@
             "title": "Schedule Enabled",
             "type": "boolean"
           },
+          "slo_breach_count": {
+            "title": "Slo Breach Count",
+            "type": "integer"
+          },
           "worker_exercises": {
             "title": "Worker Exercises",
             "type": "integer"
@@ -3432,7 +3551,12 @@
           "last_worker_run_at",
           "schedule_enabled",
           "next_run_at",
-          "overdue_seconds"
+          "overdue_seconds",
+          "heartbeat_status",
+          "heartbeat_slo_minutes",
+          "last_worker_heartbeat_at",
+          "last_slo_alert_at",
+          "slo_breach_count"
         ],
         "title": "AgentMemorySchedulerMetricsResponse",
         "type": "object"
@@ -4700,6 +4824,33 @@
           "blocked_items"
         ],
         "title": "AgentTaskMemoryContextResponse",
+        "type": "object"
+      },
+      "AgentTaskMemoryIncidentAssigneesUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "responsible_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Responsible User Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "responsible_user_ids",
+          "reason"
+        ],
+        "title": "AgentTaskMemoryIncidentAssigneesUpdate",
         "type": "object"
       },
       "AgentTaskMemoryIncidentResponse": {
@@ -21833,6 +21984,94 @@
         ]
       }
     },
+    "/agents/{agent_id}/memory-access-incidents/{incident_id}/responsibles": {
+      "put": {
+        "operationId": "update_agent_task_memory_incident_responsibles_agents__agent_id__memory_access_incidents__incident_id__responsibles_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTaskMemoryIncidentAssigneesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTaskMemoryIncidentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Agent Task Memory Incident Responsibles",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
     "/agents/{agent_id}/memory-access-incidents/{incident_id}/review": {
       "post": {
         "operationId": "review_agent_task_memory_access_incident_agents__agent_id__memory_access_incidents__incident_id__review_post",
@@ -22364,6 +22603,94 @@
           }
         ],
         "summary": "Create Agent Memory Reencryption Job",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/memory-reencryption-jobs/{job_id}/retry": {
+      "post": {
+        "operationId": "retry_agent_memory_reencryption_job_agents__agent_id__memory_reencryption_jobs__job_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMemoryReencryptionJobRetry"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMemoryReencryptionJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry Agent Memory Reencryption Job",
         "tags": [
           "agents"
         ]

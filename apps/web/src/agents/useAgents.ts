@@ -294,8 +294,12 @@ export interface AgentMemoryExerciseSchedule {
   agent_id: string;
   enabled: boolean;
   cadence_hours: number;
+  heartbeat_slo_minutes: number;
   next_run_at: string | null;
   last_run_at: string | null;
+  last_worker_heartbeat_at: string | null;
+  last_slo_alert_at: string | null;
+  slo_breach_count: number;
   updated_at: string | null;
 }
 
@@ -315,6 +319,11 @@ export interface AgentMemorySchedulerMetrics {
   schedule_enabled: boolean;
   next_run_at: string | null;
   overdue_seconds: number;
+  heartbeat_status: "disabled" | "waiting" | "healthy" | "overdue";
+  heartbeat_slo_minutes: number;
+  last_worker_heartbeat_at: string | null;
+  last_slo_alert_at: string | null;
+  slo_breach_count: number;
 }
 
 export interface AgentMemoryReencryptionJob {
@@ -327,6 +336,8 @@ export interface AgentMemoryReencryptionJob {
   scanned_count: number;
   rotated_count: number;
   failed_count: number;
+  retry_count: number;
+  last_retry_at: string | null;
   error_code: string | null;
   requested_by_user_id: string;
   created_at: string;

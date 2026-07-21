@@ -7,7 +7,7 @@ from typing import Annotated, Literal, cast
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import utc_now
@@ -50,6 +50,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryPurposePolicyInput,
     AgentMemoryReencryptionJobCreate,
     AgentMemoryReencryptionJobResponse,
+    AgentMemoryReencryptionJobRetry,
     AgentMemoryResponse,
     AgentMemoryResponseExerciseCreate,
     AgentMemoryResponseExerciseResponse,
@@ -68,6 +69,7 @@ from app.modules.agents.memory_schemas import (
     AgentTaskMemoryContextItem,
     AgentTaskMemoryContextRequest,
     AgentTaskMemoryContextResponse,
+    AgentTaskMemoryIncidentAssigneesUpdate,
     AgentTaskMemoryIncidentResponse,
     AgentTaskMemoryIncidentReview,
     AgentTaskMemoryIncidentRevoke,
@@ -157,7 +159,7 @@ async def _notify_memory_incident_reviewers(
                 if escalated
                 else "Um incidente exige revisão independente dentro do SLA configurado."
             ),
-            severity="critical" if incident.severity == "critical" or escalated else "warning",
+            severity="error" if incident.severity == "critical" or escalated else "warning",
             resource_type="agent_task_memory_access_incident",
             resource_id=incident.id,
             data={
@@ -1308,6 +1310,128 @@ async def review_agent_task_memory_access_incident(
     return _task_memory_incident_response(incident, responsible_user_ids=responsible_user_ids)
 
 
+@router.put(
+    "/{agent_id}/memory-access-incidents/{incident_id}/responsibles",
+    response_model=AgentTaskMemoryIncidentResponse,
+)
+async def update_agent_task_memory_incident_responsibles(
+    agent_id: UUID,
+    incident_id: UUID,
+    payload: AgentTaskMemoryIncidentAssigneesUpdate,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentTaskMemoryIncidentResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    incident = await database.scalar(
+        select(AgentTaskMemoryAccessIncident)
+        .where(
+            AgentTaskMemoryAccessIncident.id == incident_id,
+            AgentTaskMemoryAccessIncident.company_id == context.company_id,
+            AgentTaskMemoryAccessIncident.owner_agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incidente de memória não encontrado.")
+    if incident.review_status != "pending":
+        raise HTTPException(status_code=409, detail="Somente incidentes pendentes podem mudar.")
+    requested_responsibles = set(payload.responsible_user_ids)
+    if incident.triggered_by_user_id in requested_responsibles:
+        raise HTTPException(
+            status_code=422,
+            detail="Quem abriu o incidente não pode revisar a própria ocorrência.",
+        )
+    authorized_responsibles = set(await company_approver_user_ids(database, context.company_id))
+    if not requested_responsibles.issubset(authorized_responsibles):
+        raise HTTPException(
+            status_code=422,
+            detail="Todos os responsáveis devem ser revisores autorizados da empresa.",
+        )
+    existing_responsibles = set(
+        await database.scalars(
+            select(AgentTaskMemoryIncidentAssignee.responsible_user_id).where(
+                AgentTaskMemoryIncidentAssignee.company_id == context.company_id,
+                AgentTaskMemoryIncidentAssignee.incident_id == incident.id,
+            )
+        )
+    )
+    reviewers = set(
+        await database.scalars(
+            select(AgentTaskMemoryIncidentReviewRecord.reviewer_user_id).where(
+                AgentTaskMemoryIncidentReviewRecord.company_id == context.company_id,
+                AgentTaskMemoryIncidentReviewRecord.incident_id == incident.id,
+            )
+        )
+    )
+    if not reviewers.issubset(requested_responsibles):
+        raise HTTPException(
+            status_code=409,
+            detail="Responsáveis que já votaram devem permanecer na cadeia de custódia.",
+        )
+    if existing_responsibles == requested_responsibles:
+        return _task_memory_incident_response(
+            incident, responsible_user_ids=list(payload.responsible_user_ids)
+        )
+    await database.execute(
+        delete(AgentTaskMemoryIncidentAssignee).where(
+            AgentTaskMemoryIncidentAssignee.company_id == context.company_id,
+            AgentTaskMemoryIncidentAssignee.incident_id == incident.id,
+        )
+    )
+    for responsible_user_id in payload.responsible_user_ids:
+        database.add(
+            AgentTaskMemoryIncidentAssignee(
+                company_id=context.company_id,
+                incident_id=incident.id,
+                agent_id=agent_id,
+                responsible_user_id=responsible_user_id,
+                assigned_by_user_id=context.user_id,
+            )
+        )
+    reason_fingerprint = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="responsible_reassignment",
+        value=payload.reason,
+    )
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.task_memory_incident.responsibles_updated",
+        target_type="agent_task_memory_access_incident",
+        target_id=incident.id,
+        details={
+            "previous_count": len(existing_responsibles),
+            "responsible_count": len(requested_responsibles),
+            "reason_fingerprint": reason_fingerprint,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.task_memory_incident.responsibles_updated",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={
+                "incident_id": str(incident.id),
+                "agent_id": str(agent_id),
+                "responsible_count": len(requested_responsibles),
+            },
+        ),
+    )
+    await database.flush()
+    await _notify_memory_incident_reviewers(database, incident=incident, escalated=False)
+    await database.commit()
+    return _task_memory_incident_response(
+        incident, responsible_user_ids=list(payload.responsible_user_ids)
+    )
+
+
 @router.post(
     "/{agent_id}/memory-risk-report",
     response_model=AgentMemoryRiskReport,
@@ -1619,8 +1743,12 @@ def _exercise_schedule_response(
         agent_id=agent_id,
         enabled=schedule.enabled if schedule else False,
         cadence_hours=schedule.cadence_hours if schedule else 168,
+        heartbeat_slo_minutes=schedule.heartbeat_slo_minutes if schedule else 15,
         next_run_at=schedule.next_run_at if schedule else None,
         last_run_at=schedule.last_run_at if schedule else None,
+        last_worker_heartbeat_at=schedule.last_worker_heartbeat_at if schedule else None,
+        last_slo_alert_at=schedule.last_slo_alert_at if schedule else None,
+        slo_breach_count=schedule.slo_breach_count if schedule else 0,
         updated_at=schedule.updated_at if schedule else None,
     )
 
@@ -1701,6 +1829,16 @@ async def get_agent_memory_scheduler_metrics(
     overdue_seconds = 0
     if schedule and schedule.enabled and schedule.next_run_at and schedule.next_run_at < utc_now():
         overdue_seconds = max(0, int((utc_now() - schedule.next_run_at).total_seconds()))
+    heartbeat_status: Literal["disabled", "waiting", "healthy", "overdue"] = "disabled"
+    if schedule and schedule.enabled:
+        if schedule.last_worker_heartbeat_at is None:
+            heartbeat_status = "waiting"
+        elif utc_now() - schedule.last_worker_heartbeat_at > timedelta(
+            minutes=schedule.heartbeat_slo_minutes
+        ):
+            heartbeat_status = "overdue"
+        else:
+            heartbeat_status = "healthy"
     return AgentMemorySchedulerMetricsResponse(
         agent_id=agent_id,
         worker_exercises=worker_exercises,
@@ -1711,6 +1849,11 @@ async def get_agent_memory_scheduler_metrics(
         schedule_enabled=bool(schedule and schedule.enabled),
         next_run_at=schedule.next_run_at if schedule else None,
         overdue_seconds=overdue_seconds,
+        heartbeat_status=heartbeat_status,
+        heartbeat_slo_minutes=schedule.heartbeat_slo_minutes if schedule else 15,
+        last_worker_heartbeat_at=schedule.last_worker_heartbeat_at if schedule else None,
+        last_slo_alert_at=schedule.last_slo_alert_at if schedule else None,
+        slo_breach_count=schedule.slo_breach_count if schedule else 0,
     )
 
 
@@ -1744,6 +1887,7 @@ async def update_agent_memory_exercise_schedule(
         database.add(schedule)
     schedule.enabled = payload.enabled
     schedule.cadence_hours = payload.cadence_hours
+    schedule.heartbeat_slo_minutes = payload.heartbeat_slo_minutes
     schedule.next_run_at = now + timedelta(hours=payload.cadence_hours) if payload.enabled else None
     schedule.updated_by_user_id = context.user_id
     await database.commit()
@@ -1852,6 +1996,25 @@ async def revoke_agent_task_memory_access_for_incident(
         value_type="reason",
         value=payload.reason,
     )
+    request_fingerprint = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="request",
+        value=json.dumps(
+            {
+                "incident_reference_fingerprint": reference_fingerprint,
+                "quarantine_minutes": payload.quarantine_minutes,
+                "reason_fingerprint": reason_fingerprint,
+                "required_review_quorum": payload.required_review_quorum,
+                "responsible_user_ids": sorted(str(item) for item in requested_responsibles),
+                "review_sla_minutes": payload.review_sla_minutes,
+                "severity": payload.severity,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ),
+    )
     existing = await database.scalar(
         select(AgentTaskMemoryAccessIncident).where(
             AgentTaskMemoryAccessIncident.company_id == context.company_id,
@@ -1875,14 +2038,21 @@ async def revoke_agent_task_memory_access_for_incident(
             or existing.severity != payload.severity
             or existing.required_review_quorum != payload.required_review_quorum
             or existing.review_sla_minutes != payload.review_sla_minutes
-            or existing_responsibles != requested_responsibles
+            or (
+                existing.request_fingerprint is not None
+                and existing.request_fingerprint != request_fingerprint
+            )
+            or (
+                existing.request_fingerprint is None
+                and existing_responsibles != requested_responsibles
+            )
         ):
             raise HTTPException(
                 status_code=409, detail="Chave idempotente usada por outro incidente."
             )
         return _task_memory_incident_response(
             existing,
-            responsible_user_ids=list(payload.responsible_user_ids),
+            responsible_user_ids=list(existing_responsibles),
             already_processed=True,
         )
     now = utc_now()
@@ -1890,6 +2060,7 @@ async def revoke_agent_task_memory_access_for_incident(
         company_id=context.company_id,
         owner_agent_id=agent_id,
         idempotency_key=payload.idempotency_key,
+        request_fingerprint=request_fingerprint,
         incident_reference_fingerprint=reference_fingerprint,
         reason_fingerprint=reason_fingerprint,
         revoked_grants=0,
@@ -1985,6 +2156,8 @@ def _memory_reencryption_job_response(
         scanned_count=job.scanned_count,
         rotated_count=job.rotated_count,
         failed_count=job.failed_count,
+        retry_count=job.retry_count,
+        last_retry_at=job.last_retry_at,
         error_code=job.error_code,
         requested_by_user_id=job.requested_by_user_id,
         created_at=job.created_at,
@@ -2058,6 +2231,17 @@ async def create_agent_memory_reencryption_job(
         )
         or 0
     )
+    snapshot = (
+        await database.execute(
+            select(AgentMemoryEntry.created_at, AgentMemoryEntry.id)
+            .where(
+                AgentMemoryEntry.company_id == context.company_id,
+                AgentMemoryEntry.agent_id == agent_id,
+            )
+            .order_by(AgentMemoryEntry.created_at.desc(), AgentMemoryEntry.id.desc())
+            .limit(1)
+        )
+    ).first()
     job = AgentMemoryReencryptionJob(
         company_id=context.company_id,
         agent_id=agent_id,
@@ -2065,6 +2249,8 @@ async def create_agent_memory_reencryption_job(
         target_master_key_id=memory_master_key_id(settings.encryption_key),
         batch_size=payload.batch_size,
         total_count=total_count,
+        snapshot_created_at=snapshot[0] if snapshot else None,
+        snapshot_memory_id=snapshot[1] if snapshot else None,
         requested_by_user_id=context.user_id,
     )
     database.add(job)
@@ -2082,6 +2268,95 @@ async def create_agent_memory_reencryption_job(
         database,
         DomainEventCreate(
             event_type="agent.memory_reencryption.requested",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={"job_id": str(job.id), "agent_id": str(agent_id)},
+        ),
+    )
+    await database.commit()
+    await database.refresh(job)
+    return _memory_reencryption_job_response(job)
+
+
+@router.post(
+    "/{agent_id}/memory-reencryption-jobs/{job_id}/retry",
+    response_model=AgentMemoryReencryptionJobResponse,
+)
+async def retry_agent_memory_reencryption_job(
+    agent_id: UUID,
+    job_id: UUID,
+    payload: AgentMemoryReencryptionJobRetry,
+    principal: CanConfigureAgentMemory,
+    database: DatabaseSession,
+    settings: RequestSettings,
+) -> AgentMemoryReencryptionJobResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, company_id=context.company_id, agent_id=agent_id)
+    if not settings.encryption_previous_keys:
+        raise HTTPException(
+            status_code=409,
+            detail="Mantenha as chaves anteriores no keyring antes de retomar o job.",
+        )
+    job = await database.scalar(
+        select(AgentMemoryReencryptionJob)
+        .where(
+            AgentMemoryReencryptionJob.id == job_id,
+            AgentMemoryReencryptionJob.company_id == context.company_id,
+            AgentMemoryReencryptionJob.agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job de recriptografia não encontrado.")
+    if job.status != "failed":
+        raise HTTPException(status_code=409, detail="Somente jobs falhos podem ser retomados.")
+    active_job_id = await database.scalar(
+        select(AgentMemoryReencryptionJob.id)
+        .where(
+            AgentMemoryReencryptionJob.company_id == context.company_id,
+            AgentMemoryReencryptionJob.agent_id == agent_id,
+            AgentMemoryReencryptionJob.status.in_(("pending", "running")),
+            AgentMemoryReencryptionJob.id != job.id,
+        )
+        .limit(1)
+    )
+    if active_job_id is not None:
+        raise HTTPException(status_code=409, detail="Já existe outro job em andamento.")
+    now = utc_now()
+    job.status = "pending"
+    job.target_master_key_id = memory_master_key_id(settings.encryption_key)
+    job.scanned_count = job.rotated_count
+    job.failed_count = 0
+    job.error_code = None
+    job.retry_count += 1
+    job.last_retry_at = now
+    job.retry_reason_fingerprint = memory_incident_value_fingerprint(
+        secret=settings.encryption_key,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        value_type="reencryption_retry",
+        value=payload.reason,
+    )
+    job.started_at = None
+    job.completed_at = None
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="agent.memory_reencryption.retried",
+        target_type="agent_memory_reencryption_job",
+        target_id=job.id,
+        details={
+            "agent_id": str(agent_id),
+            "retry_count": job.retry_count,
+            "checkpoint_rotated_count": job.rotated_count,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="agent.memory_reencryption.retried",
             company_id=context.company_id,
             actor_user_id=context.user_id,
             classification="internal",
