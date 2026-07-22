@@ -296,9 +296,20 @@
   padding: 0.85rem;
 }
 .agent-policy-row small {
-  color: #6e766d;
+  color: #43534e;
   display: block;
+  font-weight: 500;
+  line-height: 1.45;
   margin-top: 0.2rem;
+}
+
+.agent-policy-row {
+  border-color: #bccbc5;
+  color: #203a35;
+}
+
+.agent-policy-row p {
+  color: #43534e;
 }
 .agent-policy-row__actions {
   align-items: flex-end;
@@ -328,6 +339,17 @@
   color: #17322d;
   font: inherit;
   padding: 0.8rem;
+}
+.agent-policy-simulator .agent-native-select {
+  background-color: #fffdf7;
+  color: #17322d;
+  color-scheme: light;
+  opacity: 1;
+  -webkit-text-fill-color: #17322d;
+}
+.agent-policy-simulator .agent-native-select option {
+  background-color: #fffdf7;
+  color: #17322d;
 }
 .agent-policy-decision {
   border: 1px solid transparent;
