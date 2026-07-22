@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.config import Settings
 from app.core.dependencies import DatabaseSession, RedisClient, RequestSettings
@@ -13,8 +13,9 @@ from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
-from app.modules.events.models import EventContract, EventSubscription
+from app.modules.events.models import EventContract, EventDelivery, EventSubscription
 from app.modules.events.operations_service import validate_payload
+from app.modules.notifications.models import ApprovalRequest
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 from app.modules.workflows.compiler import (
     analyze_compiler_compatibility,
@@ -26,6 +27,7 @@ from app.modules.workflows.definition import (
     analyze_definition,
     block_catalog,
     compare_definitions,
+    compensation_policy,
     export_definition,
     prepare_definition,
 )
@@ -33,6 +35,7 @@ from app.modules.workflows.execution import run_workflow
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
 from app.modules.workflows.schemas import (
     WorkflowComparisonResponse,
+    WorkflowCancelRequest,
     WorkflowCreate,
     WorkflowCreatedResponse,
     WorkflowDefinitionRequest,
@@ -41,6 +44,7 @@ from app.modules.workflows.schemas import (
     WorkflowExecutionResponse,
     WorkflowExportResponse,
     WorkflowResponse,
+    WorkflowMetricsResponse,
     WorkflowSimulationRequest,
     WorkflowSimulationResponse,
     WorkflowUpdate,
@@ -679,6 +683,195 @@ async def list_workflow_executions(
         )
     )
     return [_execution_response(execution) for execution in executions]
+
+
+@router.post(
+    "/{workflow_id}/executions/{execution_id}/cancel",
+    response_model=WorkflowExecutionResponse,
+)
+async def cancel_workflow_execution(
+    workflow_id: UUID,
+    execution_id: UUID,
+    payload: WorkflowCancelRequest,
+    principal: CanExecuteWorkflows,
+    database: DatabaseSession,
+) -> WorkflowExecutionResponse:
+    context = get_request_context(principal)
+    workflow = await _get_workflow(database, context.company_id, workflow_id)
+    execution = await database.scalar(
+        select(WorkflowExecution).where(
+            WorkflowExecution.id == execution_id,
+            WorkflowExecution.workflow_id == workflow_id,
+            WorkflowExecution.company_id == context.company_id,
+        )
+    )
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Execucao nao encontrada.")
+    if execution.status in {"success", "error", "canceled"}:
+        raise HTTPException(status_code=409, detail="A execucao ja foi finalizada.")
+    now = utc_now()
+    execution.cancellation_requested_at = now
+    execution.canceled_by_user_id = context.user_id
+    execution.cancel_reason = payload.reason.strip() if payload.reason else None
+    if execution.status in {"queued", "waiting"}:
+        execution.status = "canceled"
+        execution.canceled_at = now
+        execution.finished_at = now
+        policy = compensation_policy(workflow.definition)
+        if policy["enabled"] and "canceled" in policy["on_status"]:
+            execution.compensation_status = "pending"
+    approval = await database.scalar(
+        select(ApprovalRequest).where(
+            ApprovalRequest.company_id == context.company_id,
+            ApprovalRequest.workflow_execution_id == execution.id,
+            ApprovalRequest.status == "pending",
+        )
+    )
+    if approval is not None:
+        approval.status = "cancelled"
+        approval.decided_at = now
+        approval.encrypted_payload = None
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="workflow.execution.cancellation_requested",
+        target_type="workflow_execution",
+        target_id=execution.id,
+        details={
+            "workflow_id": str(workflow_id),
+            "immediate": execution.status == "canceled",
+        },
+    )
+    await database.commit()
+    await database.refresh(execution)
+    return _execution_response(execution)
+
+
+@router.post(
+    "/{workflow_id}/executions/{execution_id}/compensation/acknowledge",
+    response_model=WorkflowExecutionResponse,
+)
+async def acknowledge_workflow_compensation(
+    workflow_id: UUID,
+    execution_id: UUID,
+    principal: CanExecuteWorkflows,
+    database: DatabaseSession,
+) -> WorkflowExecutionResponse:
+    context = get_request_context(principal)
+    await _get_workflow(database, context.company_id, workflow_id)
+    execution = await database.scalar(
+        select(WorkflowExecution).where(
+            WorkflowExecution.id == execution_id,
+            WorkflowExecution.workflow_id == workflow_id,
+            WorkflowExecution.company_id == context.company_id,
+        )
+    )
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Execucao nao encontrada.")
+    if execution.compensation_status != "pending":
+        raise HTTPException(status_code=409, detail="Nao existe compensacao pendente.")
+    execution.compensation_status = "acknowledged"
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="workflow.compensation.acknowledged",
+        target_type="workflow_execution",
+        target_id=execution.id,
+        details={"workflow_id": str(workflow_id)},
+    )
+    await database.commit()
+    await database.refresh(execution)
+    return _execution_response(execution)
+
+
+@router.get("/{workflow_id}/metrics", response_model=WorkflowMetricsResponse)
+async def workflow_metrics(
+    workflow_id: UUID,
+    principal: CanViewWorkflows,
+    database: DatabaseSession,
+) -> WorkflowMetricsResponse:
+    context = get_request_context(principal)
+    await _get_workflow(database, context.company_id, workflow_id)
+    base = (
+        WorkflowExecution.company_id == context.company_id,
+        WorkflowExecution.workflow_id == workflow_id,
+    )
+    total = int(await database.scalar(select(func.count(WorkflowExecution.id)).where(*base)) or 0)
+
+    async def count_status(status_value: str) -> int:
+        return int(
+            await database.scalar(
+                select(func.count(WorkflowExecution.id)).where(
+                    *base, WorkflowExecution.status == status_value
+                )
+            )
+            or 0
+        )
+
+    success = await count_status("success")
+    errors = await count_status("error")
+    canceled = await count_status("canceled")
+    waiting = await count_status("waiting")
+    running = await count_status("running")
+    domain_event_executions = int(
+        await database.scalar(
+            select(func.count(WorkflowExecution.id)).where(
+                *base, WorkflowExecution.source == "domain_event"
+            )
+        )
+        or 0
+    )
+    cancellation_requests = int(
+        await database.scalar(
+            select(func.count(WorkflowExecution.id)).where(
+                *base, WorkflowExecution.cancellation_requested_at.is_not(None)
+            )
+        )
+        or 0
+    )
+    compensation_pending = int(
+        await database.scalar(
+            select(func.count(WorkflowExecution.id)).where(
+                *base, WorkflowExecution.compensation_status == "pending"
+            )
+        )
+        or 0
+    )
+    average_duration = await database.scalar(
+        select(func.avg(WorkflowExecution.duration_ms)).where(
+            *base, WorkflowExecution.duration_ms.is_not(None)
+        )
+    )
+    replay_count = int(
+        await database.scalar(
+            select(func.coalesce(func.sum(EventDelivery.replay_count), 0))
+            .join(
+                EventSubscription,
+                EventSubscription.id == EventDelivery.subscription_id,
+            )
+            .where(
+                EventDelivery.company_id == context.company_id,
+                EventSubscription.workflow_id == workflow_id,
+            )
+        )
+        or 0
+    )
+    return WorkflowMetricsResponse(
+        total=total,
+        success=success,
+        errors=errors,
+        canceled=canceled,
+        waiting=waiting,
+        running=running,
+        domain_event_executions=domain_event_executions,
+        cancellation_requests=cancellation_requests,
+        compensation_pending=compensation_pending,
+        replay_count=replay_count,
+        success_rate=round((success / total * 100) if total else 0.0, 2),
+        average_duration_ms=round(float(average_duration or 0), 2),
+    )
 
 
 @router.get("/{workflow_id}/versions", response_model=list[WorkflowVersionResponse])

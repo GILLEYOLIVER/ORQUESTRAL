@@ -87,6 +87,10 @@ class WorkflowExecution(Base):
             "duration_ms IS NULL OR duration_ms >= 0",
             name="ck_workflow_executions_duration",
         ),
+        CheckConstraint(
+            "compensation_status IN ('not_required', 'pending', 'acknowledged')",
+            name="ck_workflow_executions_compensation_status",
+        ),
         UniqueConstraint(
             "company_id", "workflow_id", "source_event_id", name="uq_workflow_execution_event"
         ),
@@ -107,6 +111,9 @@ class WorkflowExecution(Base):
     requested_by_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
+    canceled_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     external_execution_id: Mapped[str | None] = mapped_column(String(80), index=True)
     source: Mapped[str] = mapped_column(String(20), index=True)
     status: Mapped[str] = mapped_column(
@@ -119,7 +126,13 @@ class WorkflowExecution(Base):
         JSONB, default=dict, server_default=text("'{}'::jsonb")
     )
     error_summary: Mapped[str | None] = mapped_column(Text)
+    cancel_reason: Mapped[str | None] = mapped_column(String(300))
+    compensation_status: Mapped[str] = mapped_column(
+        String(24), default="not_required", server_default="not_required", index=True
+    )
     duration_ms: Mapped[int | None] = mapped_column(Integer)
+    cancellation_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(

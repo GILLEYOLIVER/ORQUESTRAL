@@ -46,6 +46,7 @@ from app.modules.notifications.service import (
 )
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 from app.modules.users.models import User
+from app.modules.workflows.definition import compensation_policy
 from app.modules.workflows.execution import run_workflow
 from app.modules.workflows.models import Workflow, WorkflowExecution
 
@@ -563,18 +564,24 @@ async def decide_approval(
         )
         if execution is None:
             raise HTTPException(status_code=404, detail="Execução vinculada não encontrada.")
+        workflow = await database.scalar(
+            select(Workflow).where(
+                Workflow.id == execution.workflow_id,
+                Workflow.company_id == context.company_id,
+            )
+        )
+        if workflow is None:
+            raise HTTPException(status_code=409, detail="Automação vinculada indisponível.")
         if payload.decision == "rejected":
             execution.status = "canceled"
             execution.error_summary = "Execução rejeitada por decisão humana."
             execution.finished_at = utc_now()
+            execution.canceled_at = execution.finished_at
+            policy = compensation_policy(workflow.definition)
+            if policy["enabled"] and "canceled" in policy["on_status"]:
+                execution.compensation_status = "pending"
         else:
-            workflow = await database.scalar(
-                select(Workflow).where(
-                    Workflow.id == execution.workflow_id,
-                    Workflow.company_id == context.company_id,
-                )
-            )
-            if workflow is None or approval.encrypted_payload is None:
+            if approval.encrypted_payload is None:
                 raise HTTPException(status_code=409, detail="Automação vinculada indisponível.")
             try:
                 encrypted = CredentialVault(settings.encryption_key).decrypt(

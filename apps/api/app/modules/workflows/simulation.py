@@ -7,6 +7,7 @@ from app.modules.workflows.definition import (
     TRIGGER_TYPES,
     analyze_definition,
     as_summary_object,
+    compensation_policy,
     execution_policy,
 )
 
@@ -15,6 +16,7 @@ def simulate_definition(definition: dict[str, Any], input_data: dict[str, Any]) 
     """Build a deterministic dry-run trace without executing external effects."""
     issues = analyze_definition(definition)
     policy = execution_policy(definition)
+    compensation = compensation_policy(definition)
     nodes = [item for item in definition.get("nodes", []) if isinstance(item, dict)]
     by_id = {str(item.get("id")): item for item in nodes}
     outgoing: dict[str, list[str]] = {node_id: [] for node_id in by_id}
@@ -86,6 +88,7 @@ def simulate_definition(definition: dict[str, Any], input_data: dict[str, Any]) 
         "estimated_steps": len(trace),
         "blocked_side_effects": blocked_side_effects,
         "execution_policy": policy,
+        "compensation_policy": compensation,
         "input_summary": as_summary_object(input_data),
         "trace": trace,
         "issues": issues,

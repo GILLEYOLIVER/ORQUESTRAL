@@ -22,7 +22,14 @@ export interface WorkflowDefinition {
   connections: WorkflowConnectionDefinition[];
   variables: Record<string, unknown>;
   execution_policy?: WorkflowExecutionPolicy;
+  compensation_policy?: WorkflowCompensationPolicy;
   version: 1;
+}
+
+export interface WorkflowCompensationPolicy {
+  enabled: boolean;
+  mode: "manual";
+  on_status: Array<"error" | "canceled">;
 }
 
 export interface WorkflowExecutionPolicy {
@@ -59,7 +66,11 @@ export interface WorkflowExecutionResponse {
   input_summary: Record<string, unknown>;
   output_summary: Record<string, unknown>;
   error_summary: string | null;
+  cancel_reason: string | null;
+  compensation_status: "not_required" | "pending" | "acknowledged";
   duration_ms: number | null;
+  cancellation_requested_at: string | null;
+  canceled_at: string | null;
   started_at: string | null;
   finished_at: string | null;
   created_at: string;
@@ -107,9 +118,25 @@ export interface WorkflowSimulationResponse {
   estimated_steps: number;
   blocked_side_effects: number;
   execution_policy: WorkflowExecutionPolicy;
+  compensation_policy: WorkflowCompensationPolicy;
   input_summary: Record<string, unknown>;
   trace: WorkflowSimulationTrace[];
   issues: WorkflowValidationIssue[];
+}
+
+export interface WorkflowMetricsResponse {
+  total: number;
+  success: number;
+  errors: number;
+  canceled: number;
+  waiting: number;
+  running: number;
+  domain_event_executions: number;
+  cancellation_requests: number;
+  compensation_pending: number;
+  replay_count: number;
+  success_rate: number;
+  average_duration_ms: number;
 }
 
 export interface EventContractOption {

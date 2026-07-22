@@ -159,6 +159,11 @@ DEFAULT_EXECUTION_POLICY: dict[str, Any] = {
     "concurrency_limit": 1,
     "on_conflict": "reject",
 }
+DEFAULT_COMPENSATION_POLICY: dict[str, Any] = {
+    "enabled": False,
+    "mode": "manual",
+    "on_status": ["error", "canceled"],
+}
 
 
 def block_catalog() -> list[dict[str, Any]]:
@@ -168,6 +173,14 @@ def block_catalog() -> list[dict[str, Any]]:
 def execution_policy(definition: dict[str, Any]) -> dict[str, Any]:
     raw = definition.get("execution_policy")
     policy = dict(DEFAULT_EXECUTION_POLICY)
+    if isinstance(raw, dict):
+        policy.update(raw)
+    return policy
+
+
+def compensation_policy(definition: dict[str, Any]) -> dict[str, Any]:
+    raw = definition.get("compensation_policy")
+    policy = dict(DEFAULT_COMPENSATION_POLICY)
     if isinstance(raw, dict):
         policy.update(raw)
     return policy
@@ -201,6 +214,7 @@ def build_default_definition(_webhook_path: str | None = None) -> dict[str, Any]
         ],
         "variables": {},
         "execution_policy": dict(DEFAULT_EXECUTION_POLICY),
+        "compensation_policy": dict(DEFAULT_COMPENSATION_POLICY),
         "version": 1,
     }
 
@@ -235,6 +249,7 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         "connections",
         "variables",
         "execution_policy",
+        "compensation_policy",
         "version",
     }:
         issues.append(
@@ -290,6 +305,42 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                 "error",
                 "invalid_execution_policy",
                 "Conflitos de concorrencia devem ser rejeitados com seguranca.",
+            )
+        )
+    compensation = compensation_policy(definition)
+    if "compensation_policy" in definition and not isinstance(
+        definition.get("compensation_policy"), dict
+    ):
+        issues.append(
+            _issue("error", "invalid_compensation_policy", "A politica de compensacao e invalida.")
+        )
+    if not isinstance(compensation.get("enabled"), bool):
+        issues.append(
+            _issue(
+                "error",
+                "invalid_compensation_policy",
+                "A ativacao da compensacao deve ser verdadeira ou falsa.",
+            )
+        )
+    if compensation.get("mode") != "manual":
+        issues.append(
+            _issue(
+                "error",
+                "invalid_compensation_policy",
+                "Somente compensacao manual supervisionada e permitida nesta fase.",
+            )
+        )
+    on_status = compensation.get("on_status")
+    if (
+        not isinstance(on_status, list)
+        or not on_status
+        or not all(item in {"error", "canceled"} for item in on_status)
+    ):
+        issues.append(
+            _issue(
+                "error",
+                "invalid_compensation_policy",
+                "Selecione error e/ou canceled para preparar a compensacao.",
             )
         )
 
@@ -580,6 +631,7 @@ def prepare_definition(
     if _is_legacy_n8n(prepared):
         prepared = build_default_definition()
     prepared.setdefault("execution_policy", dict(DEFAULT_EXECUTION_POLICY))
+    prepared.setdefault("compensation_policy", dict(DEFAULT_COMPENSATION_POLICY))
     validate_definition(prepared)
     return prepared
 

@@ -919,3 +919,12 @@ controlada de metadados entre ambientes.
 - Estudio visual com configuracao do evento, limites e resultado passo a passo.
 - Migracao: nenhuma; utiliza o schema de eventos do ciclo 58.
 - Proximo passo exato: cancelamento cooperativo, compensacao declarativa e metricas agregadas por automacao.
+
+## Ciclo 60 - controle e metricas de automacoes (22/07/2026)
+
+- Cancelamento cooperativo com estado, solicitante, motivo e auditoria.
+- Compensacao manual declarativa para falha ou cancelamento, sem reversao automatica.
+- Metricas agregadas de sucesso, erro, latencia, cancelamento e replay.
+- Painel operacional e acoes supervisionadas no Estudio de Automacoes.
+- Migracao: `20260722_0079_workflow_execution_control.py`.
+- Proximo passo exato: retry por bloco, circuit breaker de provider e cancelamento remoto por adaptador.

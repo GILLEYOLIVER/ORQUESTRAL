@@ -414,6 +414,9 @@
 .visual-simulation-panel {
   grid-column: 1 / -1;
 }
+.visual-metrics-panel {
+  grid-column: 1 / -1;
+}
 .visual-policy-grid {
   display: grid;
   gap: 10px;
@@ -441,6 +444,53 @@
   gap: 10px;
   grid-template-columns: 1fr auto;
   margin-top: 14px;
+}
+.visual-compensation-toggle {
+  align-items: flex-start;
+  background: #f7f4e9;
+  border: 1px solid #d8d1bd;
+  border-radius: 11px;
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+}
+.visual-compensation-toggle span {
+  display: grid;
+  gap: 3px;
+}
+.visual-compensation-toggle small {
+  color: #536159;
+  line-height: 1.4;
+}
+.visual-metrics-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.visual-metrics-grid > div {
+  background: #f7f4e9;
+  border: 1px solid #ded9c9;
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 13px;
+}
+.visual-metrics-grid strong {
+  font-size: 1.25rem;
+}
+.visual-metrics-grid small {
+  color: #536159;
+}
+.visual-execution-action {
+  background: #edf2d9;
+  border: 1px solid #cad99b;
+  border-radius: 8px;
+  color: #294536;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 7px 9px;
 }
 .visual-simulation-result {
   background: #edf2d9;
@@ -547,6 +597,9 @@
   .visual-inspector-form {
     grid-template-columns: 1fr;
   }
+  .visual-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 560px) {
   .visual-workflow-hero {
@@ -567,6 +620,9 @@
   }
   .visual-policy-grid,
   .visual-simulation-actions {
+    grid-template-columns: 1fr;
+  }
+  .visual-metrics-grid {
     grid-template-columns: 1fr;
   }
 }
