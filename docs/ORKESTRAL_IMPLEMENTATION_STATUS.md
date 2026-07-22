@@ -961,3 +961,16 @@ controlada de metadados entre ambientes.
 - Migracao: nenhuma.
 - Documento detalhado: `docs/cycles/CYCLE_63_MANUAL_DEPLOY_AND_STABILIZATION.md`.
 - Proximo passo exato: compensacao vinculada a blocos, provider fake e fechamento da Fase 3.
+
+## Ciclo 64 - compensacao por bloco e portabilidade do provider (22/07/2026)
+
+- A definicao canonica vincula cada acao operacional a um bloco compensatorio exclusivo e fora do caminho normal.
+- Falhas e cancelamentos persistem um plano seguro; cada item exige confirmacao humana e auditoria propria.
+- `WorkflowProvider` centraliza sincronizacao, ativacao, execucao, health e cancelamento remoto.
+- O adaptador n8n preserva compatibilidade e referencias legadas durante a migracao.
+- O provider falso prova publicacao, execucao, cancelamento e ausencia de dependencia do formato n8n.
+- Referencias genericas e provider usado em cada execucao permitem futura troca de motor sem reescrever o dominio.
+- Correcao adicional: a validacao de risco de repeticao nao consulta mais uma variavel de loop durante a validacao de eventos.
+- Migracao: `20260722_0081_workflow_provider_compensation.py`.
+- Documento detalhado: `docs/cycles/CYCLE_64_WORKFLOW_PORTABILITY_AND_COMPENSATION.md`.
+- Fase 3 concluida. Proximo passo exato: iniciar a Fase 4 com definicoes e versoes do runtime de agentes, ferramentas tipadas e politicas de autonomia.

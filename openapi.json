@@ -21895,9 +21895,14 @@
           "message": {
             "title": "Message",
             "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
           }
         },
         "required": [
+          "provider",
           "configured",
           "available",
           "message"
@@ -21954,6 +21959,14 @@
               }
             ],
             "title": "Cancellation Requested At"
+          },
+          "compensation_plan": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Compensation Plan",
+            "type": "array"
           },
           "compensation_status": {
             "enum": [
@@ -22018,6 +22031,10 @@
             "title": "Output Summary",
             "type": "object"
           },
+          "provider_key": {
+            "title": "Provider Key",
+            "type": "string"
+          },
           "remote_cancel_status": {
             "enum": [
               "not_requested",
@@ -22072,7 +22089,9 @@
           "output_summary",
           "error_summary",
           "cancel_reason",
+          "provider_key",
           "compensation_status",
+          "compensation_plan",
           "remote_cancel_status",
           "duration_ms",
           "cancellation_requested_at",
@@ -22333,6 +22352,14 @@
             "title": "Blocked Side Effects",
             "type": "integer"
           },
+          "compensation_plan": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Compensation Plan",
+            "type": "array"
+          },
           "compensation_policy": {
             "additionalProperties": true,
             "title": "Compensation Policy",
@@ -22382,6 +22409,7 @@
           "blocked_side_effects",
           "execution_policy",
           "compensation_policy",
+          "compensation_plan",
           "input_summary",
           "trace",
           "issues"
@@ -49510,6 +49538,93 @@
           }
         ],
         "summary": "Acknowledge Workflow Compensation",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/workflows/{workflow_id}/executions/{execution_id}/compensation/{source_node_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledge_workflow_compensation_item_workflows__workflow_id__executions__execution_id__compensation__source_node_id__acknowledge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "execution_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Execution Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "source_node_id",
+            "required": true,
+            "schema": {
+              "title": "Source Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Acknowledge Workflow Compensation Item",
         "tags": [
           "workflows"
         ]

@@ -7,8 +7,10 @@ from app.modules.workflows.definition import (
     TRIGGER_TYPES,
     analyze_definition,
     as_summary_object,
+    build_compensation_plan,
     compensation_policy,
     execution_policy,
+    is_compensation_only,
 )
 
 
@@ -17,7 +19,11 @@ def simulate_definition(definition: dict[str, Any], input_data: dict[str, Any]) 
     issues = analyze_definition(definition)
     policy = execution_policy(definition)
     compensation = compensation_policy(definition)
-    nodes = [item for item in definition.get("nodes", []) if isinstance(item, dict)]
+    nodes = [
+        item
+        for item in definition.get("nodes", [])
+        if isinstance(item, dict) and not is_compensation_only(item)
+    ]
     by_id = {str(item.get("id")): item for item in nodes}
     outgoing: dict[str, list[str]] = {node_id: [] for node_id in by_id}
     for edge in definition.get("connections", []):
@@ -89,6 +95,7 @@ def simulate_definition(definition: dict[str, Any], input_data: dict[str, Any]) 
         "blocked_side_effects": blocked_side_effects,
         "execution_policy": policy,
         "compensation_policy": compensation,
+        "compensation_plan": build_compensation_plan(definition),
         "input_summary": as_summary_object(input_data),
         "trace": trace,
         "issues": issues,

@@ -161,6 +161,17 @@ export function WorkflowsPage() {
     max_attempts: 3,
     wait_seconds: 2,
   }) as { enabled: boolean; max_attempts: number; wait_seconds: number };
+  const selectedBlockCompensation = (selectedNode?.data.config.compensation ?? {
+    enabled: false,
+    mode: "manual",
+    action_node_id: "",
+  }) as { enabled: boolean; mode: "manual"; action_node_id: string };
+  const compensationTargets = nodes.filter(
+    (node) =>
+      node.id !== selectedNodeId &&
+      node.data.blockType.startsWith("action.") &&
+      node.data.config.compensation_only === true,
+  );
 
   const engine = useQuery({
     queryKey: ["workflow-engine-status"],
@@ -436,9 +447,17 @@ export function WorkflowsPage() {
     },
   });
   const acknowledgeCompensation = useMutation({
-    mutationFn: (executionId: string) =>
+    mutationFn: ({
+      executionId,
+      sourceNodeId,
+    }: {
+      executionId: string;
+      sourceNodeId?: string;
+    }) =>
       request<WorkflowExecutionResponse>(
-        `/workflows/${selectedId}/executions/${executionId}/compensation/acknowledge`,
+        sourceNodeId
+          ? `/workflows/${selectedId}/executions/${executionId}/compensation/${sourceNodeId}/acknowledge`
+          : `/workflows/${selectedId}/executions/${executionId}/compensation/acknowledge`,
         { method: "POST" },
       ),
     onSuccess: async () => {
@@ -835,6 +854,88 @@ export function WorkflowsPage() {
                   </label>
                 </div>
               ) : null}
+              {selectedNode.data.blockType.startsWith("action.") ? (
+                <div className="visual-retry-policy">
+                  <label>
+                    <span>Usar somente como compensacao</span>
+                    <input
+                      checked={
+                        selectedNode.data.config.compensation_only === true
+                      }
+                      onChange={(event) =>
+                        updateNode({
+                          config: {
+                            ...selectedNode.data.config,
+                            compensation_only: event.target.checked,
+                            compensation: event.target.checked
+                              ? undefined
+                              : selectedNode.data.config.compensation,
+                          },
+                        })
+                      }
+                      type="checkbox"
+                    />
+                  </label>
+                  {selectedNode.data.config.compensation_only !== true ? (
+                    <>
+                      <label>
+                        <span>Preparar reversao deste bloco</span>
+                        <input
+                          checked={selectedBlockCompensation.enabled}
+                          onChange={(event) =>
+                            updateNode({
+                              config: {
+                                ...selectedNode.data.config,
+                                compensation: {
+                                  ...selectedBlockCompensation,
+                                  enabled: event.target.checked,
+                                  mode: "manual",
+                                },
+                              },
+                            })
+                          }
+                          type="checkbox"
+                        />
+                      </label>
+                      <label>
+                        Acao compensatoria
+                        <select
+                          disabled={!selectedBlockCompensation.enabled}
+                          onChange={(event) =>
+                            updateNode({
+                              config: {
+                                ...selectedNode.data.config,
+                                compensation: {
+                                  ...selectedBlockCompensation,
+                                  action_node_id: event.target.value,
+                                  mode: "manual",
+                                },
+                              },
+                            })
+                          }
+                          value={selectedBlockCompensation.action_node_id}
+                        >
+                          <option value="">Selecione um bloco</option>
+                          {compensationTargets.map((node) => (
+                            <option key={node.id} value={node.id}>
+                              {node.data.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <small>
+                        A Orkestral apenas cria a pendencia. Uma pessoa deve
+                        revisar e confirmar cada compensacao.
+                      </small>
+                    </>
+                  ) : (
+                    <small>
+                      Este bloco fica fora do caminho normal e somente descreve
+                      a reversao supervisionada.
+                    </small>
+                  )}
+                </div>
+              ) : null}
               <label>
                 Configuracao JSON
                 <textarea
@@ -983,7 +1084,7 @@ export function WorkflowsPage() {
                   <span>
                     <strong>{execution.status}</strong>
                     <small>
-                      {execution.source} ·{" "}
+                      {execution.source} · {execution.provider_key} ·{" "}
                       {new Date(execution.created_at).toLocaleString("pt-BR")} ·{" "}
                       {execution.duration_ms ?? 0} ms
                     </small>
@@ -1006,18 +1107,48 @@ export function WorkflowsPage() {
                       Cancelar
                     </button>
                   ) : null}
-                  {execution.compensation_status === "pending" ? (
+                  {execution.compensation_status === "pending" &&
+                  execution.compensation_plan.length === 0 ? (
                     <button
                       className="visual-execution-action"
                       disabled={acknowledgeCompensation.isPending}
                       onClick={() =>
-                        acknowledgeCompensation.mutate(execution.id)
+                        acknowledgeCompensation.mutate({
+                          executionId: execution.id,
+                        })
                       }
                       type="button"
                     >
                       Confirmar tratamento
                     </button>
                   ) : null}
+                  {execution.compensation_plan.map((item) => (
+                    <div
+                      className="visual-compensation-item"
+                      key={item.source_node_id}
+                    >
+                      <small>
+                        {item.source_label} → {item.action_label}
+                      </small>
+                      {item.status === "pending" ? (
+                        <button
+                          className="visual-execution-action"
+                          disabled={acknowledgeCompensation.isPending}
+                          onClick={() =>
+                            acknowledgeCompensation.mutate({
+                              executionId: execution.id,
+                              sourceNodeId: item.source_node_id,
+                            })
+                          }
+                          type="button"
+                        >
+                          Confirmar bloco
+                        </button>
+                      ) : (
+                        <small>Tratamento confirmado</small>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -1122,6 +1253,10 @@ export function WorkflowsPage() {
                 <small>
                   {simulation.estimated_steps} etapas analisadas ·{" "}
                   {simulation.blocked_side_effects} efeitos bloqueados
+                </small>
+                <small>
+                  {simulation.compensation_plan.length} compensacoes vinculadas
+                  para revisao humana
                 </small>
                 <div className="visual-simulation-trace">
                   {simulation.trace.map((step) => (

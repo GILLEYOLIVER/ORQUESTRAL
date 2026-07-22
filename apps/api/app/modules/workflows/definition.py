@@ -186,6 +186,38 @@ def compensation_policy(definition: dict[str, Any]) -> dict[str, Any]:
     return policy
 
 
+def is_compensation_only(node: dict[str, Any]) -> bool:
+    config = node.get("config")
+    return isinstance(config, dict) and config.get("compensation_only") is True
+
+
+def build_compensation_plan(definition: dict[str, Any]) -> list[dict[str, Any]]:
+    nodes = [item for item in definition.get("nodes", []) if isinstance(item, dict)]
+    by_id = {str(item.get("id")): item for item in nodes}
+    plan: list[dict[str, Any]] = []
+    for source in nodes:
+        config = source.get("config")
+        if not isinstance(config, dict) or is_compensation_only(source):
+            continue
+        binding = config.get("compensation")
+        if not isinstance(binding, dict) or binding.get("enabled") is not True:
+            continue
+        target_id = str(binding.get("action_node_id") or "")
+        target = by_id.get(target_id)
+        if target is None:
+            continue
+        plan.append(
+            {
+                "source_node_id": str(source.get("id")),
+                "source_label": str(source.get("label") or source.get("type"))[:160],
+                "action_node_id": target_id,
+                "action_label": str(target.get("label") or target.get("type"))[:160],
+                "status": "pending",
+            }
+        )
+    return plan
+
+
 def build_default_definition(_webhook_path: str | None = None) -> dict[str, Any]:
     return {
         "nodes": [
@@ -345,6 +377,8 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         )
 
     by_id: dict[str, dict[str, Any]] = {}
+    compensation_nodes: set[str] = set()
+    compensation_links: list[tuple[str, str]] = []
     triggers: set[str] = set()
     endings: set[str] = set()
     for node in nodes:
@@ -390,6 +424,27 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                 )
             )
             continue
+        compensation_only = config.get("compensation_only", False)
+        if not isinstance(compensation_only, bool):
+            issues.append(
+                _issue(
+                    "error",
+                    "invalid_compensation_block",
+                    "A marcacao de bloco compensatorio deve ser verdadeira ou falsa.",
+                    node_id,
+                )
+            )
+        elif compensation_only:
+            if node_type not in ACTION_TYPES:
+                issues.append(
+                    _issue(
+                        "error",
+                        "invalid_compensation_block",
+                        "Somente blocos de acao podem ser usados como compensacao.",
+                        node_id,
+                    )
+                )
+            compensation_nodes.add(node_id)
         secret_path = _embedded_secret(config)
         if secret_path:
             issues.append(
@@ -479,13 +534,31 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                 )
             )
         if node_type == "logic.loop":
-            maximum = config.get("max_iterations")
-            if not isinstance(maximum, int) or maximum < 1:
+            loop_maximum = config.get("max_iterations")
+            if not isinstance(loop_maximum, int) or loop_maximum < 1:
                 issues.append(
                     _issue(
                         "error",
                         "invalid_loop",
                         "A repeticao precisa de um limite positivo.",
+                        node_id,
+                    )
+                )
+            elif loop_maximum > 1000:
+                issues.append(
+                    _issue(
+                        "error",
+                        "mass_risk",
+                        "O limite de repeticao excede 1000 operacoes.",
+                        node_id,
+                    )
+                )
+            elif loop_maximum > 100:
+                issues.append(
+                    _issue(
+                        "warning",
+                        "mass_risk",
+                        "Esta repeticao pode gerar operacoes em massa.",
                         node_id,
                     )
                 )
@@ -528,24 +601,59 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                         node_id,
                     )
                 )
-            elif maximum > 1000:
+        binding = config.get("compensation")
+        if binding is not None:
+            if node_type not in ACTION_TYPES or compensation_only:
                 issues.append(
                     _issue(
                         "error",
-                        "mass_risk",
-                        "O limite de repeticao excede 1000 operacoes.",
+                        "invalid_compensation_binding",
+                        "Apenas uma acao operacional pode apontar para uma compensacao.",
                         node_id,
                     )
                 )
-            elif maximum > 100:
+            elif not isinstance(binding, dict):
                 issues.append(
                     _issue(
-                        "warning",
-                        "mass_risk",
-                        "Esta repeticao pode gerar operacoes em massa.",
+                        "error",
+                        "invalid_compensation_binding",
+                        "A vinculacao de compensacao deve ser um objeto.",
                         node_id,
                     )
                 )
+            else:
+                binding_enabled = binding.get("enabled", False)
+                action_node_id = binding.get("action_node_id")
+                if not isinstance(binding_enabled, bool) or binding.get("mode") != "manual":
+                    issues.append(
+                        _issue(
+                            "error",
+                            "invalid_compensation_binding",
+                            "A compensacao do bloco deve ser manual e explicitamente ativada.",
+                            node_id,
+                        )
+                    )
+                elif binding_enabled:
+                    if not compensation.get("enabled"):
+                        issues.append(
+                            _issue(
+                                "error",
+                                "compensation_policy_required",
+                                "Ative a politica global antes de vincular compensacoes.",
+                                node_id,
+                            )
+                        )
+                    if not isinstance(action_node_id, str) or not action_node_id:
+                        issues.append(
+                            _issue(
+                                "error",
+                                "invalid_compensation_binding",
+                                "Selecione o bloco que descreve a acao compensatoria.",
+                                node_id,
+                            )
+                        )
+                    else:
+                        compensation_links.append((node_id, action_node_id))
         if node_type in {"action.email", "action.message"} and str(
             config.get("recipient", "")
         ).strip().lower() in {"*", "all", "todos"}:
@@ -555,6 +663,51 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                     "mass_recipient",
                     "Destinatarios em massa exigem uma segmentacao explicita.",
                     node_id,
+                )
+            )
+
+    linked_targets: dict[str, list[str]] = {}
+    for source_id, target_id in compensation_links:
+        target = by_id.get(target_id)
+        if target_id == source_id or target is None:
+            issues.append(
+                _issue(
+                    "error",
+                    "invalid_compensation_target",
+                    "O bloco compensatorio selecionado nao existe ou aponta para si mesmo.",
+                    source_id,
+                )
+            )
+            continue
+        if str(target.get("type")) not in ACTION_TYPES or target_id not in compensation_nodes:
+            issues.append(
+                _issue(
+                    "error",
+                    "invalid_compensation_target",
+                    "O destino deve ser uma acao marcada exclusivamente como compensatoria.",
+                    source_id,
+                )
+            )
+            continue
+        linked_targets.setdefault(target_id, []).append(source_id)
+    for target_id in compensation_nodes:
+        sources = linked_targets.get(target_id, [])
+        if not sources:
+            issues.append(
+                _issue(
+                    "error",
+                    "unbound_compensation_block",
+                    "Vincule o bloco compensatorio a uma acao operacional.",
+                    target_id,
+                )
+            )
+        elif len(sources) > 1:
+            issues.append(
+                _issue(
+                    "error",
+                    "shared_compensation_block",
+                    "Cada bloco compensatorio deve atender uma unica acao.",
+                    target_id,
                 )
             )
 
@@ -568,7 +721,13 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         source = edge.get("source")
         target = edge.get("target")
         handle = str(edge.get("source_handle", "main"))
-        if source not in by_id or target not in by_id or source == target:
+        if (
+            source not in by_id
+            or target not in by_id
+            or source == target
+            or source in compensation_nodes
+            or target in compensation_nodes
+        ):
             issues.append(
                 _issue(
                     "error",
@@ -619,6 +778,8 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
         reachable.add(current)
         stack.extend(outgoing.get(current, []))
     for node_id in by_id:
+        if node_id in compensation_nodes:
+            continue
         if node_id not in reachable:
             issues.append(
                 _issue(

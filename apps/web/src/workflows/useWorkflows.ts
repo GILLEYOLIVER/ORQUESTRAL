@@ -67,7 +67,9 @@ export interface WorkflowExecutionResponse {
   output_summary: Record<string, unknown>;
   error_summary: string | null;
   cancel_reason: string | null;
+  provider_key: string;
   compensation_status: "not_required" | "pending" | "acknowledged";
+  compensation_plan: WorkflowCompensationItem[];
   remote_cancel_status:
     "not_requested" | "unsupported" | "requested" | "confirmed" | "failed";
   duration_ms: number | null;
@@ -79,12 +81,22 @@ export interface WorkflowExecutionResponse {
 }
 
 export interface WorkflowEngineStatus {
+  provider: string;
   configured: boolean;
   available: boolean;
   message: string;
   circuit_state: "closed" | "open" | "half_open";
   circuit_failures: number;
   circuit_retry_at: string | null;
+}
+
+export interface WorkflowCompensationItem {
+  source_node_id: string;
+  source_label: string;
+  action_node_id: string;
+  action_label: string;
+  status: "pending" | "acknowledged";
+  acknowledged_at?: string;
 }
 
 export interface WorkflowBlock {
@@ -124,6 +136,7 @@ export interface WorkflowSimulationResponse {
   blocked_side_effects: number;
   execution_policy: WorkflowExecutionPolicy;
   compensation_policy: WorkflowCompensationPolicy;
+  compensation_plan: WorkflowCompensationItem[];
   input_summary: Record<string, unknown>;
   trace: WorkflowSimulationTrace[];
   issues: WorkflowValidationIssue[];

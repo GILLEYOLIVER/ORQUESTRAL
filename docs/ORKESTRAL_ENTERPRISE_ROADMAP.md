@@ -434,3 +434,7 @@ A Fase 3 agora inclui cancelamento cooperativo, compensacao manual supervisionad
 ## Atualizacao do Ciclo 61
 
 Retry por bloco, circuit breaker distribuido e capacidade explicita de cancelamento agora fazem parte da Fase 3. O fechamento da fase exige compensacao vinculada a blocos e prova de portabilidade com provider falso.
+
+## Atualizacao do Ciclo 64
+
+A Fase 3 foi fechada com compensacao supervisionada vinculada a blocos, referencias genericas de provider e uma prova deterministica de publicacao, execucao e cancelamento sem n8n. O proximo incremento do plano mestre inicia a Fase 4 pelo contrato de definicao, versao, politica e ferramenta do runtime de agentes.
