@@ -2,12 +2,31 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 
 MONITOR_SECRET = "development-only-change-me-agent-memory-monitor-secret-32"
+
+
+class EmptyScheduleResult:
+    def all(self) -> list[Any]:
+        return []
+
+
+class EmptyScheduleDatabase:
+    async def execute(self, _statement: object) -> EmptyScheduleResult:
+        return EmptyScheduleResult()
+
+
+@asynccontextmanager
+async def empty_schedule_sessions() -> AsyncIterator[EmptyScheduleDatabase]:
+    yield EmptyScheduleDatabase()
 
 
 def _monitor_headers(*, at: datetime | None = None, secret: str = MONITOR_SECRET) -> dict[str, str]:
@@ -29,7 +48,10 @@ def test_health_returns_process_status(client: TestClient) -> None:
     assert response.json()["service"] == "Orkestral API"
 
 
-def test_agent_memory_scheduler_health_is_generic(client: TestClient) -> None:
+def test_agent_memory_scheduler_health_is_generic(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(client.app.state.resources, "sessions", empty_schedule_sessions)
     assert client.get("/health/agent-memory-scheduler").status_code == 401
     assert (
         client.get(

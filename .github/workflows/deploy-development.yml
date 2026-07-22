@@ -1,11 +1,12 @@
 name: Deploy development
 
 on:
-  workflow_run:
-    workflows: [Publish images]
-    types: [completed]
-    branches: [development]
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full commit SHA from the development branch
+        required: true
+        type: string
 
 concurrency:
   group: deploy-development
@@ -13,9 +14,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: development
     permissions:
@@ -24,24 +22,21 @@ jobs:
       - name: Resolve commit
         id: commit
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
-          MANUAL_SHA: ${{ github.sha }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
         run: |
-          if [ "$EVENT_NAME" = "workflow_run" ]; then
-            echo "sha=$WORKFLOW_SHA" >> "$GITHUB_OUTPUT"
-          else
-            echo "sha=$MANUAL_SHA" >> "$GITHUB_OUTPUT"
-          fi
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ steps.commit.outputs.sha }}
       - name: Trigger Render deploy
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          RELEASE_SHA: ${{ steps.commit.outputs.sha }}
         run: |
           test -n "$RENDER_DEPLOY_HOOK" || { echo "RENDER_DEPLOY_HOOK não configurado"; exit 1; }
-          curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK"
+          curl --fail --silent --show-error --get --output /dev/null \
+            --data-urlencode "ref=$RELEASE_SHA" "$RENDER_DEPLOY_HOOK"
       - name: Verify deployed commit
         env:
           REMOTE_DEVELOPMENT_URL: ${{ vars.REMOTE_DEVELOPMENT_URL }}

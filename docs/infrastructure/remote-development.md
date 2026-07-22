@@ -14,7 +14,7 @@ Redis permanece obrigatório porque autenticação, sessão, limitação de tent
 | PostgreSQL      | `orkestral-development`                      | Neon Free, AWS US East, TLS e scale-to-zero                |
 | Redis           | `orkestral-development`                      | Upstash Free, AWS `us-east-1`, TLS                         |
 | Código          | `GILLEYOLIVER/ORQUESTRAL`                    | Repositório privado, branch `development`                  |
-| Deploy          | GitHub Environment `development`             | Branch autorizada, hook secreto e URL pública configurados |
+| Deploy          | Render manual por SHA                         | Auto-Deploy desligado, hook secreto e verificação explícita |
 
 O container remoto executa frontend e API no mesmo domínio. O bootstrap criou somente a empresa e o administrador fictícios de desenvolvimento. As credenciais reais permanecem exclusivamente nos cofres dos provedores.
 
@@ -45,7 +45,12 @@ Validações concluídas:
 4. Preencha apenas os segredos solicitados. Gere senha administrativa exclusiva e forte.
 5. Não cadastre cartão e não faça upgrade automático.
 6. Após o primeiro deploy, confirme `/ready`, `/system/version`, `/system/capabilities` e `/login`.
-7. Configure o deploy hook como segredo GitHub `RENDER_DEPLOY_HOOK` e a URL como variável `REMOTE_DEVELOPMENT_URL` no environment `development`.
+7. Desligue Auto-Deploy no Render. Guarde o deploy hook como segredo e publique somente um SHA completo por ação manual.
+
+Push e merge nunca publicam este ambiente. Use `scripts/deploy-development-manual.sh SHA_COMPLETO`
+com `RENDER_DEPLOY_HOOK` injetado temporariamente, ou `Manual Deploy > Deploy a specific commit` no
+painel do Render. Em ambos os casos, valide `/system/version` e `/ready` antes de considerar a
+implantação concluída.
 
 ## Controles
 

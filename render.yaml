@@ -7,7 +7,7 @@ services:
     dockerContext: .
     branch: development
     healthCheckPath: /ready
-    autoDeployTrigger: commit
+    autoDeployTrigger: off
     envVars:
       - key: APP_ENV
         value: development

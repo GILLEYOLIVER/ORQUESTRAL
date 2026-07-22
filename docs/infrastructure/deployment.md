@@ -2,23 +2,27 @@
 
 ## Fluxo gratuito ativo
 
-1. Mudanças entram em `development` por pull request.
-2. O Render detecta o commit na branch privada `development`.
-3. O Auto-Deploy constrói `Dockerfile.remote` e publica a nova versão.
-4. O entrypoint valida variáveis, aplica migrações com lock e executa o bootstrap idempotente.
-5. O Render valida `/ready` antes de marcar o deploy como `Live`.
-6. A versão pode ser confirmada em `/system/version` e a aplicação em sua URL pública.
+1. Mudanças entram em `development` por pull request, sem publicar automaticamente.
+2. O responsável escolhe um SHA completo já presente na branch privada `development`.
+3. O deploy é iniciado manualmente no Render ou por `scripts/deploy-development-manual.sh SHA`.
+4. O Render desativa Auto-Deploy ao receber um deploy hook com `ref=SHA`.
+5. O entrypoint valida variáveis, aplica migrações com lock e executa o bootstrap idempotente.
+6. O Render valida `/ready` antes de marcar o deploy como `Live`.
+7. `scripts/verify-deployment.sh` confirma o SHA em `/system/version` e a prontidão.
 
-Esse fluxo usa o plano Render Free e não depende de minutos do GitHub Actions. Em 20/07/2026, a
+Esse fluxo manual usa o plano Render Free e não depende de minutos do GitHub Actions. Em 20/07/2026, a
 conta do GitHub informou indisponibilidade dos runners por limite de gastos ou pagamento. Nenhum
 limite foi aumentado e nenhum meio de pagamento foi adicionado, preservando a regra de custo zero.
+
+O deploy hook é um segredo. Ele deve existir somente no cofre do provedor ou no ambiente temporário
+do comando e nunca pode ser escrito no repositório, histórico do shell, logs ou documentação.
 
 ## Fluxo completo preservado
 
 Quando houver cota gratuita disponível, o workflow `CI` valida código, testes, integrações,
-containers e contratos. Depois, `Publish images` constrói, escaneia e publica `api`, `web` e
-`remote` no GHCR por SHA, com proveniência. Por fim, `Deploy development` chama o hook do Render e
-usa `scripts/verify-deployment.sh` para confirmar `/system/version` e `/ready`.
+containers e contratos. `Publish images` pode construir, escanear e publicar `api`, `web` e
+`remote` no GHCR por SHA, com proveniência. A implantação de desenvolvimento permanece manual:
+`Deploy development` só aceita `workflow_dispatch` com SHA explícito.
 
 Staging usa o workflow manual protegido `Deploy staging`. Ele aceita somente um SHA completo ja publicado, confirma as imagens imutaveis, cria backup, executa a migracao em tarefa unica, implanta e verifica o commit. O procedimento e os secrets exigidos estao em `docs/infrastructure/staging.md`.
 
@@ -30,14 +34,19 @@ disponíveis. Um deploy nunca é considerado concluído apenas porque a imagem i
 - URL: `https://orkestral-development.onrender.com`.
 - Branch: `development`.
 - GitHub Environment: `development`, restrito à branch de mesmo nome.
-- Deploy ativo: Auto-Deploy nativo por commit.
+- Deploy ativo: exclusivamente manual por SHA; Auto-Deploy desligado.
 - Render: serviço Docker Free `orkestral-development`, conectado ao repositório privado e à branch
   `development`.
 - Verificação: commit publicado em `/system/version` e dependências em `/ready`.
 
-Em 20/07/2026, o Auto-Deploy publicou o commit `5947b37` em 1m39s e o marcou como `Live`. O
-histórico anterior também preserva a validação manual `29702874801`, que publicou `b987f45` pelo
-deploy hook com sucesso.
+O histórico preserva as implantações anteriores. A partir de 22/07/2026, push e merge nunca são
+considerados autorização de publicação; cada release exige ação manual e verificação do SHA.
+
+Comando manual, mantendo o hook apenas no ambiente atual:
+
+```bash
+RENDER_DEPLOY_HOOK='valor-no-cofre' scripts/deploy-development-manual.sh SHA_COMPLETO
+```
 
 ## Ambientes protegidos
 

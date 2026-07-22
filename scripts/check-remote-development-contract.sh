@@ -23,12 +23,21 @@ required_files=(
   "docs/infrastructure/migration.md"
   "scripts/export-development-database.sh"
   "scripts/restore-development-database.sh"
+  "scripts/deploy-development-manual.sh"
   "scripts/verify-remote.sh"
 )
 
 for file in "${required_files[@]}"; do
   [[ -f "$file" ]] || fail "arquivo obrigatorio ausente: $file"
 done
+
+grep -Fq 'autoDeployTrigger: off' render.yaml || fail "auto-deploy do Render deve estar desligado"
+if grep -Fq 'workflow_run:' .github/workflows/deploy-development.yml; then
+  fail "deploy de desenvolvimento não pode possuir gatilho automático"
+fi
+grep -Fq 'release_sha:' .github/workflows/deploy-development.yml || \
+  fail "workflow manual deve exigir SHA explícito"
+bash -n scripts/deploy-development-manual.sh
 
 if grep -En '(localhost|127\.0\.0\.1|host\.docker\.internal)' .env.development.example >/dev/null; then
   fail ".env.development.example contem endereco local"
