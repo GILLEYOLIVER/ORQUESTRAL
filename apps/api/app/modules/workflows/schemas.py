@@ -77,6 +77,9 @@ class WorkflowExecutionResponse(StrictSchema):
     error_summary: str | None
     cancel_reason: str | None
     compensation_status: Literal["not_required", "pending", "acknowledged"]
+    remote_cancel_status: Literal[
+        "not_requested", "unsupported", "requested", "confirmed", "failed"
+    ]
     duration_ms: int | None
     cancellation_requested_at: datetime | None
     canceled_at: datetime | None
@@ -102,6 +105,9 @@ class WorkflowEngineStatusResponse(StrictSchema):
     configured: bool
     available: bool
     message: str
+    circuit_state: Literal["closed", "open", "half_open"] = "closed"
+    circuit_failures: int = 0
+    circuit_retry_at: datetime | None = None
 
 
 class WorkflowDefinitionRequest(StrictSchema):

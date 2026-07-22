@@ -13229,6 +13229,19 @@ export interface components {
         WorkflowEngineStatusResponse: {
             /** Available */
             available: boolean;
+            /**
+             * Circuit Failures
+             * @default 0
+             */
+            circuit_failures: number;
+            /** Circuit Retry At */
+            circuit_retry_at?: string | null;
+            /**
+             * Circuit State
+             * @default closed
+             * @enum {string}
+             */
+            circuit_state: "closed" | "open" | "half_open";
             /** Configured */
             configured: boolean;
             /** Message */
@@ -13278,6 +13291,11 @@ export interface components {
             output_summary: {
                 [key: string]: unknown;
             };
+            /**
+             * Remote Cancel Status
+             * @enum {string}
+             */
+            remote_cancel_status: "not_requested" | "unsupported" | "requested" | "confirmed" | "failed";
             /** Source */
             source: string;
             /** Started At */

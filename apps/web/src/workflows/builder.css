@@ -322,6 +322,19 @@
   background: #f1ded8;
   color: #9c3f2f;
 }
+.visual-retry-policy {
+  background: #edf2d9;
+  border: 1px solid #cad99b;
+  border-radius: 11px;
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+}
+.visual-retry-policy > label:first-child {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
 .visual-muted {
   color: #858a85;
   line-height: 1.5;

@@ -430,3 +430,7 @@ O construtor agora possui gatilho canonico de evento, assinatura automatica, sim
 ## Atualizacao do Ciclo 60
 
 A Fase 3 agora inclui cancelamento cooperativo, compensacao manual supervisionada e metricas agregadas por automacao. O proximo incremento adiciona retry por bloco, circuit breaker e evolucao do contrato de cancelamento do provider.
+
+## Atualizacao do Ciclo 61
+
+Retry por bloco, circuit breaker distribuido e capacidade explicita de cancelamento agora fazem parte da Fase 3. O fechamento da fase exige compensacao vinculada a blocos e prova de portabilidade com provider falso.

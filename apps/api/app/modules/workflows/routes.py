@@ -33,6 +33,7 @@ from app.modules.workflows.definition import (
 )
 from app.modules.workflows.execution import run_workflow
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
+from app.modules.workflows.provider_resilience import provider_circuit_snapshot
 from app.modules.workflows.schemas import (
     WorkflowComparisonResponse,
     WorkflowCancelRequest,
@@ -302,14 +303,25 @@ async def _create_workflow_record(
 
 @router.get("/engine/status", response_model=WorkflowEngineStatusResponse)
 async def engine_status(
-    principal: CanViewWorkflows, settings: RequestSettings
+    principal: CanViewWorkflows,
+    database: DatabaseSession,
+    settings: RequestSettings,
 ) -> WorkflowEngineStatusResponse:
-    del principal
+    context = get_request_context(principal)
+    circuit = await provider_circuit_snapshot(
+        database, company_id=context.company_id, provider="n8n"
+    )
+    circuit_fields = {
+        "circuit_state": circuit["state"],
+        "circuit_failures": circuit["failure_count"],
+        "circuit_retry_at": circuit["retry_at"],
+    }
     if not settings.n8n_enabled:
         return WorkflowEngineStatusResponse(
             configured=False,
             available=False,
             message="n8n indisponível no ambiente remoto reduzido.",
+            **circuit_fields,
         )
     client = N8nClient(settings)
     if not client.configured:
@@ -317,15 +329,19 @@ async def engine_status(
             configured=False,
             available=False,
             message="O motor interno aguarda configuração administrativa.",
+            **circuit_fields,
         )
     try:
         await client.test_connection()
     except N8nClientError as exc:
-        return WorkflowEngineStatusResponse(configured=True, available=False, message=str(exc))
+        return WorkflowEngineStatusResponse(
+            configured=True, available=False, message=str(exc), **circuit_fields
+        )
     return WorkflowEngineStatusResponse(
         configured=True,
         available=True,
         message="Motor de automação conectado e disponível.",
+        **circuit_fields,
     )
 
 
@@ -695,6 +711,7 @@ async def cancel_workflow_execution(
     payload: WorkflowCancelRequest,
     principal: CanExecuteWorkflows,
     database: DatabaseSession,
+    settings: RequestSettings,
 ) -> WorkflowExecutionResponse:
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
@@ -713,6 +730,16 @@ async def cancel_workflow_execution(
     execution.cancellation_requested_at = now
     execution.canceled_by_user_id = context.user_id
     execution.cancel_reason = payload.reason.strip() if payload.reason else None
+    if execution.status == "running":
+        client = N8nClient(settings)
+        if execution.external_execution_id and client.supports_remote_cancellation:
+            try:
+                requested = await client.cancel_execution(execution.external_execution_id)
+                execution.remote_cancel_status = "requested" if requested else "unsupported"
+            except N8nClientError:
+                execution.remote_cancel_status = "failed"
+        else:
+            execution.remote_cancel_status = "unsupported"
     if execution.status in {"queued", "waiting"}:
         execution.status = "canceled"
         execution.canceled_at = now

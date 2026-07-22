@@ -419,6 +419,56 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                     node_id,
                 )
             )
+        retry = config.get("retry_policy")
+        if retry is not None:
+            if not isinstance(retry, dict):
+                issues.append(
+                    _issue(
+                        "error",
+                        "invalid_retry_policy",
+                        "A politica de retentativa do bloco e invalida.",
+                        node_id,
+                    )
+                )
+            else:
+                enabled = retry.get("enabled", False)
+                max_attempts = retry.get("max_attempts", 1)
+                wait_seconds = retry.get("wait_seconds", 1)
+                if not isinstance(enabled, bool):
+                    issues.append(
+                        _issue(
+                            "error",
+                            "invalid_retry_policy",
+                            "A ativacao da retentativa deve ser verdadeira ou falsa.",
+                            node_id,
+                        )
+                    )
+                if (
+                    isinstance(max_attempts, bool)
+                    or not isinstance(max_attempts, int)
+                    or not 1 <= max_attempts <= 10
+                ):
+                    issues.append(
+                        _issue(
+                            "error",
+                            "invalid_retry_policy",
+                            "As tentativas devem estar entre 1 e 10.",
+                            node_id,
+                        )
+                    )
+                if (
+                    isinstance(wait_seconds, bool)
+                    or not isinstance(wait_seconds, int)
+                    or not 1 <= wait_seconds <= 300
+                ):
+                    issues.append(
+                        _issue(
+                            "error",
+                            "invalid_retry_policy",
+                            "A espera entre tentativas deve estar entre 1 e 300 segundos.",
+                            node_id,
+                        )
+                    )
         if config.get("enabled") is False:
             issues.append(
                 _issue(
