@@ -51,7 +51,7 @@ async def run_workflow(
     )
     approval_config = human_approval_configuration(workflow.definition)
     if approval_config is not None and not bypass_approval:
-        execution = WorkflowExecution(
+        execution = existing_execution or WorkflowExecution(
             company_id=workflow.company_id,
             workflow_id=workflow.id,
             requested_by_user_id=requested_by_user_id,
@@ -59,7 +59,10 @@ async def run_workflow(
             status="waiting",
             input_summary=as_summary_object(input_data),
         )
-        database.add(execution)
+        if existing_execution is None:
+            database.add(execution)
+        execution.status = "waiting"
+        execution.input_summary = as_summary_object(input_data)
         await database.flush()
         encrypted_payload = CredentialVault(settings.encryption_key).encrypt({"input": input_data})
         await create_approval_request(

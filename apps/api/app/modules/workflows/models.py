@@ -76,7 +76,7 @@ class WorkflowExecution(Base):
     __tablename__ = "workflow_executions"
     __table_args__ = (
         CheckConstraint(
-            "source IN ('manual', 'webhook', 'schedule', 'system')",
+            "source IN ('manual', 'webhook', 'schedule', 'system', 'domain_event')",
             name="ck_workflow_executions_source",
         ),
         CheckConstraint(
@@ -86,6 +86,9 @@ class WorkflowExecution(Base):
         CheckConstraint(
             "duration_ms IS NULL OR duration_ms >= 0",
             name="ck_workflow_executions_duration",
+        ),
+        UniqueConstraint(
+            "company_id", "workflow_id", "source_event_id", name="uq_workflow_execution_event"
         ),
     )
 
@@ -97,6 +100,9 @@ class WorkflowExecution(Base):
     )
     workflow_id: Mapped[UUID] = mapped_column(
         ForeignKey("workflows.id", ondelete="CASCADE"), index=True
+    )
+    source_event_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("outbox_events.id", ondelete="SET NULL"), index=True
     )
     requested_by_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True

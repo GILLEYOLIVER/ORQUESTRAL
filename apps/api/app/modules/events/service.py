@@ -11,6 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.execution_context import ExecutionContext, bind_execution_context
 from app.core.security import utc_now
 from app.modules.events.models import OutboxEvent
+from app.modules.events.operations_service import (
+    EventContractViolation,
+    materialize_deliveries,
+    validate_event_contract,
+)
 from app.modules.events.repository import (
     claim_pending_events,
     mark_event_failed,
@@ -119,7 +124,16 @@ async def dispatch_outbox_batch(
                 environment="worker",
             )
             with bind_execution_context(context):
+                await validate_event_contract(database, event)
                 external_id = await transport.publish(event_envelope(event))
+                await materialize_deliveries(database, event)
+        except EventContractViolation as exc:
+            event.status = "dead_letter"
+            event.last_error_code = exc.code
+            event.locked_at = None
+            event.locked_by = None
+            failed += 1
+            dead_lettered += 1
         except Exception as exc:
             mark_event_failed(event, type(exc).__name__)
             failed += 1

@@ -27,6 +27,7 @@ import { ModulesPage } from "./pages/ModulesPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { PluginsPage } from "./pages/PluginsPage";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
+import { EventOperationsPage } from "./pages/EventOperationsPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ProjectsPage } from "./pages/ProjectsPage";
@@ -220,6 +221,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute permission="workflows.view">
             <WorkflowsPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "eventos",
+        element: (
+          <PermissionRoute permission="events.view">
+            <EventOperationsPage />
           </PermissionRoute>
         ),
       },

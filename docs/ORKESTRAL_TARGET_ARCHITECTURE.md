@@ -304,3 +304,7 @@ Metas futuras:
 - Dependencia publica do formato n8n.
 - Migracao destrutiva sem expand/contract e rollback.
 - Promessa de sucesso sem resultado confirmado.
+
+## Evolucao da Fase 3 - Plataforma de eventos governados
+
+O barramento interno agora separa producao, transporte e consumo. `EventContract` governa payloads; `EventSubscription` descreve destinos; `EventDelivery` controla retentativas e DLQ; `EventConsumption` garante idempotencia. Workflows usam `source_event_id`, sem depender da semantica interna do n8n. A decisao completa esta em `docs/adr/20260721-event-contracts-idempotent-consumers.md`.

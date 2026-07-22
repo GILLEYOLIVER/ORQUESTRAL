@@ -900,3 +900,12 @@ controlada de metadados entre ambientes.
 - Migracao: `20260721_0077_metadata_permissions_sharing.py`.
 - Testes do recorte cobrem propriedade, campo restrito, compartilhamento e isolamento entre empresas.
 - Proximo recorte: iniciar a Fase 3 com contratos versionados de eventos, transactional outbox e consumidores idempotentes para automacoes.
+
+## Ciclo 58 - Fase 3: contratos e consumidores de eventos (21/07/2026)
+
+- **Concluido no codigo:** contratos versionados, assinaturas, entregas persistentes, consumo idempotente, retentativas, DLQ, replay auditado, workflow por evento e central operacional.
+- **Migracao:** `20260721_0078_event_contracts_consumers.py`.
+- **Seguranca:** permissoes `events.view`, `events.configure` e `events.replay`; isolamento por `company_id`; payload nao exposto na central; replay sem mutacao do original.
+- **Testes adicionados:** validacao/compatibilidade de contrato, consumo unico, DLQ, replay e acesso cruzado.
+- **Documento detalhado:** `docs/cycles/CYCLE_58_EVENT_CONTRACTS_AND_CONSUMERS.md`.
+- **Proximo passo exato:** gatilhos canonicos de evento no construtor visual, simulacao e observabilidade de automacoes.

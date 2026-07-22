@@ -15,6 +15,7 @@ import {
   LogOut,
   Megaphone,
   PackageOpen,
+  RadioTower,
   ShieldCheck,
   UserRoundCog,
   UserRound,
@@ -84,6 +85,12 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/automacoes">
               <Workflow size={18} />
               Automações
+            </NavLink>
+          ) : null}
+          {!preview && session.me?.permissions.includes("events.view") ? (
+            <NavLink className="sidebar__link" to="/app/eventos">
+              <RadioTower size={18} />
+              Eventos
             </NavLink>
           ) : null}
           {!preview && session.me?.permissions.includes("agents.view") ? (
