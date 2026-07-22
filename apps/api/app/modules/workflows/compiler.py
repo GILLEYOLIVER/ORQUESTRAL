@@ -27,7 +27,7 @@ def _name(node: dict[str, Any]) -> str:
 
 def _base_node(node: dict[str, Any]) -> dict[str, Any]:
     position = node.get("position", {})
-    return {
+    native = {
         "id": str(node["id"]),
         "name": _name(node),
         "position": [int(position.get("x", 0)), int(position.get("y", 0))],
@@ -35,6 +35,15 @@ def _base_node(node: dict[str, Any]) -> dict[str, Any]:
         "type": "n8n-nodes-base.noOp",
         "typeVersion": 1,
     }
+    config = node.get("config", {})
+    retry = config.get("retry_policy", {}) if isinstance(config, dict) else {}
+    if isinstance(retry, dict) and retry.get("enabled") is True:
+        native.update(
+            retryOnFail=True,
+            maxTries=int(retry.get("max_attempts", 3)),
+            waitBetweenTries=int(retry.get("wait_seconds", 1)) * 1_000,
+        )
+    return native
 
 
 def _manual_adapter(node: dict[str, Any], _path: str) -> dict[str, Any]:

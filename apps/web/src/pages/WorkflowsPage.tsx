@@ -156,6 +156,11 @@ export function WorkflowsPage() {
   const selected =
     workflows.data?.find((workflow) => workflow.id === selectedId) ?? null;
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
+  const selectedRetryPolicy = (selectedNode?.data.config.retry_policy ?? {
+    enabled: false,
+    max_attempts: 3,
+    wait_seconds: 2,
+  }) as { enabled: boolean; max_attempts: number; wait_seconds: number };
 
   const engine = useQuery({
     queryKey: ["workflow-engine-status"],
@@ -561,6 +566,9 @@ export function WorkflowsPage() {
       {engine.data ? (
         <Alert variant={engine.data.available ? "success" : "error"}>
           {engine.data.message}
+          {engine.data.circuit_state !== "closed"
+            ? ` Circuit breaker: ${engine.data.circuit_state}, ${engine.data.circuit_failures} falhas.`
+            : ""}
         </Alert>
       ) : null}
       {feedback ? <div className="visual-feedback">{feedback}</div> : null}
@@ -764,6 +772,69 @@ export function WorkflowsPage() {
                   </label>
                 </>
               ) : null}
+              {!selectedNode.data.blockType.startsWith("trigger.") &&
+              selectedNode.data.blockType !== "flow.end" ? (
+                <div className="visual-retry-policy">
+                  <label>
+                    <span>Retentar em falha</span>
+                    <input
+                      checked={selectedRetryPolicy.enabled}
+                      onChange={(event) =>
+                        updateNode({
+                          config: {
+                            ...selectedNode.data.config,
+                            retry_policy: {
+                              ...selectedRetryPolicy,
+                              enabled: event.target.checked,
+                            },
+                          },
+                        })
+                      }
+                      type="checkbox"
+                    />
+                  </label>
+                  <label>
+                    Maximo de tentativas
+                    <input
+                      min={1}
+                      max={10}
+                      onChange={(event) =>
+                        updateNode({
+                          config: {
+                            ...selectedNode.data.config,
+                            retry_policy: {
+                              ...selectedRetryPolicy,
+                              max_attempts: Number(event.target.value),
+                            },
+                          },
+                        })
+                      }
+                      type="number"
+                      value={selectedRetryPolicy.max_attempts}
+                    />
+                  </label>
+                  <label>
+                    Espera entre tentativas (s)
+                    <input
+                      min={1}
+                      max={300}
+                      onChange={(event) =>
+                        updateNode({
+                          config: {
+                            ...selectedNode.data.config,
+                            retry_policy: {
+                              ...selectedRetryPolicy,
+                              wait_seconds: Number(event.target.value),
+                            },
+                          },
+                        })
+                      }
+                      type="number"
+                      value={selectedRetryPolicy.wait_seconds}
+                    />
+                  </label>
+                </div>
+              ) : null}
               <label>
                 Configuracao JSON
                 <textarea
@@ -919,6 +990,9 @@ export function WorkflowsPage() {
                   </span>
                   {execution.error_summary ? (
                     <em>{execution.error_summary}</em>
+                  ) : null}
+                  {execution.remote_cancel_status === "unsupported" ? (
+                    <em>Cancelamento remoto nao suportado pelo adaptador.</em>
                   ) : null}
                   {(["queued", "running", "waiting"] as const).includes(
                     execution.status as "queued" | "running" | "waiting",

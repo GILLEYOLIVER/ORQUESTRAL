@@ -220,3 +220,36 @@ def test_compensation_policy_is_manual_and_explicit() -> None:
     assert "invalid_compensation_policy" in {
         item["code"] for item in analyze_definition(definition)
     }
+
+
+def test_retry_policy_is_validated_and_compiled_per_block() -> None:
+    definition = build_default_definition()
+    definition["nodes"].insert(
+        1,
+        {
+            "id": "wait-retry",
+            "type": "logic.wait",
+            "label": "Espera resiliente",
+            "position": {"x": 250, "y": 180},
+            "config": {
+                "seconds": 1,
+                "retry_policy": {
+                    "enabled": True,
+                    "max_attempts": 4,
+                    "wait_seconds": 3,
+                },
+            },
+        },
+    )
+    definition["connections"] = [
+        {"id": "first", "source": "trigger-manual", "target": "wait-retry"},
+        {"id": "second", "source": "wait-retry", "target": "flow-end"},
+    ]
+    compiled = compile_definition(definition, internal_webhook_path="private")
+    wait_node = next(item for item in compiled["nodes"] if item["id"] == "wait-retry")
+    assert wait_node["retryOnFail"] is True
+    assert wait_node["maxTries"] == 4
+    assert wait_node["waitBetweenTries"] == 3_000
+
+    definition["nodes"][1]["config"]["retry_policy"]["max_attempts"] = 99
+    assert "invalid_retry_policy" in {item["code"] for item in analyze_definition(definition)}

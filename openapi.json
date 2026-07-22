@@ -21861,6 +21861,33 @@
             "title": "Available",
             "type": "boolean"
           },
+          "circuit_failures": {
+            "default": 0,
+            "title": "Circuit Failures",
+            "type": "integer"
+          },
+          "circuit_retry_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Retry At"
+          },
+          "circuit_state": {
+            "default": "closed",
+            "enum": [
+              "closed",
+              "open",
+              "half_open"
+            ],
+            "title": "Circuit State",
+            "type": "string"
+          },
           "configured": {
             "title": "Configured",
             "type": "boolean"
@@ -21991,6 +22018,17 @@
             "title": "Output Summary",
             "type": "object"
           },
+          "remote_cancel_status": {
+            "enum": [
+              "not_requested",
+              "unsupported",
+              "requested",
+              "confirmed",
+              "failed"
+            ],
+            "title": "Remote Cancel Status",
+            "type": "string"
+          },
           "source": {
             "title": "Source",
             "type": "string"
@@ -22035,6 +22073,7 @@
           "error_summary",
           "cancel_reason",
           "compensation_status",
+          "remote_cancel_status",
           "duration_ms",
           "cancellation_requested_at",
           "canceled_at",

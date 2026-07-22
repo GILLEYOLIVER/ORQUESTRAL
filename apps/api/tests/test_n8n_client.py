@@ -86,6 +86,13 @@ async def test_internal_webhook_does_not_send_admin_api_key() -> None:
 
 
 @pytest.mark.asyncio
+async def test_public_adapter_does_not_fake_remote_cancellation() -> None:
+    client = N8nClient(Settings(n8n_api_key="valid-api-key-with-enough-entropy"))
+    assert client.supports_remote_cancellation is False
+    assert await client.cancel_execution("execution-1") is False
+
+
+@pytest.mark.asyncio
 async def test_update_restores_previous_workflow_when_n8n_rejects_change() -> None:
     put_payloads: list[dict[str, object]] = []
 

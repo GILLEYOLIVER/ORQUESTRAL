@@ -47,6 +47,14 @@ class N8nClient:
             marker in lowered for marker in ("change-me", "development-only", "placeholder")
         )
 
+    @property
+    def supports_remote_cancellation(self) -> bool:
+        return False
+
+    async def cancel_execution(self, _execution_id: str) -> bool:
+        """Public n8n API has no stable early-stop contract used by this adapter."""
+        return False
+
     async def _request(
         self,
         method: str,
@@ -87,9 +95,13 @@ class N8nClient:
                     raise N8nUnavailableError(
                         "O motor de automação está temporariamente indisponível."
                     ) from exc
-                if response.status_code in {429, 502, 503, 504} and attempt < self._max_attempts:
-                    await asyncio.sleep(self._retry_delay_seconds * attempt)
-                    continue
+                if response.status_code in {429, 502, 503, 504}:
+                    if attempt < self._max_attempts:
+                        await asyncio.sleep(self._retry_delay_seconds * attempt)
+                        continue
+                    raise N8nUnavailableError(
+                        "O motor de automação está temporariamente indisponível."
+                    )
                 if response.status_code == 401:
                     raise N8nConfigurationError("A chave do motor de automação foi recusada.")
                 if response.status_code == 404:

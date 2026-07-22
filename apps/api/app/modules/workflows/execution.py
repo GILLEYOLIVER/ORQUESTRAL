@@ -21,8 +21,18 @@ from app.modules.workflows.definition import (
     execution_policy,
 )
 from app.modules.workflows.models import Workflow, WorkflowExecution
+from app.modules.workflows.provider_resilience import (
+    ProviderCircuitOpen,
+    ensure_provider_available,
+    record_provider_failure,
+    record_provider_success,
+)
 from app.modules.workflows.security import sign_webhook_body
-from app.modules.workflows.services.n8n_client import N8nClient, N8nClientError
+from app.modules.workflows.services.n8n_client import (
+    N8nClient,
+    N8nClientError,
+    N8nUnavailableError,
+)
 
 
 def human_approval_configuration(definition: dict[str, Any]) -> dict[str, Any] | None:
@@ -51,6 +61,10 @@ async def run_workflow(
         )
     policy = execution_policy(workflow.definition)
     compensation = compensation_policy(workflow.definition)
+    try:
+        await ensure_provider_available(database, company_id=workflow.company_id, provider="n8n")
+    except ProviderCircuitOpen as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     active_executions = await database.scalar(
         select(func.count(WorkflowExecution.id)).where(
             WorkflowExecution.company_id == workflow.company_id,
@@ -148,12 +162,32 @@ async def run_workflow(
         )
         execution.status = "success"
         execution.output_summary = as_summary_object(output)
+        await record_provider_success(database, company_id=workflow.company_id, provider="n8n")
+    except N8nUnavailableError as exc:
+        execution.status = "error"
+        execution.error_summary = str(exc)
+        await record_provider_failure(
+            database,
+            company_id=workflow.company_id,
+            provider="n8n",
+            error_code=type(exc).__name__,
+            threshold=settings.workflow_circuit_failure_threshold,
+            reset_seconds=settings.workflow_circuit_reset_seconds,
+        )
     except N8nClientError as exc:
         execution.status = "error"
         execution.error_summary = str(exc)
     except TimeoutError:
         execution.status = "error"
         execution.error_summary = "A automacao excedeu o tempo limite configurado."
+        await record_provider_failure(
+            database,
+            company_id=workflow.company_id,
+            provider="n8n",
+            error_code="workflow_timeout",
+            threshold=settings.workflow_circuit_failure_threshold,
+            reset_seconds=settings.workflow_circuit_reset_seconds,
+        )
     await database.refresh(
         execution,
         attribute_names=["cancellation_requested_at", "canceled_by_user_id", "cancel_reason"],

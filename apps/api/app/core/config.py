@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     n8n_api_key: str = "development-only-change-me-n8n-api-key"
     n8n_timeout_seconds: float = Field(default=15.0, gt=0, le=60)
     n8n_max_attempts: int = Field(default=3, ge=1, le=5)
+    workflow_circuit_failure_threshold: int = Field(default=5, ge=2, le=50)
+    workflow_circuit_reset_seconds: int = Field(default=60, ge=10, le=3_600)
     workflow_webhook_rate_limit: int = Field(default=60, ge=1, le=1_000)
     workflow_max_payload_bytes: int = Field(default=262_144, ge=1_024, le=5_242_880)
     ai_provider_api_key: str | None = None

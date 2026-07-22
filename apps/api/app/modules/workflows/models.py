@@ -91,6 +91,10 @@ class WorkflowExecution(Base):
             "compensation_status IN ('not_required', 'pending', 'acknowledged')",
             name="ck_workflow_executions_compensation_status",
         ),
+        CheckConstraint(
+            "remote_cancel_status IN ('not_requested', 'unsupported', 'requested', 'confirmed', 'failed')",
+            name="ck_workflow_executions_remote_cancel_status",
+        ),
         UniqueConstraint(
             "company_id", "workflow_id", "source_event_id", name="uq_workflow_execution_event"
         ),
@@ -130,6 +134,9 @@ class WorkflowExecution(Base):
     compensation_status: Mapped[str] = mapped_column(
         String(24), default="not_required", server_default="not_required", index=True
     )
+    remote_cancel_status: Mapped[str] = mapped_column(
+        String(24), default="not_requested", server_default="not_requested"
+    )
     duration_ms: Mapped[int | None] = mapped_column(Integer)
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     canceled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -166,4 +173,37 @@ class WorkflowVersion(Base):
     change_summary: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+
+
+class WorkflowProviderCircuit(Base):
+    __tablename__ = "workflow_provider_circuits"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id", "provider", name="uq_workflow_provider_circuit_company_provider"
+        ),
+        CheckConstraint(
+            "state IN ('closed', 'open', 'half_open')",
+            name="ck_workflow_provider_circuit_state",
+        ),
+        CheckConstraint("failure_count >= 0", name="ck_workflow_provider_circuit_failures"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(80))
+    state: Mapped[str] = mapped_column(String(20), default="closed", server_default="closed")
+    failure_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    last_failure_code: Mapped[str | None] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
     )

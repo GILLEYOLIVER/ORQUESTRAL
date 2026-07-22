@@ -928,3 +928,12 @@ controlada de metadados entre ambientes.
 - Painel operacional e acoes supervisionadas no Estudio de Automacoes.
 - Migracao: `20260722_0079_workflow_execution_control.py`.
 - Proximo passo exato: retry por bloco, circuit breaker de provider e cancelamento remoto por adaptador.
+
+## Ciclo 61 - resiliencia de automacoes (22/07/2026)
+
+- Retry configuravel e limitado por bloco no contrato canonico.
+- Circuit breaker persistente por empresa e provider, compartilhado entre processos.
+- Saude do circuito visivel sem expor configuracoes internas.
+- Capacidade de cancelamento remoto declarada pelo adaptador sem usar API privada.
+- Migracao: `20260722_0080_workflow_provider_resilience.py`.
+- Proximo passo exato: compensacao vinculada a blocos, provider fake e fechamento da Fase 3.

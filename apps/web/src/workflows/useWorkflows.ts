@@ -68,6 +68,8 @@ export interface WorkflowExecutionResponse {
   error_summary: string | null;
   cancel_reason: string | null;
   compensation_status: "not_required" | "pending" | "acknowledged";
+  remote_cancel_status:
+    "not_requested" | "unsupported" | "requested" | "confirmed" | "failed";
   duration_ms: number | null;
   cancellation_requested_at: string | null;
   canceled_at: string | null;
@@ -80,6 +82,9 @@ export interface WorkflowEngineStatus {
   configured: boolean;
   available: boolean;
   message: string;
+  circuit_state: "closed" | "open" | "half_open";
+  circuit_failures: number;
+  circuit_retry_at: string | null;
 }
 
 export interface WorkflowBlock {
