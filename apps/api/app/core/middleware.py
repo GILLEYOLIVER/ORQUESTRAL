@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import hashlib
 import ipaddress
+from dataclasses import dataclass
 from time import perf_counter
 from typing import cast
 
@@ -15,10 +15,47 @@ from starlette.responses import JSONResponse, Response
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.core.request_context import normalize_request_id
-from app.core.security import InvalidAccessTokenError, decode_access_token
+from app.core.security import InvalidAccessTokenError, decode_access_token, hash_opaque_token
 from app.modules.audit.service import AuditEventInput, AuditService
 
 _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+_SENSITIVE_AUTH_PATHS = frozenset(
+    {
+        "/auth/accept-invitation",
+        "/auth/development-login",
+        "/auth/forgot-password",
+        "/auth/login",
+        "/auth/read-only-links",
+        "/auth/read-only-links/authorize",
+        "/auth/read-only-links/exchange",
+        "/auth/refresh",
+        "/auth/reset-password",
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class RateLimitPolicy:
+    scope: str
+    requests: int
+    window_seconds: int
+    fail_closed: bool
+
+
+def request_rate_limit_policy(request: Request, settings: Settings) -> RateLimitPolicy:
+    if request.method == "POST" and request.url.path in _SENSITIVE_AUTH_PATHS:
+        return RateLimitPolicy(
+            scope="authentication",
+            requests=settings.security_auth_rate_limit_requests,
+            window_seconds=settings.security_auth_rate_limit_window_seconds,
+            fail_closed=True,
+        )
+    return RateLimitPolicy(
+        scope="api",
+        requests=settings.security_rate_limit_requests,
+        window_seconds=settings.security_rate_limit_window_seconds,
+        fail_closed=False,
+    )
 
 
 def client_ip_address(request: Request, settings: Settings | None = None) -> str:
@@ -143,6 +180,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     async def _enforce_rate_limit(self, request: Request, settings: Settings) -> Response | None:
         if not settings.security_rate_limit_enabled or settings.app_env == "testing":
             return None
+        policy = request_rate_limit_policy(request, settings)
         identity = client_ip_address(request, settings)
         authorization = request.headers.get("authorization", "")
         if authorization.lower().startswith("bearer "):
@@ -151,19 +189,19 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 identity = f"{identity}:{claims.user_id}"
             except InvalidAccessTokenError:
                 pass
-        fingerprint = hashlib.sha256(identity.encode()).hexdigest()
-        bucket = f"security:rate:{fingerprint}"
+        fingerprint = hash_opaque_token(settings, f"{policy.scope}|{identity}")
+        bucket = f"security:rate:{policy.scope}:{fingerprint}"
         redis = cast(Redis, request.app.state.resources.redis)
         try:
             count = await redis.incr(bucket)
             if count == 1:
-                await redis.expire(bucket, settings.security_rate_limit_window_seconds)
-            if count <= settings.security_rate_limit_requests:
+                await redis.expire(bucket, policy.window_seconds)
+            if count <= policy.requests:
                 return None
             ttl = max(await redis.ttl(bucket), 1)
         except RedisError:
             get_logger(component="security").exception("rate_limit_backend_unavailable")
-            if settings.app_env in {"staging", "production"}:
+            if policy.fail_closed or settings.app_env in {"staging", "production"}:
                 return self._problem(
                     request,
                     503,
@@ -178,6 +216,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             "Aguarde alguns instantes antes de tentar novamente.",
         )
         response.headers["Retry-After"] = str(ttl)
+        response.headers["RateLimit-Limit"] = str(policy.requests)
+        response.headers["RateLimit-Remaining"] = "0"
+        response.headers["RateLimit-Reset"] = str(ttl)
         return response
 
     def _enforce_read_only(self, request: Request, settings: Settings) -> Response | None:

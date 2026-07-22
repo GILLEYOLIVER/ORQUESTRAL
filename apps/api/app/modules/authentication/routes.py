@@ -7,6 +7,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 from sqlalchemy import select
 
 from app.core.dependencies import DatabaseSession, RedisClient, RequestSettings
+from app.core.middleware import client_ip_address
 from app.core.security import WeakPasswordError
 from app.core.tenancy import CurrentPrincipal
 from app.modules.authentication.schemas import (
@@ -31,6 +32,7 @@ from app.modules.authentication.schemas import (
     UserResponse,
 )
 from app.modules.authentication.service import (
+    AuthenticationProtectionUnavailableError,
     AuthenticationService,
     CompanyAccessError,
     InvalidCredentialsError,
@@ -46,8 +48,8 @@ from app.modules.users.models import CompanyUser
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+def _client_ip(request: Request, settings: RequestSettings) -> str:
+    return client_ip_address(request, settings)
 
 
 def _set_refresh_cookie(response: Response, token: str, settings: RequestSettings) -> None:
@@ -105,7 +107,7 @@ async def development_login(
         issued = await AuthenticationService(database, redis, settings).login(
             email=admin_email,
             password=password,
-            ip_address=_client_ip(request),
+            ip_address=_client_ip(request, settings),
             user_agent=request.headers.get("user-agent"),
         )
     except InvalidCredentialsError as exc:
@@ -117,6 +119,8 @@ async def development_login(
         raise HTTPException(
             status_code=429, detail="Acesso local temporariamente bloqueado."
         ) from exc
+    except AuthenticationProtectionUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Proteção de acesso indisponível.") from exc
     _set_refresh_cookie(response, issued.refresh_token, settings)
     return _token_response(issued)
 
@@ -135,7 +139,7 @@ async def login(
         issued = await service.login(
             email=str(payload.email),
             password=payload.password,
-            ip_address=_client_ip(request),
+            ip_address=_client_ip(request, settings),
             user_agent=request.headers.get("user-agent"),
         )
     except InvalidCredentialsError as exc:
@@ -145,6 +149,8 @@ async def login(
             status_code=429,
             detail="Muitas tentativas. Aguarde alguns minutos e tente novamente.",
         ) from exc
+    except AuthenticationProtectionUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Proteção de acesso indisponível.") from exc
     _set_refresh_cookie(response, issued.refresh_token, settings)
     return _token_response(issued)
 
@@ -166,7 +172,7 @@ async def authorize_read_only_link(
         ).authorize_read_only_link(
             email=str(payload.email),
             password=payload.password,
-            ip_address=_client_ip(request),
+            ip_address=_client_ip(request, settings),
         )
     except InvalidCredentialsError as exc:
         raise HTTPException(status_code=401, detail="E-mail ou senha inválidos.") from exc
@@ -175,6 +181,8 @@ async def authorize_read_only_link(
             status_code=429,
             detail="Muitas tentativas. Aguarde alguns minutos e tente novamente.",
         ) from exc
+    except AuthenticationProtectionUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Proteção de acesso indisponível.") from exc
     except CompanyAccessError as exc:
         raise HTTPException(
             status_code=403,
@@ -242,7 +250,7 @@ async def exchange_read_only_link(
     try:
         issued = await AuthenticationService(database, redis, settings).exchange_read_only_link(
             token=payload.token,
-            ip_address=_client_ip(request),
+            ip_address=_client_ip(request, settings),
             user_agent=request.headers.get("user-agent"),
         )
     except InvalidReadOnlyLinkError as exc:
@@ -356,9 +364,12 @@ async def forgot_password(
     redis: RedisClient,
     settings: RequestSettings,
 ) -> MessageResponse:
-    token = await AuthenticationService(database, redis, settings).forgot_password(
-        email=str(payload.email), ip_address=_client_ip(request)
-    )
+    try:
+        token = await AuthenticationService(database, redis, settings).forgot_password(
+            email=str(payload.email), ip_address=_client_ip(request, settings)
+        )
+    except AuthenticationProtectionUnavailableError as exc:
+        raise HTTPException(status_code=503, detail="Proteção de acesso indisponível.") from exc
     return MessageResponse(
         message="Se o e-mail estiver cadastrado, as instruções serão enviadas.",
         development_token=token if settings.development_expose_tokens else None,

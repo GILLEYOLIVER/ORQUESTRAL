@@ -937,3 +937,15 @@ controlada de metadados entre ambientes.
 - Capacidade de cancelamento remoto declarada pelo adaptador sem usar API privada.
 - Migracao: `20260722_0080_workflow_provider_resilience.py`.
 - Proximo passo exato: compensacao vinculada a blocos, provider fake e fechamento da Fase 3.
+
+## Ciclo 62 - protecao de acesso e ambiente (22/07/2026)
+
+- Rate limit distribuido separado entre API e autenticacao, com falha fechada nas rotas sensiveis.
+- Login protegido simultaneamente por conta e IP; recuperacao de senha limitada sem enumeracao de usuarios.
+- Identificadores Redis protegidos por HMAC e IP de proxy aceito somente quando explicitamente confiavel.
+- Ambientes remotos recusam placeholders, segredos centrais reutilizados e protecoes criticas desativadas.
+- Nginx sobrescreve cabecalhos de encaminhamento, limita rajadas/conexoes e oculta a versao.
+- Testes adicionados para configuracao remota, proxy confiavel, politica especifica, resposta `429` e falha fechada.
+- Migracao: nenhuma.
+- Documento detalhado: `docs/cycles/CYCLE_62_ACCESS_AND_ENV_SECURITY.md`.
+- Proximo passo exato do plano mestre permanece: compensacao vinculada a blocos, provider fake e fechamento da Fase 3.
