@@ -1,6 +1,6 @@
 # Motor de eventos e automações do Orkestral
 
-Atualizado em 21 de julho de 2026.
+Atualizado em 22 de julho de 2026.
 
 ## Objetivo
 
@@ -27,6 +27,9 @@ O recorte do Ciclo 58 acrescenta a camada confiável que liga ações empresaria
 | `EventConsumption`                  | Ledger idempotente por evento e nome do consumidor.                      |
 | `WorkflowExecution.source_event_id` | Impede duas execuções do mesmo workflow para o mesmo evento.             |
 | `EventConsumerRegistry`             | Resolve adaptadores sem acoplar o dispatcher ao consumidor.              |
+| `WorkflowProvider`                  | Contrato neutro para publicar, ativar, executar e cancelar fluxos.       |
+| `N8nWorkflowProvider`               | Adaptador do motor interno atual, sem expor formato ou credenciais.      |
+| `FakeWorkflowProvider`              | Prova determinística de portabilidade sem depender do n8n.               |
 
 ## Contratos
 
@@ -81,10 +84,21 @@ O recorte do Ciclo 58 acrescenta a camada confiável que liga ações empresaria
 
 O Celery Beat agenda despacho e consumo a cada cinco segundos. O painel **Eventos** exibe contratos, assinaturas, fila, DLQ e outbox. A indisponibilidade do n8n afeta somente assinaturas do tipo workflow; assinaturas de ledger e o restante da API continuam operando.
 
+## Compensação supervisionada por bloco
+
+- Uma ação operacional pode apontar para exatamente um bloco de compensação.
+- O bloco compensatório fica fora do caminho normal e nunca é executado automaticamente.
+- Falha ou cancelamento gera um plano persistente com origem, ação compensatória e estado.
+- O operador confirma cada item individualmente; a execução só fecha a pendência depois de todos os itens.
+- A API registra auditoria sem argumentos, credenciais, payloads ou resultados empresariais.
+- Blocos compartilhados, desconectados incorretamente ou vinculados entre si são recusados na publicação.
+
+## Portabilidade do provider
+
+Sincronização, ativação, execução, cancelamento remoto e health usam o contrato `WorkflowProvider`. As referências genéricas coexistem com os campos legados do n8n durante a migração. O provider falso publica e executa a definição canônica sem importar cliente, schema ou tipos do n8n, comprovando que um novo motor pode ser adicionado sem reescrever o domínio.
+
 ## Próximos recortes
 
-1. gatilhos canônicos de workflow configuráveis pelo construtor visual;
-2. simulação de evento e pré-visualização das entregas antes da publicação;
-3. cancelamento, compensação e reprocessamento em lote;
-4. métricas por tipo, consumidor, latência e empresa;
-5. adaptador de transporte substituível além do Redis Streams.
+1. iniciar o runtime empresarial de agentes sobre ferramentas tipadas;
+2. manter testes de contrato para cada novo provider de automação;
+3. evoluir o transporte de eventos além do Redis Streams quando houver demanda operacional.

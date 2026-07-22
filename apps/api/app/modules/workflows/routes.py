@@ -19,13 +19,13 @@ from app.modules.notifications.models import ApprovalRequest
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 from app.modules.workflows.compiler import (
     analyze_compiler_compatibility,
-    compile_definition,
     compiler_compatibility,
 )
 from app.modules.workflows.definition import (
     WorkflowDefinitionError,
     analyze_definition,
     block_catalog,
+    build_compensation_plan,
     compare_definitions,
     compensation_policy,
     export_definition,
@@ -33,10 +33,14 @@ from app.modules.workflows.definition import (
 )
 from app.modules.workflows.execution import run_workflow
 from app.modules.workflows.models import Workflow, WorkflowExecution, WorkflowVersion
+from app.modules.workflows.provider import (
+    WorkflowProviderError,
+    get_workflow_provider,
+)
 from app.modules.workflows.provider_resilience import provider_circuit_snapshot
 from app.modules.workflows.schemas import (
-    WorkflowComparisonResponse,
     WorkflowCancelRequest,
+    WorkflowComparisonResponse,
     WorkflowCreate,
     WorkflowCreatedResponse,
     WorkflowDefinitionRequest,
@@ -44,8 +48,8 @@ from app.modules.workflows.schemas import (
     WorkflowExecuteRequest,
     WorkflowExecutionResponse,
     WorkflowExportResponse,
-    WorkflowResponse,
     WorkflowMetricsResponse,
+    WorkflowResponse,
     WorkflowSimulationRequest,
     WorkflowSimulationResponse,
     WorkflowUpdate,
@@ -53,14 +57,13 @@ from app.modules.workflows.schemas import (
     WorkflowVersionResponse,
     WorkflowWebhookSecretResponse,
 )
-from app.modules.workflows.simulation import simulate_definition
 from app.modules.workflows.security import (
     new_internal_webhook_path,
     new_webhook_key,
     new_webhook_secret,
     verify_webhook_signature,
 )
-from app.modules.workflows.services.n8n_client import N8nClient, N8nClientError
+from app.modules.workflows.simulation import simulate_definition
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 webhook_router = APIRouter(prefix="/webhooks/workflows", tags=["workflow-webhooks"])
@@ -220,27 +223,28 @@ async def _deactivate_domain_event_subscriptions(
 
 
 async def _sync_workflow(workflow: Workflow, settings: Settings) -> None:
-    if not settings.n8n_enabled:
+    provider = get_workflow_provider(settings)
+    if not provider.configured:
         workflow.sync_status = "error"
-        workflow.last_error = "n8n indisponível no ambiente remoto reduzido."
+        workflow.last_error = "Motor de automacao indisponivel neste ambiente."
         return
-    client = N8nClient(settings)
     try:
-        compiled = compile_definition(
-            workflow.definition,
+        current_reference = workflow.provider_workflow_id or workflow.n8n_workflow_id
+        reference = await provider.sync_workflow(
+            external_workflow_id=current_reference,
+            name=workflow.name,
+            definition=workflow.definition,
             internal_webhook_path=workflow.internal_webhook_path,
         )
-        if workflow.n8n_workflow_id:
-            result = await client.update_workflow_with_rollback(
-                workflow.n8n_workflow_id, workflow.name, compiled
-            )
-        else:
-            result = await client.create_workflow(workflow.name, compiled)
-            workflow.n8n_workflow_id = str(result.get("id") or "") or None
-        workflow.n8n_version_id = str(result.get("versionId") or "") or None
+        workflow.provider_key = provider.key
+        workflow.provider_workflow_id = reference.workflow_id
+        workflow.provider_version_id = reference.version_id
+        if provider.key == "n8n":
+            workflow.n8n_workflow_id = reference.workflow_id
+            workflow.n8n_version_id = reference.version_id
         workflow.sync_status = "synced"
         workflow.last_error = None
-    except (N8nClientError, WorkflowDefinitionError) as exc:
+    except (WorkflowProviderError, WorkflowDefinitionError) as exc:
         workflow.sync_status = "error"
         workflow.last_error = str(exc)
 
@@ -308,36 +312,35 @@ async def engine_status(
     settings: RequestSettings,
 ) -> WorkflowEngineStatusResponse:
     context = get_request_context(principal)
+    provider = get_workflow_provider(settings)
     circuit = await provider_circuit_snapshot(
-        database, company_id=context.company_id, provider="n8n"
+        database, company_id=context.company_id, provider=provider.key
     )
     circuit_fields = {
         "circuit_state": circuit["state"],
         "circuit_failures": circuit["failure_count"],
         "circuit_retry_at": circuit["retry_at"],
     }
-    if not settings.n8n_enabled:
+    if not provider.configured:
         return WorkflowEngineStatusResponse(
+            provider=provider.key,
             configured=False,
             available=False,
-            message="n8n indisponível no ambiente remoto reduzido.",
-            **circuit_fields,
-        )
-    client = N8nClient(settings)
-    if not client.configured:
-        return WorkflowEngineStatusResponse(
-            configured=False,
-            available=False,
-            message="O motor interno aguarda configuração administrativa.",
+            message="Motor de automacao indisponivel neste ambiente.",
             **circuit_fields,
         )
     try:
-        await client.test_connection()
-    except N8nClientError as exc:
+        await provider.test_connection()
+    except WorkflowProviderError as exc:
         return WorkflowEngineStatusResponse(
-            configured=True, available=False, message=str(exc), **circuit_fields
+            provider=provider.key,
+            configured=True,
+            available=False,
+            message=str(exc),
+            **circuit_fields,
         )
     return WorkflowEngineStatusResponse(
+        provider=provider.key,
         configured=True,
         available=True,
         message="Motor de automação conectado e disponível.",
@@ -577,23 +580,29 @@ async def activate_workflow(
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
     await _assert_domain_event_contracts(database, workflow)
-    if workflow.sync_status != "synced" or not workflow.n8n_workflow_id:
+    provider = get_workflow_provider(settings)
+    provider_workflow_id = workflow.provider_workflow_id or workflow.n8n_workflow_id
+    if workflow.sync_status != "synced" or not provider_workflow_id:
         await _sync_workflow(workflow, settings)
-    if workflow.sync_status != "synced" or not workflow.n8n_workflow_id:
+        provider_workflow_id = workflow.provider_workflow_id or workflow.n8n_workflow_id
+    if workflow.sync_status != "synced" or not provider_workflow_id:
         await database.commit()
         raise HTTPException(
             status_code=503,
             detail=workflow.last_error or "A automação ainda não foi sincronizada.",
         )
     try:
-        result = await N8nClient(settings).activate_workflow(workflow.n8n_workflow_id)
-    except N8nClientError as exc:
+        reference = await provider.activate_workflow(provider_workflow_id)
+    except WorkflowProviderError as exc:
         workflow.status = "error"
         workflow.last_error = str(exc)
         await database.commit()
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     workflow.status = "active"
-    workflow.n8n_version_id = str(result.get("versionId") or workflow.n8n_version_id or "") or None
+    workflow.provider_key = provider.key
+    workflow.provider_version_id = reference.version_id or workflow.provider_version_id
+    if provider.key == "n8n":
+        workflow.n8n_version_id = reference.version_id or workflow.n8n_version_id
     workflow.published_at = utc_now()
     workflow.last_error = None
     await _sync_domain_event_subscriptions(database, workflow, context.user_id)
@@ -620,10 +629,12 @@ async def deactivate_workflow(
 ) -> WorkflowResponse:
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
-    if workflow.n8n_workflow_id:
+    provider = get_workflow_provider(settings)
+    provider_workflow_id = workflow.provider_workflow_id or workflow.n8n_workflow_id
+    if provider_workflow_id:
         try:
-            await N8nClient(settings).deactivate_workflow(workflow.n8n_workflow_id)
-        except N8nClientError as exc:
+            await provider.deactivate_workflow(provider_workflow_id)
+        except WorkflowProviderError as exc:
             workflow.last_error = str(exc)
             await database.commit()
             raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -731,12 +742,12 @@ async def cancel_workflow_execution(
     execution.canceled_by_user_id = context.user_id
     execution.cancel_reason = payload.reason.strip() if payload.reason else None
     if execution.status == "running":
-        client = N8nClient(settings)
-        if execution.external_execution_id and client.supports_remote_cancellation:
+        provider = get_workflow_provider(settings)
+        if execution.external_execution_id and provider.supports_remote_cancellation:
             try:
-                requested = await client.cancel_execution(execution.external_execution_id)
+                requested = await provider.cancel_execution(execution.external_execution_id)
                 execution.remote_cancel_status = "requested" if requested else "unsupported"
-            except N8nClientError:
+            except WorkflowProviderError:
                 execution.remote_cancel_status = "failed"
         else:
             execution.remote_cancel_status = "unsupported"
@@ -746,6 +757,7 @@ async def cancel_workflow_execution(
         execution.finished_at = now
         policy = compensation_policy(workflow.definition)
         if policy["enabled"] and "canceled" in policy["on_status"]:
+            execution.compensation_plan = build_compensation_plan(workflow.definition)
             execution.compensation_status = "pending"
     approval = await database.scalar(
         select(ApprovalRequest).where(
@@ -798,6 +810,12 @@ async def acknowledge_workflow_compensation(
         raise HTTPException(status_code=404, detail="Execucao nao encontrada.")
     if execution.compensation_status != "pending":
         raise HTTPException(status_code=409, detail="Nao existe compensacao pendente.")
+    execution.compensation_plan = [
+        {**item, "status": "acknowledged", "acknowledged_at": utc_now().isoformat()}
+        if item.get("status") == "pending"
+        else item
+        for item in execution.compensation_plan
+    ]
     execution.compensation_status = "acknowledged"
     record_authorization_audit(
         database,
@@ -807,6 +825,58 @@ async def acknowledge_workflow_compensation(
         target_type="workflow_execution",
         target_id=execution.id,
         details={"workflow_id": str(workflow_id)},
+    )
+    await database.commit()
+    await database.refresh(execution)
+    return _execution_response(execution)
+
+
+@router.post(
+    "/{workflow_id}/executions/{execution_id}/compensation/{source_node_id}/acknowledge",
+    response_model=WorkflowExecutionResponse,
+)
+async def acknowledge_workflow_compensation_item(
+    workflow_id: UUID,
+    execution_id: UUID,
+    source_node_id: str,
+    principal: CanExecuteWorkflows,
+    database: DatabaseSession,
+) -> WorkflowExecutionResponse:
+    context = get_request_context(principal)
+    await _get_workflow(database, context.company_id, workflow_id)
+    execution = await database.scalar(
+        select(WorkflowExecution).where(
+            WorkflowExecution.id == execution_id,
+            WorkflowExecution.workflow_id == workflow_id,
+            WorkflowExecution.company_id == context.company_id,
+        )
+    )
+    if execution is None:
+        raise HTTPException(status_code=404, detail="Execucao nao encontrada.")
+    if execution.compensation_status != "pending":
+        raise HTTPException(status_code=409, detail="Nao existe compensacao pendente.")
+    changed = False
+    updated_plan: list[dict[str, Any]] = []
+    for item in execution.compensation_plan:
+        current = dict(item)
+        if current.get("source_node_id") == source_node_id and current.get("status") == "pending":
+            current["status"] = "acknowledged"
+            current["acknowledged_at"] = utc_now().isoformat()
+            changed = True
+        updated_plan.append(current)
+    if not changed:
+        raise HTTPException(status_code=404, detail="Compensacao de bloco nao encontrada.")
+    execution.compensation_plan = updated_plan
+    if all(item.get("status") == "acknowledged" for item in updated_plan):
+        execution.compensation_status = "acknowledged"
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="workflow.compensation.item_acknowledged",
+        target_type="workflow_execution",
+        target_id=execution.id,
+        details={"workflow_id": str(workflow_id), "source_node_id": source_node_id[:160]},
     )
     await database.commit()
     await database.refresh(execution)
@@ -1074,10 +1144,12 @@ async def delete_workflow(
 ) -> Response:
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
-    if workflow.status == "active" and workflow.n8n_workflow_id:
+    provider = get_workflow_provider(settings)
+    provider_workflow_id = workflow.provider_workflow_id or workflow.n8n_workflow_id
+    if workflow.status == "active" and provider_workflow_id:
         try:
-            await N8nClient(settings).deactivate_workflow(workflow.n8n_workflow_id)
-        except N8nClientError as exc:
+            await provider.deactivate_workflow(provider_workflow_id)
+        except WorkflowProviderError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
     record_authorization_audit(
         database,

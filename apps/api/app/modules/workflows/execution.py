@@ -17,10 +17,17 @@ from app.modules.notifications.service import create_approval_request
 from app.modules.plugins.crypto import CredentialVault
 from app.modules.workflows.definition import (
     as_summary_object,
+    build_compensation_plan,
     compensation_policy,
     execution_policy,
 )
 from app.modules.workflows.models import Workflow, WorkflowExecution
+from app.modules.workflows.provider import (
+    WorkflowProvider,
+    WorkflowProviderError,
+    WorkflowProviderUnavailable,
+    get_workflow_provider,
+)
 from app.modules.workflows.provider_resilience import (
     ProviderCircuitOpen,
     ensure_provider_available,
@@ -28,11 +35,6 @@ from app.modules.workflows.provider_resilience import (
     record_provider_success,
 )
 from app.modules.workflows.security import sign_webhook_body
-from app.modules.workflows.services.n8n_client import (
-    N8nClient,
-    N8nClientError,
-    N8nUnavailableError,
-)
 
 
 def human_approval_configuration(definition: dict[str, Any]) -> dict[str, Any] | None:
@@ -53,8 +55,10 @@ async def run_workflow(
     requested_by_user_id: UUID | None,
     existing_execution: WorkflowExecution | None = None,
     bypass_approval: bool = False,
+    provider: WorkflowProvider | None = None,
 ) -> WorkflowExecution:
-    if not settings.n8n_enabled:
+    runtime_provider = provider or get_workflow_provider(settings)
+    if not runtime_provider.configured:
         raise HTTPException(
             status_code=503,
             detail="Execução de automações indisponível no ambiente remoto reduzido.",
@@ -62,7 +66,9 @@ async def run_workflow(
     policy = execution_policy(workflow.definition)
     compensation = compensation_policy(workflow.definition)
     try:
-        await ensure_provider_available(database, company_id=workflow.company_id, provider="n8n")
+        await ensure_provider_available(
+            database, company_id=workflow.company_id, provider=runtime_provider.key
+        )
     except ProviderCircuitOpen as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     active_executions = await database.scalar(
@@ -91,6 +97,7 @@ async def run_workflow(
             requested_by_user_id=requested_by_user_id,
             source=source,
             status="waiting",
+            provider_key=runtime_provider.key,
             input_summary=as_summary_object(input_data),
         )
         if existing_execution is None:
@@ -125,6 +132,7 @@ async def run_workflow(
         workflow_id=workflow.id,
         requested_by_user_id=requested_by_user_id,
         source=source,
+        provider_key=runtime_provider.key,
         input_summary=as_summary_object(input_data),
     )
     if existing_execution is None:
@@ -140,6 +148,7 @@ async def run_workflow(
         execution.status = "canceled"
         execution.canceled_at = utc_now()
         if "canceled" in compensation["on_status"] and compensation["enabled"]:
+            execution.compensation_plan = build_compensation_plan(workflow.definition)
             execution.compensation_status = "pending"
         await database.commit()
         await database.refresh(execution)
@@ -156,25 +165,29 @@ async def run_workflow(
     internal_payload["orkestral_signature"] = sign_webhook_body(settings.encryption_key, canonical)
     started = perf_counter()
     try:
-        output = await asyncio.wait_for(
-            N8nClient(settings).trigger_webhook(workflow.internal_webhook_path, internal_payload),
+        provider_result = await asyncio.wait_for(
+            runtime_provider.trigger_workflow(workflow.internal_webhook_path, internal_payload),
             timeout=float(policy["timeout_seconds"]),
         )
+        output = provider_result.output
+        execution.external_execution_id = provider_result.execution_id
         execution.status = "success"
         execution.output_summary = as_summary_object(output)
-        await record_provider_success(database, company_id=workflow.company_id, provider="n8n")
-    except N8nUnavailableError as exc:
+        await record_provider_success(
+            database, company_id=workflow.company_id, provider=runtime_provider.key
+        )
+    except WorkflowProviderUnavailable as exc:
         execution.status = "error"
         execution.error_summary = str(exc)
         await record_provider_failure(
             database,
             company_id=workflow.company_id,
-            provider="n8n",
+            provider=runtime_provider.key,
             error_code=type(exc).__name__,
             threshold=settings.workflow_circuit_failure_threshold,
             reset_seconds=settings.workflow_circuit_reset_seconds,
         )
-    except N8nClientError as exc:
+    except WorkflowProviderError as exc:
         execution.status = "error"
         execution.error_summary = str(exc)
     except TimeoutError:
@@ -183,7 +196,7 @@ async def run_workflow(
         await record_provider_failure(
             database,
             company_id=workflow.company_id,
-            provider="n8n",
+            provider=runtime_provider.key,
             error_code="workflow_timeout",
             threshold=settings.workflow_circuit_failure_threshold,
             reset_seconds=settings.workflow_circuit_reset_seconds,
@@ -197,8 +210,10 @@ async def run_workflow(
         execution.canceled_at = utc_now()
         execution.output_summary = {}
     if execution.status in compensation["on_status"] and compensation["enabled"]:
+        execution.compensation_plan = build_compensation_plan(workflow.definition)
         execution.compensation_status = "pending"
     else:
+        execution.compensation_plan = []
         execution.compensation_status = "not_required"
     execution.duration_ms = max(0, round((perf_counter() - started) * 1_000))
     execution.finished_at = utc_now()

@@ -12,7 +12,7 @@ from app.core.config import Settings
 from app.modules.agents.models import AgentTool
 from app.modules.companies.models import Company
 from app.modules.workflows.models import Workflow
-from app.modules.workflows.services.n8n_client import N8nClient, N8nClientError
+from app.modules.workflows.provider import WorkflowProviderError, get_workflow_provider
 
 
 class ToolAccessError(RuntimeError):
@@ -154,10 +154,12 @@ async def execute_builtin_tool(
             "sync_status": workflow.sync_status,
         }
     if tool_key == "orkestral.workflow.deactivate":
-        if workflow.n8n_workflow_id:
+        provider = get_workflow_provider(settings)
+        provider_workflow_id = workflow.provider_workflow_id or workflow.n8n_workflow_id
+        if provider_workflow_id:
             try:
-                await N8nClient(settings).deactivate_workflow(workflow.n8n_workflow_id)
-            except N8nClientError as exc:
+                await provider.deactivate_workflow(provider_workflow_id)
+            except WorkflowProviderError as exc:
                 raise ToolExecutionError(str(exc)) from exc
         workflow.status = "inactive"
         return {

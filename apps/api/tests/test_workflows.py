@@ -15,14 +15,15 @@ from app.modules.workflows.definition import (
     analyze_definition,
     as_summary_object,
     block_catalog,
+    build_compensation_plan,
     build_default_definition,
     compare_definitions,
     compensation_policy,
     export_definition,
     prepare_definition,
 )
-from app.modules.workflows.simulation import simulate_definition
 from app.modules.workflows.security import sign_webhook_body, verify_webhook_signature
+from app.modules.workflows.simulation import simulate_definition
 
 
 def test_default_visual_workflow_is_valid_and_neutral() -> None:
@@ -253,3 +254,108 @@ def test_retry_policy_is_validated_and_compiled_per_block() -> None:
 
     definition["nodes"][1]["config"]["retry_policy"]["max_attempts"] = 99
     assert "invalid_retry_policy" in {item["code"] for item in analyze_definition(definition)}
+
+
+def test_compensation_is_bound_to_an_exclusive_action_block() -> None:
+    definition = build_default_definition()
+    definition["compensation_policy"]["enabled"] = True
+    definition["nodes"].insert(
+        1,
+        {
+            "id": "send-message",
+            "type": "action.message",
+            "label": "Enviar mensagem",
+            "position": {"x": 240, "y": 180},
+            "config": {
+                "channel": "whatsapp",
+                "credential_id": "vault-reference",
+                "recipient": "contact.primary",
+                "template": "follow-up",
+                "on_error": "stop",
+                "compensation": {
+                    "enabled": True,
+                    "mode": "manual",
+                    "action_node_id": "cancel-message",
+                },
+            },
+        },
+    )
+    definition["nodes"].append(
+        {
+            "id": "cancel-message",
+            "type": "action.message",
+            "label": "Comunicar cancelamento",
+            "position": {"x": 240, "y": 420},
+            "config": {
+                "channel": "whatsapp",
+                "credential_id": "vault-reference",
+                "recipient": "contact.primary",
+                "template": "cancel-follow-up",
+                "on_error": "stop",
+                "compensation_only": True,
+            },
+        }
+    )
+    definition["connections"] = [
+        {"id": "first", "source": "trigger-manual", "target": "send-message"},
+        {"id": "second", "source": "send-message", "target": "flow-end"},
+    ]
+    assert analyze_definition(definition) == []
+    assert build_compensation_plan(definition) == [
+        {
+            "source_node_id": "send-message",
+            "source_label": "Enviar mensagem",
+            "action_node_id": "cancel-message",
+            "action_label": "Comunicar cancelamento",
+            "status": "pending",
+        }
+    ]
+    simulation = simulate_definition(definition, {"contact_id": "synthetic"})
+    assert simulation["compensation_plan"] == build_compensation_plan(definition)
+    assert all(item["node_id"] != "cancel-message" for item in simulation["trace"])
+
+
+def test_compensation_rejects_cross_graph_or_shared_targets() -> None:
+    definition = build_default_definition()
+    definition["compensation_policy"]["enabled"] = True
+    for index in range(2):
+        definition["nodes"].append(
+            {
+                "id": f"action-{index}",
+                "type": "action.plugin",
+                "label": f"Acao {index}",
+                "position": {"x": 200 + index * 100, "y": 200},
+                "config": {
+                    "plugin_code": "synthetic",
+                    "action": "execute",
+                    "credential_id": "vault-reference",
+                    "on_error": "stop",
+                    "compensation": {
+                        "enabled": True,
+                        "mode": "manual",
+                        "action_node_id": "rollback",
+                    },
+                },
+            }
+        )
+    definition["nodes"].append(
+        {
+            "id": "rollback",
+            "type": "action.plugin",
+            "label": "Reverter",
+            "position": {"x": 400, "y": 400},
+            "config": {
+                "plugin_code": "synthetic",
+                "action": "rollback",
+                "credential_id": "vault-reference",
+                "on_error": "stop",
+                "compensation_only": True,
+            },
+        }
+    )
+    definition["connections"] = [
+        {"id": "one", "source": "trigger-manual", "target": "action-0"},
+        {"id": "two", "source": "action-0", "target": "action-1"},
+        {"id": "three", "source": "action-1", "target": "flow-end"},
+    ]
+    assert "shared_compensation_block" in {item["code"] for item in analyze_definition(definition)}

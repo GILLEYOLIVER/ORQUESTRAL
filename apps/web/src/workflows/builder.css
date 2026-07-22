@@ -335,6 +335,15 @@
   display: flex;
   justify-content: space-between;
 }
+.visual-retry-policy select {
+  background: #fffdf7;
+  border: 1px solid #bfcbaa;
+  border-radius: 8px;
+  color: #18352b;
+  font: inherit;
+  padding: 9px;
+  width: 100%;
+}
 .visual-muted {
   color: #858a85;
   line-height: 1.5;
@@ -504,6 +513,15 @@
   font-size: 0.72rem;
   font-weight: 800;
   padding: 7px 9px;
+}
+.visual-compensation-item {
+  align-items: center;
+  background: #fffdf7;
+  border: 1px solid #d8d1bd;
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  padding: 7px;
 }
 .visual-simulation-result {
   background: #edf2d9;

@@ -9,6 +9,7 @@ from app.modules.workflows.definition import (
     WorkflowDefinitionError,
     block_catalog,
     execution_policy,
+    is_compensation_only,
     validate_definition,
 )
 
@@ -182,6 +183,8 @@ def analyze_compiler_compatibility(definition: dict[str, Any]) -> list[dict[str,
     for node in definition.get("nodes", []):
         if not isinstance(node, dict):
             continue
+        if is_compensation_only(node):
+            continue
         block_type = str(node.get("type", ""))
         if block_type and block_type not in _ADAPTERS:
             issues.append(
@@ -214,7 +217,11 @@ def compile_definition(definition: dict[str, Any], *, internal_webhook_path: str
         raise WorkflowCompilerError(str(compatibility_issues[0]["message"]))
 
     source = json.loads(json.dumps(definition))
-    visual_nodes = [node for node in source["nodes"] if isinstance(node, dict)]
+    visual_nodes = [
+        node
+        for node in source["nodes"]
+        if isinstance(node, dict) and not is_compensation_only(node)
+    ]
     by_id = {str(node["id"]): node for node in visual_nodes}
     names = {node_id: _name(node) for node_id, node in by_id.items()}
     nodes = [_native_node(node, internal_webhook_path) for node in visual_nodes]
@@ -249,6 +256,8 @@ def compile_definition(definition: dict[str, Any], *, internal_webhook_path: str
     for edge in source["connections"]:
         source_id = str(edge["source"])
         target_id = str(edge["target"])
+        if source_id not in by_id or target_id not in by_id:
+            continue
         output_index = 1 if str(edge.get("source_handle", "main")) == "false" else 0
         connect(names[source_id], names[target_id], output_index)
         if str(by_id[source_id]["type"]) in TRIGGER_TYPES:

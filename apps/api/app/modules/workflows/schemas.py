@@ -76,7 +76,9 @@ class WorkflowExecutionResponse(StrictSchema):
     output_summary: dict[str, Any]
     error_summary: str | None
     cancel_reason: str | None
+    provider_key: str
     compensation_status: Literal["not_required", "pending", "acknowledged"]
+    compensation_plan: list[dict[str, Any]]
     remote_cancel_status: Literal[
         "not_requested", "unsupported", "requested", "confirmed", "failed"
     ]
@@ -102,6 +104,7 @@ class WorkflowWebhookSecretResponse(StrictSchema):
 
 
 class WorkflowEngineStatusResponse(StrictSchema):
+    provider: str
     configured: bool
     available: bool
     message: str
@@ -146,6 +149,7 @@ class WorkflowSimulationResponse(StrictSchema):
     blocked_side_effects: int
     execution_policy: dict[str, Any]
     compensation_policy: dict[str, Any]
+    compensation_plan: list[dict[str, Any]]
     input_summary: dict[str, Any]
     trace: list[WorkflowSimulationTrace]
     issues: list[WorkflowValidationIssue]

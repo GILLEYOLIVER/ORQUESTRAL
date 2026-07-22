@@ -34,6 +34,11 @@ class Workflow(Base):
             name="ck_workflows_sync_status",
         ),
         CheckConstraint("version >= 1", name="ck_workflows_version"),
+        UniqueConstraint(
+            "provider_key",
+            "provider_workflow_id",
+            name="uq_workflows_provider_reference",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -53,6 +58,11 @@ class Workflow(Base):
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     n8n_workflow_id: Mapped[str | None] = mapped_column(String(80), unique=True, index=True)
     n8n_version_id: Mapped[str | None] = mapped_column(String(80))
+    provider_key: Mapped[str] = mapped_column(
+        String(80), default="n8n", server_default="n8n", index=True
+    )
+    provider_workflow_id: Mapped[str | None] = mapped_column(String(120), index=True)
+    provider_version_id: Mapped[str | None] = mapped_column(String(120))
     status: Mapped[str] = mapped_column(
         String(20), default="draft", server_default="draft", index=True
     )
@@ -119,6 +129,9 @@ class WorkflowExecution(Base):
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
     external_execution_id: Mapped[str | None] = mapped_column(String(80), index=True)
+    provider_key: Mapped[str] = mapped_column(
+        String(80), default="n8n", server_default="n8n", index=True
+    )
     source: Mapped[str] = mapped_column(String(20), index=True)
     status: Mapped[str] = mapped_column(
         String(20), default="queued", server_default="queued", index=True
@@ -133,6 +146,9 @@ class WorkflowExecution(Base):
     cancel_reason: Mapped[str | None] = mapped_column(String(300))
     compensation_status: Mapped[str] = mapped_column(
         String(24), default="not_required", server_default="not_required", index=True
+    )
+    compensation_plan: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
     )
     remote_cancel_status: Mapped[str] = mapped_column(
         String(24), default="not_requested", server_default="not_requested"

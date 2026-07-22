@@ -4673,6 +4673,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflows/{workflow_id}/executions/{execution_id}/compensation/{source_node_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge Workflow Compensation Item */
+        post: operations["acknowledge_workflow_compensation_item_workflows__workflow_id__executions__execution_id__compensation__source_node_id__acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflows/{workflow_id}/export": {
         parameters: {
             query?: never;
@@ -13246,6 +13263,8 @@ export interface components {
             configured: boolean;
             /** Message */
             message: string;
+            /** Provider */
+            provider: string;
         };
         /** WorkflowExecuteRequest */
         WorkflowExecuteRequest: {
@@ -13262,6 +13281,10 @@ export interface components {
             canceled_at: string | null;
             /** Cancellation Requested At */
             cancellation_requested_at: string | null;
+            /** Compensation Plan */
+            compensation_plan: {
+                [key: string]: unknown;
+            }[];
             /**
              * Compensation Status
              * @enum {string}
@@ -13291,6 +13314,8 @@ export interface components {
             output_summary: {
                 [key: string]: unknown;
             };
+            /** Provider Key */
+            provider_key: string;
             /**
              * Remote Cancel Status
              * @enum {string}
@@ -13416,6 +13441,10 @@ export interface components {
         WorkflowSimulationResponse: {
             /** Blocked Side Effects */
             blocked_side_effects: number;
+            /** Compensation Plan */
+            compensation_plan: {
+                [key: string]: unknown;
+            }[];
             /** Compensation Policy */
             compensation_policy: {
                 [key: string]: unknown;
@@ -32019,6 +32048,57 @@ export interface operations {
             path: {
                 workflow_id: string;
                 execution_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowExecutionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    acknowledge_workflow_compensation_item_workflows__workflow_id__executions__execution_id__compensation__source_node_id__acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                execution_id: string;
+                source_node_id: string;
             };
             cookie?: never;
         };
