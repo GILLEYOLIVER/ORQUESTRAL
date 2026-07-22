@@ -422,3 +422,7 @@ Uma entrega pronta possui requisito, modelo, migracao, schema, servico, autoriza
 ## Atualizacao do Ciclo 58
 
 A fundacao da Fase 3 avancou para contratos versionados, assinaturas, consumidores idempotentes, DLQ/replay e automacoes disparadas por eventos. O proximo incremento cobre gatilhos no canvas, simulacao, concorrencia e observabilidade operacional.
+
+## Atualizacao do Ciclo 59
+
+O construtor agora possui gatilho canonico de evento, assinatura automatica, simulacao sem efeitos e politicas de execucao aplicadas no backend. O proximo incremento da Fase 3 cobre cancelamento cooperativo, compensacao e metricas agregadas de confiabilidade.

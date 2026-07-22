@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from time import perf_counter
 from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -13,7 +15,7 @@ from app.core.security import utc_now
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.notifications.service import create_approval_request
 from app.modules.plugins.crypto import CredentialVault
-from app.modules.workflows.definition import as_summary_object
+from app.modules.workflows.definition import as_summary_object, execution_policy
 from app.modules.workflows.models import Workflow, WorkflowExecution
 from app.modules.workflows.security import sign_webhook_body
 from app.modules.workflows.services.n8n_client import N8nClient, N8nClientError
@@ -42,6 +44,19 @@ async def run_workflow(
         raise HTTPException(
             status_code=503,
             detail="Execução de automações indisponível no ambiente remoto reduzido.",
+        )
+    policy = execution_policy(workflow.definition)
+    active_executions = await database.scalar(
+        select(func.count(WorkflowExecution.id)).where(
+            WorkflowExecution.company_id == workflow.company_id,
+            WorkflowExecution.workflow_id == workflow.id,
+            WorkflowExecution.status == "running",
+        )
+    )
+    if (active_executions or 0) >= int(policy["concurrency_limit"]):
+        raise HTTPException(
+            status_code=409,
+            detail="A automacao atingiu o limite de execucoes simultaneas.",
         )
     await enforce_limit(
         database,
@@ -112,14 +127,18 @@ async def run_workflow(
     internal_payload["orkestral_signature"] = sign_webhook_body(settings.encryption_key, canonical)
     started = perf_counter()
     try:
-        output = await N8nClient(settings).trigger_webhook(
-            workflow.internal_webhook_path, internal_payload
+        output = await asyncio.wait_for(
+            N8nClient(settings).trigger_webhook(workflow.internal_webhook_path, internal_payload),
+            timeout=float(policy["timeout_seconds"]),
         )
         execution.status = "success"
         execution.output_summary = as_summary_object(output)
     except N8nClientError as exc:
         execution.status = "error"
         execution.error_summary = str(exc)
+    except TimeoutError:
+        execution.status = "error"
+        execution.error_summary = "A automacao excedeu o tempo limite configurado."
     execution.duration_ms = max(0, round((perf_counter() - started) * 1_000))
     execution.finished_at = utc_now()
     await record_usage(

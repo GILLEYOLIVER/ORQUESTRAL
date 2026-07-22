@@ -8,6 +8,7 @@ from app.modules.workflows.definition import (
     TRIGGER_TYPES,
     WorkflowDefinitionError,
     block_catalog,
+    execution_policy,
     validate_definition,
 )
 
@@ -126,6 +127,7 @@ _ADAPTERS: dict[str, NodeAdapter] = {
     "trigger.webhook": _webhook_adapter,
     "trigger.message_received": _webhook_adapter,
     "trigger.contact_created": _webhook_adapter,
+    "trigger.domain_event": _webhook_adapter,
     "logic.condition": _condition_adapter,
     "logic.wait": _wait_adapter,
     "flow.end": _end_adapter,
@@ -137,6 +139,7 @@ _NATIVE_TYPES = {
     "trigger.webhook": ("n8n-nodes-base.webhook", 2),
     "trigger.message_received": ("n8n-nodes-base.webhook", 2),
     "trigger.contact_created": ("n8n-nodes-base.webhook", 2),
+    "trigger.domain_event": ("n8n-nodes-base.webhook", 2),
     "logic.condition": ("n8n-nodes-base.if", 2.2),
     "logic.wait": ("n8n-nodes-base.wait", 1.1),
     "flow.end": ("n8n-nodes-base.noOp", 1),
@@ -244,6 +247,7 @@ def compile_definition(definition: dict[str, Any], *, internal_webhook_path: str
     for target_id in dict.fromkeys(trigger_successors):
         connect(internal_name, names[target_id])
 
+    policy = execution_policy(definition)
     return {
         "nodes": nodes,
         "connections": connections,
@@ -252,5 +256,6 @@ def compile_definition(definition: dict[str, Any], *, internal_webhook_path: str
             "saveDataErrorExecution": "all",
             "saveDataSuccessExecution": "all",
             "saveExecutionProgress": True,
+            "executionTimeout": int(policy["timeout_seconds"]),
         },
     }

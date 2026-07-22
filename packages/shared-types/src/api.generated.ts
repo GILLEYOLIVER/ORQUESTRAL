@@ -4673,6 +4673,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflows/{workflow_id}/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Simulate Workflow Draft */
+        post: operations["simulate_workflow_draft_workflows__workflow_id__simulate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflows/{workflow_id}/sync": {
         parameters: {
             query?: never;
@@ -13271,6 +13288,58 @@ export interface components {
             version: number;
             /** Webhook Url */
             webhook_url: string;
+        };
+        /** WorkflowSimulationRequest */
+        WorkflowSimulationRequest: {
+            /** Definition */
+            definition?: {
+                [key: string]: unknown;
+            } | null;
+            /** Input */
+            input?: {
+                [key: string]: unknown;
+            };
+        };
+        /** WorkflowSimulationResponse */
+        WorkflowSimulationResponse: {
+            /** Blocked Side Effects */
+            blocked_side_effects: number;
+            /** Estimated Steps */
+            estimated_steps: number;
+            /** Execution Policy */
+            execution_policy: {
+                [key: string]: unknown;
+            };
+            /** Input Summary */
+            input_summary: {
+                [key: string]: unknown;
+            };
+            /** Issues */
+            issues: components["schemas"]["WorkflowValidationIssue"][];
+            /** Publishable */
+            publishable: boolean;
+            /** Trace */
+            trace: components["schemas"]["WorkflowSimulationTrace"][];
+            /** Valid */
+            valid: boolean;
+        };
+        /** WorkflowSimulationTrace */
+        WorkflowSimulationTrace: {
+            /** Block Type */
+            block_type: string;
+            /** Detail */
+            detail: string;
+            /** Label */
+            label: string;
+            /** Node Id */
+            node_id: string;
+            /** Side Effect */
+            side_effect: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "simulated" | "approval_required" | "blocked_effect";
         };
         /** WorkflowUpdate */
         WorkflowUpdate: {
@@ -31840,6 +31909,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    simulate_workflow_draft_workflows__workflow_id__simulate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowSimulationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowSimulationResponse"];
                 };
             };
             /** @description Solicitação inválida */
