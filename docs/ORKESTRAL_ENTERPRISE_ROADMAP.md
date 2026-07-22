@@ -438,3 +438,7 @@ Retry por bloco, circuit breaker distribuido e capacidade explicita de cancelame
 ## Atualizacao do Ciclo 64
 
 A Fase 3 foi fechada com compensacao supervisionada vinculada a blocos, referencias genericas de provider e uma prova deterministica de publicacao, execucao e cancelamento sem n8n. O proximo incremento do plano mestre inicia a Fase 4 pelo contrato de definicao, versao, politica e ferramenta do runtime de agentes.
+
+### Progresso da Fase 4 — Ciclo 65
+
+O runtime agora persiste trace operacional seguro por etapa para execuções diretas, simulações e delegações. Os passos registram somente códigos, estados e fingerprints HMAC isolados por empresa; prompts, argumentos, respostas completas, segredos e raciocínio interno permanecem fora do trace. O próximo recorte da Fase 4 é a governança de agenda, gatilhos e credenciais vinculadas por agente.

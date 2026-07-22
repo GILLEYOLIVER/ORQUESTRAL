@@ -66,6 +66,7 @@ from app.modules.agents.tools import (
     execute_builtin_tool,
     validate_tool_arguments,
 )
+from app.modules.agents.trace import add_agent_run_steps
 from app.modules.authorization.models import Permission, RolePermission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
@@ -625,6 +626,12 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
                     )
                     database.add(agent_run)
                     await database.flush()
+                    add_agent_run_steps(
+                        database,
+                        settings,
+                        run=agent_run,
+                        tool_arguments=[item.arguments for item in result.tool_calls],
+                    )
                     for shared_memory_trace in shared_memory_traces:
                         shared_memory_trace.agent_run_id = agent_run.id
                     delegation.status = "awaiting_approval"
@@ -708,6 +715,12 @@ async def process_delegation(delegation_id: UUID, *, settings: Settings) -> dict
             )
             database.add(agent_run)
             await database.flush()
+            add_agent_run_steps(
+                database,
+                settings,
+                run=agent_run,
+                tool_arguments=[call.arguments for call in result.tool_calls],
+            )
             for shared_memory_trace in shared_memory_traces:
                 shared_memory_trace.agent_run_id = agent_run.id
             delegation.status = run_status
@@ -851,6 +864,14 @@ async def _execute_approved_tool(
         finished_at=utc_now(),
     )
     database.add(agent_run)
+    await database.flush()
+    add_agent_run_steps(
+        database,
+        settings,
+        run=agent_run,
+        tool_arguments=[arguments],
+        tool_outputs=[tool_result],
+    )
     delegation.status = "completed"
     delegation.last_error_code = None
     delegation.result_fingerprint = coordination_fingerprint(
