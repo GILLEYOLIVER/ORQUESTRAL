@@ -13,6 +13,8 @@ from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
+from app.modules.events.models import EventContract, EventSubscription
+from app.modules.events.operations_service import validate_payload
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError
 from app.modules.workflows.compiler import (
     analyze_compiler_compatibility,
@@ -39,11 +41,14 @@ from app.modules.workflows.schemas import (
     WorkflowExecutionResponse,
     WorkflowExportResponse,
     WorkflowResponse,
+    WorkflowSimulationRequest,
+    WorkflowSimulationResponse,
     WorkflowUpdate,
     WorkflowValidationResponse,
     WorkflowVersionResponse,
     WorkflowWebhookSecretResponse,
 )
+from app.modules.workflows.simulation import simulate_definition
 from app.modules.workflows.security import (
     new_internal_webhook_path,
     new_webhook_key,
@@ -117,6 +122,96 @@ async def _get_workflow(database: DatabaseSession, company_id: UUID, workflow_id
     if workflow is None:
         raise HTTPException(status_code=404, detail="Automação não encontrada.")
     return workflow
+
+
+def _domain_event_bindings(definition: dict[str, Any]) -> dict[str, tuple[int, int]]:
+    bindings: dict[str, tuple[int, int]] = {}
+    for node in definition.get("nodes", []):
+        if not isinstance(node, dict) or node.get("type") != "trigger.domain_event":
+            continue
+        config = node.get("config", {})
+        if not isinstance(config, dict):
+            continue
+        event_type = str(config.get("event_type", ""))
+        bindings[event_type] = (
+            int(config.get("event_version", 1)),
+            int(config.get("max_attempts", 8)),
+        )
+    return bindings
+
+
+async def _assert_domain_event_contracts(database: DatabaseSession, workflow: Workflow) -> None:
+    for event_type, (version, _) in _domain_event_bindings(workflow.definition).items():
+        contract = await database.scalar(
+            select(EventContract.id).where(
+                EventContract.company_id == workflow.company_id,
+                EventContract.event_type == event_type,
+                EventContract.version == version,
+                EventContract.status == "published",
+            )
+        )
+        if contract is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Publique o contrato {event_type} v{version} antes da automacao.",
+            )
+
+
+async def _sync_domain_event_subscriptions(
+    database: DatabaseSession, workflow: Workflow, user_id: UUID
+) -> None:
+    bindings = _domain_event_bindings(workflow.definition)
+    rows = list(
+        await database.scalars(
+            select(EventSubscription).where(
+                EventSubscription.company_id == workflow.company_id,
+                EventSubscription.workflow_id == workflow.id,
+                EventSubscription.delivery_mode == "workflow",
+            )
+        )
+    )
+    by_type = {item.event_type: item for item in rows}
+    for subscription in rows:
+        binding = bindings.get(subscription.event_type)
+        if binding is None:
+            subscription.active = False
+            continue
+        version, max_attempts = binding
+        subscription.min_version = version
+        subscription.max_version = version
+        subscription.max_attempts = max_attempts
+        subscription.active = True
+    for event_type, (version, max_attempts) in bindings.items():
+        if event_type in by_type:
+            continue
+        database.add(
+            EventSubscription(
+                company_id=workflow.company_id,
+                name=f"Automacao: {workflow.name}"[:120],
+                consumer_name=f"workflow.{workflow.id}",
+                event_type=event_type,
+                min_version=version,
+                max_version=version,
+                delivery_mode="workflow",
+                workflow_id=workflow.id,
+                active=True,
+                max_attempts=max_attempts,
+                created_by_user_id=user_id,
+            )
+        )
+
+
+async def _deactivate_domain_event_subscriptions(
+    database: DatabaseSession, workflow: Workflow
+) -> None:
+    rows = await database.scalars(
+        select(EventSubscription).where(
+            EventSubscription.company_id == workflow.company_id,
+            EventSubscription.workflow_id == workflow.id,
+        )
+    )
+    for subscription in rows:
+        subscription.active = False
 
 
 async def _sync_workflow(workflow: Workflow, settings: Settings) -> None:
@@ -359,6 +454,72 @@ async def validate_workflow_draft(
     )
 
 
+@router.post("/{workflow_id}/simulate", response_model=WorkflowSimulationResponse)
+async def simulate_workflow_draft(
+    workflow_id: UUID,
+    payload: WorkflowSimulationRequest,
+    principal: CanConfigureWorkflows,
+    database: DatabaseSession,
+) -> WorkflowSimulationResponse:
+    context = get_request_context(principal)
+    workflow = await _get_workflow(database, context.company_id, workflow_id)
+    definition = payload.definition if payload.definition is not None else workflow.definition
+    result = simulate_definition(definition, payload.input)
+    result["issues"].extend(analyze_compiler_compatibility(definition))
+    event_wrapper = payload.input.get("event")
+    event_payload = (
+        event_wrapper.get("payload", {}) if isinstance(event_wrapper, dict) else payload.input
+    )
+    if not isinstance(event_payload, dict):
+        event_payload = {}
+    for event_type, (version, _) in _domain_event_bindings(definition).items():
+        contract = await database.scalar(
+            select(EventContract).where(
+                EventContract.company_id == context.company_id,
+                EventContract.event_type == event_type,
+                EventContract.version == version,
+                EventContract.status == "published",
+            )
+        )
+        if contract is None:
+            result["issues"].append(
+                {
+                    "severity": "error",
+                    "code": "event_contract_missing",
+                    "message": f"Contrato publicado ausente: {event_type} v{version}.",
+                    "node_id": None,
+                }
+            )
+            continue
+        for message in validate_payload(event_payload, contract.payload_schema):
+            result["issues"].append(
+                {
+                    "severity": "error",
+                    "code": "event_payload_invalid",
+                    "message": message,
+                    "node_id": None,
+                }
+            )
+    result["valid"] = not any(item["severity"] == "error" for item in result["issues"])
+    result["publishable"] = result["valid"]
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="workflow.simulated",
+        target_type="workflow",
+        target_id=workflow.id,
+        details={
+            "version": workflow.version,
+            "estimated_steps": result["estimated_steps"],
+            "blocked_side_effects": result["blocked_side_effects"],
+            "valid": result["valid"],
+        },
+    )
+    await database.commit()
+    return WorkflowSimulationResponse.model_validate(result)
+
+
 @router.post("/{workflow_id}/sync", response_model=WorkflowResponse)
 async def sync_workflow(
     workflow_id: UUID,
@@ -368,6 +529,7 @@ async def sync_workflow(
 ) -> WorkflowResponse:
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
+    await _assert_domain_event_contracts(database, workflow)
     _assert_publishable(workflow.definition)
     await _sync_workflow(workflow, settings)
     await database.commit()
@@ -394,6 +556,7 @@ async def activate_workflow(
 ) -> WorkflowResponse:
     context = get_request_context(principal)
     workflow = await _get_workflow(database, context.company_id, workflow_id)
+    await _assert_domain_event_contracts(database, workflow)
     if workflow.sync_status != "synced" or not workflow.n8n_workflow_id:
         await _sync_workflow(workflow, settings)
     if workflow.sync_status != "synced" or not workflow.n8n_workflow_id:
@@ -413,6 +576,7 @@ async def activate_workflow(
     workflow.n8n_version_id = str(result.get("versionId") or workflow.n8n_version_id or "") or None
     workflow.published_at = utc_now()
     workflow.last_error = None
+    await _sync_domain_event_subscriptions(database, workflow, context.user_id)
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -445,6 +609,7 @@ async def deactivate_workflow(
             raise HTTPException(status_code=503, detail=str(exc)) from exc
     workflow.status = "inactive"
     workflow.last_error = None
+    await _deactivate_domain_event_subscriptions(database, workflow)
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -703,6 +868,16 @@ async def delete_workflow(
         target_id=workflow.id,
         details={},
     )
+    subscriptions = list(
+        await database.scalars(
+            select(EventSubscription).where(
+                EventSubscription.company_id == context.company_id,
+                EventSubscription.workflow_id == workflow.id,
+            )
+        )
+    )
+    for subscription in subscriptions:
+        await database.delete(subscription)
     await database.delete(workflow)
     await database.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

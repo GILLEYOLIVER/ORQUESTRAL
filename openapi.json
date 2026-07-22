@@ -22127,6 +22127,131 @@
         "title": "WorkflowResponse",
         "type": "object"
       },
+      "WorkflowSimulationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "definition": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Definition"
+          },
+          "input": {
+            "additionalProperties": true,
+            "title": "Input",
+            "type": "object"
+          }
+        },
+        "title": "WorkflowSimulationRequest",
+        "type": "object"
+      },
+      "WorkflowSimulationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked_side_effects": {
+            "title": "Blocked Side Effects",
+            "type": "integer"
+          },
+          "estimated_steps": {
+            "title": "Estimated Steps",
+            "type": "integer"
+          },
+          "execution_policy": {
+            "additionalProperties": true,
+            "title": "Execution Policy",
+            "type": "object"
+          },
+          "input_summary": {
+            "additionalProperties": true,
+            "title": "Input Summary",
+            "type": "object"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowValidationIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "publishable": {
+            "title": "Publishable",
+            "type": "boolean"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowSimulationTrace"
+            },
+            "title": "Trace",
+            "type": "array"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "publishable",
+          "estimated_steps",
+          "blocked_side_effects",
+          "execution_policy",
+          "input_summary",
+          "trace",
+          "issues"
+        ],
+        "title": "WorkflowSimulationResponse",
+        "type": "object"
+      },
+      "WorkflowSimulationTrace": {
+        "additionalProperties": false,
+        "properties": {
+          "block_type": {
+            "title": "Block Type",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "side_effect": {
+            "title": "Side Effect",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "simulated",
+              "approval_required",
+              "blocked_effect"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "label",
+          "block_type",
+          "status",
+          "detail",
+          "side_effect"
+        ],
+        "title": "WorkflowSimulationTrace",
+        "type": "object"
+      },
       "WorkflowUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -49174,6 +49299,84 @@
           }
         ],
         "summary": "Publish Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/workflows/{workflow_id}/simulate": {
+      "post": {
+        "operationId": "simulate_workflow_draft_workflows__workflow_id__simulate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowSimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowSimulationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Simulate Workflow Draft",
         "tags": [
           "workflows"
         ]

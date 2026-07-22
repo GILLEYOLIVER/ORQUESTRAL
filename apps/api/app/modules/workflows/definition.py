@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, cast
 
 
@@ -48,6 +49,14 @@ BLOCK_CATALOG: tuple[dict[str, Any], ...] = (
         "description": "Inicia quando um contato e criado.",
         "required_fields": [],
         "defaults": {},
+    },
+    {
+        "type": "trigger.domain_event",
+        "category": "Gatilhos",
+        "label": "Evento empresarial",
+        "description": "Inicia ao receber um evento publicado e validado da empresa.",
+        "required_fields": ["event_type", "event_version"],
+        "defaults": {"event_type": "contact.created", "event_version": 1, "max_attempts": 8},
     },
     {
         "type": "logic.condition",
@@ -143,10 +152,25 @@ BLOCK_BY_TYPE = {item["type"]: item for item in BLOCK_CATALOG}
 TRIGGER_TYPES = {item["type"] for item in BLOCK_CATALOG if item["type"].startswith("trigger.")}
 ACTION_TYPES = {item["type"] for item in BLOCK_CATALOG if item["type"].startswith("action.")}
 SENSITIVE_KEYS = frozenset({"password", "secret", "token", "api_key", "apikey", "authorization"})
+EVENT_TYPE_PATTERN = re.compile(r"^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$")
+DEFAULT_EXECUTION_POLICY: dict[str, Any] = {
+    "max_steps": 100,
+    "timeout_seconds": 300,
+    "concurrency_limit": 1,
+    "on_conflict": "reject",
+}
 
 
 def block_catalog() -> list[dict[str, Any]]:
     return cast(list[dict[str, Any]], json.loads(json.dumps(BLOCK_CATALOG)))
+
+
+def execution_policy(definition: dict[str, Any]) -> dict[str, Any]:
+    raw = definition.get("execution_policy")
+    policy = dict(DEFAULT_EXECUTION_POLICY)
+    if isinstance(raw, dict):
+        policy.update(raw)
+    return policy
 
 
 def build_default_definition(_webhook_path: str | None = None) -> dict[str, Any]:
@@ -176,6 +200,7 @@ def build_default_definition(_webhook_path: str | None = None) -> dict[str, Any]
             }
         ],
         "variables": {},
+        "execution_policy": dict(DEFAULT_EXECUTION_POLICY),
         "version": 1,
     }
 
@@ -205,7 +230,13 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
     issues: list[dict[str, Any]] = []
     if not isinstance(definition, dict):
         return [_issue("error", "invalid_definition", "A definicao deve ser um objeto.")]
-    if set(definition) - {"nodes", "connections", "variables", "version"}:
+    if set(definition) - {
+        "nodes",
+        "connections",
+        "variables",
+        "execution_policy",
+        "version",
+    }:
         issues.append(
             _issue("error", "unknown_properties", "A definicao contem propriedades nao permitidas.")
         )
@@ -229,6 +260,36 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                 "error",
                 "invalid_metadata",
                 "Variaveis devem ser um objeto e a versao da definicao deve ser 1.",
+            )
+        )
+    policy = execution_policy(definition)
+    policy_ranges = {
+        "max_steps": (2, 1000),
+        "timeout_seconds": (5, 3600),
+        "concurrency_limit": (1, 50),
+    }
+    if "execution_policy" in definition and not isinstance(
+        definition.get("execution_policy"), dict
+    ):
+        issues.append(
+            _issue("error", "invalid_execution_policy", "A politica de execucao e invalida.")
+        )
+    for field, (minimum, maximum) in policy_ranges.items():
+        value = policy.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
+            issues.append(
+                _issue(
+                    "error",
+                    "invalid_execution_policy",
+                    f"{field} deve estar entre {minimum} e {maximum}.",
+                )
+            )
+    if policy.get("on_conflict") != "reject":
+        issues.append(
+            _issue(
+                "error",
+                "invalid_execution_policy",
+                "Conflitos de concorrencia devem ser rejeitados com seguranca.",
             )
         )
 
@@ -324,6 +385,45 @@ def analyze_definition(definition: dict[str, Any]) -> list[dict[str, Any]]:
                         "error",
                         "invalid_loop",
                         "A repeticao precisa de um limite positivo.",
+                        node_id,
+                    )
+                )
+        if node_type == "trigger.domain_event":
+            event_type = str(config.get("event_type", ""))
+            event_version = config.get("event_version")
+            max_attempts = config.get("max_attempts", 8)
+            if not EVENT_TYPE_PATTERN.fullmatch(event_type):
+                issues.append(
+                    _issue(
+                        "error",
+                        "invalid_event_type",
+                        "Use um tipo de evento no formato dominio.acao.",
+                        node_id,
+                    )
+                )
+            if (
+                isinstance(event_version, bool)
+                or not isinstance(event_version, int)
+                or not 1 <= event_version <= 1000
+            ):
+                issues.append(
+                    _issue(
+                        "error",
+                        "invalid_event_version",
+                        "A versao do evento deve estar entre 1 e 1000.",
+                        node_id,
+                    )
+                )
+            if (
+                isinstance(max_attempts, bool)
+                or not isinstance(max_attempts, int)
+                or not 1 <= max_attempts <= 25
+            ):
+                issues.append(
+                    _issue(
+                        "error",
+                        "invalid_event_attempts",
+                        "As tentativas do evento devem estar entre 1 e 25.",
                         node_id,
                     )
                 )
@@ -479,6 +579,7 @@ def prepare_definition(
     )
     if _is_legacy_n8n(prepared):
         prepared = build_default_definition()
+    prepared.setdefault("execution_policy", dict(DEFAULT_EXECUTION_POLICY))
     validate_definition(prepared)
     return prepared
 

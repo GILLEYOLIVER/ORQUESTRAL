@@ -22,6 +22,7 @@ import {
   Braces,
   CheckCircle2,
   Copy,
+  FlaskConical,
   GitCompareArrows,
   History,
   Play,
@@ -42,12 +43,15 @@ import {
   type WorkflowComparison,
   type WorkflowCreatedResponse,
   type WorkflowDefinition,
+  type WorkflowExecutionPolicy,
   type WorkflowEngineStatus,
   type WorkflowExecutionResponse,
   type WorkflowResponse,
+  type WorkflowSimulationResponse,
   type WorkflowValidationResponse,
   type WorkflowVersion,
   useWorkflows,
+  type EventContractOption,
 } from "../workflows/useWorkflows";
 import "../workflows/builder.css";
 
@@ -104,6 +108,12 @@ function VisualBlock({ data, selected }: NodeProps<VisualNode>) {
 }
 
 const nodeTypes = { orkestral: VisualBlock };
+const defaultExecutionPolicy: WorkflowExecutionPolicy = {
+  max_steps: 100,
+  timeout_seconds: 300,
+  concurrency_limit: 1,
+  on_conflict: "reject",
+};
 
 function errorMessage(
   error: unknown,
@@ -127,6 +137,10 @@ export function WorkflowsPage() {
   const [validation, setValidation] =
     useState<WorkflowValidationResponse | null>(null);
   const [comparison, setComparison] = useState<WorkflowComparison | null>(null);
+  const [simulation, setSimulation] =
+    useState<WorkflowSimulationResponse | null>(null);
+  const [executionPolicy, setExecutionPolicy] =
+    useState<WorkflowExecutionPolicy>(defaultExecutionPolicy);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<VisualNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -141,6 +155,10 @@ export function WorkflowsPage() {
   const blocks = useQuery({
     queryKey: ["workflow-blocks"],
     queryFn: () => request<WorkflowBlock[]>("/workflows/blocks/catalog"),
+  });
+  const eventContracts = useQuery({
+    queryKey: ["event-contract-options"],
+    queryFn: () => request<EventContractOption[]>("/events/contracts"),
   });
   const versions = useQuery({
     queryKey: ["workflow-versions", selectedId],
@@ -192,6 +210,10 @@ export function WorkflowsPage() {
     );
     setSelectedNodeId(null);
     setValidation(null);
+    setSimulation(null);
+    setExecutionPolicy(
+      selected.definition.execution_policy ?? defaultExecutionPolicy,
+    );
     // Rehydrate only when the persisted workflow version changes; query refetches
     // must not overwrite unsaved canvas edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,6 +252,7 @@ export function WorkflowsPage() {
       source_handle: edge.sourceHandle ?? "main",
     })),
     variables: selected?.definition.variables ?? {},
+    execution_policy: executionPolicy,
     version: 1,
   });
 
@@ -348,6 +371,24 @@ export function WorkflowsPage() {
       }),
     onSuccess: refresh,
   });
+  const simulate = useMutation({
+    mutationFn: () =>
+      request<WorkflowSimulationResponse>(`/workflows/${selectedId}/simulate`, {
+        method: "POST",
+        body: {
+          definition: definition(),
+          input: JSON.parse(input) as Record<string, unknown>,
+        },
+      }),
+    onSuccess: (result) => {
+      setSimulation(result);
+      setFeedback(
+        result.valid
+          ? "Simulacao concluida sem executar efeitos externos."
+          : "A simulacao encontrou bloqueios antes da publicacao.",
+      );
+    },
+  });
 
   function addBlock(block: WorkflowBlock) {
     const id = crypto.randomUUID();
@@ -437,6 +478,7 @@ export function WorkflowsPage() {
     duplicate.error ??
     restore.error ??
     compare.error ??
+    simulate.error ??
     execute.error;
 
   return (
@@ -619,6 +661,52 @@ export function WorkflowsPage() {
                 Tipo
                 <input disabled value={selectedNode.data.blockType} />
               </label>
+              {selectedNode.data.blockType === "trigger.domain_event" ? (
+                <>
+                  <label>
+                    Evento publicado
+                    <input
+                      list="published-event-contracts"
+                      onChange={(event) =>
+                        updateNode({
+                          config: {
+                            ...selectedNode.data.config,
+                            event_type: event.target.value,
+                          },
+                        })
+                      }
+                      value={String(selectedNode.data.config.event_type ?? "")}
+                    />
+                    <datalist id="published-event-contracts">
+                      {eventContracts.data
+                        ?.filter((contract) => contract.status === "published")
+                        .map((contract) => (
+                          <option key={contract.id} value={contract.event_type}>
+                            versao {contract.version}
+                          </option>
+                        ))}
+                    </datalist>
+                  </label>
+                  <label>
+                    Versao do contrato
+                    <input
+                      min={1}
+                      onChange={(event) =>
+                        updateNode({
+                          config: {
+                            ...selectedNode.data.config,
+                            event_version: Number(event.target.value),
+                          },
+                        })
+                      }
+                      type="number"
+                      value={Number(
+                        selectedNode.data.config.event_version ?? 1,
+                      )}
+                    />
+                  </label>
+                </>
+              ) : null}
               <label>
                 Configuracao JSON
                 <textarea
@@ -767,6 +855,7 @@ export function WorkflowsPage() {
                   <span>
                     <strong>{execution.status}</strong>
                     <small>
+                      {execution.source} ·{" "}
                       {new Date(execution.created_at).toLocaleString("pt-BR")} ·{" "}
                       {execution.duration_ms ?? 0} ms
                     </small>
@@ -777,6 +866,104 @@ export function WorkflowsPage() {
                 </div>
               ))}
             </div>
+          </article>
+          <article className="visual-simulation-panel">
+            <div className="visual-section-title">
+              <span>06</span>
+              <h2>Simulacao e limites</h2>
+            </div>
+            <p className="visual-muted">
+              Teste o caminho inteiro sem enviar mensagens, alterar dados ou
+              chamar sistemas externos.
+            </p>
+            <div className="visual-policy-grid">
+              <label>
+                Limite de etapas
+                <input
+                  min={2}
+                  max={1000}
+                  onChange={(event) =>
+                    setExecutionPolicy((current) => ({
+                      ...current,
+                      max_steps: Number(event.target.value),
+                    }))
+                  }
+                  type="number"
+                  value={executionPolicy.max_steps}
+                />
+              </label>
+              <label>
+                Tempo maximo (segundos)
+                <input
+                  min={5}
+                  max={3600}
+                  onChange={(event) =>
+                    setExecutionPolicy((current) => ({
+                      ...current,
+                      timeout_seconds: Number(event.target.value),
+                    }))
+                  }
+                  type="number"
+                  value={executionPolicy.timeout_seconds}
+                />
+              </label>
+              <label>
+                Execucoes simultaneas
+                <input
+                  min={1}
+                  max={50}
+                  onChange={(event) =>
+                    setExecutionPolicy((current) => ({
+                      ...current,
+                      concurrency_limit: Number(event.target.value),
+                    }))
+                  }
+                  type="number"
+                  value={executionPolicy.concurrency_limit}
+                />
+              </label>
+            </div>
+            <div className="visual-simulation-actions">
+              <textarea
+                aria-label="Dados de teste da simulacao"
+                onChange={(event) => setInput(event.target.value)}
+                rows={4}
+                value={input}
+              />
+              <Button
+                loading={simulate.isPending}
+                onClick={() => simulate.mutate()}
+                variant="secondary"
+              >
+                <FlaskConical size={16} /> Simular sem executar
+              </Button>
+            </div>
+            {simulation ? (
+              <div className="visual-simulation-result">
+                <strong>
+                  {simulation.valid
+                    ? "Simulacao aprovada"
+                    : "Simulacao bloqueada"}
+                </strong>
+                <small>
+                  {simulation.estimated_steps} etapas analisadas ·{" "}
+                  {simulation.blocked_side_effects} efeitos bloqueados
+                </small>
+                <div className="visual-simulation-trace">
+                  {simulation.trace.map((step) => (
+                    <div key={step.node_id}>
+                      <span
+                        className={`visual-trace-status visual-trace-status--${step.status}`}
+                      />
+                      <span>
+                        <strong>{step.label}</strong>
+                        <small>{step.detail}</small>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </article>
         </section>
       ) : null}

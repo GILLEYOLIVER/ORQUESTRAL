@@ -20,6 +20,7 @@ from app.modules.workflows.definition import (
     export_definition,
     prepare_definition,
 )
+from app.modules.workflows.simulation import simulate_definition
 from app.modules.workflows.security import sign_webhook_body, verify_webhook_signature
 
 
@@ -32,9 +33,10 @@ def test_default_visual_workflow_is_valid_and_neutral() -> None:
 
 def test_catalog_contains_all_master_document_blocks() -> None:
     types = {item["type"] for item in block_catalog()}
-    assert len(types) == 16
+    assert len(types) == 17
     assert {
         "trigger.schedule",
+        "trigger.domain_event",
         "logic.condition",
         "action.agent",
         "action.human_approval",
@@ -62,13 +64,14 @@ def test_compiler_matches_golden_default_fixture() -> None:
 
 def test_compiler_compatibility_covers_catalog_and_rejects_missing_adapter() -> None:
     matrix = compiler_compatibility()
-    assert len(matrix) == len(block_catalog()) == 16
+    assert len(matrix) == len(block_catalog()) == 17
     assert {item["block_type"] for item in matrix if item["supported"]} == {
         "trigger.manual",
         "trigger.schedule",
         "trigger.webhook",
         "trigger.message_received",
         "trigger.contact_created",
+        "trigger.domain_event",
         "logic.condition",
         "logic.wait",
         "flow.end",
@@ -148,3 +151,54 @@ def test_payload_summary_redacts_secrets_and_limits_long_values() -> None:
     assert summary["access_token"] == "[protegido]"
     assert summary["nested"] == {"password": "[protegido]"}
     assert len(str(summary["message"])) <= 503
+
+
+def test_domain_event_policy_and_simulation_block_external_effects() -> None:
+    definition = build_default_definition()
+    definition["nodes"][0].update(
+        type="trigger.domain_event",
+        label="Contato criado",
+        config={"event_type": "contact.created", "event_version": 1, "max_attempts": 5},
+    )
+    definition["nodes"].insert(
+        1,
+        {
+            "id": "send-email",
+            "type": "action.email",
+            "label": "Avisar comercial",
+            "position": {"x": 250, "y": 180},
+            "config": {
+                "credential_id": "vault-reference",
+                "recipient": "comercial@example.test",
+                "subject": "Novo contato",
+                "on_error": "stop",
+            },
+        },
+    )
+    definition["connections"] = [
+        {"id": "first", "source": "trigger-manual", "target": "send-email"},
+        {"id": "second", "source": "send-email", "target": "flow-end"},
+    ]
+    result = simulate_definition(definition, {"contact_id": "synthetic"})
+    assert result["valid"] is True
+    assert result["estimated_steps"] == 3
+    assert result["blocked_side_effects"] == 1
+    assert {item["status"] for item in result["trace"]} >= {"blocked_effect", "simulated"}
+    assert "comercial@example.test" not in str(result["trace"])
+
+
+def test_domain_event_and_execution_policy_reject_unsafe_values() -> None:
+    definition = build_default_definition()
+    definition["nodes"][0].update(
+        type="trigger.domain_event",
+        config={"event_type": "INVALID", "event_version": 0, "max_attempts": 99},
+    )
+    definition["execution_policy"] = {
+        "max_steps": 1,
+        "timeout_seconds": 1,
+        "concurrency_limit": 0,
+        "on_conflict": "queue",
+    }
+    codes = {item["code"] for item in analyze_definition(definition)}
+    assert {"invalid_event_type", "invalid_event_version", "invalid_event_attempts"} <= codes
+    assert "invalid_execution_policy" in codes

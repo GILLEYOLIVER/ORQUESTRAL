@@ -100,6 +100,10 @@ class WorkflowDefinitionRequest(StrictSchema):
     definition: dict[str, Any] | None = None
 
 
+class WorkflowSimulationRequest(WorkflowDefinitionRequest):
+    input: dict[str, Any] = Field(default_factory=dict)
+
+
 class WorkflowValidationIssue(StrictSchema):
     severity: Literal["error", "warning"]
     code: str
@@ -109,6 +113,26 @@ class WorkflowValidationIssue(StrictSchema):
 
 class WorkflowValidationResponse(StrictSchema):
     valid: bool
+    issues: list[WorkflowValidationIssue]
+
+
+class WorkflowSimulationTrace(StrictSchema):
+    node_id: str
+    label: str
+    block_type: str
+    status: Literal["simulated", "approval_required", "blocked_effect"]
+    detail: str
+    side_effect: bool
+
+
+class WorkflowSimulationResponse(StrictSchema):
+    valid: bool
+    publishable: bool
+    estimated_steps: int
+    blocked_side_effects: int
+    execution_policy: dict[str, Any]
+    input_summary: dict[str, Any]
+    trace: list[WorkflowSimulationTrace]
     issues: list[WorkflowValidationIssue]
 
 

@@ -4,7 +4,7 @@ Atualizado em: 21 de julho de 2026
 
 ## Fase atual
 
-**Fase 2 - Plataforma de metadados (em andamento)**
+**Fase 3 - Eventos e automacoes (em andamento)**
 
 O primeiro ciclo do Prompt Mestre concluiu os itens imediatos 1 a 3:
 
@@ -14,7 +14,7 @@ O primeiro ciclo do Prompt Mestre concluiu os itens imediatos 1 a 3:
 
 Progresso realista da Fase 0: **100%**.
 
-Progresso realista do roteiro empresarial completo: **32%**.
+Progresso realista do roteiro empresarial completo: **35%**.
 
 Percentuais reavaliados no ciclo 52 conforme codigo, migracoes, testes e matriz de equivalencia; nao representam apenas a quantidade de telas.
 
@@ -909,3 +909,13 @@ controlada de metadados entre ambientes.
 - **Testes adicionados:** validacao/compatibilidade de contrato, consumo unico, DLQ, replay e acesso cruzado.
 - **Documento detalhado:** `docs/cycles/CYCLE_58_EVENT_CONTRACTS_AND_CONSUMERS.md`.
 - **Proximo passo exato:** gatilhos canonicos de evento no construtor visual, simulacao e observabilidade de automacoes.
+
+## Ciclo 59 - gatilhos de evento e simulacao de automacoes (22/07/2026)
+
+- Gatilho `trigger.domain_event` integrado ao modelo canonico e aos contratos publicados.
+- Assinaturas de workflow sincronizadas automaticamente na publicacao e desativacao.
+- Politicas de etapas, timeout e concorrencia validadas e aplicadas no backend.
+- Simulacao sem efeitos externos com validacao de payload e trace seguro.
+- Estudio visual com configuracao do evento, limites e resultado passo a passo.
+- Migracao: nenhuma; utiliza o schema de eventos do ciclo 58.
+- Proximo passo exato: cancelamento cooperativo, compensacao declarativa e metricas agregadas por automacao.

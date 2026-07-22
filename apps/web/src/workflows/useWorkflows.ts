@@ -21,7 +21,15 @@ export interface WorkflowDefinition {
   nodes: WorkflowNodeDefinition[];
   connections: WorkflowConnectionDefinition[];
   variables: Record<string, unknown>;
+  execution_policy?: WorkflowExecutionPolicy;
   version: 1;
+}
+
+export interface WorkflowExecutionPolicy {
+  max_steps: number;
+  timeout_seconds: number;
+  concurrency_limit: number;
+  on_conflict: "reject";
 }
 
 export interface WorkflowResponse {
@@ -82,6 +90,33 @@ export interface WorkflowValidationIssue {
 export interface WorkflowValidationResponse {
   valid: boolean;
   issues: WorkflowValidationIssue[];
+}
+
+export interface WorkflowSimulationTrace {
+  node_id: string;
+  label: string;
+  block_type: string;
+  status: "simulated" | "approval_required" | "blocked_effect";
+  detail: string;
+  side_effect: boolean;
+}
+
+export interface WorkflowSimulationResponse {
+  valid: boolean;
+  publishable: boolean;
+  estimated_steps: number;
+  blocked_side_effects: number;
+  execution_policy: WorkflowExecutionPolicy;
+  input_summary: Record<string, unknown>;
+  trace: WorkflowSimulationTrace[];
+  issues: WorkflowValidationIssue[];
+}
+
+export interface EventContractOption {
+  id: string;
+  event_type: string;
+  version: number;
+  status: string;
 }
 
 export interface WorkflowVersion {
