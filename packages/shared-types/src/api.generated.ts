@@ -1196,6 +1196,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/runs/{run_id}/steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Run Steps */
+        get: operations["list_agent_run_steps_agents__agent_id__runs__run_id__steps_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/security-events": {
         parameters: {
             query?: never;
@@ -6955,6 +6972,50 @@ export interface components {
             step_count: number;
             /** Total Tokens */
             total_tokens: number;
+        };
+        /** AgentRunStepResponse */
+        AgentRunStepResponse: {
+            /**
+             * Agent Run Id
+             * Format: uuid
+             */
+            agent_run_id: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Error Code */
+            error_code: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Input Fingerprint */
+            input_fingerprint: string | null;
+            /** Output Fingerprint */
+            output_fingerprint: string | null;
+            /** Sequence */
+            sequence: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planned" | "completed" | "blocked" | "failed" | "awaiting_approval" | "simulated" | "timed_out";
+            /**
+             * Step Type
+             * @enum {string}
+             */
+            step_type: "provider" | "tool";
+            /** Summary Code */
+            summary_code: string;
+            /** Tool Key */
+            tool_key: string | null;
         };
         /** AgentSecurityEventResponse */
         AgentSecurityEventResponse: {
@@ -18173,6 +18234,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentRunResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_run_steps_agents__agent_id__runs__run_id__steps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRunStepResponse"][];
                 };
             };
             /** @description Solicitação inválida */

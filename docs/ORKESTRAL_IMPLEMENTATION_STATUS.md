@@ -974,3 +974,11 @@ controlada de metadados entre ambientes.
 - Migracao: `20260722_0081_workflow_provider_compensation.py`.
 - Documento detalhado: `docs/cycles/CYCLE_64_WORKFLOW_PORTABILITY_AND_COMPENSATION.md`.
 - Fase 3 concluida. Proximo passo exato: iniciar a Fase 4 com definicoes e versoes do runtime de agentes, ferramentas tipadas e politicas de autonomia.
+
+## Ciclo 65 — Trace operacional seguro de agentes
+
+- Fase atual: Fase 4, runtime empresarial de agentes.
+- Concluído: `agent_run_steps`, API isolada por empresa, fingerprints HMAC, instrumentação de chat, simulação e delegações, painel responsivo e migração reversível `20260722_0082`.
+- Segurança: nenhum prompt, argumento, resultado completo, segredo ou raciocínio interno é persistido no trace.
+- Testes concluídos: 193 API, 5 worker, 13 front-end, 19 integrações, 7 E2E aprovados e 2 E2E condicionais ignorados; build, tipagem, migração reversível, auditoria de segurança e contratos CI/CD/remotos aprovados.
+- Próximo passo exato: agenda e gatilhos versionados por agente, com vínculo seguro de credenciais e enforcement no worker.

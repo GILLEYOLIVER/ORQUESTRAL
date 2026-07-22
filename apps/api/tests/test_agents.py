@@ -41,7 +41,7 @@ from app.modules.agents.memory_schemas import (
     AgentMemoryScopePolicyInput,
 )
 from app.modules.agents.memory_service import estimate_memory_tokens, memory_content_fingerprint
-from app.modules.agents.models import AgentDataPolicy, AgentTool
+from app.modules.agents.models import AgentDataPolicy, AgentRun, AgentTool
 from app.modules.agents.providers.base import ModelMessage, ToolDefinition
 from app.modules.agents.providers.local import LocalLanguageModelProvider
 from app.modules.agents.security import (
@@ -56,6 +56,7 @@ from app.modules.agents.tools import (
     assert_tool_access,
     validate_tool_arguments,
 )
+from app.modules.agents.trace import build_agent_run_steps, trace_payload_fingerprint
 from app.modules.notifications.schemas import ApprovalDelegationCreate
 
 
@@ -543,6 +544,79 @@ def test_agent_run_limits_block_excess_steps_and_runtime() -> None:
     )
     assert steps.error_code == "max_steps_exceeded"
     assert timeout.error_code == "max_runtime_exceeded"
+
+
+def test_agent_operational_trace_is_tenant_scoped_and_does_not_store_payloads() -> None:
+    settings = Settings(app_env="testing")
+    first_company = UUID("00000000-0000-0000-0000-000000000071")
+    second_company = UUID("00000000-0000-0000-0000-000000000072")
+    run_id = UUID("00000000-0000-0000-0000-000000000073")
+    sensitive = {"password": "client-secret", "amount": 2500}
+    first = trace_payload_fingerprint(
+        settings,
+        company_id=first_company,
+        run_id=run_id,
+        sequence=2,
+        payload=sensitive,
+    )
+    second = trace_payload_fingerprint(
+        settings,
+        company_id=second_company,
+        run_id=run_id,
+        sequence=2,
+        payload=sensitive,
+    )
+    assert first != second
+    assert "client-secret" not in first
+    assert len(first) == 64
+
+
+def test_agent_operational_trace_maps_completed_blocked_and_approval_steps() -> None:
+    settings = Settings(app_env="testing")
+    run = AgentRun(
+        id=UUID("00000000-0000-0000-0000-000000000081"),
+        company_id=UUID("00000000-0000-0000-0000-000000000082"),
+        agent_id=UUID("00000000-0000-0000-0000-000000000083"),
+        agent_version_id=UUID("00000000-0000-0000-0000-000000000084"),
+        execution_mode="live",
+        status="awaiting_approval",
+        request_fingerprint="a" * 64,
+        planned_tool_keys=["tool.completed", "tool.blocked", "tool.approval"],
+        completed_tool_keys=["tool.completed"],
+        denied_tool_keys=["tool.blocked"],
+        error_code=None,
+        step_count=3,
+        total_tokens=10,
+        cost_microunits=0,
+        duration_ms=12,
+        max_steps=4,
+        max_runtime_seconds=30,
+        started_at=datetime.now(UTC),
+        finished_at=datetime.now(UTC),
+    )
+    steps = build_agent_run_steps(
+        settings,
+        run=run,
+        tool_arguments=[{"id": 1}, {"id": 2}, {"id": 3}],
+    )
+    assert [step.status for step in steps] == [
+        "completed",
+        "completed",
+        "blocked",
+        "awaiting_approval",
+    ]
+    assert all(step.company_id == run.company_id for step in steps)
+    assert all(step.input_fingerprint for step in steps[1:])
+
+
+def test_agent_trace_route_requires_authentication(client: TestClient) -> None:
+    assert (
+        client.get(
+            "/agents/00000000-0000-0000-0000-000000000000/runs/"
+            "00000000-0000-0000-0000-000000000000/steps"
+        ).status_code
+        == 401
+    )
 
 
 def test_agent_request_fingerprint_is_tenant_scoped_and_does_not_expose_message() -> None:

@@ -64,6 +64,7 @@ from app.modules.agents.models import (
     AgentDataPolicy,
     AgentMessage,
     AgentRun,
+    AgentRunStep,
     AgentSecurityEvent,
     AgentTool,
     AgentToolRun,
@@ -101,6 +102,7 @@ from app.modules.agents.schemas import (
     AgentProviderStatusResponse,
     AgentResponse,
     AgentRunResponse,
+    AgentRunStepResponse,
     AgentSecurityEventResponse,
     AgentTaskContractCreate,
     AgentTaskContractResponse,
@@ -130,6 +132,7 @@ from app.modules.agents.tools import (
     execute_builtin_tool,
     validate_tool_arguments,
 )
+from app.modules.agents.trace import add_agent_run_steps
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.events.schemas import DomainEventCreate
@@ -172,6 +175,10 @@ def _budget_response(budget: AgentBudget) -> AgentBudgetResponse:
 
 def _run_response(run: AgentRun) -> AgentRunResponse:
     return AgentRunResponse.model_validate(run, from_attributes=True)
+
+
+def _run_step_response(step: AgentRunStep) -> AgentRunStepResponse:
+    return AgentRunStepResponse.model_validate(step, from_attributes=True)
 
 
 def _data_policy_response(policy: AgentDataPolicy) -> AgentDataPolicyResponse:
@@ -972,6 +979,34 @@ async def get_agent_run(
     if run is None:
         raise HTTPException(status_code=404, detail="Execução do agente não encontrada.")
     return _run_response(run)
+
+
+@router.get("/{agent_id}/runs/{run_id}/steps", response_model=list[AgentRunStepResponse])
+async def list_agent_run_steps(
+    agent_id: UUID, run_id: UUID, principal: CanViewAgents, database: DatabaseSession
+) -> list[AgentRunStepResponse]:
+    context = get_request_context(principal)
+    run = await database.scalar(
+        select(AgentRun).where(
+            AgentRun.id == run_id,
+            AgentRun.agent_id == agent_id,
+            AgentRun.company_id == context.company_id,
+        )
+    )
+    if run is None:
+        raise HTTPException(status_code=404, detail="Execução do agente não encontrada.")
+    steps = (
+        await database.scalars(
+            select(AgentRunStep)
+            .where(
+                AgentRunStep.agent_run_id == run_id,
+                AgentRunStep.agent_id == agent_id,
+                AgentRunStep.company_id == context.company_id,
+            )
+            .order_by(AgentRunStep.sequence)
+        )
+    ).all()
+    return [_run_step_response(step) for step in steps]
 
 
 @router.get("/{agent_id}/data-policy", response_model=AgentDataPolicyResponse)
@@ -2176,6 +2211,7 @@ async def chat_with_agent(
             reserved_microunits=budget_reservation,
             consumed_microunits=0,
         )
+        add_agent_run_steps(database, settings, run=agent_run)
         await database.commit()
         detail = (
             "O provedor de IA excedeu o tempo permitido."
@@ -2203,6 +2239,7 @@ async def chat_with_agent(
     tool_keys: list[str] = []
     completed_tool_keys: list[str] = []
     denied_tool_keys: list[str] = []
+    tool_run_ids: dict[str, UUID] = {}
     for call_index, call in enumerate(result.tool_calls):
         tool_keys.append(call.key)
         limit_decision = evaluate_run_limits(
@@ -2262,6 +2299,7 @@ async def chat_with_agent(
         database.add(run)
         await database.flush()
         created_runs.append(run)
+        tool_run_ids[call.key] = run.id
         if autonomy.requires_approval:
             await create_approval_request(
                 database,
@@ -2376,6 +2414,24 @@ async def chat_with_agent(
         agent_run.status = "failed"
     else:
         agent_run.status = "completed"
+    add_agent_run_steps(
+        database,
+        settings,
+        run=agent_run,
+        tool_arguments=[call.arguments for call in result.tool_calls],
+        tool_outputs=[
+            next(
+                (
+                    tool_run.result_summary
+                    for tool_run in created_runs
+                    if tool_run.id == tool_run_ids.get(call.key) and tool_run.result_summary
+                ),
+                None,
+            )
+            for call in result.tool_calls
+        ],
+        tool_run_ids=tool_run_ids,
+    )
     record_authorization_audit(
         database,
         company_id=context.company_id,

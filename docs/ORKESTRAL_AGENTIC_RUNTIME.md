@@ -62,6 +62,8 @@ Os modos oficiais são:
 
 O runtime interrompe o provedor ao atingir `max_runtime_seconds`, bloqueia chamadas além de `max_steps` e vincula ferramentas e consumo ao trace e à versão exata. Os endpoints `GET /agents/{agent_id}/runs` e `GET /agents/{agent_id}/runs/{run_id}` aplicam isolamento por empresa.
 
+O ciclo 65 detalha esse contrato em `agent_run_steps`. Cada execução passa a registrar uma etapa do provedor e uma etapa por ferramenta planejada, com estado, código operacional, duração e fingerprints HMAC vinculados à empresa e à execução. O trace não guarda prompt, resposta completa, argumentos, resultados, credenciais nem raciocínio interno. Execuções diretas, simulações e delegações multiagentes usam o mesmo contrato. A consulta `GET /agents/{agent_id}/runs/{run_id}/steps` exige `agents.view` e filtra simultaneamente agente, execução e `company_id`.
+
 ## Política de dados e defesa contra prompt injection
 
 O ciclo 12 adiciona uma política individual por agente. Ela define provedores permitidos, autorização para processamento externo, envio de mensagens e conhecimento, classificação máxima e mascaramento obrigatório. O endpoint administrativo é `GET/PUT /agents/{agent_id}/data-policy`.

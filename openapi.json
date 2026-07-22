@@ -5167,6 +5167,132 @@
         "title": "AgentRunResponse",
         "type": "object"
       },
+      "AgentRunStepResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_run_id": {
+            "format": "uuid",
+            "title": "Agent Run Id",
+            "type": "string"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Fingerprint"
+          },
+          "output_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Fingerprint"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "completed",
+              "blocked",
+              "failed",
+              "awaiting_approval",
+              "simulated",
+              "timed_out"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_type": {
+            "enum": [
+              "provider",
+              "tool"
+            ],
+            "title": "Step Type",
+            "type": "string"
+          },
+          "summary_code": {
+            "title": "Summary Code",
+            "type": "string"
+          },
+          "tool_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Key"
+          }
+        },
+        "required": [
+          "id",
+          "agent_run_id",
+          "sequence",
+          "step_type",
+          "status",
+          "summary_code",
+          "tool_key",
+          "input_fingerprint",
+          "output_fingerprint",
+          "error_code",
+          "duration_ms",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "AgentRunStepResponse",
+        "type": "object"
+      },
       "AgentSecurityEventResponse": {
         "additionalProperties": false,
         "properties": {
@@ -29789,6 +29915,88 @@
           }
         ],
         "summary": "Get Agent Run",
+        "tags": [
+          "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runs/{run_id}/steps": {
+      "get": {
+        "operationId": "list_agent_run_steps_agents__agent_id__runs__run_id__steps_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentRunStepResponse"
+                  },
+                  "title": "Response List Agent Run Steps Agents  Agent Id  Runs  Run Id  Steps Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Run Steps",
         "tags": [
           "agents"
         ]

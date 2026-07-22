@@ -304,6 +304,30 @@ class AgentRunResponse(StrictSchema):
     finished_at: datetime | None
 
 
+class AgentRunStepResponse(StrictSchema):
+    id: UUID
+    agent_run_id: UUID
+    sequence: int
+    step_type: Literal["provider", "tool"]
+    status: Literal[
+        "planned",
+        "completed",
+        "blocked",
+        "failed",
+        "awaiting_approval",
+        "simulated",
+        "timed_out",
+    ]
+    summary_code: str
+    tool_key: str | None
+    input_fingerprint: str | None
+    output_fingerprint: str | None
+    error_code: str | None
+    duration_ms: int
+    started_at: datetime
+    finished_at: datetime | None
+
+
 class AgentTaskContractCreate(StrictSchema):
     worker_agent_id: UUID
     name: str = Field(min_length=2, max_length=160)

@@ -105,6 +105,56 @@ export interface AgentUsageResponse {
   created_at: string;
 }
 
+export interface AgentRunResponse {
+  id: string;
+  agent_id: string;
+  agent_version_id: string;
+  conversation_id: string | null;
+  execution_mode: "live" | "shadow" | "simulation";
+  status:
+    | "running"
+    | "completed"
+    | "failed"
+    | "timed_out"
+    | "awaiting_approval"
+    | "simulated";
+  planned_tool_keys: string[];
+  completed_tool_keys: string[];
+  denied_tool_keys: string[];
+  error_code: string | null;
+  step_count: number;
+  total_tokens: number;
+  cost_microunits: number;
+  duration_ms: number;
+  max_steps: number;
+  max_runtime_seconds: number;
+  started_at: string;
+  finished_at: string | null;
+}
+
+export interface AgentRunStepResponse {
+  id: string;
+  agent_run_id: string;
+  sequence: number;
+  step_type: "provider" | "tool";
+  status:
+    | "planned"
+    | "completed"
+    | "blocked"
+    | "failed"
+    | "awaiting_approval"
+    | "simulated"
+    | "timed_out";
+  summary_code: string;
+  tool_key: string | null;
+  input_fingerprint: string | null;
+  output_fingerprint: string | null;
+  error_code: string | null;
+  duration_ms: number;
+  started_at: string;
+  finished_at: string | null;
+}
+
 export interface AgentApprovalPolicyResponse {
   id: string;
   agent_id: string;

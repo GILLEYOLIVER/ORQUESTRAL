@@ -46,6 +46,8 @@ import {
   type AgentMemoryWorkloadIdentityRotation,
   type ManagedVaultMetric,
   type AgentResponse,
+  type AgentRunResponse,
+  type AgentRunStepResponse,
   type AgentToolCatalog,
   type AgentToolResponse,
   type AgentToolRunResponse,
@@ -116,6 +118,7 @@ export function AgentsPage() {
   const canManagePlugins = me?.permissions.includes("plugins.manage") ?? false;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [instructions, setInstructions] = useState(
     "Ajude a equipe com respostas claras e use apenas ferramentas autorizadas.",
@@ -289,6 +292,7 @@ export function AgentsPage() {
   }, [agents.data, selectedId]);
   useEffect(() => {
     setConversationId(null);
+    setSelectedRunId(null);
     setConversationFeedback(null);
     setMemoryRecoveryAssessment(null);
   }, [selectedId]);
@@ -301,6 +305,32 @@ export function AgentsPage() {
     queryKey: ["agent-tools", selectedId],
     queryFn: () => request<AgentToolResponse[]>(`/agents/${selectedId}/tools`),
     enabled: Boolean(selectedId),
+  });
+  const agentRuns = useQuery({
+    queryKey: ["agent-runs", selectedId],
+    queryFn: () =>
+      request<AgentRunResponse[]>(`/agents/${selectedId}/runs?limit=12`),
+    enabled: Boolean(selectedId),
+  });
+  useEffect(() => {
+    if (!agentRuns.data?.length) {
+      setSelectedRunId(null);
+      return;
+    }
+    if (
+      !selectedRunId ||
+      !agentRuns.data.some((run) => run.id === selectedRunId)
+    ) {
+      setSelectedRunId(agentRuns.data[0].id);
+    }
+  }, [agentRuns.data, selectedRunId]);
+  const runSteps = useQuery({
+    queryKey: ["agent-run-steps", selectedId, selectedRunId],
+    queryFn: () =>
+      request<AgentRunStepResponse[]>(
+        `/agents/${selectedId}/runs/${selectedRunId}/steps`,
+      ),
+    enabled: Boolean(selectedId && selectedRunId),
   });
   const policies = useQuery({
     queryKey: ["agent-approval-policies", selectedId],
@@ -610,6 +640,12 @@ export function AgentsPage() {
     void queryClient.invalidateQueries({ queryKey: ["agent-pending-actions"] });
     void queryClient.invalidateQueries({ queryKey: ["agent-usage"] });
     void queryClient.invalidateQueries({
+      queryKey: ["agent-runs", selectedId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["agent-run-steps", selectedId],
+    });
+    void queryClient.invalidateQueries({
       queryKey: ["agent-approval-policies", selectedId],
     });
     void queryClient.invalidateQueries({
@@ -689,6 +725,7 @@ export function AgentsPage() {
       }),
     onSuccess: (response) => {
       setConversationId(response.conversation.id);
+      setSelectedRunId(null);
       setConversationFeedback(null);
       setMessage("");
       refresh();
@@ -4098,6 +4135,75 @@ export function AgentsPage() {
             </div>
           </Card>
         </PermissionGuard>
+        <Card
+          className="agent-trace-card"
+          eyebrow="Observabilidade segura"
+          title="Trace operacional dos agentes"
+        >
+          <p>
+            Acompanhe etapas, ferramentas e bloqueios sem expor prompts,
+            argumentos, segredos ou raciocínio interno.
+          </p>
+          <div className="agent-trace-runs">
+            {agentRuns.data?.length ? (
+              agentRuns.data.slice(0, 6).map((run) => (
+                <button
+                  className={`agent-trace-run${selectedRunId === run.id ? " agent-trace-run--active" : ""}`}
+                  key={run.id}
+                  onClick={() => setSelectedRunId(run.id)}
+                  type="button"
+                >
+                  <span>
+                    {new Date(run.started_at).toLocaleString("pt-BR")}
+                  </span>
+                  <strong>{run.status.replaceAll("_", " ")}</strong>
+                  <small>
+                    {run.execution_mode} · {run.step_count} ferramenta(s) ·{" "}
+                    {run.duration_ms} ms
+                  </small>
+                </button>
+              ))
+            ) : (
+              <div className="empty-state">
+                <BrainCircuit />
+                <span>Nenhuma execução registrada para este agente.</span>
+              </div>
+            )}
+          </div>
+          {selectedRunId ? (
+            <div className="agent-trace-steps">
+              {runSteps.data?.map((step) => (
+                <article
+                  className={`agent-trace-step agent-trace-step--${step.status}`}
+                  key={step.id}
+                >
+                  <span className="agent-trace-step__sequence">
+                    {step.sequence}
+                  </span>
+                  <div>
+                    <strong>
+                      {step.step_type === "provider"
+                        ? "Interpretação do provedor"
+                        : step.tool_key || "Ferramenta"}
+                    </strong>
+                    <small>
+                      {step.summary_code} · {step.status.replaceAll("_", " ")}
+                    </small>
+                    {step.input_fingerprint ? (
+                      <small>
+                        Evidência protegida:{" "}
+                        {step.input_fingerprint.slice(0, 12)}…
+                      </small>
+                    ) : null}
+                    {step.error_code ? (
+                      <small>Controle: {step.error_code}</small>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </Card>
         <Card eyebrow="Consumo rastreável" title="Tokens, custo e duração">
           <div className="agent-usage-list">
             {usage.data?.slice(0, 8).map((item) => (

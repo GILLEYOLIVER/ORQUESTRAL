@@ -373,6 +373,75 @@
   border-color: #d98471;
   color: #772f21;
 }
+.agent-trace-card {
+  background: linear-gradient(145deg, #eef7f2, #fff9ec);
+}
+.agent-trace-runs,
+.agent-trace-steps {
+  display: grid;
+  gap: 0.65rem;
+}
+.agent-trace-runs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0.8rem 0 1rem;
+}
+.agent-trace-run {
+  background: rgb(255 255 255 / 78%);
+  border: 1px solid #c9d7d0;
+  border-radius: 14px;
+  color: #17322d;
+  cursor: pointer;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  text-align: left;
+}
+.agent-trace-run--active {
+  background: #dff1e7;
+  border-color: #377565;
+  box-shadow: inset 3px 0 #276555;
+}
+.agent-trace-run span,
+.agent-trace-run small,
+.agent-trace-step small {
+  color: #52645e;
+  font-size: 0.75rem;
+}
+.agent-trace-step {
+  align-items: flex-start;
+  background: #fffdf7;
+  border: 1px solid #d8ded7;
+  border-left: 4px solid #4f7668;
+  border-radius: 14px;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: auto 1fr;
+  padding: 0.75rem;
+}
+.agent-trace-step--blocked,
+.agent-trace-step--failed,
+.agent-trace-step--timed_out {
+  border-left-color: #a13c32;
+}
+.agent-trace-step--awaiting_approval {
+  border-left-color: #bf7a15;
+}
+.agent-trace-step__sequence {
+  align-items: center;
+  background: #17322d;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 800;
+  height: 1.6rem;
+  justify-content: center;
+  width: 1.6rem;
+}
+.agent-trace-step div {
+  display: grid;
+  gap: 0.18rem;
+}
 @media (max-width: 900px) {
   .agent-studio,
   .agent-config-grid,
@@ -384,6 +453,9 @@
   }
   .agent-memory-risk__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .agent-trace-runs {
+    grid-template-columns: 1fr;
   }
   .agent-policy-row {
     align-items: stretch;

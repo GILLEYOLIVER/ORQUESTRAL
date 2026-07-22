@@ -271,6 +271,48 @@ class AgentRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class AgentRunStep(Base):
+    __tablename__ = "agent_run_steps"
+    __table_args__ = (
+        UniqueConstraint("agent_run_id", "sequence", name="uq_agent_run_steps_sequence"),
+        CheckConstraint("sequence > 0", name="ck_agent_run_steps_sequence"),
+        CheckConstraint("step_type IN ('provider', 'tool')", name="ck_agent_run_steps_type"),
+        CheckConstraint(
+            "status IN ('planned', 'completed', 'blocked', 'failed', "
+            "'awaiting_approval', 'simulated', 'timed_out')",
+            name="ck_agent_run_steps_status",
+        ),
+        CheckConstraint("duration_ms >= 0", name="ck_agent_run_steps_duration"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    agent_run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="CASCADE"), index=True
+    )
+    tool_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_tool_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer)
+    step_type: Mapped[str] = mapped_column(String(20), index=True)
+    status: Mapped[str] = mapped_column(String(24), index=True)
+    summary_code: Mapped[str] = mapped_column(String(80), index=True)
+    tool_key: Mapped[str | None] = mapped_column(String(120), index=True)
+    input_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    output_fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    error_code: Mapped[str | None] = mapped_column(String(80), index=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class AgentSecurityEvent(Base):
     __tablename__ = "agent_security_events"
     __table_args__ = (
