@@ -16,6 +16,9 @@ def production_settings(
     database_url: str = "postgresql+asyncpg://orkestral:strong-password@database.internal/orkestral",
     knowledge_embedding_provider: str = "openai_compatible",
     billing_enforcement_enabled: bool = True,
+    security_rate_limit_enabled: bool = True,
+    jwt_secret: str = "production-jwt-secret-with-at-least-32-characters",  # noqa: S107
+    encryption_key: str = "production-encryption-key-at-least-32-characters",
 ) -> Settings:
     return Settings(
         app_env=app_env,
@@ -26,8 +29,8 @@ def production_settings(
         n8n_base_url="https://automation.internal",
         storage_endpoint="https://objects.internal",
         cors_origins=["https://app.orkestral.com.br"],
-        jwt_secret="production-jwt-secret-with-at-least-32-characters",  # noqa: S106
-        encryption_key="production-encryption-key-at-least-32-characters",
+        jwt_secret=jwt_secret,
+        encryption_key=encryption_key,
         encryption_key_provider="external",
         encryption_key_reference="vault://orkestral/production/active",
         agent_memory_monitor_secret="production-monitor-secret-with-at-least-32-characters",  # noqa: S106
@@ -38,6 +41,7 @@ def production_settings(
         ai_provider_api_key="production-ai-provider-key-with-32-characters",
         knowledge_embedding_provider=knowledge_embedding_provider,
         billing_enforcement_enabled=billing_enforcement_enabled,
+        security_rate_limit_enabled=security_rate_limit_enabled,
         development_expose_tokens=development_expose_tokens,
         bootstrap_enabled=bootstrap_enabled,
     )
@@ -130,3 +134,19 @@ def test_monitor_rotation_policy_is_environment_specific() -> None:
             app_env="local",
             agent_memory_monitor_secret_rotation_policy="enforce",  # noqa: S106
         )
+
+
+def test_remote_runtime_rejects_disabled_rate_limit() -> None:
+    with pytest.raises(ValidationError, match="SECURITY_RATE_LIMIT_ENABLED"):
+        production_settings(security_rate_limit_enabled=False)
+
+
+def test_remote_runtime_rejects_reused_core_secrets() -> None:
+    shared = "shared-production-secret-with-at-least-32-characters"
+    with pytest.raises(ValidationError, match="devem ser independentes"):
+        production_settings(jwt_secret=shared, encryption_key=shared)
+
+
+def test_remote_runtime_rejects_instruction_placeholders() -> None:
+    with pytest.raises(ValidationError, match="Valores inseguros para produção"):
+        production_settings(jwt_secret="GENERATE_AT_LEAST_32_RANDOM_CHARACTERS")  # noqa: S106

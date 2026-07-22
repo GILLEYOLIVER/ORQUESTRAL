@@ -34,6 +34,24 @@ Uma camada nunca substitui outra. O acesso somente e concedido quando todas as c
 
 Alteracoes de politica, compartilhamentos e revogacoes registram ator, empresa, entidade, destinatario e permissao, sem copiar valores do registro. Eventos usam identificadores e contagens para permitir investigacao e automacao segura.
 
+## Segredos e configuracao por ambiente
+
+- Arquivos `.env` reais sao ignorados e recusados pela verificacao de segredos do CI.
+- Ambientes remotos recusam placeholders, segredos curtos, keyrings duplicados e reutilizacao entre JWT, criptografia e monitor.
+- Producao exige cofre externo, TLS para PostgreSQL e Redis, HTTPS para armazenamento e rotacao coordenada.
+- Rate limit, HSTS, validacao de origem e tipo de conteudo nao podem ser desligados remotamente.
+- Segredos nunca devem ser gravados em imagem, codigo, logs ou documentacao; o provedor injeta os valores no processo.
+
+## Protecao de acesso e abuso
+
+- A API possui limite distribuido por Redis e identificadores protegidos por HMAC.
+- Login e autorizacao administrativa usam limites independentes por conta e por IP para conter forca bruta e ataques distribuidos.
+- Recuperacao de senha usa limite por conta e IP sem revelar se o e-mail existe.
+- Rotas sensiveis falham fechadas quando o backend de protecao fica indisponivel.
+- Somente proxies explicitamente confiaveis podem fornecer o IP original; o Nginx sobrescreve cabecalhos enviados pelo cliente.
+- O gateway limita conexoes e rajadas, enquanto a aplicacao continua sendo a camada autoritativa.
+- Respostas `429` informam tempo de espera sem revelar estado de conta ou detalhes internos.
+
 ## Evolucao planejada
 
 - testes sistematicos de acesso cruzado em todos os dominios;

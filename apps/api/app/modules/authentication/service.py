@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from hashlib import sha256
 from uuid import UUID
 
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,6 +60,10 @@ class InvalidReadOnlyLinkError(ValueError):
     pass
 
 
+class AuthenticationProtectionUnavailableError(RuntimeError):
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class IssuedTokens:
     access_token: str
@@ -95,17 +99,79 @@ class AuthenticationService:
         self.redis = redis
         self.settings = settings
 
-    def _rate_key(self, email: str, ip_address: str) -> str:
-        fingerprint = sha256(f"{email.lower()}|{ip_address}".encode()).hexdigest()
-        return f"auth:login:{fingerprint}"
+    def _rate_key(self, scope: str, value: str) -> str:
+        fingerprint = hash_opaque_token(self.settings, f"{scope}|{value.strip().lower()}")
+        return f"auth:rate:{scope}:{fingerprint}"
+
+    def _login_rate_limits(self, email: str, ip_address: str) -> tuple[tuple[str, int], ...]:
+        return (
+            (self._rate_key("login-account", email), self.settings.login_max_attempts),
+            (self._rate_key("login-ip", ip_address), self.settings.login_ip_max_attempts),
+        )
+
+    def _recovery_rate_limits(self, email: str, ip_address: str) -> tuple[tuple[str, int], ...]:
+        return (
+            (
+                self._rate_key("password-recovery-account", email),
+                self.settings.password_reset_max_attempts,
+            ),
+            (
+                self._rate_key("password-recovery-ip", ip_address),
+                self.settings.password_reset_ip_max_attempts,
+            ),
+        )
+
+    def _rate_limit_backend_failed(self, error: RedisError) -> None:
+        logger.exception("authentication_rate_limit_backend_unavailable")
+        if self.settings.auth_cookie_secure:
+            raise AuthenticationProtectionUnavailableError from error
+
+    async def _rate_limits_exceeded(self, limits: tuple[tuple[str, int], ...]) -> bool:
+        try:
+            values = await self.redis.mget([key for key, _ in limits])
+        except RedisError as exc:
+            self._rate_limit_backend_failed(exc)
+            return False
+        return any(
+            int(value or 0) >= maximum for value, (_, maximum) in zip(values, limits, strict=True)
+        )
+
+    async def _record_rate_limit_hits(
+        self, limits: tuple[tuple[str, int], ...], window_seconds: int
+    ) -> bool:
+        pipeline = self.redis.pipeline(transaction=True)
+        for key, _ in limits:
+            pipeline.incr(key)
+            pipeline.expire(key, window_seconds, nx=True)
+        try:
+            results = await pipeline.execute()
+        except RedisError as exc:
+            self._rate_limit_backend_failed(exc)
+            return False
+        counts = (int(results[index]) for index in range(0, len(results), 2))
+        return any(count > maximum for count, (_, maximum) in zip(counts, limits, strict=True))
 
     async def _check_rate_limit(self, email: str, ip_address: str) -> None:
-        key = self._rate_key(email, ip_address)
-        count = await self.redis.incr(key)
-        if count == 1:
-            await self.redis.expire(key, self.settings.login_window_seconds)
-        if count > self.settings.login_max_attempts:
+        if await self._rate_limits_exceeded(self._login_rate_limits(email, ip_address)):
             raise LoginRateLimitedError
+
+    async def _record_login_failure(self, email: str, ip_address: str) -> None:
+        await self._record_rate_limit_hits(
+            self._login_rate_limits(email, ip_address), self.settings.login_window_seconds
+        )
+
+    async def _consume_recovery_limit(self, email: str, ip_address: str) -> bool:
+        limits = self._recovery_rate_limits(email, ip_address)
+        if await self._rate_limits_exceeded(limits):
+            return False
+        exceeded = await self._record_rate_limit_hits(limits, self.settings.login_window_seconds)
+        return not exceeded
+
+    async def _clear_account_login_limit(self, email: str) -> None:
+        try:
+            await self.redis.delete(self._rate_key("login-account", email))
+        except RedisError:
+            logger.exception("authentication_rate_limit_clear_failed")
 
     async def _record_attempt(
         self, *, email: str, ip_address: str, succeeded: bool, reason: str
@@ -174,6 +240,7 @@ class AuthenticationService:
             or user.status != "active"
             or not verify_password(user.password_hash, password)
         ):
+            await self._record_login_failure(normalized_email, ip_address)
             await self._record_attempt(
                 email=normalized_email,
                 ip_address=ip_address,
@@ -181,7 +248,10 @@ class AuthenticationService:
                 reason="invalid_credentials",
             )
             await self.database.commit()
-            logger.warning("login_failed", ip_address=ip_address)
+            logger.warning(
+                "login_failed",
+                ip_fingerprint=hash_opaque_token(self.settings, ip_address)[:16],
+            )
             raise InvalidCredentialsError
 
         if user.password_hash and password_needs_rehash(user.password_hash):
@@ -209,7 +279,7 @@ class AuthenticationService:
             reason="success",
         )
         await self.database.commit()
-        await self.redis.delete(self._rate_key(normalized_email, ip_address))
+        await self._clear_account_login_limit(normalized_email)
         issued = self._issue_access(auth_session)
         return IssuedTokens(issued.access_token, issued.access_expires_at, refresh_token)
 
@@ -269,6 +339,7 @@ class AuthenticationService:
             or user.status != "active"
             or not verify_password(user.password_hash, password)
         ):
+            await self._record_login_failure(normalized_email, ip_address)
             await self._record_attempt(
                 email=normalized_email,
                 ip_address=ip_address,
@@ -324,7 +395,7 @@ class AuthenticationService:
             reason="read_only_link_authorized",
         )
         await self.database.commit()
-        await self.redis.delete(self._rate_key(normalized_email, ip_address))
+        await self._clear_account_login_limit(normalized_email)
         return ReadOnlyLinkAuthorization(
             token=token,
             expires_at=expires_at,
@@ -570,9 +641,16 @@ class AuthenticationService:
         return self._issue_access(auth_session)
 
     async def forgot_password(self, *, email: str, ip_address: str) -> str | None:
+        normalized_email = email.strip().lower()
+        if not await self._consume_recovery_limit(normalized_email, ip_address):
+            logger.warning(
+                "password_reset_rate_limited",
+                ip_fingerprint=hash_opaque_token(self.settings, ip_address)[:16],
+            )
+            return None
         user = await self.database.scalar(
             select(User).where(
-                User.email == email.strip().lower(),
+                User.email == normalized_email,
                 User.status == "active",
                 User.deleted_at.is_(None),
             )

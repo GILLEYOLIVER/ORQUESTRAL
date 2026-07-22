@@ -11,7 +11,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "development", "testing", "staging", "production"]
 
-_PLACEHOLDER_MARKERS = ("change-me", "development-only", "example", "placeholder")
+_PLACEHOLDER_MARKERS = (
+    "change-me",
+    "development-only",
+    "example",
+    "generate",
+    "placeholder",
+    "required",
+    "set_current",
+)
 _LOCAL_MARKERS = ("localhost", "127.0.0.1", "::1")
 
 
@@ -90,6 +98,8 @@ class Settings(BaseSettings):
     security_rate_limit_enabled: bool = True
     security_rate_limit_requests: int = Field(default=300, ge=10, le=10_000)
     security_rate_limit_window_seconds: int = Field(default=60, ge=10, le=3_600)
+    security_auth_rate_limit_requests: int = Field(default=20, ge=5, le=300)
+    security_auth_rate_limit_window_seconds: int = Field(default=900, ge=60, le=3_600)
     request_max_body_bytes: int = Field(default=26_214_400, ge=1_024, le=104_857_600)
     security_hsts_seconds: int = Field(default=31_536_000, ge=0, le=63_072_000)
     security_trusted_proxy_ips: list[str] = Field(default_factory=list)
@@ -115,7 +125,10 @@ class Settings(BaseSettings):
     invitation_days: int = Field(default=7, ge=1, le=30)
     auth_cookie_name: str = "orkestral_refresh"
     login_max_attempts: int = Field(default=5, ge=3, le=20)
+    login_ip_max_attempts: int = Field(default=20, ge=5, le=100)
     login_window_seconds: int = Field(default=900, ge=60, le=3_600)
+    password_reset_max_attempts: int = Field(default=3, ge=1, le=20)
+    password_reset_ip_max_attempts: int = Field(default=10, ge=3, le=100)
     development_expose_tokens: bool = False
     bootstrap_enabled: bool = False
     bootstrap_admin_name: str | None = None
@@ -141,6 +154,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
+        jwt_keyring = (self.jwt_secret, *self.jwt_previous_secrets)
+        if len(set(jwt_keyring)) != len(jwt_keyring):
+            raise ValueError("Segredos JWT ativos e anteriores devem ser únicos")
+        encryption_keyring = (self.encryption_key, *self.encryption_previous_keys)
+        if len(set(encryption_keyring)) != len(encryption_keyring):
+            raise ValueError("Chaves de criptografia ativas e anteriores devem ser únicas")
         monitor_secrets = (
             self.agent_memory_monitor_secret,
             *self.agent_memory_monitor_previous_secrets,
@@ -172,6 +191,18 @@ class Settings(BaseSettings):
                 raise ValueError("AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT está no futuro")
             if now - rotated_at > timedelta(days=self.agent_memory_monitor_secret_max_age_days):
                 raise ValueError("O segredo do monitor excedeu a idade máxima permitida")
+        if self.login_max_attempts > self.login_ip_max_attempts:
+            raise ValueError("LOGIN_IP_MAX_ATTEMPTS deve cobrir o limite por conta")
+        if self.password_reset_max_attempts > self.password_reset_ip_max_attempts:
+            raise ValueError("PASSWORD_RESET_IP_MAX_ATTEMPTS deve cobrir o limite por conta")
+        if self.login_ip_max_attempts > self.security_auth_rate_limit_requests:
+            raise ValueError(
+                "SECURITY_AUTH_RATE_LIMIT_REQUESTS deve cobrir o limite de login por IP"
+            )
+        if self.password_reset_ip_max_attempts > self.security_auth_rate_limit_requests:
+            raise ValueError(
+                "SECURITY_AUTH_RATE_LIMIT_REQUESTS deve cobrir o limite de recuperação por IP"
+            )
         if self.encryption_key_provider == "external":
             references = (
                 self.encryption_key_reference,
@@ -249,6 +280,28 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "CORS_ORIGINS remoto aceita somente origens HTTPS explícitas ou lista vazia"
                 )
+        remote_runtime = self.remote_development_enabled or self.app_env in {
+            "staging",
+            "production",
+        }
+        if remote_runtime:
+            core_secrets = (
+                self.jwt_secret,
+                self.encryption_key,
+                self.agent_memory_monitor_secret,
+            )
+            if len(set(core_secrets)) != len(core_secrets):
+                raise ValueError("Segredos de JWT, criptografia e monitor devem ser independentes")
+            if not self.security_rate_limit_enabled:
+                raise ValueError("SECURITY_RATE_LIMIT_ENABLED deve permanecer ativo remotamente")
+            if not self.security_enforce_origin:
+                raise ValueError("SECURITY_ENFORCE_ORIGIN deve permanecer ativo remotamente")
+            if not self.security_enforce_json_content_type:
+                raise ValueError(
+                    "SECURITY_ENFORCE_JSON_CONTENT_TYPE deve permanecer ativo remotamente"
+                )
+            if self.security_hsts_seconds <= 0:
+                raise ValueError("SECURITY_HSTS_SECONDS deve permanecer ativo remotamente")
         if self.app_env not in {"staging", "production"}:
             return self
         secrets = {
