@@ -41,11 +41,13 @@ import { ApiClientError, request } from "../lib/http";
 import {
   type WorkflowBlock,
   type WorkflowComparison,
+  type WorkflowCompensationPolicy,
   type WorkflowCreatedResponse,
   type WorkflowDefinition,
   type WorkflowExecutionPolicy,
   type WorkflowEngineStatus,
   type WorkflowExecutionResponse,
+  type WorkflowMetricsResponse,
   type WorkflowResponse,
   type WorkflowSimulationResponse,
   type WorkflowValidationResponse,
@@ -114,6 +116,11 @@ const defaultExecutionPolicy: WorkflowExecutionPolicy = {
   concurrency_limit: 1,
   on_conflict: "reject",
 };
+const defaultCompensationPolicy: WorkflowCompensationPolicy = {
+  enabled: false,
+  mode: "manual",
+  on_status: ["error", "canceled"],
+};
 
 function errorMessage(
   error: unknown,
@@ -141,6 +148,8 @@ export function WorkflowsPage() {
     useState<WorkflowSimulationResponse | null>(null);
   const [executionPolicy, setExecutionPolicy] =
     useState<WorkflowExecutionPolicy>(defaultExecutionPolicy);
+  const [compensationPolicy, setCompensationPolicy] =
+    useState<WorkflowCompensationPolicy>(defaultCompensationPolicy);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<VisualNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -174,6 +183,13 @@ export function WorkflowsPage() {
       ),
     enabled: Boolean(selectedId),
     refetchInterval: 5000,
+  });
+  const metrics = useQuery({
+    queryKey: ["workflow-metrics", selectedId],
+    queryFn: () =>
+      request<WorkflowMetricsResponse>(`/workflows/${selectedId}/metrics`),
+    enabled: Boolean(selectedId),
+    refetchInterval: 10_000,
   });
 
   useEffect(() => {
@@ -214,6 +230,9 @@ export function WorkflowsPage() {
     setExecutionPolicy(
       selected.definition.execution_policy ?? defaultExecutionPolicy,
     );
+    setCompensationPolicy(
+      selected.definition.compensation_policy ?? defaultCompensationPolicy,
+    );
     // Rehydrate only when the persisted workflow version changes; query refetches
     // must not overwrite unsaved canvas edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -253,6 +272,7 @@ export function WorkflowsPage() {
     })),
     variables: selected?.definition.variables ?? {},
     execution_policy: executionPolicy,
+    compensation_policy: compensationPolicy,
     version: 1,
   });
 
@@ -264,6 +284,9 @@ export function WorkflowsPage() {
       }),
       queryClient.invalidateQueries({
         queryKey: ["workflow-executions", selectedId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["workflow-metrics", selectedId],
       }),
     ]);
   };
@@ -389,6 +412,37 @@ export function WorkflowsPage() {
       );
     },
   });
+  const cancelExecution = useMutation({
+    mutationFn: (executionId: string) =>
+      request<WorkflowExecutionResponse>(
+        `/workflows/${selectedId}/executions/${executionId}/cancel`,
+        {
+          method: "POST",
+          body: { reason: "Cancelamento solicitado pelo administrador." },
+        },
+      ),
+    onSuccess: async (execution) => {
+      setFeedback(
+        execution.status === "canceled"
+          ? "Execucao cancelada antes do efeito seguinte."
+          : "Cancelamento cooperativo registrado e aguardando o motor encerrar.",
+      );
+      await refresh();
+    },
+  });
+  const acknowledgeCompensation = useMutation({
+    mutationFn: (executionId: string) =>
+      request<WorkflowExecutionResponse>(
+        `/workflows/${selectedId}/executions/${executionId}/compensation/acknowledge`,
+        { method: "POST" },
+      ),
+    onSuccess: async () => {
+      setFeedback(
+        "Pendencia de compensacao reconhecida e registrada na auditoria.",
+      );
+      await refresh();
+    },
+  });
 
   function addBlock(block: WorkflowBlock) {
     const id = crypto.randomUUID();
@@ -479,6 +533,9 @@ export function WorkflowsPage() {
     restore.error ??
     compare.error ??
     simulate.error ??
+    cancelExecution.error ??
+    acknowledgeCompensation.error ??
+    metrics.error ??
     execute.error;
 
   return (
@@ -863,6 +920,30 @@ export function WorkflowsPage() {
                   {execution.error_summary ? (
                     <em>{execution.error_summary}</em>
                   ) : null}
+                  {(["queued", "running", "waiting"] as const).includes(
+                    execution.status as "queued" | "running" | "waiting",
+                  ) ? (
+                    <button
+                      className="visual-execution-action"
+                      disabled={cancelExecution.isPending}
+                      onClick={() => cancelExecution.mutate(execution.id)}
+                      type="button"
+                    >
+                      Cancelar
+                    </button>
+                  ) : null}
+                  {execution.compensation_status === "pending" ? (
+                    <button
+                      className="visual-execution-action"
+                      disabled={acknowledgeCompensation.isPending}
+                      onClick={() =>
+                        acknowledgeCompensation.mutate(execution.id)
+                      }
+                      type="button"
+                    >
+                      Confirmar tratamento
+                    </button>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -923,6 +1004,25 @@ export function WorkflowsPage() {
                 />
               </label>
             </div>
+            <label className="visual-compensation-toggle">
+              <input
+                checked={compensationPolicy.enabled}
+                onChange={(event) =>
+                  setCompensationPolicy((current) => ({
+                    ...current,
+                    enabled: event.target.checked,
+                  }))
+                }
+                type="checkbox"
+              />
+              <span>
+                <strong>Preparar compensacao manual</strong>
+                <small>
+                  Em falhas ou cancelamentos, cria uma pendencia auditavel para
+                  revisao humana. Nenhuma reversao e executada automaticamente.
+                </small>
+              </span>
+            </label>
             <div className="visual-simulation-actions">
               <textarea
                 aria-label="Dados de teste da simulacao"
@@ -964,6 +1064,38 @@ export function WorkflowsPage() {
                 </div>
               </div>
             ) : null}
+          </article>
+          <article className="visual-metrics-panel">
+            <div className="visual-section-title">
+              <span>07</span>
+              <h2>Confiabilidade operacional</h2>
+            </div>
+            <div className="visual-metrics-grid">
+              <div>
+                <strong>{metrics.data?.success_rate ?? 0}%</strong>
+                <small>taxa de sucesso</small>
+              </div>
+              <div>
+                <strong>{metrics.data?.average_duration_ms ?? 0} ms</strong>
+                <small>duracao media</small>
+              </div>
+              <div>
+                <strong>{metrics.data?.errors ?? 0}</strong>
+                <small>falhas</small>
+              </div>
+              <div>
+                <strong>{metrics.data?.canceled ?? 0}</strong>
+                <small>canceladas</small>
+              </div>
+              <div>
+                <strong>{metrics.data?.compensation_pending ?? 0}</strong>
+                <small>compensacoes pendentes</small>
+              </div>
+              <div>
+                <strong>{metrics.data?.replay_count ?? 0}</strong>
+                <small>reprocessamentos</small>
+              </div>
+            </div>
           </article>
         </section>
       ) : null}

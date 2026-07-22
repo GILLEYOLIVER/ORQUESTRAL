@@ -63,6 +63,10 @@ class WorkflowExecuteRequest(StrictSchema):
     input: dict[str, Any] = Field(default_factory=dict)
 
 
+class WorkflowCancelRequest(StrictSchema):
+    reason: str | None = Field(default=None, max_length=300)
+
+
 class WorkflowExecutionResponse(StrictSchema):
     id: UUID
     workflow_id: UUID
@@ -71,7 +75,11 @@ class WorkflowExecutionResponse(StrictSchema):
     input_summary: dict[str, Any]
     output_summary: dict[str, Any]
     error_summary: str | None
+    cancel_reason: str | None
+    compensation_status: Literal["not_required", "pending", "acknowledged"]
     duration_ms: int | None
+    cancellation_requested_at: datetime | None
+    canceled_at: datetime | None
     started_at: datetime | None
     finished_at: datetime | None
     created_at: datetime
@@ -131,9 +139,25 @@ class WorkflowSimulationResponse(StrictSchema):
     estimated_steps: int
     blocked_side_effects: int
     execution_policy: dict[str, Any]
+    compensation_policy: dict[str, Any]
     input_summary: dict[str, Any]
     trace: list[WorkflowSimulationTrace]
     issues: list[WorkflowValidationIssue]
+
+
+class WorkflowMetricsResponse(StrictSchema):
+    total: int
+    success: int
+    errors: int
+    canceled: int
+    waiting: int
+    running: int
+    domain_event_executions: int
+    cancellation_requests: int
+    compensation_pending: int
+    replay_count: int
+    success_rate: float
+    average_duration_ms: float
 
 
 class WorkflowVersionResponse(StrictSchema):

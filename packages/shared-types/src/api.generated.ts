@@ -4639,6 +4639,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workflows/{workflow_id}/executions/{execution_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Workflow Execution */
+        post: operations["cancel_workflow_execution_workflows__workflow_id__executions__execution_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflows/{workflow_id}/executions/{execution_id}/compensation/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge Workflow Compensation */
+        post: operations["acknowledge_workflow_compensation_workflows__workflow_id__executions__execution_id__compensation_acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workflows/{workflow_id}/export": {
         parameters: {
             query?: never;
@@ -4648,6 +4682,23 @@ export interface paths {
         };
         /** Export Workflow */
         get: operations["export_workflow_workflows__workflow_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workflows/{workflow_id}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workflow Metrics */
+        get: operations["workflow_metrics_workflows__workflow_id__metrics_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13090,6 +13141,11 @@ export interface components {
              */
             status: "ok" | "degraded";
         };
+        /** WorkflowCancelRequest */
+        WorkflowCancelRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
         /** WorkflowComparisonResponse */
         WorkflowComparisonResponse: {
             /** Added Nodes */
@@ -13187,6 +13243,17 @@ export interface components {
         };
         /** WorkflowExecutionResponse */
         WorkflowExecutionResponse: {
+            /** Cancel Reason */
+            cancel_reason: string | null;
+            /** Canceled At */
+            canceled_at: string | null;
+            /** Cancellation Requested At */
+            cancellation_requested_at: string | null;
+            /**
+             * Compensation Status
+             * @enum {string}
+             */
+            compensation_status: "not_required" | "pending" | "acknowledged";
             /**
              * Created At
              * Format: date-time
@@ -13244,6 +13311,33 @@ export interface components {
             name: string;
             /** Version */
             version: number;
+        };
+        /** WorkflowMetricsResponse */
+        WorkflowMetricsResponse: {
+            /** Average Duration Ms */
+            average_duration_ms: number;
+            /** Canceled */
+            canceled: number;
+            /** Cancellation Requests */
+            cancellation_requests: number;
+            /** Compensation Pending */
+            compensation_pending: number;
+            /** Domain Event Executions */
+            domain_event_executions: number;
+            /** Errors */
+            errors: number;
+            /** Replay Count */
+            replay_count: number;
+            /** Running */
+            running: number;
+            /** Success */
+            success: number;
+            /** Success Rate */
+            success_rate: number;
+            /** Total */
+            total: number;
+            /** Waiting */
+            waiting: number;
         };
         /** WorkflowResponse */
         WorkflowResponse: {
@@ -13304,6 +13398,10 @@ export interface components {
         WorkflowSimulationResponse: {
             /** Blocked Side Effects */
             blocked_side_effects: number;
+            /** Compensation Policy */
+            compensation_policy: {
+                [key: string]: unknown;
+            };
             /** Estimated Steps */
             estimated_steps: number;
             /** Execution Policy */
@@ -31842,6 +31940,110 @@ export interface operations {
             };
         };
     };
+    cancel_workflow_execution_workflows__workflow_id__executions__execution_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                execution_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowCancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowExecutionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    acknowledge_workflow_compensation_workflows__workflow_id__executions__execution_id__compensation_acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+                execution_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowExecutionResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     export_workflow_workflows__workflow_id__export_get: {
         parameters: {
             query?: never;
@@ -31860,6 +32062,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowExportResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    workflow_metrics_workflows__workflow_id__metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowMetricsResponse"];
                 };
             };
             /** @description Solicitação inválida */

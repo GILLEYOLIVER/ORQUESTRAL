@@ -426,3 +426,7 @@ A fundacao da Fase 3 avancou para contratos versionados, assinaturas, consumidor
 ## Atualizacao do Ciclo 59
 
 O construtor agora possui gatilho canonico de evento, assinatura automatica, simulacao sem efeitos e politicas de execucao aplicadas no backend. O proximo incremento da Fase 3 cobre cancelamento cooperativo, compensacao e metricas agregadas de confiabilidade.
+
+## Atualizacao do Ciclo 60
+
+A Fase 3 agora inclui cancelamento cooperativo, compensacao manual supervisionada e metricas agregadas por automacao. O proximo incremento adiciona retry por bloco, circuit breaker e evolucao do contrato de cancelamento do provider.

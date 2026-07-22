@@ -17,6 +17,7 @@ from app.modules.workflows.definition import (
     block_catalog,
     build_default_definition,
     compare_definitions,
+    compensation_policy,
     export_definition,
     prepare_definition,
 )
@@ -202,3 +203,20 @@ def test_domain_event_and_execution_policy_reject_unsafe_values() -> None:
     codes = {item["code"] for item in analyze_definition(definition)}
     assert {"invalid_event_type", "invalid_event_version", "invalid_event_attempts"} <= codes
     assert "invalid_execution_policy" in codes
+
+
+def test_compensation_policy_is_manual_and_explicit() -> None:
+    definition = build_default_definition()
+    assert compensation_policy(definition) == {
+        "enabled": False,
+        "mode": "manual",
+        "on_status": ["error", "canceled"],
+    }
+    definition["compensation_policy"] = {
+        "enabled": True,
+        "mode": "automatic",
+        "on_status": ["success"],
+    }
+    assert "invalid_compensation_policy" in {
+        item["code"] for item in analyze_definition(definition)
+    }

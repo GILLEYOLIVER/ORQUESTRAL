@@ -21617,6 +21617,25 @@
         "title": "WorkerHealthResponse",
         "type": "object"
       },
+      "WorkflowCancelRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "WorkflowCancelRequest",
+        "type": "object"
+      },
       "WorkflowComparisonResponse": {
         "additionalProperties": false,
         "properties": {
@@ -21874,6 +21893,50 @@
       "WorkflowExecutionResponse": {
         "additionalProperties": false,
         "properties": {
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "canceled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canceled At"
+          },
+          "cancellation_requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancellation Requested At"
+          },
+          "compensation_status": {
+            "enum": [
+              "not_required",
+              "pending",
+              "acknowledged"
+            ],
+            "title": "Compensation Status",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -21970,7 +22033,11 @@
           "input_summary",
           "output_summary",
           "error_summary",
+          "cancel_reason",
+          "compensation_status",
           "duration_ms",
+          "cancellation_requested_at",
+          "canceled_at",
           "started_at",
           "finished_at",
           "created_at"
@@ -22019,6 +22086,75 @@
           "definition"
         ],
         "title": "WorkflowExportResponse",
+        "type": "object"
+      },
+      "WorkflowMetricsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "average_duration_ms": {
+            "title": "Average Duration Ms",
+            "type": "number"
+          },
+          "canceled": {
+            "title": "Canceled",
+            "type": "integer"
+          },
+          "cancellation_requests": {
+            "title": "Cancellation Requests",
+            "type": "integer"
+          },
+          "compensation_pending": {
+            "title": "Compensation Pending",
+            "type": "integer"
+          },
+          "domain_event_executions": {
+            "title": "Domain Event Executions",
+            "type": "integer"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "replay_count": {
+            "title": "Replay Count",
+            "type": "integer"
+          },
+          "running": {
+            "title": "Running",
+            "type": "integer"
+          },
+          "success": {
+            "title": "Success",
+            "type": "integer"
+          },
+          "success_rate": {
+            "title": "Success Rate",
+            "type": "number"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "success",
+          "errors",
+          "canceled",
+          "waiting",
+          "running",
+          "domain_event_executions",
+          "cancellation_requests",
+          "compensation_pending",
+          "replay_count",
+          "success_rate",
+          "average_duration_ms"
+        ],
+        "title": "WorkflowMetricsResponse",
         "type": "object"
       },
       "WorkflowResponse": {
@@ -22158,6 +22294,11 @@
             "title": "Blocked Side Effects",
             "type": "integer"
           },
+          "compensation_policy": {
+            "additionalProperties": true,
+            "title": "Compensation Policy",
+            "type": "object"
+          },
           "estimated_steps": {
             "title": "Estimated Steps",
             "type": "integer"
@@ -22201,6 +22342,7 @@
           "estimated_steps",
           "blocked_side_effects",
           "execution_policy",
+          "compensation_policy",
           "input_summary",
           "trace",
           "issues"
@@ -49168,6 +49310,172 @@
         ]
       }
     },
+    "/workflows/{workflow_id}/executions/{execution_id}/cancel": {
+      "post": {
+        "operationId": "cancel_workflow_execution_workflows__workflow_id__executions__execution_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "execution_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Execution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel Workflow Execution",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/workflows/{workflow_id}/executions/{execution_id}/compensation/acknowledge": {
+      "post": {
+        "operationId": "acknowledge_workflow_compensation_workflows__workflow_id__executions__execution_id__compensation_acknowledge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "execution_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Execution Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowExecutionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Acknowledge Workflow Compensation",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
     "/workflows/{workflow_id}/export": {
       "get": {
         "operationId": "export_workflow_workflows__workflow_id__export_get",
@@ -49231,6 +49539,74 @@
           }
         ],
         "summary": "Export Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/workflows/{workflow_id}/metrics": {
+      "get": {
+        "operationId": "workflow_metrics_workflows__workflow_id__metrics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workflow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workflow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowMetricsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Workflow Metrics",
         "tags": [
           "workflows"
         ]
