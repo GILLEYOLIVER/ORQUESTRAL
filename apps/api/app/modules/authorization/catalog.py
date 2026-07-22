@@ -198,6 +198,11 @@ PERMISSION_CATALOG = (
     PermissionDefinition("workflows.view", "workflows", "view", "Visualizar workflows"),
     PermissionDefinition("workflows.execute", "workflows", "execute", "Executar workflows"),
     PermissionDefinition("workflows.configure", "workflows", "configure", "Configurar workflows"),
+    PermissionDefinition("events.view", "events", "view", "Visualizar eventos empresariais"),
+    PermissionDefinition(
+        "events.configure", "events", "configure", "Configurar contratos e assinaturas"
+    ),
+    PermissionDefinition("events.replay", "events", "replay", "Reprocessar eventos com falha"),
     PermissionDefinition("metrics.view", "metrics", "view", "Visualizar dashboards e metricas"),
     PermissionDefinition("metrics.export", "metrics", "export", "Exportar relatorios gerenciais"),
     PermissionDefinition("audit.view", "audit", "view", "Consultar eventos de auditoria"),

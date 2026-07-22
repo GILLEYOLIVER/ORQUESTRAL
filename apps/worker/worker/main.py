@@ -46,6 +46,14 @@ celery_app.conf.update(
             "task": "orkestral.agents.maintain_memory_reencryption",
             "schedule": 60.0,
         },
+        "dispatch-domain-events-every-five-seconds": {
+            "task": "orkestral.events.dispatch_outbox",
+            "schedule": 5.0,
+        },
+        "process-domain-event-deliveries-every-five-seconds": {
+            "task": "orkestral.events.process_deliveries",
+            "schedule": 5.0,
+        },
     },
 )
 

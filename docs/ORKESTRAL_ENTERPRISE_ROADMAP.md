@@ -418,3 +418,7 @@ Uma entrega pronta possui requisito, modelo, migracao, schema, servico, autoriza
 | GitHub sem gates atuais        | PRs sem merge ate checks executarem; manter privado       |
 | Dados pessoais residuais       | Retencao, eliminacao verificavel e backups governados     |
 | Custos inesperados             | Entitlements, budgets e nenhum recurso pago automatico    |
+
+## Atualizacao do Ciclo 58
+
+A fundacao da Fase 3 avancou para contratos versionados, assinaturas, consumidores idempotentes, DLQ/replay e automacoes disparadas por eventos. O proximo incremento cobre gatilhos no canvas, simulacao, concorrencia e observabilidade operacional.

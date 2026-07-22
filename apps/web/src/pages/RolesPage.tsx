@@ -27,6 +27,7 @@ const moduleLabels: Record<string, string> = {
   crm: "CRM",
   agents: "Agentes",
   workflows: "Workflows",
+  events: "Eventos empresariais",
   integrations: "Integrações",
   billing: "Faturamento",
 };
