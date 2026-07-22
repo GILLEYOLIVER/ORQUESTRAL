@@ -13,6 +13,7 @@ required=(
   .env.staging.example
   .env.production.example
   scripts/verify-deployment.sh
+  scripts/deploy-development-manual.sh
   scripts/security-audit.sh
 )
 
@@ -20,7 +21,10 @@ for file in "${required[@]}"; do
   test -f "$file" || { printf 'Arquivo obrigatório ausente: %s\n' "$file" >&2; exit 1; }
 done
 
-bash -n scripts/verify-deployment.sh scripts/check-cicd-contracts.sh
+bash -n scripts/verify-deployment.sh scripts/deploy-development-manual.sh scripts/check-cicd-contracts.sh
+grep -Fq 'autoDeployTrigger: off' render.yaml
+! grep -Fq 'workflow_run:' .github/workflows/deploy-development.yml
+grep -Fq 'release_sha:' .github/workflows/deploy-development.yml
 grep -q 'aquasecurity/trivy-action' .github/workflows/publish-images.yml
 grep -q 'provenance: mode=max' .github/workflows/publish-images.yml
 grep -q 'sbom: true' .github/workflows/publish-images.yml

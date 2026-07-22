@@ -949,3 +949,15 @@ controlada de metadados entre ambientes.
 - Migracao: nenhuma.
 - Documento detalhado: `docs/cycles/CYCLE_62_ACCESS_AND_ENV_SECURITY.md`.
 - Proximo passo exato do plano mestre permanece: compensacao vinculada a blocos, provider fake e fechamento da Fase 3.
+
+## Ciclo 63 - deploy manual e estabilizacao (22/07/2026)
+
+- Auto-Deploy do Render desligado no contrato; push e merge nao publicam a aplicacao.
+- Workflow de desenvolvimento restrito a inicio manual com SHA completo.
+- Script manual valida branch, SHA, endpoint do hook e versao publicada sem expor o segredo.
+- Contratos CI/CD impedem a reintroducao de gatilho automatico.
+- Circuit breaker inicializa estado e contador no dominio, independentemente do flush do banco.
+- Teste do monitor isolado de PostgreSQL externo ao processo de teste.
+- Migracao: nenhuma.
+- Documento detalhado: `docs/cycles/CYCLE_63_MANUAL_DEPLOY_AND_STABILIZATION.md`.
+- Proximo passo exato: compensacao vinculada a blocos, provider fake e fechamento da Fase 3.

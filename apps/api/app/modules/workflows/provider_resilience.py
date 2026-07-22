@@ -29,7 +29,12 @@ async def _locked_circuit(
         .with_for_update()
     )
     if circuit is None:
-        circuit = WorkflowProviderCircuit(company_id=company_id, provider=provider)
+        circuit = WorkflowProviderCircuit(
+            company_id=company_id,
+            provider=provider,
+            state="closed",
+            failure_count=0,
+        )
         database.add(circuit)
         await database.flush()
     return circuit
