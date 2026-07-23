@@ -97,6 +97,7 @@ def test_development_login_has_a_separate_local_only_rate_limit_policy() -> None
     remote_settings = Settings(
         app_env="development",
         remote_development_enabled=False,
+        agent_memory_monitor_secret_rotation_policy="warn",  # noqa: S106
         security_auth_rate_limit_requests=20,
         security_local_dev_login_rate_limit_requests=60,
     )

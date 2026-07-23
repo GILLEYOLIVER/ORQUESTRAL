@@ -51,6 +51,7 @@ def production_settings(
         encryption_key_reference="vault://orkestral/production/active",
         agent_memory_monitor_secret="production-monitor-secret-with-at-least-32-characters",  # noqa: S106
         agent_memory_monitor_secret_rotated_at=datetime.now(UTC),
+        agent_memory_monitor_secret_rotation_policy="enforce",  # noqa: S106
         n8n_api_key="production-n8n-key-with-at-least-32-characters",
         storage_access_key="production-storage-access-key-32-characters",
         storage_secret_key="production-storage-secret-key-32-characters",  # noqa: S106
@@ -65,7 +66,11 @@ def production_settings(
 
 def test_production_rejects_development_secrets() -> None:
     with pytest.raises(ValidationError, match="Valores inseguros para produção"):
-        Settings(app_env="production")
+        Settings(
+            app_env="production",
+            agent_memory_monitor_secret_rotation_policy="enforce",  # noqa: S106
+            agent_memory_monitor_secret_rotated_at=datetime.now(UTC),
+        )
 
 
 def test_staging_uses_production_security_validation() -> None:
@@ -138,8 +143,20 @@ def test_monitor_secret_rotation_warning_precedes_expiration() -> None:
 
 
 def test_monitor_rotation_policy_is_environment_specific() -> None:
-    assert Settings(app_env="local").agent_memory_monitor_effective_rotation_policy == "optional"
-    assert Settings(app_env="development").agent_memory_monitor_effective_rotation_policy == "warn"
+    assert (
+        Settings(
+            app_env="local",
+            agent_memory_monitor_secret_rotation_policy=None,
+        ).agent_memory_monitor_effective_rotation_policy
+        == "optional"
+    )
+    assert (
+        Settings(
+            app_env="development",
+            agent_memory_monitor_secret_rotation_policy=None,
+        ).agent_memory_monitor_effective_rotation_policy
+        == "warn"
+    )
     with pytest.raises(ValueError, match="não aceita política optional"):
         Settings(
             app_env="development",

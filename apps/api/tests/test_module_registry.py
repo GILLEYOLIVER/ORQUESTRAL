@@ -32,6 +32,7 @@ def test_registry_loads_only_installed_modules() -> None:
         "20260723_0094",
         "20260723_0095",
         "20260723_0096",
+        "20260723_0097",
     )
     assert "crm.contacts.view" in installed[1].permissions
     assert installed[2].migrations == ("20260720_0020",)

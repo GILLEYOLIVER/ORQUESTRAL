@@ -3180,3 +3180,156 @@ p {
     flex-wrap: wrap;
   }
 }
+.customer-cdc-panel {
+  margin-top: 1.5rem;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  color: var(--ink, #102b27);
+  background:
+    radial-gradient(circle at 90% 10%, rgb(220 242 231 / 75%), transparent 30%),
+    #fffdf8;
+  border: 1px solid #cbded7;
+  border-radius: 1.4rem;
+  box-shadow: 0 16px 44px rgb(22 65 56 / 8%);
+}
+
+.customer-cdc-heading,
+.customer-cdc-stream-header,
+.customer-cdc-subscription,
+.customer-cdc-events article {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.customer-cdc-heading h2,
+.customer-cdc-subscriptions h3,
+.customer-cdc-stream h3 {
+  margin: 0.25rem 0;
+}
+
+.customer-cdc-heading p,
+.customer-cdc-stream-header p,
+.customer-cdc-events p {
+  margin: 0.25rem 0;
+  color: #526a64;
+}
+
+.customer-cdc-metrics {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.2rem 0.6rem;
+  min-width: 11rem;
+  padding: 0.85rem 1rem;
+  color: #eef8f4;
+  background: #123e36;
+  border-radius: 1rem;
+}
+
+.customer-cdc-metrics strong {
+  font-size: 1.15rem;
+}
+
+.customer-cdc-metrics span {
+  align-self: center;
+  color: #c8ddd6;
+  font-size: 0.78rem;
+}
+
+.customer-cdc-create {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.customer-cdc-create label {
+  display: grid;
+  gap: 0.4rem;
+  color: #294b44;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.customer-cdc-layout {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.7fr) minmax(0, 1.3fr);
+  gap: 1rem;
+}
+
+.customer-cdc-subscriptions,
+.customer-cdc-stream {
+  padding: 1rem;
+  background: rgb(244 248 245 / 85%);
+  border: 1px solid #d8e5df;
+  border-radius: 1rem;
+}
+
+.customer-cdc-subscription {
+  width: 100%;
+  margin-top: 0.55rem;
+  padding: 0.85rem;
+  color: #183b34;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #d4e0db;
+  border-radius: 0.85rem;
+}
+
+.customer-cdc-subscription.is-selected {
+  color: #f4fbf8;
+  background: #1d5c50;
+  border-color: #1d5c50;
+}
+
+.customer-cdc-subscription span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.customer-cdc-subscription span:last-child {
+  justify-items: end;
+}
+
+.customer-cdc-events {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.customer-cdc-events article {
+  justify-content: flex-start;
+  padding: 0.85rem;
+  background: #fff;
+  border: 1px solid #dae5e0;
+  border-radius: 0.85rem;
+}
+
+.customer-cdc-sequence {
+  flex: 0 0 auto;
+  min-width: 3.4rem;
+  padding: 0.28rem 0.5rem;
+  color: #155c4e;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+  background: #dff2e9;
+  border-radius: 999px;
+}
+
+@media (max-width: 760px) {
+  .customer-cdc-heading,
+  .customer-cdc-stream-header {
+    display: grid;
+  }
+
+  .customer-cdc-create,
+  .customer-cdc-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-cdc-metrics {
+    width: 100%;
+  }
+}

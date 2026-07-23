@@ -1347,3 +1347,15 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
   arquivos e auditoria de seguranca aprovados.
 - Migracao validada em upgrade, downgrade para `0095` e novo upgrade para `0096`.
 - Proximo passo: ingestao incremental, checkpoints e Change Data Capture governado.
+# Atualizacao 2026-07-23 - Ciclo 83
+
+- fase atual: Fase 5, plataforma de dados;
+- concluido neste recorte: CDC de clientes, sequencia por empresa, assinaturas,
+  checkpoints monotônicos, pausa e retomada, API protegida e painel administrativo;
+- privacidade: eventos nao armazenam nem retornam payload bruto;
+- migracao: `20260723_0097`;
+- testes novos: contratos de metadados e deduplicacao de operacoes;
+- proximo passo exato: retencao segura pelo menor checkpoint, resolucao de
+  identidade e fusao assistida;
+- documento tecnico:
+  `docs/implementation/CYCLE_83_CUSTOMER_CDC_CHECKPOINTS.md`.

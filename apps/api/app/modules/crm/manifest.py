@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.modules.crm.customer_cdc_routes import router as customer_cdc_router
 from app.modules.crm.customer_governance_routes import router as customer_governance_router
 from app.modules.crm.customer_ingestion_routes import router as customer_ingestion_router
 from app.modules.crm.customer_sync_routes import router as customer_sync_router
@@ -29,6 +30,7 @@ crm_module = ModuleDefinition(
         router,
         customer_governance_router,
         customer_ingestion_router,
+        customer_cdc_router,
         customer_sync_router,
         customer_sync_scheduler_router,
     ),
@@ -79,5 +81,6 @@ crm_module = ModuleDefinition(
         "20260723_0094",
         "20260723_0095",
         "20260723_0096",
+        "20260723_0097",
     ),
 )
