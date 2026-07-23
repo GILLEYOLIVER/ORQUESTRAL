@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import UUID
@@ -16,6 +17,7 @@ from app.modules.agents.dispatch_review_service import (
     create_dispatch_review,
 )
 from app.modules.agents.models import Agent, AgentTool, AgentVersion
+from app.modules.agents.review_sla_service import dispatch_review_summary
 from app.modules.agents.runtime_models import (
     AgentCredentialBinding,
     AgentDispatchReview,
@@ -30,6 +32,7 @@ from app.modules.agents.runtime_schemas import (
     AgentDispatchRetryApproval,
     AgentDispatchReviewCreate,
     AgentDispatchReviewResponse,
+    AgentDispatchReviewSummaryResponse,
     AgentRuntimeDispatchResponse,
     AgentScheduleCreate,
     AgentScheduleResponse,
@@ -585,6 +588,29 @@ async def list_agent_dispatch_reviews(
             .limit(100)
         )
     )
+
+
+@router.get(
+    "/{agent_id}/runtime-dispatch-reviews/summary",
+    response_model=AgentDispatchReviewSummaryResponse,
+)
+async def get_agent_dispatch_review_summary(
+    agent_id: UUID,
+    principal: CanViewAgents,
+    database: DatabaseSession,
+    sla_minutes: int = 30,
+) -> AgentDispatchReviewSummaryResponse:
+    if not 5 <= sla_minutes <= 10_080:
+        raise HTTPException(status_code=422, detail="O SLA deve ficar entre 5 e 10080 minutos.")
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    summary = await dispatch_review_summary(
+        database,
+        company_id=context.company_id,
+        agent_id=agent_id,
+        sla_minutes=sla_minutes,
+    )
+    return AgentDispatchReviewSummaryResponse.model_validate(asdict(summary))
 
 
 @router.post(

@@ -177,3 +177,15 @@ class AgentDispatchReviewResponse(StrictSchema):
     approved_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class AgentDispatchReviewSummaryResponse(StrictSchema):
+    pending: int
+    overdue: int
+    closed: int
+    approved: int
+    repeat_interruptions: int
+    average_decision_minutes: float | None
+    oldest_pending_minutes: int | None
+    retry_rate_percent: float
+    sla_minutes: int

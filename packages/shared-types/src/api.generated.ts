@@ -1333,6 +1333,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/runtime-dispatch-reviews/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent Dispatch Review Summary */
+        get: operations["get_agent_dispatch_review_summary_agents__agent_id__runtime_dispatch_reviews_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/runtime-dispatch-reviews/{review_id}/approve-retry": {
         parameters: {
             query?: never;
@@ -5839,6 +5856,27 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** AgentDispatchReviewSummaryResponse */
+        AgentDispatchReviewSummaryResponse: {
+            /** Approved */
+            approved: number;
+            /** Average Decision Minutes */
+            average_decision_minutes: number | null;
+            /** Closed */
+            closed: number;
+            /** Oldest Pending Minutes */
+            oldest_pending_minutes: number | null;
+            /** Overdue */
+            overdue: number;
+            /** Pending */
+            pending: number;
+            /** Repeat Interruptions */
+            repeat_interruptions: number;
+            /** Retry Rate Percent */
+            retry_rate_percent: number;
+            /** Sla Minutes */
+            sla_minutes: number;
         };
         /** AgentEvaluationCaseCreate */
         AgentEvaluationCaseCreate: {
@@ -19311,6 +19349,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentDispatchReviewResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_agent_dispatch_review_summary_agents__agent_id__runtime_dispatch_reviews_summary_get: {
+        parameters: {
+            query?: {
+                sla_minutes?: number;
+            };
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewSummaryResponse"];
                 };
             };
             /** @description Solicitação inválida */

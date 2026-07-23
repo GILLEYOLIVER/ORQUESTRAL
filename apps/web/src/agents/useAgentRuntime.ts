@@ -79,6 +79,18 @@ export type DispatchReview = {
   updated_at: string;
 };
 
+export type DispatchReviewSummary = {
+  pending: number;
+  overdue: number;
+  closed: number;
+  approved: number;
+  repeat_interruptions: number;
+  average_decision_minutes: number | null;
+  oldest_pending_minutes: number | null;
+  retry_rate_percent: number;
+  sla_minutes: number;
+};
+
 export type ScheduleInput = {
   schedule_key: string;
   name: string;
@@ -132,6 +144,15 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
     enabled,
     refetchInterval: 30_000,
   });
+  const reviewSummary = useQuery({
+    queryKey: ["agent-runtime-dispatch-review-summary", agentId],
+    queryFn: () =>
+      request<DispatchReviewSummary>(
+        `/agents/${agentId}/runtime-dispatch-reviews/summary`,
+      ),
+    enabled,
+    refetchInterval: 30_000,
+  });
   const credentials = useQuery({
     queryKey: ["agent-runtime-credentials"],
     queryFn: () =>
@@ -144,7 +165,15 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
       request<CredentialBinding[]>(`/agents/${agentId}/credential-bindings`),
     enabled: enabled && canConfigure,
   });
-  return { bindings, credentials, dispatches, reviews, schedules, triggers };
+  return {
+    bindings,
+    credentials,
+    dispatches,
+    reviews,
+    reviewSummary,
+    schedules,
+    triggers,
+  };
 }
 
 export function useAgentRuntimeActions(agentId: string | null) {
@@ -165,6 +194,9 @@ export function useAgentRuntimeActions(agentId: string | null) {
       }),
       queryClient.invalidateQueries({
         queryKey: ["agent-runtime-dispatch-reviews", agentId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["agent-runtime-dispatch-review-summary", agentId],
       }),
     ]);
 

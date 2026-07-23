@@ -1870,6 +1870,74 @@
         "title": "AgentDispatchReviewResponse",
         "type": "object"
       },
+      "AgentDispatchReviewSummaryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "approved": {
+            "title": "Approved",
+            "type": "integer"
+          },
+          "average_decision_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Decision Minutes"
+          },
+          "closed": {
+            "title": "Closed",
+            "type": "integer"
+          },
+          "oldest_pending_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Pending Minutes"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "integer"
+          },
+          "repeat_interruptions": {
+            "title": "Repeat Interruptions",
+            "type": "integer"
+          },
+          "retry_rate_percent": {
+            "title": "Retry Rate Percent",
+            "type": "number"
+          },
+          "sla_minutes": {
+            "title": "Sla Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pending",
+          "overdue",
+          "closed",
+          "approved",
+          "repeat_interruptions",
+          "average_decision_minutes",
+          "oldest_pending_minutes",
+          "retry_rate_percent",
+          "sla_minutes"
+        ],
+        "title": "AgentDispatchReviewSummaryResponse",
+        "type": "object"
+      },
       "AgentEvaluationCaseCreate": {
         "additionalProperties": false,
         "properties": {
@@ -31528,6 +31596,84 @@
           }
         ],
         "summary": "List Agent Dispatch Reviews",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runtime-dispatch-reviews/summary": {
+      "get": {
+        "operationId": "get_agent_dispatch_review_summary_agents__agent_id__runtime_dispatch_reviews_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sla_minutes",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "title": "Sla Minutes",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Agent Dispatch Review Summary",
         "tags": [
           "agents-runtime"
         ]

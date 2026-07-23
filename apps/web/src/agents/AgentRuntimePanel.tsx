@@ -611,6 +611,32 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
       ) : null}
 
       <article className="agent-runtime-card">
+        <h3>Revisões operacionais</h3>
+        <p className="agent-runtime-muted">
+          SLA padrão de {runtime.reviewSummary.data?.sla_minutes ?? 30} minutos,
+          sem exibir argumentos ou credenciais.
+        </p>
+        <div className="dispatch-review-metrics">
+          <span>
+            <strong>{runtime.reviewSummary.data?.pending ?? 0}</strong>
+            Pendentes
+          </span>
+          <span data-alert={(runtime.reviewSummary.data?.overdue ?? 0) > 0}>
+            <strong>{runtime.reviewSummary.data?.overdue ?? 0}</strong>
+            Fora do prazo
+          </span>
+          <span>
+            <strong>{runtime.reviewSummary.data?.approved ?? 0}</strong>
+            Repetições aprovadas
+          </span>
+          <span>
+            <strong>{runtime.reviewSummary.data?.repeat_interruptions ?? 0}</strong>
+            Reincidências
+          </span>
+        </div>
+      </article>
+
+      <article className="agent-runtime-card">
         <h3>Fila segura recente</h3>
         <div className="agent-runtime-dispatches">
           {(runtime.dispatches.data ?? []).slice(0, 12).map((item) => {
