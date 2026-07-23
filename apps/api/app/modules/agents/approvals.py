@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.security import utc_now
-from app.modules.agents.models import AgentTool, AgentToolRun
+from app.modules.agents.models import AgentRun, AgentRunStep, AgentTool, AgentToolRun
+from app.modules.agents.runtime_models import AgentRuntimeDispatch
 from app.modules.agents.tools import (
     ToolAccessError,
     ToolArgumentsError,
@@ -18,6 +19,7 @@ from app.modules.agents.tools import (
     execute_builtin_tool,
     validate_tool_arguments,
 )
+from app.modules.agents.trace import trace_payload_fingerprint
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.notifications.service import resolve_linked_agent_approval
 from app.modules.workflows.definition import as_summary_object
@@ -96,4 +98,75 @@ async def decide_agent_tool_run(
             actor_user_id=actor_user_id,
             decision=decision,
         )
+    dispatch = await database.scalar(
+        select(AgentRuntimeDispatch).where(
+            AgentRuntimeDispatch.company_id == company_id,
+            AgentRuntimeDispatch.agent_run_id == run.agent_run_id,
+        )
+    )
+    if dispatch is not None and run.agent_run_id is not None:
+        trace_step = await database.scalar(
+            select(AgentRunStep).where(
+                AgentRunStep.company_id == company_id,
+                AgentRunStep.tool_run_id == run.id,
+            )
+        )
+        if trace_step is not None:
+            trace_step.status = (
+                "completed"
+                if run.state == "completed"
+                else "blocked"
+                if run.state == "rejected"
+                else "failed"
+            )
+            trace_step.summary_code = f"tool.execution.{trace_step.status}"
+            trace_step.error_code = (
+                None
+                if run.state == "completed"
+                else "tool_rejected"
+                if run.state == "rejected"
+                else "tool_execution_failed"
+            )
+            trace_step.output_fingerprint = (
+                trace_payload_fingerprint(
+                    settings,
+                    company_id=company_id,
+                    run_id=run.agent_run_id,
+                    sequence=trace_step.sequence,
+                    payload=run.result_summary,
+                )
+                if run.result_summary
+                else None
+            )
+            trace_step.finished_at = run.finished_at
+        linked_runs = list(
+            await database.scalars(
+                select(AgentToolRun).where(
+                    AgentToolRun.company_id == company_id,
+                    AgentToolRun.agent_run_id == run.agent_run_id,
+                )
+            )
+        )
+        states = [item.state for item in linked_runs]
+        if any(state in {"failed", "rejected"} for state in states):
+            dispatch.status = "failed"
+            dispatch.error_code = (
+                "tool_rejected" if "rejected" in states else "tool_execution_failed"
+            )
+        elif states and all(state == "completed" for state in states):
+            dispatch.status = "completed"
+            dispatch.error_code = None
+        if dispatch.status in {"failed", "completed"}:
+            dispatch.reason_code = dispatch.error_code
+            dispatch.finished_at = utc_now()
+            agent_run = await database.scalar(
+                select(AgentRun).where(
+                    AgentRun.id == run.agent_run_id,
+                    AgentRun.company_id == company_id,
+                )
+            )
+            if agent_run is not None:
+                agent_run.status = dispatch.status
+                agent_run.error_code = dispatch.error_code
+                agent_run.finished_at = dispatch.finished_at
     return run

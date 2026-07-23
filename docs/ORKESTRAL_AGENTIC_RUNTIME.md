@@ -124,3 +124,10 @@ e interrompe a execução caso uma política nova seja mais restritiva.
 O runtime passa a receber trabalho por agendas e eventos versionados. Antes de liberar um despacho, o worker confirma no limite da empresa que a ferramenta está habilitada e que existe um vínculo com credencial ativa e não expirada. O registro operacional guarda apenas referências seguras e uma impressão HMAC do objetivo; segredos e payloads externos não entram na instrução do agente.
 
 A execução efetiva dos despachos prontos será adicionada no próximo recorte, com política, orçamento, aprovação, modo sombra e trace operacional.
+## Executor governado de despachos
+
+Agendas e eventos sao consumidos por um executor fail-closed. O runtime fixa empresa,
+versao, responsavel, ferramentas e argumentos, aplica permissao, orcamento, autonomia e
+politica de aprovacao, e somente entao permite uma ferramenta real. O padrao e modo sombra;
+liberacao real exige `live` e percentual canario explicito. Cada decisao gera auditoria,
+evento de dominio e passos operacionais sem expor raciocinio interno ou segredos.

@@ -5377,6 +5377,7 @@
           "step_type": {
             "enum": [
               "provider",
+              "runtime",
               "tool"
             ],
             "title": "Step Type",
@@ -5424,15 +5425,66 @@
             "title": "Agent Id",
             "type": "string"
           },
+          "agent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Run Id"
+          },
           "agent_version_id": {
             "format": "uuid",
             "title": "Agent Version Id",
             "type": "string"
           },
+          "attempt_count": {
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "canary_percentage": {
+            "title": "Canary Percentage",
+            "type": "integer"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "execution_mode": {
+            "enum": [
+              "shadow",
+              "live"
+            ],
+            "title": "Execution Mode",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
           },
           "id": {
             "format": "uuid",
@@ -5494,13 +5546,38 @@
             "title": "Source Type",
             "type": "string"
           },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
           "status": {
             "enum": [
               "ready",
-              "blocked"
+              "blocked",
+              "processing",
+              "awaiting_approval",
+              "simulated",
+              "completed",
+              "failed"
             ],
             "title": "Status",
             "type": "string"
+          },
+          "tool_arguments": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Tool Arguments",
+            "type": "object"
           },
           "trigger_id": {
             "anyOf": [
@@ -5525,8 +5602,16 @@
           "source_type",
           "status",
           "reason_code",
+          "error_code",
           "required_tool_keys",
+          "tool_arguments",
+          "execution_mode",
+          "canary_percentage",
+          "agent_run_id",
+          "attempt_count",
           "scheduled_for",
+          "started_at",
+          "finished_at",
           "created_at"
         ],
         "title": "AgentRuntimeDispatchResponse",
@@ -5540,6 +5625,22 @@
             "minimum": 5.0,
             "title": "Cadence Minutes",
             "type": "integer"
+          },
+          "canary_percentage": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Canary Percentage",
+            "type": "integer"
+          },
+          "execution_mode": {
+            "default": "shadow",
+            "enum": [
+              "shadow",
+              "live"
+            ],
+            "title": "Execution Mode",
+            "type": "string"
           },
           "first_run_at": {
             "anyOf": [
@@ -5579,6 +5680,15 @@
             "pattern": "^[a-z0-9_.-]+$",
             "title": "Schedule Key",
             "type": "string"
+          },
+          "tool_arguments": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxProperties": 20,
+            "title": "Tool Arguments",
+            "type": "object"
           }
         },
         "required": [
@@ -5607,9 +5717,21 @@
             "title": "Cadence Minutes",
             "type": "integer"
           },
+          "canary_percentage": {
+            "title": "Canary Percentage",
+            "type": "integer"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "execution_mode": {
+            "enum": [
+              "shadow",
+              "live"
+            ],
+            "title": "Execution Mode",
             "type": "string"
           },
           "id": {
@@ -5682,6 +5804,14 @@
             "title": "Status",
             "type": "string"
           },
+          "tool_arguments": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Tool Arguments",
+            "type": "object"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -5698,6 +5828,9 @@
           "objective",
           "cadence_minutes",
           "required_tool_keys",
+          "tool_arguments",
+          "execution_mode",
+          "canary_percentage",
           "next_run_at",
           "last_run_at",
           "created_at",
@@ -7048,11 +7181,27 @@
       "AgentTriggerCreate": {
         "additionalProperties": false,
         "properties": {
+          "canary_percentage": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Canary Percentage",
+            "type": "integer"
+          },
           "event_type": {
             "maxLength": 160,
             "minLength": 3,
             "pattern": "^[a-z][a-z0-9_.-]+$",
             "title": "Event Type",
+            "type": "string"
+          },
+          "execution_mode": {
+            "default": "shadow",
+            "enum": [
+              "shadow",
+              "live"
+            ],
+            "title": "Execution Mode",
             "type": "string"
           },
           "max_event_version": {
@@ -7095,6 +7244,15 @@
             "title": "Required Tool Keys",
             "type": "array"
           },
+          "tool_arguments": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxProperties": 20,
+            "title": "Tool Arguments",
+            "type": "object"
+          },
           "trigger_key": {
             "maxLength": 80,
             "minLength": 2,
@@ -7125,6 +7283,10 @@
             "title": "Agent Version Id",
             "type": "string"
           },
+          "canary_percentage": {
+            "title": "Canary Percentage",
+            "type": "integer"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -7132,6 +7294,14 @@
           },
           "event_type": {
             "title": "Event Type",
+            "type": "string"
+          },
+          "execution_mode": {
+            "enum": [
+              "shadow",
+              "live"
+            ],
+            "title": "Execution Mode",
             "type": "string"
           },
           "id": {
@@ -7191,6 +7361,14 @@
             "title": "Status",
             "type": "string"
           },
+          "tool_arguments": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Tool Arguments",
+            "type": "object"
+          },
           "trigger_key": {
             "title": "Trigger Key",
             "type": "string"
@@ -7213,6 +7391,9 @@
           "max_event_version",
           "objective",
           "required_tool_keys",
+          "tool_arguments",
+          "execution_mode",
+          "canary_percentage",
           "created_at",
           "published_at"
         ],
