@@ -84,9 +84,23 @@ export function AuthenticatedLayout({
           {!preview &&
           session.me?.permissions.includes("crm.contacts.view") &&
           isModuleActive(modules.data, "crm") ? (
-            <NavLink className="sidebar__link" to="/app/crm/importacao-de-dados">
+            <NavLink
+              className="sidebar__link"
+              to="/app/crm/importacao-de-dados"
+            >
               <UploadCloud size={18} />
               Importar dados
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("crm.contacts.view") &&
+          isModuleActive(modules.data, "crm") ? (
+            <NavLink
+              className="sidebar__link"
+              to="/app/crm/sincronizacao-de-dados"
+            >
+              <RadioTower size={18} />
+              Sincronizar dados
             </NavLink>
           ) : null}
           {!preview &&

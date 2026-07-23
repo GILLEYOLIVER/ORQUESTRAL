@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from app.modules.crm.customer_governance_routes import router as customer_governance_router
 from app.modules.crm.customer_ingestion_routes import router as customer_ingestion_router
+from app.modules.crm.customer_sync_routes import router as customer_sync_router
 from app.modules.crm.routes import router
 from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 
 crm_module = ModuleDefinition(
     code="crm",
     name="CRM e Vendas",
-    version="0.5.0",
+    version="0.6.0",
     permissions=(
         "crm.contacts.view",
         "crm.contacts.create",
@@ -21,7 +22,12 @@ crm_module = ModuleDefinition(
         "crm.opportunities.delete",
         "crm.activities.manage",
     ),
-    routers=(router, customer_governance_router, customer_ingestion_router),
+    routers=(
+        router,
+        customer_governance_router,
+        customer_ingestion_router,
+        customer_sync_router,
+    ),
     menus=(
         ModuleMenu(
             label="CRM e Vendas",
@@ -48,6 +54,11 @@ crm_module = ModuleDefinition(
         "customer.quality_rule.published",
         "customer.ingestion.completed",
         "customer.ingestion.reprocessed",
+        "customer.sync_connector.created",
+        "customer.sync_connector.active",
+        "customer.sync_connector.paused",
+        "customer.sync.completed",
+        "customer.sync.failed",
     ),
     migrations=(
         "20260716_0004",
@@ -55,5 +66,6 @@ crm_module = ModuleDefinition(
         "20260723_0091",
         "20260723_0092",
         "20260723_0093",
+        "20260723_0094",
     ),
 )
