@@ -43,6 +43,7 @@ class DispatchReviewSummary:
 
 @dataclass(frozen=True, slots=True)
 class ReviewSLASettings:
+    policy_id: UUID | None
     sla_minutes: int
     escalation_minutes: int
     policy_version: int | None
@@ -51,6 +52,7 @@ class ReviewSLASettings:
     on_call_timezone: str
     on_call_start_hour: int
     on_call_end_hour: int
+    on_call_weekdays: tuple[int, ...]
 
 
 async def effective_review_sla(
@@ -65,6 +67,7 @@ async def effective_review_sla(
     )
     return (
         ReviewSLASettings(
+            policy.id,
             policy.sla_minutes,
             policy.escalation_minutes,
             policy.version,
@@ -73,9 +76,10 @@ async def effective_review_sla(
             policy.on_call_timezone,
             policy.on_call_start_hour,
             policy.on_call_end_hour,
+            tuple(policy.on_call_weekdays),
         )
         if policy is not None
-        else ReviewSLASettings(30, 120, None, 15, (), "UTC", 0, 24)
+        else ReviewSLASettings(None, 30, 120, None, 15, (), "UTC", 0, 24, tuple(range(7)))
     )
 
 
@@ -242,10 +246,12 @@ async def maintain_agent_dispatch_review_sla(
                 assignment = await assign_review_for_sla(
                     database,
                     review=review,
+                    policy_id=policy.policy_id,
                     on_call_user_ids=policy.on_call_user_ids,
                     on_call_timezone=policy.on_call_timezone,
                     on_call_start_hour=policy.on_call_start_hour,
                     on_call_end_hour=policy.on_call_end_hour,
+                    on_call_weekdays=policy.on_call_weekdays,
                     escalated=escalated,
                 )
                 recipients = (

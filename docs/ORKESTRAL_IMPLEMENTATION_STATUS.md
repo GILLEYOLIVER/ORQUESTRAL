@@ -1132,3 +1132,32 @@ tipagem, lint, contratos, health checks e auditoria de seguranca aprovados.
 
 **Proximo passo exato:** adicionar calendario semanal, excecoes de ausencia e
 passagem de plantao com aceite do substituto.
+
+## Atualizacao - Ciclo 73
+
+**Fase atual:** governanca e continuidade operacional do runtime de agentes.
+
+**Concluido:**
+
+- dias semanais versionados na politica de SLA;
+- janela de plantao aplicada no fuso configurado;
+- ausencias temporarias com cancelamento auditado;
+- passagem de plantao idempotente entre aprovadores do mesmo tenant;
+- aceite ou rejeicao exclusivo pelo substituto;
+- substituicao ativa somente depois do aceite;
+- expiracao segura de passagens vencidas;
+- roteamento sem usuarios ausentes e com escala deduplicada;
+- historico, auditoria, eventos e interface administrativa responsiva;
+- migracao Alembic `20260722_0088` reversivel.
+
+**Validacao:** 208 testes da API, 7 do worker, 20 de integracao e 19 da
+interface aprovados; 7 E2E aprovados e 2 condicionais ignorados; build,
+tipagem produtiva, lint, contratos, auditoria de seguranca e migracao reversivel
+aprovados. O worker foi restaurado saudavel depois da integracao.
+
+**Divida tecnica observada:** a verificacao opcional de tipagem que inclui os
+testes aponta 20 anotacoes antigas em quatro arquivos; os 223 arquivos
+produtivos permanecem sem erros de tipagem.
+
+**Proximo passo exato:** adicionar multiplos turnos semanais e calendarios de
+feriados, com validacao de sobreposicao e cobertura minima antes da publicacao.

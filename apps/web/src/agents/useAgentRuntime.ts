@@ -106,6 +106,7 @@ export type DispatchReviewSLAPolicy = {
   on_call_timezone: string;
   on_call_start_hour: number;
   on_call_end_hour: number;
+  on_call_weekdays: number[];
   created_at: string;
   published_at: string | null;
 };
@@ -131,6 +132,34 @@ export type CompanyUserOption = {
   name: string;
   email: string;
   membership_status: string;
+};
+
+export type DispatchReviewOnCallException = {
+  id: string;
+  agent_id: string;
+  policy_id: string;
+  user_id: string;
+  status: "active" | "cancelled";
+  reason: string;
+  starts_at: string;
+  ends_at: string;
+  created_at: string;
+};
+
+export type DispatchReviewOnCallHandoff = {
+  id: string;
+  agent_id: string;
+  policy_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  requested_by_user_id: string;
+  responded_by_user_id: string | null;
+  status: "pending" | "accepted" | "rejected" | "cancelled" | "expired";
+  reason: string;
+  starts_at: string;
+  ends_at: string;
+  responded_at: string | null;
+  created_at: string;
 };
 
 export type ScheduleInput = {
@@ -203,6 +232,26 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
       ),
     enabled,
   });
+  const activeReviewPolicyId =
+    reviewPolicies.data?.find((policy) => policy.status === "published")?.id ?? null;
+  const onCallExceptions = useQuery({
+    queryKey: ["agent-runtime-review-on-call-exceptions", agentId, activeReviewPolicyId],
+    queryFn: () =>
+      request<DispatchReviewOnCallException[]>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/` +
+          `${activeReviewPolicyId}/on-call-exceptions`,
+      ),
+    enabled: enabled && Boolean(activeReviewPolicyId),
+  });
+  const onCallHandoffs = useQuery({
+    queryKey: ["agent-runtime-review-on-call-handoffs", agentId, activeReviewPolicyId],
+    queryFn: () =>
+      request<DispatchReviewOnCallHandoff[]>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/` +
+          `${activeReviewPolicyId}/on-call-handoffs`,
+      ),
+    enabled: enabled && Boolean(activeReviewPolicyId),
+  });
   const reviewAssignments = useQuery({
     queryKey: ["agent-runtime-dispatch-review-assignments", agentId],
     queryFn: () =>
@@ -240,6 +289,9 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
     reviewSummary,
     schedules,
     triggers,
+    activeReviewPolicyId,
+    onCallExceptions,
+    onCallHandoffs,
   };
 }
 
@@ -270,6 +322,12 @@ export function useAgentRuntimeActions(agentId: string | null) {
       }),
       queryClient.invalidateQueries({
         queryKey: ["agent-runtime-dispatch-review-assignments", agentId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["agent-runtime-review-on-call-exceptions", agentId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["agent-runtime-review-on-call-handoffs", agentId],
       }),
     ]);
 
@@ -395,6 +453,7 @@ export function useAgentRuntimeActions(agentId: string | null) {
       on_call_timezone: string;
       on_call_start_hour: number;
       on_call_end_hour: number;
+      on_call_weekdays: number[];
     }) =>
       request<DispatchReviewSLAPolicy>(
         `/agents/${agentId}/runtime-dispatch-review-sla-policies`,
@@ -438,11 +497,96 @@ export function useAgentRuntimeActions(agentId: string | null) {
       ),
     onSuccess: refresh,
   });
+  const createOnCallException = useMutation({
+    mutationFn: ({
+      policyId,
+      userId,
+      reason,
+      startsAt,
+      endsAt,
+    }: {
+      policyId: string;
+      userId: string;
+      reason: string;
+      startsAt: string;
+      endsAt: string;
+    }) =>
+      request<DispatchReviewOnCallException>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/${policyId}/` +
+          "on-call-exceptions",
+        {
+          method: "POST",
+          body: { user_id: userId, reason, starts_at: startsAt, ends_at: endsAt },
+        },
+      ),
+    onSuccess: refresh,
+  });
+  const cancelOnCallException = useMutation({
+    mutationFn: ({ policyId, exceptionId }: { policyId: string; exceptionId: string }) =>
+      request<DispatchReviewOnCallException>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/${policyId}/` +
+          `on-call-exceptions/${exceptionId}/cancel`,
+        { method: "POST" },
+      ),
+    onSuccess: refresh,
+  });
+  const createOnCallHandoff = useMutation({
+    mutationFn: ({
+      policyId,
+      fromUserId,
+      toUserId,
+      reason,
+      startsAt,
+      endsAt,
+    }: {
+      policyId: string;
+      fromUserId: string;
+      toUserId: string;
+      reason: string;
+      startsAt: string;
+      endsAt: string;
+    }) =>
+      request<DispatchReviewOnCallHandoff>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/${policyId}/` +
+          "on-call-handoffs",
+        {
+          method: "POST",
+          body: {
+            from_user_id: fromUserId,
+            to_user_id: toUserId,
+            reason,
+            starts_at: startsAt,
+            ends_at: endsAt,
+            idempotency_key: crypto.randomUUID(),
+          },
+        },
+      ),
+    onSuccess: refresh,
+  });
+  const respondOnCallHandoff = useMutation({
+    mutationFn: ({
+      policyId,
+      handoffId,
+      decision,
+    }: {
+      policyId: string;
+      handoffId: string;
+      decision: "accept" | "reject";
+    }) =>
+      request<DispatchReviewOnCallHandoff>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/${policyId}/` +
+          `on-call-handoffs/${handoffId}/respond`,
+        { method: "POST", body: { decision } },
+      ),
+    onSuccess: refresh,
+  });
   return {
     acknowledgeReviewAssignment,
     approveDispatchRetry,
     bindCredential,
     createReviewSLAPolicy,
+    createOnCallException,
+    createOnCallHandoff,
     createSchedule,
     createTrigger,
     pauseSchedule,
@@ -451,6 +595,8 @@ export function useAgentRuntimeActions(agentId: string | null) {
     publishReviewSLAPolicy,
     publishTrigger,
     reassignReview,
+    cancelOnCallException,
+    respondOnCallHandoff,
     reviewDispatch,
   };
 }

@@ -203,6 +203,7 @@ class AgentDispatchReviewSLAPolicyCreate(StrictSchema):
     on_call_timezone: str = Field(default="UTC", min_length=1, max_length=64)
     on_call_start_hour: int = Field(default=0, ge=0, le=23)
     on_call_end_hour: int = Field(default=24, ge=1, le=24)
+    on_call_weekdays: list[int] = Field(default_factory=lambda: list(range(7)), min_length=1)
 
     @field_validator("on_call_user_ids")
     @classmethod
@@ -210,6 +211,13 @@ class AgentDispatchReviewSLAPolicyCreate(StrictSchema):
         if len(set(value)) != len(value):
             raise ValueError("Cada usuário de plantão pode aparecer somente uma vez.")
         return value
+
+    @field_validator("on_call_weekdays")
+    @classmethod
+    def valid_on_call_weekdays(cls, value: list[int]) -> list[int]:
+        if len(set(value)) != len(value) or any(day < 0 or day > 6 for day in value):
+            raise ValueError("Informe dias da semana únicos entre 0 e 6.")
+        return sorted(value)
 
     @field_validator("on_call_timezone")
     @classmethod
@@ -243,6 +251,7 @@ class AgentDispatchReviewSLAPolicyResponse(StrictSchema):
     on_call_timezone: str
     on_call_start_hour: int
     on_call_end_hour: int
+    on_call_weekdays: list[int]
     created_at: datetime
     published_at: datetime | None
 
@@ -266,3 +275,65 @@ class AgentDispatchReviewAssignmentResponse(StrictSchema):
 class AgentDispatchReviewReassign(StrictSchema):
     assigned_to_user_id: UUID
     reason: str = Field(min_length=10, max_length=500)
+
+
+class AgentDispatchReviewOnCallExceptionCreate(StrictSchema):
+    user_id: UUID
+    reason: str = Field(min_length=10, max_length=500)
+    starts_at: datetime
+    ends_at: datetime
+
+    @model_validator(mode="after")
+    def valid_window(self) -> Self:
+        if self.ends_at <= self.starts_at:
+            raise ValueError("O fim da ausência deve ocorrer depois do início.")
+        return self
+
+
+class AgentDispatchReviewOnCallExceptionResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    policy_id: UUID
+    user_id: UUID
+    status: Literal["active", "cancelled"]
+    reason: str
+    starts_at: datetime
+    ends_at: datetime
+    created_at: datetime
+
+
+class AgentDispatchReviewOnCallHandoffCreate(StrictSchema):
+    from_user_id: UUID
+    to_user_id: UUID
+    reason: str = Field(min_length=10, max_length=500)
+    starts_at: datetime
+    ends_at: datetime
+    idempotency_key: UUID
+
+    @model_validator(mode="after")
+    def valid_handoff(self) -> Self:
+        if self.from_user_id == self.to_user_id:
+            raise ValueError("Origem e substituto devem ser pessoas diferentes.")
+        if self.ends_at <= self.starts_at:
+            raise ValueError("O fim da passagem deve ocorrer depois do início.")
+        return self
+
+
+class AgentDispatchReviewOnCallHandoffResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    policy_id: UUID
+    from_user_id: UUID
+    to_user_id: UUID
+    requested_by_user_id: UUID
+    responded_by_user_id: UUID | None
+    status: Literal["pending", "accepted", "rejected", "cancelled", "expired"]
+    reason: str
+    starts_at: datetime
+    ends_at: datetime
+    responded_at: datetime | None
+    created_at: datetime
+
+
+class AgentDispatchReviewOnCallHandoffDecision(StrictSchema):
+    decision: Literal["accept", "reject"]

@@ -431,6 +431,9 @@ class AgentDispatchReviewSLAPolicy(Base):
     )
     on_call_start_hour: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     on_call_end_hour: Mapped[int] = mapped_column(Integer, default=24, server_default="24")
+    on_call_weekdays: Mapped[list[int]] = mapped_column(
+        JSONB, default=lambda: list(range(7)), server_default=text("'[0,1,2,3,4,5,6]'::jsonb")
+    )
     created_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -498,3 +501,94 @@ class AgentDispatchReviewAssignment(Base):
     )
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class AgentDispatchReviewOnCallException(Base):
+    __tablename__ = "agent_dispatch_review_on_call_exceptions"
+    __table_args__ = (
+        CheckConstraint("ends_at > starts_at", name="ck_agent_review_on_call_exception_window"),
+        CheckConstraint(
+            "status IN ('active', 'cancelled')",
+            name="ck_agent_review_on_call_exception_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="CASCADE"), index=True
+    )
+    policy_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_dispatch_review_sla_policies.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
+    reason: Mapped[str] = mapped_column(String(500))
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class AgentDispatchReviewOnCallHandoff(Base):
+    __tablename__ = "agent_dispatch_review_on_call_handoffs"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "request_idempotency_key",
+            name="uq_agent_review_on_call_handoff_request",
+        ),
+        CheckConstraint("ends_at > starts_at", name="ck_agent_review_on_call_handoff_window"),
+        CheckConstraint(
+            "from_user_id <> to_user_id",
+            name="ck_agent_review_on_call_handoff_distinct_users",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'accepted', 'rejected', 'cancelled', 'expired')",
+            name="ck_agent_review_on_call_handoff_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="CASCADE"), index=True
+    )
+    policy_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_dispatch_review_sla_policies.id", ondelete="CASCADE"), index=True
+    )
+    from_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    to_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    responded_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    request_idempotency_key: Mapped[UUID] = mapped_column(index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending")
+    reason: Mapped[str] = mapped_column(String(500))
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
