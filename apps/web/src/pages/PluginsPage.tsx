@@ -1,4 +1,10 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Cable,
@@ -31,6 +37,8 @@ export function PluginsPage() {
   const [credentialName, setCredentialName] = useState("");
   const [values, setValues] = useState<Record<string, string | boolean>>({});
   const [feedback, setFeedback] = useState<ConnectionTestResponse | null>(null);
+  const [credentialFocusRequest, setCredentialFocusRequest] = useState(0);
+  const credentialFormRef = useRef<HTMLDivElement>(null);
   const activePlugins = useMemo(
     () =>
       plugins.data?.filter((plugin) => plugin.company_status === "active") ??
@@ -43,6 +51,25 @@ export function PluginsPage() {
     if (!selectedCode && activePlugins[0])
       setSelectedCode(activePlugins[0].code);
   }, [activePlugins, selectedCode]);
+
+  useEffect(() => {
+    if (!credentialFocusRequest) return;
+    const frame = window.requestAnimationFrame(() => {
+      credentialFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      credentialFormRef.current
+        ?.querySelector<HTMLInputElement>("input")
+        ?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [credentialFocusRequest, selectedCode]);
+
+  const openCredentialForm = (pluginCode: string) => {
+    setSelectedCode(pluginCode);
+    setCredentialFocusRequest((current) => current + 1);
+  };
 
   const credentials = useQuery({
     queryKey: ["plugin-credentials", selectedCode],
@@ -201,7 +228,7 @@ export function PluginsPage() {
                 </PermissionGuard>
                 {active ? (
                   <Button
-                    onClick={() => setSelectedCode(plugin.code)}
+                    onClick={() => openCredentialForm(plugin.code)}
                     variant="secondary"
                   >
                     <KeyRound size={16} /> Credenciais
@@ -215,12 +242,16 @@ export function PluginsPage() {
 
       {selected ? (
         <div className="plugin-vault-layout">
-          <Card
-            className="plugin-credential-form"
-            eyebrow="Cofre criptografado"
-            title={`Nova credencial · ${selected.name}`}
+          <div
+            className="plugin-credential-anchor"
+            ref={credentialFormRef}
           >
-            <form className="stack-form" onSubmit={submitCredential}>
+            <Card
+              className="plugin-credential-form"
+              eyebrow="Cofre criptografado"
+              title={`Nova credencial · ${selected.name}`}
+            >
+              <form className="stack-form" onSubmit={submitCredential}>
               <TextField
                 label="Nome da credencial"
                 onChange={(event) => setCredentialName(event.target.value)}
@@ -276,8 +307,9 @@ export function PluginsPage() {
               <Button loading={createCredential.isPending} type="submit">
                 <ShieldCheck size={17} /> Criptografar e salvar
               </Button>
-            </form>
-          </Card>
+              </form>
+            </Card>
+          </div>
 
           <Card
             className="plugin-credential-list"
