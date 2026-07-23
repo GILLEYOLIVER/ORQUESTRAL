@@ -2,14 +2,17 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Activity,
   Building2,
   ChevronLeft,
   ChevronRight,
+  Database,
   Mail,
   Pencil,
   Phone,
   Plus,
   Search,
+  ShieldCheck,
   Tag,
   Trash2,
   UserRound,
@@ -49,6 +52,49 @@ const statusLabels: Record<CRMContactResponse["status"], string> = {
   prospect: "Prospect",
   customer: "Cliente",
   inactive: "Inativo",
+};
+
+type Customer360 = {
+  profile_id: string;
+  display_name: string;
+  profile_type: "person" | "organization";
+  lifecycle_status: CRMContactResponse["status"];
+  quality_score: number;
+  quality_issues: string[];
+  master_contact_id: string | null;
+  linked_contact_ids: string[];
+  duplicate_candidate_profile_ids: string[];
+  identities: Array<{
+    id: string;
+    identity_type: "email" | "phone" | "external_id" | "document";
+    display_hint: string;
+    verified: boolean;
+    source_code: string;
+    source_name: string;
+  }>;
+  sources: Array<{
+    id: string;
+    code: string;
+    name: string;
+    mode: "system_of_record" | "copied" | "federated" | "cached";
+    status: "active" | "paused" | "retired";
+  }>;
+  consents: Array<{
+    id: string;
+    purpose: string;
+    channel: string;
+    status: string;
+    lawful_basis: string;
+    captured_at: string;
+  }>;
+  opportunity_count: number;
+  open_opportunity_value: string;
+  recent_activities: Array<{
+    id: string;
+    activity_type: string;
+    subject: string;
+    occurred_at: string;
+  }>;
 };
 
 function normalizedBody(values: ContactFormValues) {
@@ -211,6 +257,32 @@ function ContactDetails({
   onDelete: () => void;
   onEdit: () => void;
 }) {
+  const queryClient = useQueryClient();
+  const [consentPurpose, setConsentPurpose] = useState("service");
+  const [consentChannel, setConsentChannel] = useState("all");
+  const [consentStatus, setConsentStatus] = useState("granted");
+  const customer360 = useQuery({
+    queryKey: ["crm-customer-360", contact.id],
+    queryFn: () =>
+      request<Customer360>(`/crm/contacts/${contact.id}/customer-360`),
+  });
+  const recordConsent = useMutation({
+    mutationFn: () =>
+      request(`/crm/contacts/${contact.id}/consents`, {
+        method: "POST",
+        body: {
+          purpose: consentPurpose,
+          channel: consentChannel,
+          status: consentStatus,
+          lawful_basis:
+            consentStatus === "granted" ? "consentimento" : "oposição do titular",
+        },
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["crm-customer-360", contact.id],
+      }),
+  });
   return (
     <Card className="crm-details" eyebrow="Detalhes do contato">
       <div className="panel-heading">
@@ -250,6 +322,114 @@ function ContactDetails({
           </span>
         ))}
       </div>
+      <section className="customer-360">
+        <div className="customer-360__heading">
+          <div>
+            <span className="eyebrow">VISÃO 360</span>
+            <h3>Perfil canônico do cliente</h3>
+          </div>
+          <Database size={20} />
+        </div>
+        {customer360.isLoading ? <p>Consolidando dados autorizados…</p> : null}
+        {customer360.isError ? (
+          <Alert variant="error">Não foi possível consolidar a visão 360.</Alert>
+        ) : null}
+        {customer360.data ? (
+          <>
+            <div className="customer-360__metrics">
+              <span>
+                <strong>{customer360.data.quality_score}%</strong>
+                Qualidade
+              </span>
+              <span>
+                <strong>{customer360.data.linked_contact_ids.length}</strong>
+                Cadastros ligados
+              </span>
+              <span>
+                <strong>{customer360.data.opportunity_count}</strong>
+                Oportunidades abertas
+              </span>
+            </div>
+            {customer360.data.quality_issues.length ? (
+              <small>
+                Melhorar: {customer360.data.quality_issues.join(" · ")}
+              </small>
+            ) : (
+              <small>Cadastro completo para ativação autorizada.</small>
+            )}
+            <div className="customer-360__section">
+              <h4>
+                <ShieldCheck size={16} /> Identidades protegidas
+              </h4>
+              {customer360.data.identities.map((identity) => (
+                <span key={identity.id}>
+                  {identity.identity_type}: {identity.display_hint} ·{" "}
+                  {identity.source_name}
+                </span>
+              ))}
+              {!customer360.data.identities.length ? (
+                <span>Identidades serão indexadas na próxima atualização.</span>
+              ) : null}
+            </div>
+            <div className="customer-360__section">
+              <h4>
+                <Activity size={16} /> Consentimentos
+              </h4>
+              {customer360.data.consents.slice(0, 5).map((consent) => (
+                <span key={consent.id}>
+                  {consent.purpose} · {consent.channel} · {consent.status}
+                </span>
+              ))}
+              {!customer360.data.consents.length ? (
+                <span>Nenhum consentimento registrado.</span>
+              ) : null}
+            </div>
+            <PermissionGuard all={["crm.contacts.update"]}>
+              <div className="customer-360__consent-form">
+                <select
+                  aria-label="Finalidade do consentimento"
+                  onChange={(event) => setConsentPurpose(event.target.value)}
+                  value={consentPurpose}
+                >
+                  <option value="service">Atendimento</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="analytics">Analytics</option>
+                  <option value="ai_processing">Processamento por IA</option>
+                  <option value="data_sharing">Compartilhamento</option>
+                </select>
+                <select
+                  aria-label="Canal do consentimento"
+                  onChange={(event) => setConsentChannel(event.target.value)}
+                  value={consentChannel}
+                >
+                  <option value="all">Todos os canais</option>
+                  <option value="email">E-mail</option>
+                  <option value="phone">Telefone</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="sms">SMS</option>
+                  <option value="web">Web</option>
+                </select>
+                <select
+                  aria-label="Decisão de consentimento"
+                  onChange={(event) => setConsentStatus(event.target.value)}
+                  value={consentStatus}
+                >
+                  <option value="granted">Concedido</option>
+                  <option value="denied">Negado</option>
+                  <option value="revoked">Revogado</option>
+                </select>
+                <Button
+                  loading={recordConsent.isPending}
+                  onClick={() => recordConsent.mutate()}
+                  variant="secondary"
+                >
+                  Registrar decisão
+                </Button>
+              </div>
+            </PermissionGuard>
+          </>
+        ) : null}
+      </section>
       <div className="form-actions">
         <PermissionGuard all={["crm.contacts.update"]}>
           <Button onClick={onEdit} variant="secondary">

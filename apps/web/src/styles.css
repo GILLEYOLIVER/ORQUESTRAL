@@ -2116,6 +2116,79 @@ p {
   padding: 0.35rem 0.55rem;
 }
 
+.customer-360 {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1.2rem 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--color-primary-soft) 65%, white), white);
+}
+
+.customer-360__heading,
+.customer-360__heading > div,
+.customer-360__section {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.customer-360__heading {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+}
+
+.customer-360__heading h3,
+.customer-360__section h4 {
+  margin: 0;
+}
+
+.customer-360__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.customer-360__metrics > span {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.6rem;
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 75%);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.customer-360__metrics strong {
+  color: var(--color-primary);
+  font-size: 1.15rem;
+}
+
+.customer-360__section {
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.customer-360__section h4 {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  color: var(--color-text);
+}
+
+.customer-360__consent-form {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.customer-360__consent-form button {
+  grid-column: 1 / -1;
+}
+
 .inline-form {
   display: grid;
   gap: 0.55rem;
@@ -2142,6 +2215,11 @@ p {
 }
 
 @media (max-width: 640px) {
+  .customer-360__metrics,
+  .customer-360__consent-form {
+    grid-template-columns: 1fr;
+  }
+
   .management-row {
     align-items: start;
     grid-template-columns: auto minmax(0, 1fr);

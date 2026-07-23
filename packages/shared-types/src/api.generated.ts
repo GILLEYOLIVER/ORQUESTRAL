@@ -1351,6 +1351,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Validate Agent Dispatch Review Coverage */
+        get: operations["validate_agent_dispatch_review_coverage_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-exceptions": {
         parameters: {
             query?: never;
@@ -2436,6 +2453,40 @@ export interface paths {
         head?: never;
         /** Update Contact */
         patch: operations["update_contact_crm_contacts__contact_id__patch"];
+        trace?: never;
+    };
+    "/crm/contacts/{contact_id}/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Customer Consent */
+        post: operations["record_customer_consent_crm_contacts__contact_id__consents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/contacts/{contact_id}/customer-360": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Customer 360 */
+        get: operations["get_customer_360_crm_contacts__contact_id__customer_360_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/crm/opportunities": {
@@ -5997,6 +6048,32 @@ export interface components {
              */
             status: "pending" | "acknowledged" | "reassigned" | "closed";
         };
+        /** AgentDispatchReviewCoverageIssueResponse */
+        AgentDispatchReviewCoverageIssueResponse: {
+            /** Code */
+            code: string;
+            /** Hour */
+            hour: number | null;
+            /** Message */
+            message: string;
+            /** User Id */
+            user_id: string | null;
+            /** Weekday */
+            weekday: number | null;
+        };
+        /** AgentDispatchReviewCoverageResponse */
+        AgentDispatchReviewCoverageResponse: {
+            /** Covered Slots */
+            covered_slots: number;
+            /** Issues */
+            issues: components["schemas"]["AgentDispatchReviewCoverageIssueResponse"][];
+            /** Minimum Coverage */
+            minimum_coverage: number;
+            /** Required Slots */
+            required_slots: number;
+            /** Valid */
+            valid: boolean;
+        };
         /** AgentDispatchReviewCreate */
         AgentDispatchReviewCreate: {
             /**
@@ -6011,6 +6088,21 @@ export interface components {
             idempotency_key: string;
             /** Reason */
             reason: string;
+        };
+        /** AgentDispatchReviewHoliday */
+        AgentDispatchReviewHoliday: {
+            /**
+             * Coverage Required
+             * @default false
+             */
+            coverage_required: boolean;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Name */
+            name: string;
         };
         /** AgentDispatchReviewOnCallExceptionCreate */
         AgentDispatchReviewOnCallExceptionCreate: {
@@ -6244,6 +6336,13 @@ export interface components {
             acknowledgement_minutes: number;
             /** Escalation Minutes */
             escalation_minutes: number;
+            /** Holiday Calendar */
+            holiday_calendar?: components["schemas"]["AgentDispatchReviewHoliday"][];
+            /**
+             * Minimum Coverage
+             * @default 1
+             */
+            minimum_coverage: number;
             /** Name */
             name: string;
             /**
@@ -6251,6 +6350,8 @@ export interface components {
              * @default 24
              */
             on_call_end_hour: number;
+            /** On Call Shifts */
+            on_call_shifts?: components["schemas"]["AgentDispatchReviewShift"][];
             /**
              * On Call Start Hour
              * @default 0
@@ -6284,15 +6385,21 @@ export interface components {
             created_at: string;
             /** Escalation Minutes */
             escalation_minutes: number;
+            /** Holiday Calendar */
+            holiday_calendar: components["schemas"]["AgentDispatchReviewHoliday"][];
             /**
              * Id
              * Format: uuid
              */
             id: string;
+            /** Minimum Coverage */
+            minimum_coverage: number;
             /** Name */
             name: string;
             /** On Call End Hour */
             on_call_end_hour: number;
+            /** On Call Shifts */
+            on_call_shifts: components["schemas"]["AgentDispatchReviewShift"][];
             /** On Call Start Hour */
             on_call_start_hour: number;
             /** On Call Timezone */
@@ -6312,6 +6419,20 @@ export interface components {
             status: "draft" | "published" | "retired";
             /** Version */
             version: number;
+        };
+        /** AgentDispatchReviewShift */
+        AgentDispatchReviewShift: {
+            /** End Hour */
+            end_hour: number;
+            /** Start Hour */
+            start_hour: number;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Weekdays */
+            weekdays: number[];
         };
         /** AgentDispatchReviewSummaryResponse */
         AgentDispatchReviewSummaryResponse: {
@@ -9390,6 +9511,48 @@ export interface components {
             /** Tag Ids */
             tag_ids?: string[] | null;
         };
+        /** CRMCustomer360Response */
+        CRMCustomer360Response: {
+            /** Consents */
+            consents: components["schemas"]["CustomerConsentResponse"][];
+            /** Display Name */
+            display_name: string;
+            /** Duplicate Candidate Profile Ids */
+            duplicate_candidate_profile_ids: string[];
+            /** Identities */
+            identities: components["schemas"]["CustomerIdentityResponse"][];
+            /**
+             * Lifecycle Status
+             * @enum {string}
+             */
+            lifecycle_status: "lead" | "prospect" | "customer" | "inactive";
+            /** Linked Contact Ids */
+            linked_contact_ids: string[];
+            /** Master Contact Id */
+            master_contact_id: string | null;
+            /** Open Opportunity Value */
+            open_opportunity_value: string;
+            /** Opportunity Count */
+            opportunity_count: number;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /**
+             * Profile Type
+             * @enum {string}
+             */
+            profile_type: "person" | "organization";
+            /** Quality Issues */
+            quality_issues: string[];
+            /** Quality Score */
+            quality_score: number;
+            /** Recent Activities */
+            recent_activities: components["schemas"]["CustomerActivityResponse"][];
+            /** Sources */
+            sources: components["schemas"]["CustomerDataSourceResponse"][];
+        };
         /** CRMOpportunityActivityCreate */
         CRMOpportunityActivityCreate: {
             /**
@@ -10271,6 +10434,133 @@ export interface components {
             failed: number;
             /** Rotated */
             rotated: number;
+        };
+        /** CustomerActivityResponse */
+        CustomerActivityResponse: {
+            /**
+             * Activity Type
+             * @enum {string}
+             */
+            activity_type: "note" | "call" | "email" | "meeting" | "stage_change" | "status_change";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Subject */
+            subject: string;
+        };
+        /** CustomerConsentCreate */
+        CustomerConsentCreate: {
+            /**
+             * Channel
+             * @default all
+             * @enum {string}
+             */
+            channel: "all" | "email" | "phone" | "whatsapp" | "sms" | "web";
+            /** Evidence Reference */
+            evidence_reference?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+            /** Lawful Basis */
+            lawful_basis: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "marketing" | "service" | "analytics" | "ai_processing" | "data_sharing";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "granted" | "denied" | "revoked" | "expired";
+        };
+        /** CustomerConsentResponse */
+        CustomerConsentResponse: {
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "all" | "email" | "phone" | "whatsapp" | "sms" | "web";
+            /** Evidence Reference */
+            evidence_reference: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lawful Basis */
+            lawful_basis: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "marketing" | "service" | "analytics" | "ai_processing" | "data_sharing";
+            /**
+             * Recorded By User Id
+             * Format: uuid
+             */
+            recorded_by_user_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "granted" | "denied" | "revoked" | "expired";
+        };
+        /** CustomerDataSourceResponse */
+        CustomerDataSourceResponse: {
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "system_of_record" | "copied" | "federated" | "cached";
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "paused" | "retired";
+        };
+        /** CustomerIdentityResponse */
+        CustomerIdentityResponse: {
+            /** Display Hint */
+            display_hint: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Identity Type
+             * @enum {string}
+             */
+            identity_type: "email" | "phone" | "external_id" | "document";
+            /** Source Code */
+            source_code: string;
+            /** Source Name */
+            source_name: string;
+            /** Verified */
+            verified: boolean;
         };
         /** DashboardResponse */
         DashboardResponse: {
@@ -19942,6 +20232,56 @@ export interface operations {
             };
         };
     };
+    validate_agent_dispatch_review_coverage_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__coverage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewCoverageResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     list_agent_dispatch_review_on_call_exceptions_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__on_call_exceptions_get: {
         parameters: {
             query?: never;
@@ -23904,6 +24244,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CRMContactResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    record_customer_consent_crm_contacts__contact_id__consents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerConsentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerConsentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_customer_360_crm_contacts__contact_id__customer_360_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CRMCustomer360Response"];
                 };
             };
             /** @description Solicitação inválida */
