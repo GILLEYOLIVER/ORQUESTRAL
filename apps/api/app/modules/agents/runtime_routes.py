@@ -21,6 +21,7 @@ from app.modules.agents.review_sla_service import dispatch_review_summary
 from app.modules.agents.runtime_models import (
     AgentCredentialBinding,
     AgentDispatchReview,
+    AgentDispatchReviewSLAPolicy,
     AgentEventTrigger,
     AgentExecutionSchedule,
     AgentRuntimeDispatch,
@@ -32,6 +33,8 @@ from app.modules.agents.runtime_schemas import (
     AgentDispatchRetryApproval,
     AgentDispatchReviewCreate,
     AgentDispatchReviewResponse,
+    AgentDispatchReviewSLAPolicyCreate,
+    AgentDispatchReviewSLAPolicyResponse,
     AgentDispatchReviewSummaryResponse,
     AgentRuntimeDispatchResponse,
     AgentScheduleCreate,
@@ -598,9 +601,9 @@ async def get_agent_dispatch_review_summary(
     agent_id: UUID,
     principal: CanViewAgents,
     database: DatabaseSession,
-    sla_minutes: int = 30,
+    sla_minutes: int | None = None,
 ) -> AgentDispatchReviewSummaryResponse:
-    if not 5 <= sla_minutes <= 10_080:
+    if sla_minutes is not None and not 5 <= sla_minutes <= 10_080:
         raise HTTPException(status_code=422, detail="O SLA deve ficar entre 5 e 10080 minutos.")
     context = get_request_context(principal)
     await _tenant_agent(database, context.company_id, agent_id)
@@ -611,6 +614,121 @@ async def get_agent_dispatch_review_summary(
         sla_minutes=sla_minutes,
     )
     return AgentDispatchReviewSummaryResponse.model_validate(asdict(summary))
+
+
+@router.get(
+    "/{agent_id}/runtime-dispatch-review-sla-policies",
+    response_model=list[AgentDispatchReviewSLAPolicyResponse],
+)
+async def list_agent_dispatch_review_sla_policies(
+    agent_id: UUID, principal: CanViewAgents, database: DatabaseSession
+) -> list[AgentDispatchReviewSLAPolicy]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    return list(
+        await database.scalars(
+            select(AgentDispatchReviewSLAPolicy)
+            .where(
+                AgentDispatchReviewSLAPolicy.company_id == context.company_id,
+                AgentDispatchReviewSLAPolicy.agent_id == agent_id,
+            )
+            .order_by(AgentDispatchReviewSLAPolicy.version.desc())
+        )
+    )
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-review-sla-policies",
+    response_model=AgentDispatchReviewSLAPolicyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_dispatch_review_sla_policy(
+    agent_id: UUID,
+    payload: AgentDispatchReviewSLAPolicyCreate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewSLAPolicy:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    current = await database.scalar(
+        select(func.max(AgentDispatchReviewSLAPolicy.version)).where(
+            AgentDispatchReviewSLAPolicy.company_id == context.company_id,
+            AgentDispatchReviewSLAPolicy.agent_id == agent_id,
+        )
+    )
+    policy = AgentDispatchReviewSLAPolicy(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        version=(current or 0) + 1,
+        status="draft",
+        created_by_user_id=context.user_id,
+        **payload.model_dump(),
+    )
+    database.add(policy)
+    await database.flush()
+    _audit_event(
+        database,
+        company_id=context.company_id,
+        user_id=context.user_id,
+        action="agent.dispatch_review_sla.created",
+        target_type="agent_dispatch_review_sla_policy",
+        target_id=policy.id,
+        agent_id=agent_id,
+    )
+    await database.commit()
+    await database.refresh(policy)
+    return policy
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/publish",
+    response_model=AgentDispatchReviewSLAPolicyResponse,
+)
+async def publish_agent_dispatch_review_sla_policy(
+    agent_id: UUID,
+    policy_id: UUID,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewSLAPolicy:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    policy = await database.scalar(
+        select(AgentDispatchReviewSLAPolicy)
+        .where(
+            AgentDispatchReviewSLAPolicy.id == policy_id,
+            AgentDispatchReviewSLAPolicy.company_id == context.company_id,
+            AgentDispatchReviewSLAPolicy.agent_id == agent_id,
+        )
+        .with_for_update()
+    )
+    if policy is None:
+        raise HTTPException(status_code=404, detail="Política de SLA não encontrada.")
+    if policy.status != "draft":
+        raise HTTPException(status_code=409, detail="Somente rascunhos podem ser publicados.")
+    await database.execute(
+        update(AgentDispatchReviewSLAPolicy)
+        .where(
+            AgentDispatchReviewSLAPolicy.company_id == context.company_id,
+            AgentDispatchReviewSLAPolicy.agent_id == agent_id,
+            AgentDispatchReviewSLAPolicy.status == "published",
+        )
+        .values(status="retired")
+    )
+    policy.status = "published"
+    policy.published_by_user_id = context.user_id
+    policy.published_at = utc_now()
+    _audit_event(
+        database,
+        company_id=context.company_id,
+        user_id=context.user_id,
+        action="agent.dispatch_review_sla.published",
+        target_type="agent_dispatch_review_sla_policy",
+        target_id=policy.id,
+        agent_id=agent_id,
+    )
+    await database.commit()
+    await database.refresh(policy)
+    return policy
 
 
 @router.post(

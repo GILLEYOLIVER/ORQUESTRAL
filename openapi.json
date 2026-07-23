@@ -1870,6 +1870,106 @@
         "title": "AgentDispatchReviewResponse",
         "type": "object"
       },
+      "AgentDispatchReviewSLAPolicyCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "escalation_minutes": {
+            "maximum": 20160.0,
+            "minimum": 6.0,
+            "title": "Escalation Minutes",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Name",
+            "type": "string"
+          },
+          "sla_minutes": {
+            "maximum": 10080.0,
+            "minimum": 5.0,
+            "title": "Sla Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "sla_minutes",
+          "escalation_minutes"
+        ],
+        "title": "AgentDispatchReviewSLAPolicyCreate",
+        "type": "object"
+      },
+      "AgentDispatchReviewSLAPolicyResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "escalation_minutes": {
+            "title": "Escalation Minutes",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "sla_minutes": {
+            "title": "Sla Minutes",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "published",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "version",
+          "status",
+          "name",
+          "sla_minutes",
+          "escalation_minutes",
+          "created_at",
+          "published_at"
+        ],
+        "title": "AgentDispatchReviewSLAPolicyResponse",
+        "type": "object"
+      },
       "AgentDispatchReviewSummaryResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1892,6 +1992,10 @@
             "title": "Closed",
             "type": "integer"
           },
+          "escalation_minutes": {
+            "title": "Escalation Minutes",
+            "type": "integer"
+          },
           "oldest_pending_minutes": {
             "anyOf": [
               {
@@ -1910,6 +2014,17 @@
           "pending": {
             "title": "Pending",
             "type": "integer"
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Version"
           },
           "repeat_interruptions": {
             "title": "Repeat Interruptions",
@@ -1933,7 +2048,9 @@
           "average_decision_minutes",
           "oldest_pending_minutes",
           "retry_rate_percent",
-          "sla_minutes"
+          "sla_minutes",
+          "escalation_minutes",
+          "policy_version"
         ],
         "title": "AgentDispatchReviewSummaryResponse",
         "type": "object"
@@ -31529,6 +31646,232 @@
         ]
       }
     },
+    "/agents/{agent_id}/runtime-dispatch-review-sla-policies": {
+      "get": {
+        "operationId": "list_agent_dispatch_review_sla_policies_agents__agent_id__runtime_dispatch_review_sla_policies_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentDispatchReviewSLAPolicyResponse"
+                  },
+                  "title": "Response List Agent Dispatch Review Sla Policies Agents  Agent Id  Runtime Dispatch Review Sla Policies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Dispatch Review Sla Policies",
+        "tags": [
+          "agents-runtime"
+        ]
+      },
+      "post": {
+        "operationId": "create_agent_dispatch_review_sla_policy_agents__agent_id__runtime_dispatch_review_sla_policies_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentDispatchReviewSLAPolicyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewSLAPolicyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Agent Dispatch Review Sla Policy",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/publish": {
+      "post": {
+        "operationId": "publish_agent_dispatch_review_sla_policy_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewSLAPolicyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Agent Dispatch Review Sla Policy",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
     "/agents/{agent_id}/runtime-dispatch-reviews": {
       "get": {
         "operationId": "list_agent_dispatch_reviews_agents__agent_id__runtime_dispatch_reviews_get",
@@ -31620,9 +31963,15 @@
             "name": "sla_minutes",
             "required": false,
             "schema": {
-              "default": 30,
-              "title": "Sla Minutes",
-              "type": "integer"
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sla Minutes"
             }
           }
         ],

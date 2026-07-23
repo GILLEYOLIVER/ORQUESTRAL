@@ -189,3 +189,29 @@ class AgentDispatchReviewSummaryResponse(StrictSchema):
     oldest_pending_minutes: int | None
     retry_rate_percent: float
     sla_minutes: int
+    escalation_minutes: int
+    policy_version: int | None
+
+
+class AgentDispatchReviewSLAPolicyCreate(StrictSchema):
+    name: str = Field(min_length=3, max_length=160)
+    sla_minutes: int = Field(ge=5, le=10_080)
+    escalation_minutes: int = Field(ge=6, le=20_160)
+
+    @model_validator(mode="after")
+    def validate_escalation(self) -> Self:
+        if self.escalation_minutes <= self.sla_minutes:
+            raise ValueError("O escalonamento deve ocorrer depois do SLA inicial.")
+        return self
+
+
+class AgentDispatchReviewSLAPolicyResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    version: int
+    status: Literal["draft", "published", "retired"]
+    name: str
+    sla_minutes: int
+    escalation_minutes: int
+    created_at: datetime
+    published_at: datetime | None

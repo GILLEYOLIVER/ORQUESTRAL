@@ -441,6 +441,35 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert review.json()["status"] == "pending_approval"
             assert review.json()["replacement_dispatch_id"] is None
 
+            foreign_policy = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies",
+                headers=headers_a,
+                json={
+                    "name": "SLA crítico",
+                    "sla_minutes": 20,
+                    "escalation_minutes": 40,
+                },
+            )
+            assert foreign_policy.status_code == 404
+            policy = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies",
+                headers=headers_b,
+                json={
+                    "name": "SLA crítico",
+                    "sla_minutes": 20,
+                    "escalation_minutes": 40,
+                },
+            )
+            assert policy.status_code == 201
+            assert policy.json()["status"] == "draft"
+            published_policy = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy.json()['id']}/publish",
+                headers=headers_b,
+            )
+            assert published_policy.status_code == 200
+            assert published_policy.json()["status"] == "published"
+
             initial_summary = client.get(
                 f"/agents/{agent_id}/runtime-dispatch-reviews/summary",
                 headers=headers_b,
@@ -448,13 +477,16 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert initial_summary.status_code == 200
             assert initial_summary.json()["pending"] == 1
             assert initial_summary.json()["overdue"] == 0
+            assert initial_summary.json()["sla_minutes"] == 20
+            assert initial_summary.json()["escalation_minutes"] == 40
+            assert initial_summary.json()["policy_version"] == 1
 
             asyncio.run(_make_review_overdue(settings, UUID(review.json()["id"])))
             first_sla_result = asyncio.run(
-                maintain_agent_dispatch_review_sla(settings=settings, sla_minutes=30)
+                maintain_agent_dispatch_review_sla(settings=settings)
             )
             second_sla_result = asyncio.run(
-                maintain_agent_dispatch_review_sla(settings=settings, sla_minutes=30)
+                maintain_agent_dispatch_review_sla(settings=settings)
             )
             assert first_sla_result["review_breaches"] == 1
             assert first_sla_result["notifications"] >= 1
