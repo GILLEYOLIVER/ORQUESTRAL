@@ -1402,3 +1402,11 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Migração: `20260723_0101` com RLS forçada em restrições e operações de direitos.
 - Segurança: permissão `crm.contacts.export`, lock por tenant/perfil e bloqueio de ingestão para perfis restritos.
 - Próximo passo: concluir ativação governada de segmentos e busca da plataforma de dados antes de iniciar a Fase 6.
+
+## Ciclo 88 — segmentos, ativação e busca
+
+- Fase atual: 5 — Plataforma de dados.
+- Concluído: segmentos tipados/versionados, materialização, busca segura e ativação em campanhas com consentimento.
+- Migração: `20260723_0102` com RLS forçada em segmentos, membros e ativações.
+- Segurança: perfis restritos sempre excluídos; busca não expõe identidade bruta; ativação sem webhook externo.
+- Próximo passo: validar o ciclo e encerrar a Fase 5; iniciar Fase 6 com fundação comercial empresarial.

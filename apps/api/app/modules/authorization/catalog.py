@@ -77,6 +77,24 @@ PERMISSION_CATALOG = (
         "Exportar dados pessoais governados do CRM",
     ),
     PermissionDefinition(
+        "crm.segments.view",
+        "crm",
+        "segments.view",
+        "Visualizar segmentos e busca de clientes",
+    ),
+    PermissionDefinition(
+        "crm.segments.manage",
+        "crm",
+        "segments.manage",
+        "Criar, materializar e publicar segmentos",
+    ),
+    PermissionDefinition(
+        "crm.segments.activate",
+        "crm",
+        "segments.activate",
+        "Ativar segmentos em destinos governados",
+    ),
+    PermissionDefinition(
         "crm.pipeline.view", "crm", "pipeline.view", "Visualizar funis comerciais"
     ),
     PermissionDefinition(

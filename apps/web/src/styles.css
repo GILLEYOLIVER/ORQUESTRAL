@@ -3655,3 +3655,210 @@ p {
     min-height: 0;
   }
 }
+.customer-segments-panel {
+  margin-top: 1.25rem;
+  padding: clamp(1rem, 2vw, 1.6rem);
+  border: 1px solid rgb(31 79 72 / 16%);
+  border-radius: 1.4rem;
+  background:
+    linear-gradient(145deg, rgb(239 246 239 / 96%), rgb(255 249 235 / 96%)),
+    var(--color-surface);
+  box-shadow: 0 18px 42px rgb(21 53 48 / 8%);
+}
+
+.customer-segments-intro {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 1.25rem;
+  align-items: end;
+}
+
+.customer-segments-intro h2,
+.customer-segments-intro p {
+  margin-top: 0;
+}
+
+.customer-profile-search {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.customer-profile-search label,
+.customer-segment-builder label,
+.customer-campaign-target {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 750;
+}
+
+.customer-profile-search input,
+.customer-segment-builder input,
+.customer-segment-builder select,
+.customer-campaign-target input {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid rgb(31 79 72 / 20%);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.customer-profile-search button,
+.customer-segment-builder button,
+.customer-segment-list button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--color-brand);
+  color: #fff;
+  font-weight: 800;
+}
+
+.customer-profile-search button:disabled,
+.customer-segment-builder button:disabled,
+.customer-segment-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.customer-profile-results {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.customer-profile-results article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.8rem;
+  background: rgb(255 255 255 / 78%);
+}
+
+.customer-profile-results article > span:first-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.customer-profile-restricted,
+.customer-profile-available {
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.customer-profile-restricted {
+  background: #ffe4d8;
+  color: #7f2f1e;
+}
+
+.customer-profile-available {
+  background: #dff3e8;
+  color: #155a48;
+}
+
+.customer-segment-builder {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(5, minmax(7rem, 1fr)) auto;
+  gap: 0.7rem;
+  align-items: end;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 76%);
+}
+
+.customer-segment-builder h3,
+.customer-segment-builder p {
+  margin: 0;
+}
+
+.customer-campaign-target {
+  margin-top: 1rem;
+}
+
+.customer-segment-status {
+  margin: 1rem 0 0;
+  padding: 0.8rem 1rem;
+  border-left: 4px solid var(--color-brand);
+  border-radius: 0.5rem;
+  background: rgb(220 239 230 / 78%);
+}
+
+.customer-segment-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.customer-segment-list article {
+  padding: 1rem;
+  border: 1px solid rgb(31 79 72 / 13%);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 86%);
+}
+
+.customer-segment-list header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.customer-segment-list header span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.customer-segment-list b {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 0.3rem 0.6rem;
+  background: #edf0fa;
+  color: #35426f;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.customer-segment-list b[data-status="published"] {
+  background: #dff3e8;
+  color: #155a48;
+}
+
+.customer-segment-list article > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 1100px) {
+  .customer-segment-builder {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .customer-segment-builder > div,
+  .customer-segment-builder > button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .customer-segments-intro,
+  .customer-profile-search,
+  .customer-segment-builder,
+  .customer-segment-list {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-profile-results article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
