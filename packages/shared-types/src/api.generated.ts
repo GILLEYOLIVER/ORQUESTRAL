@@ -2489,6 +2489,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/crm/customer-data/ingestion/dead-letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dead Letters */
+        get: operations["get_dead_letters_crm_customer_data_ingestion_dead_letters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/customer-data/ingestion/dead-letters/{record_id}/reprocess": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Dead Letter Reprocess */
+        post: operations["post_dead_letter_reprocess_crm_customer_data_ingestion_dead_letters__record_id__reprocess_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/customer-data/ingestion/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ingestion Jobs */
+        get: operations["get_ingestion_jobs_crm_customer_data_ingestion_jobs_get"];
+        put?: never;
+        /** Post Ingestion Job */
+        post: operations["post_ingestion_job_crm_customer_data_ingestion_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/customer-data/ingestion/quality-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Quality Rules */
+        get: operations["get_quality_rules_crm_customer_data_ingestion_quality_rules_get"];
+        put?: never;
+        /** Post Quality Rule */
+        post: operations["post_quality_rule_crm_customer_data_ingestion_quality_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/crm/customer-data/ingestion/quality-rules/{rule_set_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Publish Quality Rule */
+        post: operations["post_publish_quality_rule_crm_customer_data_ingestion_quality_rules__rule_set_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/crm/customer-data/match-rules": {
         parameters: {
             query?: never;
@@ -10662,6 +10749,38 @@ export interface components {
              */
             status: "active" | "paused" | "retired";
         };
+        /** CustomerDeadLetterResponse */
+        CustomerDeadLetterResponse: {
+            /** Attempts */
+            attempts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code: string;
+            /** Errors */
+            errors: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Payload Fingerprint */
+            payload_fingerprint: string;
+            /** Processed At */
+            processed_at: string | null;
+            /** Source Code */
+            source_code: string;
+            /** Source Record Id */
+            source_record_id: string;
+        };
         /** CustomerIdentityResponse */
         CustomerIdentityResponse: {
             /** Display Hint */
@@ -10682,6 +10801,114 @@ export interface components {
             source_name: string;
             /** Verified */
             verified: boolean;
+        };
+        /** CustomerIngestionJobCreate */
+        CustomerIngestionJobCreate: {
+            /** Cursor */
+            cursor?: string | null;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /**
+             * Mode
+             * @default batch
+             * @enum {string}
+             */
+            mode: "batch" | "incremental";
+            /** Records */
+            records: components["schemas"]["CustomerIngestionRecordInput"][];
+            /** Source Code */
+            source_code: string;
+            /** Source Name */
+            source_name: string;
+        };
+        /** CustomerIngestionJobResponse */
+        CustomerIngestionJobResponse: {
+            /** Accepted Records */
+            accepted_records: number;
+            /** Completed At */
+            completed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Cursor */
+            cursor: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "batch" | "incremental";
+            /** Quality Rule Version */
+            quality_rule_version: number;
+            /** Records */
+            records?: components["schemas"]["CustomerIngestionRecordResponse"][];
+            /** Rejected Records */
+            rejected_records: number;
+            /** Source Code */
+            source_code: string;
+            /** Source Name */
+            source_name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "partial" | "failed";
+            /** Total Records */
+            total_records: number;
+        };
+        /** CustomerIngestionRecordInput */
+        CustomerIngestionRecordInput: {
+            /** Display Name */
+            display_name?: string | null;
+            /** Email */
+            email?: string | null;
+            /** External Id */
+            external_id?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Source Record Id */
+            source_record_id: string;
+        };
+        /** CustomerIngestionRecordResponse */
+        CustomerIngestionRecordResponse: {
+            /** Attempts */
+            attempts: number;
+            /** Error Code */
+            error_code: string | null;
+            /** Errors */
+            errors: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Payload Fingerprint */
+            payload_fingerprint: string;
+            /** Processed At */
+            processed_at: string | null;
+            /** Profile Id */
+            profile_id: string | null;
+            /** Source Record Id */
+            source_record_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "accepted" | "rejected" | "dead_letter";
+        };
+        /** CustomerIngestionReprocess */
+        CustomerIngestionReprocess: {
+            /** Reason */
+            reason: string;
+            record: components["schemas"]["CustomerIngestionRecordInput"];
         };
         /** CustomerLineageCreate */
         CustomerLineageCreate: {
@@ -10851,6 +11078,43 @@ export interface components {
         CustomerMergeRevert: {
             /** Note */
             note: string;
+        };
+        /** CustomerQualityRuleSetCreate */
+        CustomerQualityRuleSetCreate: {
+            /** Name */
+            name: string;
+            /** Rules */
+            rules?: {
+                [key: string]: unknown;
+            };
+        };
+        /** CustomerQualityRuleSetResponse */
+        CustomerQualityRuleSetResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Published At */
+            published_at: string | null;
+            /** Rules */
+            rules: {
+                [key: string]: unknown;
+            };
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "retired";
+            /** Version */
+            version: number;
         };
         /** DashboardResponse */
         DashboardResponse: {
@@ -24636,6 +24900,351 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CRMCustomer360Response"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_dead_letters_crm_customer_data_ingestion_dead_letters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDeadLetterResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    post_dead_letter_reprocess_crm_customer_data_ingestion_dead_letters__record_id__reprocess_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerIngestionReprocess"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerIngestionRecordResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_ingestion_jobs_crm_customer_data_ingestion_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerIngestionJobResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    post_ingestion_job_crm_customer_data_ingestion_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerIngestionJobCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerIngestionJobResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_quality_rules_crm_customer_data_ingestion_quality_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerQualityRuleSetResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    post_quality_rule_crm_customer_data_ingestion_quality_rules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustomerQualityRuleSetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerQualityRuleSetResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    post_publish_quality_rule_crm_customer_data_ingestion_quality_rules__rule_set_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rule_set_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerQualityRuleSetResponse"];
                 };
             };
             /** @description Solicitação inválida */

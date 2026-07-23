@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.modules.crm.customer_governance_routes import router as customer_governance_router
+from app.modules.crm.customer_ingestion_routes import router as customer_ingestion_router
 from app.modules.crm.routes import router
 from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 
@@ -20,7 +21,7 @@ crm_module = ModuleDefinition(
         "crm.opportunities.delete",
         "crm.activities.manage",
     ),
-    routers=(router, customer_governance_router),
+    routers=(router, customer_governance_router, customer_ingestion_router),
     menus=(
         ModuleMenu(
             label="CRM e Vendas",
@@ -44,6 +45,15 @@ crm_module = ModuleDefinition(
         "customer.merge.rejected",
         "customer.merge.reverted",
         "customer.lineage.recorded",
+        "customer.quality_rule.published",
+        "customer.ingestion.completed",
+        "customer.ingestion.reprocessed",
     ),
-    migrations=("20260716_0004", "20260720_0024", "20260723_0091", "20260723_0092"),
+    migrations=(
+        "20260716_0004",
+        "20260720_0024",
+        "20260723_0091",
+        "20260723_0092",
+        "20260723_0093",
+    ),
 )

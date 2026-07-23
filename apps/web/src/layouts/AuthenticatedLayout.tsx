@@ -17,6 +17,7 @@ import {
   PackageOpen,
   RadioTower,
   ScanSearch,
+  UploadCloud,
   ShieldCheck,
   UserRoundCog,
   UserRound,
@@ -78,6 +79,14 @@ export function AuthenticatedLayout({
               {attentionCount ? (
                 <span className="sidebar__badge">{attentionCount}</span>
               ) : null}
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("crm.contacts.view") &&
+          isModuleActive(modules.data, "crm") ? (
+            <NavLink className="sidebar__link" to="/app/crm/importacao-de-dados">
+              <UploadCloud size={18} />
+              Importar dados
             </NavLink>
           ) : null}
           {!preview &&
