@@ -16,6 +16,7 @@ import {
   SupportOperationsPanel,
   type SupportOperationalTicket,
 } from "./support/SupportOperationsPanel";
+import { SupportRoutingPanel } from "./support/SupportRoutingPanel";
 
 type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
 type TicketPriority = "low" | "normal" | "high" | "urgent";
@@ -29,6 +30,8 @@ interface SupportTicket {
   priority: TicketPriority;
   channel: TicketChannel;
   assignee_user_id: string | null;
+  required_skill_id: string | null;
+  language_code: string | null;
   requester_contact_id: string | null;
   due_at: string | null;
   resolved_at: string | null;
@@ -179,6 +182,14 @@ export function SupportPage() {
         onTicketUpdated={(ticket: SupportOperationalTicket) =>
           setSelected((current) =>
             current ? { ...current, ...ticket } : current,
+          )
+        }
+      />
+      <SupportRoutingPanel
+        ticket={selected}
+        onAssigned={(userId) =>
+          setSelected((current) =>
+            current ? { ...current, assignee_user_id: userId } : current,
           )
         }
       />
