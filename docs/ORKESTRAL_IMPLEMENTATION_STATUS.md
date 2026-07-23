@@ -1193,3 +1193,33 @@ aprovados. Os oito servicos locais voltaram saudaveis.
 
 **Proximo passo exato:** separar credenciais PostgreSQL de migracao, API e
 worker e, em seguida, retomar multiplos turnos e calendarios de feriados.
+
+## Atualizacao - Ciclo 75
+
+**Fase atual:** fundacao de seguranca empresarial aplicada transversalmente.
+
+**Concluido:**
+
+- contrato de identidades PostgreSQL separadas para migracao, API e worker;
+- selecao explicita da conexao conforme o processo;
+- homologacao e producao com validacao fail-closed obrigatoria;
+- bloqueio de usuarios repetidos e contas administrativas no runtime;
+- TLS validado em todas as conexoes remotas;
+- erros Pydantic sem exibicao dos valores sensiveis recebidos;
+- fallback legado restrito a local e desenvolvimento remoto reduzido;
+- contrato CI contra segredos de infraestrutura no bundle do navegador;
+- sonda RLS contra tentativa de desativar `row_security`;
+- bootstrap de nova empresa com troca de tenant posterior a autorizacao;
+- documentacao operacional para ativacao e rotacao sem registrar credenciais.
+
+**Risco residual:** o ambiente gratuito remoto continua usando a credencial
+legada ate que tres usuarios sejam provisionados no painel do PostgreSQL. O
+codigo impede promover homologacao ou producao nesse estado.
+
+**Validacao:** 242 testes de API, worker, integracao e seguranca aprovados; 19
+testes de interface aprovados; build produtivo, lint e tipagem de 223 arquivos
+aprovados. A auditoria nao encontrou segredos conhecidos nem vulnerabilidades
+conhecidas nas dependencias e aprovou as sondas de RLS e fronteira do navegador.
+
+**Proximo passo exato:** provisionar as identidades protegidas no provedor e,
+depois, retomar multiplos turnos semanais e calendarios de feriados.

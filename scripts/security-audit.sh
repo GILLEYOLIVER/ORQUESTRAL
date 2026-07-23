@@ -13,6 +13,9 @@ bash scripts/check-secrets.sh
 printf '%s\n' 'Verificando a fronteira de segredos do frontend...'
 bash scripts/check-frontend-secret-boundary.sh
 
+printf '%s\n' 'Verificando a separação de identidades do PostgreSQL...'
+bash scripts/check-database-role-separation.sh
+
 printf '%s\n' 'Verificando pinning imutavel das GitHub Actions...'
 unpinned="$({
   grep -REn 'uses:[[:space:]]+[^[:space:]]+@' .github/workflows || true

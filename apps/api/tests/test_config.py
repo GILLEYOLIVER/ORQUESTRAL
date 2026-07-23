@@ -14,6 +14,18 @@ def production_settings(
     development_expose_tokens: bool = False,
     bootstrap_enabled: bool = False,
     database_url: str = "postgresql+asyncpg://orkestral:strong-password@database.internal/orkestral",
+    migration_database_url: str = (
+        "postgresql+asyncpg://orkestral_migration:strong-password@database.internal/"
+        "orkestral?ssl=require"
+    ),
+    api_database_url: str = (
+        "postgresql+asyncpg://orkestral_api:strong-password@database.internal/"
+        "orkestral?ssl=require"
+    ),
+    worker_database_url: str = (
+        "postgresql+asyncpg://orkestral_worker:strong-password@database.internal/"
+        "orkestral?ssl=require"
+    ),
     knowledge_embedding_provider: str = "openai_compatible",
     billing_enforcement_enabled: bool = True,
     security_rate_limit_enabled: bool = True,
@@ -23,6 +35,10 @@ def production_settings(
     return Settings(
         app_env=app_env,
         database_url=database_url,
+        migration_database_url=migration_database_url,
+        api_database_url=api_database_url,
+        worker_database_url=worker_database_url,
+        database_role_separation_required=True,
         redis_url="rediss://redis.internal:6379/0",
         celery_broker_url="rediss://redis.internal:6379/1",
         celery_result_backend="rediss://redis.internal:6379/2",
@@ -150,3 +166,41 @@ def test_remote_runtime_rejects_reused_core_secrets() -> None:
 def test_remote_runtime_rejects_instruction_placeholders() -> None:
     with pytest.raises(ValidationError, match="Valores inseguros para produção"):
         production_settings(jwt_secret="GENERATE_AT_LEAST_32_RANDOM_CHARACTERS")  # noqa: S106
+
+
+def test_production_requires_three_independent_database_identities() -> None:
+    with pytest.raises(ValidationError, match="usuários PostgreSQL distintos"):
+        production_settings(
+            api_database_url=(
+                "postgresql+asyncpg://orkestral_migration:strong-password@database.internal/"
+                "orkestral?ssl=require"
+            )
+        )
+
+
+def test_production_rejects_privileged_runtime_database_user() -> None:
+    with pytest.raises(ValidationError, match="não pode utilizar usuário administrativo"):
+        production_settings(
+            worker_database_url=(
+                "postgresql+asyncpg://postgres:strong-password@database.internal/"
+                "orkestral?ssl=require"
+            )
+        )
+
+
+def test_database_role_urls_are_hidden_from_validation_errors() -> None:
+    sensitive_password = "must-not-appear-in-validation-errors"
+    with pytest.raises(ValidationError) as captured:
+        production_settings(
+            api_database_url=f"not-a-database-url:{sensitive_password}",
+        )
+
+    assert sensitive_password not in str(captured.value)
+
+
+def test_local_database_role_fallback_remains_compatible() -> None:
+    settings = Settings(app_env="local", database_url="sqlite+aiosqlite:///local.db")
+
+    assert settings.database_url_for("migration") == settings.database_url
+    assert settings.database_url_for("api") == settings.database_url
+    assert settings.database_url_for("worker") == settings.database_url
