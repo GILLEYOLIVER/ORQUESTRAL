@@ -108,6 +108,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/runtime/credential-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Credential Catalog */
+        get: operations["list_agent_credential_catalog_agents_runtime_credential_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/tools/catalog": {
         parameters: {
             query?: never;
@@ -293,6 +310,40 @@ export interface paths {
         /** List Messages */
         get: operations["list_messages_agents__agent_id__conversations__conversation_id__messages_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/credential-bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Credential Bindings */
+        get: operations["list_agent_credential_bindings_agents__agent_id__credential_bindings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/credential-bindings/{tool_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Bind Agent Credential */
+        put: operations["bind_agent_credential_agents__agent_id__credential_bindings__tool_key__put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -518,6 +569,58 @@ export interface paths {
         put?: never;
         /** Transition Agent Delegation */
         post: operations["transition_agent_delegation_agents__agent_id__delegations__delegation_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/event-triggers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Event Triggers */
+        get: operations["list_agent_event_triggers_agents__agent_id__event_triggers_get"];
+        put?: never;
+        /** Create Agent Event Trigger */
+        post: operations["create_agent_event_trigger_agents__agent_id__event_triggers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/event-triggers/{trigger_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Agent Event Trigger */
+        post: operations["pause_agent_event_trigger_agents__agent_id__event_triggers__trigger_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/event-triggers/{trigger_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Agent Event Trigger */
+        post: operations["publish_agent_event_trigger_agents__agent_id__event_triggers__trigger_id__publish_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1207,6 +1310,75 @@ export interface paths {
         get: operations["list_agent_run_steps_agents__agent_id__runs__run_id__steps_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/runtime-dispatches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Runtime Dispatches */
+        get: operations["list_agent_runtime_dispatches_agents__agent_id__runtime_dispatches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Schedules */
+        get: operations["list_agent_schedules_agents__agent_id__schedules_get"];
+        put?: never;
+        /** Create Agent Schedule */
+        post: operations["create_agent_schedule_agents__agent_id__schedules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/schedules/{schedule_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Agent Schedule */
+        post: operations["pause_agent_schedule_agents__agent_id__schedules__schedule_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/schedules/{schedule_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Agent Schedule */
+        post: operations["publish_agent_schedule_agents__agent_id__schedules__schedule_id__publish_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5288,6 +5460,75 @@ export interface components {
              */
             temperature: number;
         };
+        /** AgentCredentialBindingCreate */
+        AgentCredentialBindingCreate: {
+            /**
+             * Credential Id
+             * Format: uuid
+             */
+            credential_id: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+        };
+        /** AgentCredentialBindingResponse */
+        AgentCredentialBindingResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Credential Id
+             * Format: uuid
+             */
+            credential_id: string;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Tool Key */
+            tool_key: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AgentCredentialCatalogResponse */
+        AgentCredentialCatalogResponse: {
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Plugin Id
+             * Format: uuid
+             */
+            plugin_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "expired" | "revoked";
+            /** Usable */
+            usable: boolean;
+        };
         /** AgentDataPolicyResponse */
         AgentDataPolicyResponse: {
             /**
@@ -7017,6 +7258,115 @@ export interface components {
             /** Tool Key */
             tool_key: string | null;
         };
+        /** AgentRuntimeDispatchResponse */
+        AgentRuntimeDispatchResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Agent Version Id
+             * Format: uuid
+             */
+            agent_version_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason Code */
+            reason_code: string | null;
+            /** Required Tool Keys */
+            required_tool_keys: string[];
+            /** Schedule Id */
+            schedule_id: string | null;
+            /**
+             * Scheduled For
+             * Format: date-time
+             */
+            scheduled_for: string;
+            /** Source Event Id */
+            source_event_id: string | null;
+            /**
+             * Source Type
+             * @enum {string}
+             */
+            source_type: "schedule" | "event";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "blocked";
+            /** Trigger Id */
+            trigger_id: string | null;
+        };
+        /** AgentScheduleCreate */
+        AgentScheduleCreate: {
+            /** Cadence Minutes */
+            cadence_minutes: number;
+            /** First Run At */
+            first_run_at?: string | null;
+            /** Name */
+            name: string;
+            /** Objective */
+            objective: string;
+            /** Required Tool Keys */
+            required_tool_keys?: string[];
+            /** Schedule Key */
+            schedule_key: string;
+        };
+        /** AgentScheduleResponse */
+        AgentScheduleResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Agent Version Id
+             * Format: uuid
+             */
+            agent_version_id: string;
+            /** Cadence Minutes */
+            cadence_minutes: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Name */
+            name: string;
+            /** Next Run At */
+            next_run_at: string | null;
+            /** Objective */
+            objective: string;
+            /** Published At */
+            published_at: string | null;
+            /** Required Tool Keys */
+            required_tool_keys: string[];
+            /** Schedule Key */
+            schedule_key: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "paused" | "retired";
+            /** Version */
+            version: number;
+        };
         /** AgentSecurityEventResponse */
         AgentSecurityEventResponse: {
             /**
@@ -7620,6 +7970,72 @@ export interface components {
         AgentToolsUpdate: {
             /** Tool Keys */
             tool_keys?: string[];
+        };
+        /** AgentTriggerCreate */
+        AgentTriggerCreate: {
+            /** Event Type */
+            event_type: string;
+            /** Max Event Version */
+            max_event_version?: number | null;
+            /**
+             * Min Event Version
+             * @default 1
+             */
+            min_event_version: number;
+            /** Name */
+            name: string;
+            /** Objective */
+            objective: string;
+            /** Required Tool Keys */
+            required_tool_keys?: string[];
+            /** Trigger Key */
+            trigger_key: string;
+        };
+        /** AgentTriggerResponse */
+        AgentTriggerResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Agent Version Id
+             * Format: uuid
+             */
+            agent_version_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Event Type */
+            event_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Event Version */
+            max_event_version: number | null;
+            /** Min Event Version */
+            min_event_version: number;
+            /** Name */
+            name: string;
+            /** Objective */
+            objective: string;
+            /** Published At */
+            published_at: string | null;
+            /** Required Tool Keys */
+            required_tool_keys: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "paused" | "retired";
+            /** Trigger Key */
+            trigger_key: string;
+            /** Version */
+            version: number;
         };
         /** AgentUpdate */
         AgentUpdate: {
@@ -14154,6 +14570,53 @@ export interface operations {
             };
         };
     };
+    list_agent_credential_catalog_agents_runtime_credential_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCredentialCatalogResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     tool_catalog_agents_tools_catalog_get: {
         parameters: {
             query?: never;
@@ -14928,6 +15391,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentMessageResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_credential_bindings_agents__agent_id__credential_bindings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCredentialBindingResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    bind_agent_credential_agents__agent_id__credential_bindings__tool_key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                tool_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentCredentialBindingCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCredentialBindingResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -15773,6 +16339,208 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentDelegationResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_event_triggers_agents__agent_id__event_triggers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTriggerResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_event_trigger_agents__agent_id__event_triggers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTriggerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTriggerResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    pause_agent_event_trigger_agents__agent_id__event_triggers__trigger_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                trigger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTriggerResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_agent_event_trigger_agents__agent_id__event_triggers__trigger_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                trigger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTriggerResponse"];
                 };
             };
             /** @description Solicitação inválida */
@@ -18284,6 +19052,257 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentRunStepResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_runtime_dispatches_agents__agent_id__runtime_dispatches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRuntimeDispatchResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    list_agent_schedules_agents__agent_id__schedules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentScheduleResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_schedule_agents__agent_id__schedules_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentScheduleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentScheduleResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    pause_agent_schedule_agents__agent_id__schedules__schedule_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentScheduleResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_agent_schedule_agents__agent_id__schedules__schedule_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                schedule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentScheduleResponse"];
                 };
             };
             /** @description Solicitação inválida */

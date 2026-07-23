@@ -16,6 +16,7 @@ from app.core.middleware import ObservabilityMiddleware, SecurityMiddleware
 from app.core.resources import create_resources
 from app.core.schemas import ProblemDetails
 from app.modules.agents.routes import router as agents_router
+from app.modules.agents.runtime_routes import router as agent_runtime_router
 from app.modules.audit.routes import router as audit_router
 from app.modules.authentication.routes import router as authentication_router
 from app.modules.authorization.routes import router as authorization_router
@@ -78,6 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(health_router)
     application.include_router(system_router)
     application.include_router(agents_router)
+    application.include_router(agent_runtime_router)
     application.include_router(authentication_router)
     application.include_router(audit_router)
     application.include_router(authorization_router)

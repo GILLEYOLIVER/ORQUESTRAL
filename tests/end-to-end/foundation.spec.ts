@@ -82,10 +82,13 @@ test("administrador cria e exclui logicamente um agente", async ({ page }) => {
     .toBe(0);
   await page.evaluate(() => window.scrollTo(0, 0));
 
-  await page
+  const createAgentForm = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Criar agente" }),
+  });
+  await createAgentForm
     .getByRole("textbox", { name: "Nome", exact: true })
     .fill(agentName);
-  await page.getByRole("button", { name: "Criar agente" }).click();
+  await createAgentForm.getByRole("button", { name: "Criar agente" }).click();
   const createdAgent = page.getByRole("button", {
     name: new RegExp(agentName),
   });

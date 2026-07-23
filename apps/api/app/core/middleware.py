@@ -43,6 +43,14 @@ class RateLimitPolicy:
 
 
 def request_rate_limit_policy(request: Request, settings: Settings) -> RateLimitPolicy:
+    if request.method == "POST" and request.url.path == "/auth/development-login":
+        if settings.app_env == "local":
+            return RateLimitPolicy(
+                scope="local-development-authentication",
+                requests=settings.security_local_dev_login_rate_limit_requests,
+                window_seconds=settings.security_auth_rate_limit_window_seconds,
+                fail_closed=True,
+            )
     if request.method == "POST" and request.url.path in _SENSITIVE_AUTH_PATHS:
         return RateLimitPolicy(
             scope="authentication",

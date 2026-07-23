@@ -1179,6 +1179,129 @@
         "title": "AgentCreate",
         "type": "object"
       },
+      "AgentCredentialBindingCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "credential_id": {
+            "format": "uuid",
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "credential_id"
+        ],
+        "title": "AgentCredentialBindingCreate",
+        "type": "object"
+      },
+      "AgentCredentialBindingResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credential_id": {
+            "format": "uuid",
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "tool_key": {
+            "title": "Tool Key",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "tool_key",
+          "credential_id",
+          "enabled",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AgentCredentialBindingResponse",
+        "type": "object"
+      },
+      "AgentCredentialCatalogResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plugin_id": {
+            "format": "uuid",
+            "title": "Plugin Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usable": {
+            "title": "Usable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "plugin_id",
+          "name",
+          "status",
+          "expires_at",
+          "usable"
+        ],
+        "title": "AgentCredentialCatalogResponse",
+        "type": "object"
+      },
       "AgentDataPolicyResponse": {
         "additionalProperties": false,
         "properties": {
@@ -5293,6 +5416,296 @@
         "title": "AgentRunStepResponse",
         "type": "object"
       },
+      "AgentRuntimeDispatchResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "agent_version_id": {
+            "format": "uuid",
+            "title": "Agent Version Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "required_tool_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Tool Keys",
+            "type": "array"
+          },
+          "schedule_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule Id"
+          },
+          "scheduled_for": {
+            "format": "date-time",
+            "title": "Scheduled For",
+            "type": "string"
+          },
+          "source_event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Event Id"
+          },
+          "source_type": {
+            "enum": [
+              "schedule",
+              "event"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "blocked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trigger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger Id"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "agent_version_id",
+          "schedule_id",
+          "trigger_id",
+          "source_event_id",
+          "source_type",
+          "status",
+          "reason_code",
+          "required_tool_keys",
+          "scheduled_for",
+          "created_at"
+        ],
+        "title": "AgentRuntimeDispatchResponse",
+        "type": "object"
+      },
+      "AgentScheduleCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "cadence_minutes": {
+            "maximum": 10080.0,
+            "minimum": 5.0,
+            "title": "Cadence Minutes",
+            "type": "integer"
+          },
+          "first_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Run At"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Objective",
+            "type": "string"
+          },
+          "required_tool_keys": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Required Tool Keys",
+            "type": "array"
+          },
+          "schedule_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z0-9_.-]+$",
+            "title": "Schedule Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schedule_key",
+          "name",
+          "objective",
+          "cadence_minutes"
+        ],
+        "title": "AgentScheduleCreate",
+        "type": "object"
+      },
+      "AgentScheduleResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "agent_version_id": {
+            "format": "uuid",
+            "title": "Agent Version Id",
+            "type": "string"
+          },
+          "cadence_minutes": {
+            "title": "Cadence Minutes",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "required_tool_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Tool Keys",
+            "type": "array"
+          },
+          "schedule_key": {
+            "title": "Schedule Key",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "published",
+              "paused",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "agent_version_id",
+          "schedule_key",
+          "version",
+          "status",
+          "name",
+          "objective",
+          "cadence_minutes",
+          "required_tool_keys",
+          "next_run_at",
+          "last_run_at",
+          "created_at",
+          "published_at"
+        ],
+        "title": "AgentScheduleResponse",
+        "type": "object"
+      },
       "AgentSecurityEventResponse": {
         "additionalProperties": false,
         "properties": {
@@ -6630,6 +7043,180 @@
           }
         },
         "title": "AgentToolsUpdate",
+        "type": "object"
+      },
+      "AgentTriggerCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "event_type": {
+            "maxLength": 160,
+            "minLength": 3,
+            "pattern": "^[a-z][a-z0-9_.-]+$",
+            "title": "Event Type",
+            "type": "string"
+          },
+          "max_event_version": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Event Version"
+          },
+          "min_event_version": {
+            "default": 1,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Min Event Version",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Objective",
+            "type": "string"
+          },
+          "required_tool_keys": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Required Tool Keys",
+            "type": "array"
+          },
+          "trigger_key": {
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[a-z0-9_.-]+$",
+            "title": "Trigger Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trigger_key",
+          "name",
+          "event_type",
+          "objective"
+        ],
+        "title": "AgentTriggerCreate",
+        "type": "object"
+      },
+      "AgentTriggerResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "agent_version_id": {
+            "format": "uuid",
+            "title": "Agent Version Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "max_event_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Event Version"
+          },
+          "min_event_version": {
+            "title": "Min Event Version",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "required_tool_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Tool Keys",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "published",
+              "paused",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trigger_key": {
+            "title": "Trigger Key",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "agent_version_id",
+          "trigger_key",
+          "version",
+          "status",
+          "name",
+          "event_type",
+          "min_event_version",
+          "max_event_version",
+          "objective",
+          "required_tool_keys",
+          "created_at",
+          "published_at"
+        ],
+        "title": "AgentTriggerResponse",
         "type": "object"
       },
       "AgentUpdate": {
@@ -23657,6 +24244,66 @@
         ]
       }
     },
+    "/agents/runtime/credential-catalog": {
+      "get": {
+        "operationId": "list_agent_credential_catalog_agents_runtime_credential_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentCredentialCatalogResponse"
+                  },
+                  "title": "Response List Agent Credential Catalog Agents Runtime Credential Catalog Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Credential Catalog",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
     "/agents/tools/catalog": {
       "get": {
         "operationId": "tool_catalog_agents_tools_catalog_get",
@@ -24811,6 +25458,165 @@
         "summary": "List Messages",
         "tags": [
           "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/credential-bindings": {
+      "get": {
+        "operationId": "list_agent_credential_bindings_agents__agent_id__credential_bindings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentCredentialBindingResponse"
+                  },
+                  "title": "Response List Agent Credential Bindings Agents  Agent Id  Credential Bindings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Credential Bindings",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/credential-bindings/{tool_key}": {
+      "put": {
+        "operationId": "bind_agent_credential_agents__agent_id__credential_bindings__tool_key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tool_key",
+            "required": true,
+            "schema": {
+              "title": "Tool Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentCredentialBindingCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentCredentialBindingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Bind Agent Credential",
+        "tags": [
+          "agents-runtime"
         ]
       }
     },
@@ -26185,6 +26991,310 @@
         "summary": "Transition Agent Delegation",
         "tags": [
           "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/event-triggers": {
+      "get": {
+        "operationId": "list_agent_event_triggers_agents__agent_id__event_triggers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentTriggerResponse"
+                  },
+                  "title": "Response List Agent Event Triggers Agents  Agent Id  Event Triggers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Event Triggers",
+        "tags": [
+          "agents-runtime"
+        ]
+      },
+      "post": {
+        "operationId": "create_agent_event_trigger_agents__agent_id__event_triggers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTriggerCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTriggerResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Agent Event Trigger",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/event-triggers/{trigger_id}/pause": {
+      "post": {
+        "operationId": "pause_agent_event_trigger_agents__agent_id__event_triggers__trigger_id__pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trigger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trigger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTriggerResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pause Agent Event Trigger",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/event-triggers/{trigger_id}/publish": {
+      "post": {
+        "operationId": "publish_agent_event_trigger_agents__agent_id__event_triggers__trigger_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trigger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Trigger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTriggerResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Agent Event Trigger",
+        "tags": [
+          "agents-runtime"
         ]
       }
     },
@@ -29999,6 +31109,382 @@
         "summary": "List Agent Run Steps",
         "tags": [
           "agents"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runtime-dispatches": {
+      "get": {
+        "operationId": "list_agent_runtime_dispatches_agents__agent_id__runtime_dispatches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentRuntimeDispatchResponse"
+                  },
+                  "title": "Response List Agent Runtime Dispatches Agents  Agent Id  Runtime Dispatches Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Runtime Dispatches",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/schedules": {
+      "get": {
+        "operationId": "list_agent_schedules_agents__agent_id__schedules_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentScheduleResponse"
+                  },
+                  "title": "Response List Agent Schedules Agents  Agent Id  Schedules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Schedules",
+        "tags": [
+          "agents-runtime"
+        ]
+      },
+      "post": {
+        "operationId": "create_agent_schedule_agents__agent_id__schedules_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentScheduleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Agent Schedule",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/schedules/{schedule_id}/pause": {
+      "post": {
+        "operationId": "pause_agent_schedule_agents__agent_id__schedules__schedule_id__pause_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Schedule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pause Agent Schedule",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/schedules/{schedule_id}/publish": {
+      "post": {
+        "operationId": "publish_agent_schedule_agents__agent_id__schedules__schedule_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Schedule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Agent Schedule",
+        "tags": [
+          "agents-runtime"
         ]
       }
     },

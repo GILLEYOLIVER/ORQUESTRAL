@@ -88,6 +88,30 @@ def test_authentication_uses_a_stricter_rate_limit_policy() -> None:
     assert api.scope == "api"
 
 
+def test_development_login_has_a_separate_local_only_rate_limit_policy() -> None:
+    local_settings = Settings(
+        app_env="local",
+        security_auth_rate_limit_requests=20,
+        security_local_dev_login_rate_limit_requests=60,
+    )
+    remote_settings = Settings(
+        app_env="development",
+        remote_development_enabled=False,
+        security_auth_rate_limit_requests=20,
+        security_local_dev_login_rate_limit_requests=60,
+    )
+
+    local = request_rate_limit_policy(request_for("/auth/development-login"), local_settings)
+    remote = request_rate_limit_policy(request_for("/auth/development-login"), remote_settings)
+
+    assert local.scope == "local-development-authentication"
+    assert local.requests == 60
+    assert local.fail_closed is True
+    assert remote.scope == "authentication"
+    assert remote.requests == 20
+    assert remote.fail_closed is True
+
+
 @pytest.mark.asyncio
 async def test_sensitive_rate_limit_returns_429_with_retry_headers() -> None:
     redis = FakeRedis()

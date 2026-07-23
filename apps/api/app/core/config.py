@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     security_rate_limit_window_seconds: int = Field(default=60, ge=10, le=3_600)
     security_auth_rate_limit_requests: int = Field(default=20, ge=5, le=300)
     security_auth_rate_limit_window_seconds: int = Field(default=900, ge=60, le=3_600)
+    security_local_dev_login_rate_limit_requests: int = Field(default=60, ge=20, le=1_000)
     request_max_body_bytes: int = Field(default=26_214_400, ge=1_024, le=104_857_600)
     security_hsts_seconds: int = Field(default=31_536_000, ge=0, le=63_072_000)
     security_trusted_proxy_ips: list[str] = Field(default_factory=list)
