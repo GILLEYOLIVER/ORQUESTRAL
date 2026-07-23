@@ -214,10 +214,23 @@ class AgentCredentialBinding(Base):
 class AgentRuntimeDispatch(Base):
     __tablename__ = "agent_runtime_dispatches"
     __table_args__ = (
-        UniqueConstraint("schedule_id", "scheduled_for", name="uq_agent_runtime_schedule_dispatch"),
-        UniqueConstraint("trigger_id", "source_event_id", name="uq_agent_runtime_event_dispatch"),
+        Index(
+            "uq_agent_runtime_schedule_dispatch_base",
+            "schedule_id",
+            "scheduled_for",
+            unique=True,
+            postgresql_where=text("source_type = 'schedule'"),
+        ),
+        Index(
+            "uq_agent_runtime_event_dispatch_base",
+            "trigger_id",
+            "source_event_id",
+            unique=True,
+            postgresql_where=text("source_type = 'event'"),
+        ),
         CheckConstraint(
-            "source_type IN ('schedule', 'event')", name="ck_agent_runtime_dispatch_source"
+            "source_type IN ('schedule', 'event', 'retry')",
+            name="ck_agent_runtime_dispatch_source",
         ),
         CheckConstraint(
             "status IN ('ready', 'blocked', 'processing', 'awaiting_approval', "
@@ -237,12 +250,17 @@ class AgentRuntimeDispatch(Base):
             name="ck_agent_runtime_dispatch_counters",
         ),
         CheckConstraint(
-            "(source_type = 'schedule' AND schedule_id IS NOT NULL AND trigger_id IS NULL) OR "
+            "(source_type = 'schedule' AND schedule_id IS NOT NULL AND trigger_id IS NULL "
+            "AND retry_of_dispatch_id IS NULL) OR "
             "(source_type = 'event' AND trigger_id IS NOT NULL AND schedule_id IS NULL "
-            "AND source_event_id IS NOT NULL)",
+            "AND source_event_id IS NOT NULL AND retry_of_dispatch_id IS NULL) OR "
+            "(source_type = 'retry' AND retry_of_dispatch_id IS NOT NULL AND "
+            "((schedule_id IS NOT NULL AND trigger_id IS NULL) OR "
+            "(trigger_id IS NOT NULL AND schedule_id IS NULL AND source_event_id IS NOT NULL)))",
             name="ck_agent_runtime_dispatch_reference",
         ),
         Index("ix_agent_runtime_dispatch_queue", "status", "created_at", "company_id"),
+        Index("ix_agent_runtime_dispatch_retry_lineage", "retry_of_dispatch_id", "created_at"),
     )
 
     id: Mapped[UUID] = mapped_column(
@@ -263,6 +281,9 @@ class AgentRuntimeDispatch(Base):
     )
     source_event_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("outbox_events.id", ondelete="CASCADE"), index=True
+    )
+    retry_of_dispatch_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runtime_dispatches.id", ondelete="RESTRICT"), index=True
     )
     source_type: Mapped[str] = mapped_column(String(20), index=True)
     status: Mapped[str] = mapped_column(String(20), index=True)
@@ -292,4 +313,59 @@ class AgentRuntimeDispatch(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class AgentDispatchReview(Base):
+    __tablename__ = "agent_dispatch_reviews"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "interrupted_dispatch_id",
+            name="uq_agent_dispatch_review_interrupted",
+        ),
+        UniqueConstraint(
+            "company_id", "request_idempotency_key", name="uq_agent_dispatch_review_request"
+        ),
+        UniqueConstraint(
+            "company_id", "approval_idempotency_key", name="uq_agent_dispatch_review_approval"
+        ),
+        CheckConstraint("decision IN ('close', 'retry')", name="ck_agent_dispatch_review_decision"),
+        CheckConstraint(
+            "status IN ('closed', 'pending_approval', 'approved')",
+            name="ck_agent_dispatch_review_status",
+        ),
+        Index("ix_agent_dispatch_review_queue", "company_id", "status", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    interrupted_dispatch_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_runtime_dispatches.id", ondelete="CASCADE"), index=True
+    )
+    replacement_dispatch_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runtime_dispatches.id", ondelete="SET NULL"), unique=True, index=True
+    )
+    decision: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    reason: Mapped[str] = mapped_column(String(1000))
+    request_idempotency_key: Mapped[UUID] = mapped_column(index=True)
+    approval_idempotency_key: Mapped[UUID | None] = mapped_column(index=True)
+    requested_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    approved_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
     )

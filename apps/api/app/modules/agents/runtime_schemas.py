@@ -129,7 +129,8 @@ class AgentRuntimeDispatchResponse(StrictSchema):
     schedule_id: UUID | None
     trigger_id: UUID | None
     source_event_id: UUID | None
-    source_type: Literal["schedule", "event"]
+    source_type: Literal["schedule", "event", "retry"]
+    retry_of_dispatch_id: UUID | None
     status: Literal[
         "ready",
         "blocked",
@@ -151,3 +152,28 @@ class AgentRuntimeDispatchResponse(StrictSchema):
     started_at: datetime | None
     finished_at: datetime | None
     created_at: datetime
+
+
+class AgentDispatchReviewCreate(StrictSchema):
+    decision: Literal["close", "retry"]
+    reason: str = Field(min_length=10, max_length=1000)
+    idempotency_key: UUID
+
+
+class AgentDispatchRetryApproval(StrictSchema):
+    idempotency_key: UUID
+
+
+class AgentDispatchReviewResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    interrupted_dispatch_id: UUID
+    replacement_dispatch_id: UUID | None
+    decision: Literal["close", "retry"]
+    status: Literal["closed", "pending_approval", "approved"]
+    reason: str
+    requested_by_user_id: UUID
+    approved_by_user_id: UUID | None
+    approved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime

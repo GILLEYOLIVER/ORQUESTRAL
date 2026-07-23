@@ -1716,6 +1716,160 @@
         "title": "AgentDelegationTransition",
         "type": "object"
       },
+      "AgentDispatchRetryApproval": {
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "format": "uuid",
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "AgentDispatchRetryApproval",
+        "type": "object"
+      },
+      "AgentDispatchReviewCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "close",
+              "retry"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "format": "uuid",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason",
+          "idempotency_key"
+        ],
+        "title": "AgentDispatchReviewCreate",
+        "type": "object"
+      },
+      "AgentDispatchReviewResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By User Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "close",
+              "retry"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "interrupted_dispatch_id": {
+            "format": "uuid",
+            "title": "Interrupted Dispatch Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "replacement_dispatch_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement Dispatch Id"
+          },
+          "requested_by_user_id": {
+            "format": "uuid",
+            "title": "Requested By User Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "closed",
+              "pending_approval",
+              "approved"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "interrupted_dispatch_id",
+          "replacement_dispatch_id",
+          "decision",
+          "status",
+          "reason",
+          "requested_by_user_id",
+          "approved_by_user_id",
+          "approved_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AgentDispatchReviewResponse",
+        "type": "object"
+      },
       "AgentEvaluationCaseCreate": {
         "additionalProperties": false,
         "properties": {
@@ -5509,6 +5663,18 @@
             "title": "Required Tool Keys",
             "type": "array"
           },
+          "retry_of_dispatch_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Of Dispatch Id"
+          },
           "schedule_id": {
             "anyOf": [
               {
@@ -5541,7 +5707,8 @@
           "source_type": {
             "enum": [
               "schedule",
-              "event"
+              "event",
+              "retry"
             ],
             "title": "Source Type",
             "type": "string"
@@ -5600,6 +5767,7 @@
           "trigger_id",
           "source_event_id",
           "source_type",
+          "retry_of_dispatch_id",
           "status",
           "reason_code",
           "error_code",
@@ -31293,6 +31461,166 @@
         ]
       }
     },
+    "/agents/{agent_id}/runtime-dispatch-reviews": {
+      "get": {
+        "operationId": "list_agent_dispatch_reviews_agents__agent_id__runtime_dispatch_reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentDispatchReviewResponse"
+                  },
+                  "title": "Response List Agent Dispatch Reviews Agents  Agent Id  Runtime Dispatch Reviews Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Dispatch Reviews",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runtime-dispatch-reviews/{review_id}/approve-retry": {
+      "post": {
+        "operationId": "approve_interrupted_dispatch_retry_agents__agent_id__runtime_dispatch_reviews__review_id__approve_retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Review Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentDispatchRetryApproval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Interrupted Dispatch Retry",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
     "/agents/{agent_id}/runtime-dispatches": {
       "get": {
         "operationId": "list_agent_runtime_dispatches_agents__agent_id__runtime_dispatches_get",
@@ -31360,6 +31688,94 @@
           }
         ],
         "summary": "List Agent Runtime Dispatches",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runtime-dispatches/{dispatch_id}/reviews": {
+      "post": {
+        "operationId": "review_interrupted_dispatch_agents__agent_id__runtime_dispatches__dispatch_id__reviews_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dispatch_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Dispatch Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentDispatchReviewCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Review Interrupted Dispatch",
         "tags": [
           "agents-runtime"
         ]

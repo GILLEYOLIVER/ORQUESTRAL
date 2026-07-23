@@ -10,9 +10,15 @@ from sqlalchemy import func, select, update
 from app.core.dependencies import DatabaseSession
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
+from app.modules.agents.dispatch_review_service import (
+    DispatchReviewError,
+    approve_dispatch_retry,
+    create_dispatch_review,
+)
 from app.modules.agents.models import Agent, AgentTool, AgentVersion
 from app.modules.agents.runtime_models import (
     AgentCredentialBinding,
+    AgentDispatchReview,
     AgentEventTrigger,
     AgentExecutionSchedule,
     AgentRuntimeDispatch,
@@ -21,6 +27,9 @@ from app.modules.agents.runtime_schemas import (
     AgentCredentialBindingCreate,
     AgentCredentialBindingResponse,
     AgentCredentialCatalogResponse,
+    AgentDispatchRetryApproval,
+    AgentDispatchReviewCreate,
+    AgentDispatchReviewResponse,
     AgentRuntimeDispatchResponse,
     AgentScheduleCreate,
     AgentScheduleResponse,
@@ -35,6 +44,7 @@ from app.modules.plugins.models import IntegrationCredential
 router = APIRouter(prefix="/agents", tags=["agents-runtime"])
 CanConfigureAgents = Annotated[Principal, Depends(require_permission("agents.configure"))]
 CanViewAgents = Annotated[Principal, Depends(require_permission("agents.view"))]
+CanExecuteAgents = Annotated[Principal, Depends(require_permission("agents.execute"))]
 
 
 async def _tenant_agent(database: DatabaseSession, company_id: UUID, agent_id: UUID) -> Agent:
@@ -548,3 +558,91 @@ async def list_agent_runtime_dispatches(
             .limit(100)
         )
     )
+
+
+def _raise_review_error(error: DispatchReviewError) -> None:
+    status_code = status.HTTP_404_NOT_FOUND if error.code.endswith("not_found") else status.HTTP_409_CONFLICT
+    raise HTTPException(status_code=status_code, detail=error.detail) from error
+
+
+@router.get(
+    "/{agent_id}/runtime-dispatch-reviews",
+    response_model=list[AgentDispatchReviewResponse],
+)
+async def list_agent_dispatch_reviews(
+    agent_id: UUID, principal: CanViewAgents, database: DatabaseSession
+) -> list[AgentDispatchReview]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    return list(
+        await database.scalars(
+            select(AgentDispatchReview)
+            .where(
+                AgentDispatchReview.company_id == context.company_id,
+                AgentDispatchReview.agent_id == agent_id,
+            )
+            .order_by(AgentDispatchReview.created_at.desc())
+            .limit(100)
+        )
+    )
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatches/{dispatch_id}/reviews",
+    response_model=AgentDispatchReviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def review_interrupted_dispatch(
+    agent_id: UUID,
+    dispatch_id: UUID,
+    payload: AgentDispatchReviewCreate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReview:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    try:
+        review = await create_dispatch_review(
+            database,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            dispatch_id=dispatch_id,
+            actor_user_id=context.user_id,
+            decision=payload.decision,
+            reason=payload.reason,
+            idempotency_key=payload.idempotency_key,
+        )
+    except DispatchReviewError as error:
+        _raise_review_error(error)
+    await database.commit()
+    await database.refresh(review)
+    return review
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-reviews/{review_id}/approve-retry",
+    response_model=AgentDispatchReviewResponse,
+)
+async def approve_interrupted_dispatch_retry(
+    agent_id: UUID,
+    review_id: UUID,
+    payload: AgentDispatchRetryApproval,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReview:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    try:
+        review = await approve_dispatch_retry(
+            database,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            review_id=review_id,
+            actor_user_id=context.user_id,
+            idempotency_key=payload.idempotency_key,
+        )
+    except DispatchReviewError as error:
+        _raise_review_error(error)
+    await database.commit()
+    await database.refresh(review)
+    return review

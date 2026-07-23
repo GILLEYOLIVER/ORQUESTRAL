@@ -224,3 +224,38 @@
     justify-content: flex-start;
   }
 }
+
+.dispatch-review-actions {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--warning, #b56a22) 35%, transparent);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--warning, #b56a22) 8%, white);
+}
+
+.dispatch-review-actions label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--ink, #112d29);
+  font-weight: 700;
+}
+
+.dispatch-review-actions textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.dispatch-review-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dispatch-review-state {
+  margin: 0.65rem 0 0;
+  color: var(--ink, #112d29);
+  font-weight: 700;
+}
