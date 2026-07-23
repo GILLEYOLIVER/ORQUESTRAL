@@ -333,6 +333,36 @@ async def _identity_profile(
     return cast(UUID | None, profile_id)
 
 
+class CustomerProcessingRestrictedError(ValueError):
+    """Raised when automated processing is prohibited for a customer profile."""
+
+
+async def _ensure_processing_allowed(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    profile_id: UUID,
+) -> None:
+    restricted = await database.scalar(
+        text(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM customer_processing_restrictions
+                WHERE company_id = :company_id
+                  AND profile_id = :profile_id
+                  AND status = 'active'
+            )
+            """
+        ),
+        {"company_id": company_id, "profile_id": profile_id},
+    )
+    if restricted:
+        raise CustomerProcessingRestrictedError(
+            "O processamento deste perfil está restrito por uma política de privacidade."
+        )
+
+
 async def _insert_identity(
     database: AsyncSession,
     *,
@@ -472,6 +502,11 @@ async def _consolidate_record(
             },
         )
     else:
+        await _ensure_processing_allowed(
+            database,
+            company_id=company_id,
+            profile_id=profile_id,
+        )
         await database.execute(
             text(
                 """
@@ -659,26 +694,34 @@ async def ingest_customer_records(
         errors, quality_score = validate_ingestion_record(record, rule.rules)
         profile_id: UUID | None = None
         record_status = "rejected" if errors else "accepted"
+        error_code = "quality_validation_failed" if errors else None
         if not errors:
-            profile_id = await _consolidate_record(
-                database,
-                company_id=company_id,
-                actor_user_id=actor_user_id,
-                source_id=source.id,
-                record=record,
-                quality_score=quality_score,
-            )
-            await record_customer_change(
-                database,
-                company_id=company_id,
-                actor_user_id=actor_user_id,
-                profile_id=profile_id,
-                source_id=source.id,
-                ingestion_job_id=job_id,
-                operation="upserted",
-                record=record.model_dump(mode="json"),
-            )
-            accepted += 1
+            try:
+                profile_id = await _consolidate_record(
+                    database,
+                    company_id=company_id,
+                    actor_user_id=actor_user_id,
+                    source_id=source.id,
+                    record=record,
+                    quality_score=quality_score,
+                )
+            except CustomerProcessingRestrictedError:
+                errors = ["processing_restricted"]
+                error_code = "processing_restricted"
+                record_status = "rejected"
+                rejected += 1
+            else:
+                await record_customer_change(
+                    database,
+                    company_id=company_id,
+                    actor_user_id=actor_user_id,
+                    profile_id=profile_id,
+                    source_id=source.id,
+                    ingestion_job_id=job_id,
+                    operation="upserted",
+                    record=record.model_dump(mode="json"),
+                )
+                accepted += 1
         else:
             rejected += 1
         await database.execute(
@@ -699,7 +742,7 @@ async def ingest_customer_records(
                 "source_record_id": record.source_record_id,
                 "payload_hash": payload_fingerprint(record),
                 "status": record_status,
-                "error_code": "quality_validation_failed" if errors else None,
+                "error_code": error_code,
                 "errors": json.dumps(errors),
                 "profile_id": profile_id,
             },

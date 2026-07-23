@@ -1394,3 +1394,11 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
   processamento com pacote temporario criptografado;
 - documento tecnico:
   `docs/implementation/CYCLE_86_CUSTOMER_PRIVACY_REQUESTS.md`.
+
+## Ciclo 87 — direitos do titular e restrição de processamento
+
+- Fase atual: 5 — Plataforma de dados.
+- Concluído: exportação portátil sem cache, correção canônica, restrição/liberação de processamento, auditoria sem PII e painel administrativo.
+- Migração: `20260723_0101` com RLS forçada em restrições e operações de direitos.
+- Segurança: permissão `crm.contacts.export`, lock por tenant/perfil e bloqueio de ingestão para perfis restritos.
+- Próximo passo: concluir ativação governada de segmentos e busca da plataforma de dados antes de iniciar a Fase 6.

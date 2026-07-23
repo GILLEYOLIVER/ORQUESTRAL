@@ -4,6 +4,7 @@ from app.modules.crm.customer_cdc_routes import router as customer_cdc_router
 from app.modules.crm.customer_governance_routes import router as customer_governance_router
 from app.modules.crm.customer_ingestion_routes import router as customer_ingestion_router
 from app.modules.crm.customer_privacy_routes import router as customer_privacy_router
+from app.modules.crm.customer_rights_routes import router as customer_rights_router
 from app.modules.crm.customer_sync_routes import router as customer_sync_router
 from app.modules.crm.customer_sync_scheduler_routes import (
     router as customer_sync_scheduler_router,
@@ -20,6 +21,7 @@ crm_module = ModuleDefinition(
         "crm.contacts.create",
         "crm.contacts.update",
         "crm.contacts.delete",
+        "crm.contacts.export",
         "crm.pipeline.view",
         "crm.pipeline.manage",
         "crm.opportunities.create",
@@ -33,6 +35,7 @@ crm_module = ModuleDefinition(
         customer_ingestion_router,
         customer_cdc_router,
         customer_privacy_router,
+        customer_rights_router,
         customer_sync_router,
         customer_sync_scheduler_router,
     ),
@@ -87,5 +90,6 @@ crm_module = ModuleDefinition(
         "20260723_0098",
         "20260723_0099",
         "20260723_0100",
+        "20260723_0101",
     ),
 )

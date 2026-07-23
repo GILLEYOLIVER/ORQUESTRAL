@@ -71,6 +71,12 @@ PERMISSION_CATALOG = (
         "crm.contacts.delete", "crm", "contacts.delete", "Excluir contatos do CRM"
     ),
     PermissionDefinition(
+        "crm.contacts.export",
+        "crm",
+        "contacts.export",
+        "Exportar dados pessoais governados do CRM",
+    ),
+    PermissionDefinition(
         "crm.pipeline.view", "crm", "pipeline.view", "Visualizar funis comerciais"
     ),
     PermissionDefinition(
