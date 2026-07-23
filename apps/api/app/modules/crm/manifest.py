@@ -12,13 +12,14 @@ from app.modules.crm.customer_sync_scheduler_routes import (
 )
 from app.modules.crm.routes import router
 from app.modules.crm.sales_catalog_routes import router as sales_catalog_router
+from app.modules.crm.sales_intelligence_routes import router as sales_intelligence_router
 from app.modules.crm.sales_routes import router as sales_router
 from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 
 crm_module = ModuleDefinition(
     code="crm",
     name="CRM e Vendas",
-    version="0.7.0",
+    version="0.8.0",
     permissions=(
         "crm.contacts.view",
         "crm.contacts.create",
@@ -50,6 +51,7 @@ crm_module = ModuleDefinition(
         router,
         sales_router,
         sales_catalog_router,
+        sales_intelligence_router,
         customer_governance_router,
         customer_ingestion_router,
         customer_cdc_router,
@@ -124,5 +126,7 @@ crm_module = ModuleDefinition(
         "20260723_0100",
         "20260723_0101",
         "20260723_0102",
+        "20260723_0103",
+        "20260723_0104",
     ),
 )
