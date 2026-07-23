@@ -1300,3 +1300,14 @@ desfusao humana e linhagem por atributo.
 - Resultado: 250 testes Python, 19 testes web, build, Ruff, mypy e auditoria aprovados.
 - Sonda transacional: idempotencia e reprocessamento executados no PostgreSQL e revertidos.
 - Migracao: rollback/upgrade 0093 aprovado e RLS validado.
+
+### Ciclo 80 - sincronizacao agendada e observabilidade
+
+- Implementado: conectores por empresa com fonte canonica e agenda persistente.
+- Implementado: lease exclusivo, cursor protegido, idempotencia e backoff exponencial.
+- Implementado: execucao real integrada a ingestao, pausa, retomada e metricas seguras.
+- Seguranca: nenhuma credencial, token de lease, cursor bruto ou carga retorna pela API.
+- Migracao: `20260723_0094` com RLS forcado e rollback.
+- Validacao: 253 testes Python, 19 testes web, build, Ruff, mypy, sonda
+  transacional, auditoria de seguranca e oito servicos locais aprovados.
+- Proximo passo exato: registro de adaptadores, scheduler no worker e health por provedor.
