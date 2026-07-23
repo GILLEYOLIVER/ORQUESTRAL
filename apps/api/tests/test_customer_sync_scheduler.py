@@ -57,9 +57,18 @@ def test_customer_sync_scheduler_routes_are_protected(client: TestClient) -> Non
     assert client.get("/crm/customer-data/sync/adapters").status_code == 401
     assert client.get("/crm/customer-data/sync/adapter-health").status_code == 401
     assert client.get("/crm/customer-data/sync/dispatches").status_code == 401
+    assert client.get("/crm/customer-data/sync/credential-options").status_code == 401
+    assert (
+        client.post(
+            "/crm/customer-data/sync/dispatches/00000000-0000-0000-0000-000000000001/retry"
+        ).status_code
+        == 401
+    )
     paths = client.get("/openapi.json").json()["paths"]
     assert "/crm/customer-data/sync/adapters" in paths
     assert "/crm/customer-data/sync/adapter-health" in paths
     assert "/crm/customer-data/sync/connectors/{connector_id}/health" in paths
     assert "/crm/customer-data/sync/dispatches" in paths
+    assert "/crm/customer-data/sync/credential-options" in paths
+    assert "/crm/customer-data/sync/dispatches/{dispatch_id}/retry" in paths
     assert "/crm/customer-data/sync/scheduler-summary" in paths

@@ -70,6 +70,10 @@ celery_app.conf.update(
             "task": "orkestral.customer_data.schedule_sync",
             "schedule": 60.0,
         },
+        "execute-customer-sync-dispatches-every-fifteen-seconds": {
+            "task": "orkestral.customer_data.execute_sync_dispatches",
+            "schedule": 15.0,
+        },
     },
 )
 

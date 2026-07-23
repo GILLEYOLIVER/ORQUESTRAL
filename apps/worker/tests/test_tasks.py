@@ -5,6 +5,7 @@ from pytest import MonkeyPatch
 from worker.tasks import (
     diagnostic_ping,
     dispatch_agent_runtime_task,
+    execute_customer_sync_dispatches_task,
     maintain_agent_delegations_task,
     maintain_agent_dispatch_review_sla_task,
     maintain_agent_memory_reencryption_task,
@@ -34,6 +35,31 @@ def test_customer_sync_scheduler_task_can_run_eagerly(monkeypatch: MonkeyPatch) 
         "evaluated": 3,
         "dispatched": 1,
         "blocked": 2,
+    }
+
+
+def test_customer_sync_dispatch_task_can_run_eagerly(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "worker.tasks.execute_customer_sync_dispatches_sync",
+        lambda: {
+            "companies": 1,
+            "claimed": 2,
+            "acknowledged": 1,
+            "retried": 1,
+            "dead_letter": 0,
+            "skipped": 0,
+        },
+    )
+    result = execute_customer_sync_dispatches_task.apply()
+    assert result.successful()
+    assert result.result == {
+        "status": "ok",
+        "companies": 1,
+        "claimed": 2,
+        "acknowledged": 1,
+        "retried": 1,
+        "dead_letter": 0,
+        "skipped": 0,
     }
 
 

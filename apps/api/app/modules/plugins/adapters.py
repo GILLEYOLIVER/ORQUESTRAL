@@ -19,6 +19,7 @@ from orkestral_plugin_sdk import (
     PluginValidationError,
 )
 
+from app.core.secure_http import SecureHttpError, secure_https_get
 from app.modules.plugins.managed_vault import (
     ManagedVaultResolutionError,
     ManagedVaultSecretResolver,
@@ -53,8 +54,8 @@ class HttpAdapter(BasePlugin):
         configuration: Mapping[str, Any] | None = None,
     ) -> ConnectionTestResult:
         url = str(credentials.get("base_url") or credentials.get("url") or "").strip()
-        if not url.startswith(("http://", "https://")):
-            raise PluginAdapterError("Informe uma URL HTTP ou HTTPS válida.")
+        if not url.startswith("https://"):
+            raise PluginAdapterError("Informe uma URL HTTPS válida.")
         headers = credentials.get("headers") or {}
         if not isinstance(headers, dict):
             raise PluginAdapterError("O campo headers deve ser um objeto.")
@@ -62,8 +63,15 @@ class HttpAdapter(BasePlugin):
         if api_key:
             header_name = str(credentials.get("auth_header") or "Authorization")
             headers[header_name] = api_key
-        async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
-            response = await client.get(url, headers={str(k): str(v) for k, v in headers.items()})
+        try:
+            response = await secure_https_get(
+                url,
+                headers={str(k): str(v) for k, v in headers.items()},
+                timeout_seconds=5.0,
+                max_response_bytes=65_536,
+            )
+        except SecureHttpError as exc:
+            return ConnectionTestResult(False, f"Destino HTTPS bloqueado: {exc.code}.")
         if response.status_code >= 500:
             return ConnectionTestResult(
                 False, f"O destino respondeu com HTTP {response.status_code}."

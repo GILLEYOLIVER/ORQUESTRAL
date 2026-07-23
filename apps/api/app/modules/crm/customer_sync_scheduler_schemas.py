@@ -40,12 +40,24 @@ class CustomerSyncDispatchResponse(BaseModel):
     adapter_key: str
     adapter_version: str
     schedule_slot: datetime
-    status: Literal["pending", "claimed", "acknowledged", "failed", "expired"]
+    status: Literal[
+        "pending",
+        "claimed",
+        "acknowledged",
+        "failed",
+        "expired",
+        "dead_letter",
+    ]
     attempts: int
     available_at: datetime
     error_code: str | None
+    response_status_code: int | None
+    response_bytes: int
+    records_received: int
+    has_result_fingerprint: bool
     created_at: datetime
     claimed_at: datetime | None
+    claim_expires_at: datetime | None
     completed_at: datetime | None
 
 
@@ -59,4 +71,15 @@ class CustomerSyncSchedulerSummary(BaseModel):
     dispatch_pending: int
     dispatch_claimed: int
     dispatch_failed: int
+    dispatch_dead_letter: int
     oldest_pending_at: datetime | None
+
+
+class CustomerSyncCredentialOptionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    name: str
+    plugin_code: str
+    plugin_name: str
+    expires_at: datetime | None

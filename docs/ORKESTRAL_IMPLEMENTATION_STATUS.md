@@ -1333,3 +1333,17 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Migracao: `20260723_0095`.
 - Validacao: 257 testes, 19 testes web, build web, Ruff, mypy em 237 arquivos e auditoria de seguranca aprovados.
 - Proximo passo exato: executor HTTP seguro para o adaptador REST, com protecao SSRF, claim atomico, retry, dead-letter queue e confirmacao real de resultado.
+## Atualizacao - ciclo 82: execucao REST segura e fila de falhas
+
+Situacao: concluido e validado localmente em 23 de julho de 2026.
+
+- Execucao HTTPS real com DNS e socket presos a enderecos publicos validados.
+- Bloqueio de SSRF, DNS rebinding, redirecionamento, compressao e respostas sem limite.
+- Claim atomico, expiracao, retentativa, backoff e `dead_letter`.
+- Credenciais descriptografadas somente no worker e nunca devolvidas ao frontend.
+- Reenvio administrativo auditado e observabilidade baseada apenas em metadados seguros.
+- Migracao: `20260723_0096`.
+- Validacao: 269 testes, 19 testes web, build Vite, Ruff, mypy em 240
+  arquivos e auditoria de seguranca aprovados.
+- Migracao validada em upgrade, downgrade para `0095` e novo upgrade para `0096`.
+- Proximo passo: ingestao incremental, checkpoints e Change Data Capture governado.

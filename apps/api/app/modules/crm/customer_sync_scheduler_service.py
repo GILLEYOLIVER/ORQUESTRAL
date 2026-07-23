@@ -22,6 +22,7 @@ from app.modules.crm.customer_sync_adapters import (
 from app.modules.crm.customer_sync_scheduler_schemas import (
     CustomerSyncAdapterHealthResponse,
     CustomerSyncAdapterResponse,
+    CustomerSyncCredentialOptionResponse,
     CustomerSyncDispatchResponse,
     CustomerSyncSchedulerSummary,
 )
@@ -110,8 +111,13 @@ def _dispatch_response(row: Any) -> CustomerSyncDispatchResponse:
         attempts=row.attempts,
         available_at=row.available_at,
         error_code=row.error_code,
+        response_status_code=row.response_status_code,
+        response_bytes=row.response_bytes,
+        records_received=row.records_received,
+        has_result_fingerprint=row.result_fingerprint is not None,
         created_at=row.created_at,
         claimed_at=row.claimed_at,
+        claim_expires_at=row.claim_expires_at,
         completed_at=row.completed_at,
     )
 
@@ -266,7 +272,8 @@ async def list_sync_dispatches(
                 SELECT
                     id, connector_id, adapter_key, adapter_version, schedule_slot,
                     status, attempts, available_at, error_code, created_at,
-                    claimed_at, completed_at
+                    response_status_code, response_bytes, records_received,
+                    result_fingerprint, claimed_at, claim_expires_at, completed_at
                 FROM customer_sync_dispatches
                 WHERE company_id = :company_id
                 ORDER BY created_at DESC
@@ -314,6 +321,9 @@ async def sync_scheduler_summary(
                     COUNT(*) FILTER (WHERE status = 'pending')::integer AS dispatch_pending,
                     COUNT(*) FILTER (WHERE status = 'claimed')::integer AS dispatch_claimed,
                     COUNT(*) FILTER (WHERE status = 'failed')::integer AS dispatch_failed,
+                    COUNT(*) FILTER (
+                        WHERE status = 'dead_letter'
+                    )::integer AS dispatch_dead_letter,
                     MIN(created_at) FILTER (WHERE status = 'pending') AS oldest_pending_at
                 FROM customer_sync_dispatches
                 WHERE company_id = :company_id
@@ -323,6 +333,91 @@ async def sync_scheduler_summary(
         )
     ).one()
     return CustomerSyncSchedulerSummary(**row._mapping)
+
+
+async def list_sync_credential_options(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+) -> list[CustomerSyncCredentialOptionResponse]:
+    rows = (
+        await database.execute(
+            text(
+                """
+                SELECT
+                    credential.id,
+                    credential.name,
+                    plugin.code AS plugin_code,
+                    plugin.name AS plugin_name,
+                    credential.expires_at
+                FROM integration_credentials AS credential
+                JOIN plugins AS plugin ON plugin.id = credential.plugin_id
+                JOIN company_plugins AS company_plugin
+                  ON company_plugin.company_id = credential.company_id
+                 AND company_plugin.plugin_id = credential.plugin_id
+                WHERE credential.company_id = :company_id
+                  AND credential.status = 'active'
+                  AND plugin.code = 'rest_api'
+                  AND company_plugin.status = 'active'
+                  AND (
+                      credential.expires_at IS NULL
+                      OR credential.expires_at > now()
+                  )
+                ORDER BY credential.name
+                """
+            ),
+            {"company_id": company_id},
+        )
+    ).all()
+    return [CustomerSyncCredentialOptionResponse(**row._mapping) for row in rows]
+
+
+async def requeue_sync_dispatch(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    actor_user_id: UUID,
+    dispatch_id: UUID,
+) -> CustomerSyncDispatchResponse:
+    updated = (
+        await database.execute(
+            text(
+                """
+                UPDATE customer_sync_dispatches
+                SET
+                    status = 'pending',
+                    attempts = 0,
+                    available_at = now(),
+                    claim_fingerprint = NULL,
+                    claim_expires_at = NULL,
+                    error_code = NULL,
+                    response_status_code = NULL,
+                    response_bytes = 0,
+                    records_received = 0,
+                    result_fingerprint = NULL,
+                    completed_at = NULL
+                WHERE company_id = :company_id
+                  AND id = :dispatch_id
+                  AND status IN ('failed', 'dead_letter')
+                RETURNING id
+                """
+            ),
+            {"company_id": company_id, "dispatch_id": dispatch_id},
+        )
+    ).scalar_one_or_none()
+    if updated is None:
+        raise ValueError("Somente despachos com falha podem ser reenviados.")
+    await _governance_event(
+        database,
+        company_id=company_id,
+        actor_user_id=actor_user_id,
+        event_type="customer.sync_dispatch.requeued",
+        subject_type="sync_dispatch",
+        subject_id=dispatch_id,
+        payload={"reason": "manual_retry_after_review"},
+    )
+    rows = await list_sync_dispatches(database, company_id=company_id, limit=200)
+    return next(row for row in rows if row.id == dispatch_id)
 
 
 async def _schedule_company(
