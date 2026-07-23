@@ -1418,3 +1418,15 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - RLS forçada, permissões granulares, auditoria e eventos sem PII bruta.
 - Migração: `20260723_0103`.
 - Próximo passo: produtos, tabelas de preços, propostas e inteligência comercial.
+# Atualização - Ciclo 90
+
+- Fase atual: 6 - Vendas empresariais.
+- Catálogo comercial reutiliza produtos do estoque.
+- Tabelas de preços versionadas e publicáveis.
+- Propostas auditáveis com snapshot de itens e cálculos decimais.
+- Migração reversível: `20260723_0104`.
+- Validação: backend `267 passed`, frontend `19 passed`, build, Ruff, MyPy e auditoria de segurança aprovados.
+- Smoke HTTP aprovado com proposta publicada e aceita por `R$ 2.250,90`.
+- Próximo passo: saúde explicável da oportunidade, previsão comercial e recomendação de próxima ação.
+- Migração: `20260723_0104`.
+- Próximo passo: interface, previsão e saúde explicável das oportunidades.
