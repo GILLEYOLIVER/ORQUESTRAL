@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
+from app.core.database import apply_tenant_database_context
 from app.core.dependencies import DatabaseSession, RequestSettings
 from app.core.security import InvalidAccessTokenError, decode_access_token, utc_now
 from app.modules.authentication.models import AuthSession
@@ -114,6 +115,13 @@ async def get_current_principal(
                         .where(RolePermission.role_id == membership.role_id)
                     )
                 )
+
+    if company is not None:
+        await apply_tenant_database_context(
+            database,
+            company_id=company.id,
+            access_mode="read_only" if session.access_mode == "read_only" else "standard",
+        )
 
     return Principal(
         user=user,

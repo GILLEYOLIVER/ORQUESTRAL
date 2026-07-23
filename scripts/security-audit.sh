@@ -10,6 +10,9 @@ trap 'rm -f "$requirements"' EXIT
 printf '%s\n' 'Verificando segredos versionados...'
 bash scripts/check-secrets.sh
 
+printf '%s\n' 'Verificando a fronteira de segredos do frontend...'
+bash scripts/check-frontend-secret-boundary.sh
+
 printf '%s\n' 'Verificando pinning imutavel das GitHub Actions...'
 unpinned="$({
   grep -REn 'uses:[[:space:]]+[^[:space:]]+@' .github/workflows || true

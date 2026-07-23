@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Callable, Iterator
+from typing import get_args
 
 from fastapi.routing import APIRoute
+from pydantic import BaseModel
 
 import app.core.model_registry  # noqa: F401
 from app.core.database import Base
@@ -52,6 +54,23 @@ PUBLIC_READ_ROUTES = frozenset(
     }
 )
 
+FORBIDDEN_RESPONSE_FIELDS = frozenset(
+    {
+        "api_key",
+        "api_token",
+        "client_secret",
+        "encrypted_credentials",
+        "encrypted_payload",
+        "encryption_key",
+        "password",
+        "password_hash",
+        "private_key",
+        "refresh_token",
+        "refresh_token_hash",
+        "token_hash",
+    }
+)
+
 
 def _application_routes() -> Iterator[APIRoute]:
     application = create_app()
@@ -75,6 +94,20 @@ def _dependency_calls(route: APIRoute) -> list[Callable[..., object]]:
 
 def _dependency_names(route: APIRoute) -> set[str]:
     return {getattr(call, "__name__", type(call).__name__) for call in _dependency_calls(route)}
+
+
+def _response_models(annotation: object) -> set[type[BaseModel]]:
+    models: set[type[BaseModel]] = set()
+    candidates = [annotation]
+    while candidates:
+        candidate = candidates.pop()
+        if isinstance(candidate, type) and issubclass(candidate, BaseModel):
+            if candidate in models:
+                continue
+            models.add(candidate)
+            candidates.extend(field.annotation for field in candidate.model_fields.values())
+        candidates.extend(get_args(candidate))
+    return models
 
 
 def test_every_business_table_has_an_explicit_tenant_scope() -> None:
@@ -164,3 +197,18 @@ def test_non_public_reads_require_an_authenticated_principal() -> None:
             failures.append(f"GET {route.path}: sem usuario autenticado")
 
     assert not failures, "\n".join(failures)
+
+
+def test_api_response_contracts_never_publish_secret_material() -> None:
+    failures: list[str] = []
+    for route in _application_routes():
+        if route.response_model is None:
+            continue
+        for model in _response_models(route.response_model):
+            exposed = FORBIDDEN_RESPONSE_FIELDS & model.model_fields.keys()
+            if exposed:
+                failures.append(
+                    f"{route.path} ({model.__name__}): {sorted(exposed)}"
+                )
+
+    assert not failures, "Campos sensíveis em respostas da API:\n" + "\n".join(failures)
