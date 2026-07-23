@@ -12,6 +12,7 @@ import { CompaniesPage } from "./pages/CompaniesPage";
 import { CompanySelectionPage } from "./pages/CompanySelectionPage";
 import { CompanyUsersPage } from "./pages/CompanyUsersPage";
 import { CRMContactsPage } from "./pages/CRMContactsPage";
+import { CustomerDataGovernancePage } from "./pages/CustomerDataGovernancePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ErrorPage } from "./pages/ErrorPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -237,6 +238,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="crm" permission="crm.contacts.view">
             <CRMContactsPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "crm/governanca-de-dados",
+        element: (
+          <ModuleRoute moduleCode="crm" permission="crm.contacts.view">
+            <CustomerDataGovernancePage />
           </ModuleRoute>
         ),
       },

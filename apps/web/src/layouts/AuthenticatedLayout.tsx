@@ -16,6 +16,7 @@ import {
   Megaphone,
   PackageOpen,
   RadioTower,
+  ScanSearch,
   ShieldCheck,
   UserRoundCog,
   UserRound,
@@ -77,6 +78,17 @@ export function AuthenticatedLayout({
               {attentionCount ? (
                 <span className="sidebar__badge">{attentionCount}</span>
               ) : null}
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("crm.contacts.view") &&
+          isModuleActive(modules.data, "crm") ? (
+            <NavLink
+              className="sidebar__link"
+              to="/app/crm/governanca-de-dados"
+            >
+              <ScanSearch size={18} />
+              Qualidade de dados
             </NavLink>
           ) : null}
           {!preview &&

@@ -47,3 +47,9 @@ identidade não fazem parte dos schemas públicos.
 Os próximos recortes acrescentarão regras de correspondência versionadas,
 decisão humana de fusão e desfusão, linhagem por atributo, ingestão incremental,
 qualidade configurável, retenção, anonimização e ativação autorizada.
+## Correspondencia e governanca
+
+O Ciclo 78 acrescenta regras versionadas de correspondencia, fila de revisao humana,
+fusao reversivel e linhagem de campo por fingerprint. A plataforma nao executa
+fusoes automaticamente e nao armazena uma segunda copia do valor sensivel na
+trilha de origem.
