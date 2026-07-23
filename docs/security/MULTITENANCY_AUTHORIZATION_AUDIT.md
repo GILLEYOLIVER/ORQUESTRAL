@@ -10,7 +10,12 @@ Verificar se dados empresariais, rotas e permissoes do Orkestral possuem limites
 
 O isolamento atual e consistente no nivel da aplicacao: tabelas empresariais diretas usam `company_id`, rotas filtram pelo contexto autenticado e operacoes administrativas exigem permissoes. O ciclo adiciona contratos automaticos que impedem novos modelos ou rotas de escaparem silenciosamente dessas regras.
 
-A defesa ainda nao atingiu o nivel maximo. Relacoes entre registros empresariais normalmente usam uma chave estrangeira pelo identificador do registro e uma coluna `company_id` separada. A aplicacao valida os dois lados, mas o banco ainda nao possui chaves compostas em todos esses relacionamentos. PostgreSQL RLS tambem nao esta ativo. Esses pontos permanecem como defesa em profundidade planejada, nao como pretexto para afirmar seguranca absoluta.
+A defesa agora inclui PostgreSQL RLS em todas as tabelas com `company_id` e nas
+duas associacoes protegidas pelo pai. Relacoes entre registros empresariais
+normalmente ainda usam uma chave estrangeira pelo identificador e uma coluna
+`company_id` separada. A aplicacao valida os dois lados, mas o banco ainda nao
+possui chaves compostas em todos esses relacionamentos. Esse ponto permanece
+como defesa em profundidade planejada, sem afirmar seguranca absoluta.
 
 ## Contrato das tabelas
 
@@ -75,14 +80,14 @@ A Empresa A tenta consultar e excluir esses identificadores. O resultado exigido
 | Nova rota de escrita sem permissao                         | Critica    | Mitigado neste ciclo | Contrato automatico de dependencias                                |
 | Codigo de permissao inexistente no catalogo                | Alta       | Mitigado neste ciclo | Comparacao automatica rota versus catalogo                         |
 | Chave estrangeira entre tenants sem composicao por empresa | Alta       | Parcial              | Validacao na aplicacao; planejar constraints compostas por dominio |
-| Ausencia de PostgreSQL RLS                                 | Alta       | Planejado            | ADR, prototipo, testes de worker/admin e medicao antes de ativar   |
+| Ausencia de PostgreSQL RLS                                 | Alta       | Mitigado no ciclo 74 | Papeis transacionais, FORCE RLS e testes SQL negativos             |
 | Cobertura negativa ainda nao inclui todo endpoint          | Media      | Parcial              | Expandir matriz a cada ciclo de dominio                            |
 | Administrador de plataforma com alto privilegio            | Alta       | Controlado           | Auditoria, menor privilegio, MFA/SSO e segregacao futura           |
 
 ## Proximas melhorias obrigatorias
 
-1. Criar ADR para estrategia de chaves compostas e RLS.
-2. Implementar contexto de tenant transacional e negar consultas sem contexto.
+1. Separar credenciais PostgreSQL de migracao, API e worker.
+2. Adicionar chaves compostas por tenant nos relacionamentos de maior risco.
 3. Expandir testes negativos para conhecimento, estoque, financeiro, RH, analytics, plugins, billing e workflows.
 4. Adicionar autorizacao por registro e por campo na plataforma de metadados.
 5. Aplicar politica de retencao e eliminacao verificavel por dominio.
@@ -92,5 +97,6 @@ A Empresa A tenta consultar e excluir esses identificadores. O resultado exigido
 
 - `apps/api/tests/test_enterprise_security_contracts.py`
 - `tests/integration/test_enterprise_tenant_boundaries.py`
+- `tests/integration/test_postgresql_rls_penetration.py`
 - `tests/integration/test_support_module.py`
 - testes existentes de autenticacao, autorizacao, CRM e eliminacao de empresa.

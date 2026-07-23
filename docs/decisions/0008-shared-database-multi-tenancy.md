@@ -16,7 +16,8 @@ Esta opção reduz custo operacional, simplifica migrações e permite validar o
 - chaves e índices compostos devem incluir o tenant quando houver risco de colisão;
 - testes de integração devem tentar acesso cruzado por ID;
 - jobs, buscas vetoriais, auditoria e exportações mantêm o filtro de tenant;
-- RLS no PostgreSQL será avaliado antes do gate de produção.
+- RLS no PostgreSQL é aplicado por papéis transacionais conforme o ADR 0010,
+  mantendo os filtros da aplicação como primeira barreira.
 
 ## Evolução
 

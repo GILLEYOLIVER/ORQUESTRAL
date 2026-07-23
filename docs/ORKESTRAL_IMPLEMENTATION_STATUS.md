@@ -1161,3 +1161,35 @@ produtivos permanecem sem erros de tipagem.
 
 **Proximo passo exato:** adicionar multiplos turnos semanais e calendarios de
 feriados, com validacao de sobreposicao e cobertura minima antes da publicacao.
+
+## Atualizacao - Ciclo 74
+
+**Fase atual:** fundacao de seguranca empresarial aplicada transversalmente.
+
+**Concluido:**
+
+- papeis PostgreSQL separados para runtime e somente leitura;
+- RLS forcado em todas as tabelas com `company_id`;
+- associacoes CRM e RBAC protegidas pelo tenant do pai;
+- contexto de tenant transacional reaplicado depois de commit e rollback;
+- bloqueio de leitura e escrita cruzada diretamente no banco;
+- testes ofensivos controlados de IDOR, mass assignment, SQL injection e
+  cabecalho de empresa forjado;
+- contrato contra campos sensiveis em respostas da API;
+- allowlist de variaveis publicas do Vite;
+- proibicao de tokens persistentes no armazenamento do navegador;
+- sonda sintetica de segredo e varredura do bundle compilado;
+- migracao Alembic `20260722_0089` reversivel.
+
+**Risco residual:** migracoes e workers ainda compartilham a credencial
+administrativa do banco; a proxima evolucao de seguranca deve separar esses
+papeis de login e seus privilegios.
+
+**Validacao:** 216 testes de API e worker, integracoes completas com duas novas
+sondas ofensivas, 19 testes de interface e 7 jornadas E2E aprovados; 2 E2E
+condicionais ignorados. Build, lint, tipagem de 224 arquivos, auditoria de
+dependencias/segredos e downgrade/upgrade controlado da migracao foram
+aprovados. Os oito servicos locais voltaram saudaveis.
+
+**Proximo passo exato:** separar credenciais PostgreSQL de migracao, API e
+worker e, em seguida, retomar multiplos turnos e calendarios de feriados.
