@@ -1287,3 +1287,16 @@ desfusao humana e linhagem por atributo.
 - Resultado: 246 testes Python, 19 testes web, build, Ruff, mypy e auditoria aprovados.
 - Sonda transacional: fusao e reversao reais executadas no PostgreSQL e totalmente revertidas.
 - Migracao: rollback/upgrade 0092 aprovado e RLS validado nas novas tabelas.
+### Ciclo 79 - ingestao e qualidade
+
+- Implementado: jobs idempotentes em lote e incrementais.
+- Implementado: regras de qualidade versionadas e publicaveis.
+- Implementado: fila de erros sem carga bruta e reprocessamento auditado.
+- Seguranca: RLS forcado e fingerprints para carga, identidades e linhagem.
+- Proximo passo exato: conectores agendados, cursores e observabilidade de sincronizacao.
+
+### Validacao do Ciclo 79
+
+- Resultado: 250 testes Python, 19 testes web, build, Ruff, mypy e auditoria aprovados.
+- Sonda transacional: idempotencia e reprocessamento executados no PostgreSQL e revertidos.
+- Migracao: rollback/upgrade 0093 aprovado e RLS validado.

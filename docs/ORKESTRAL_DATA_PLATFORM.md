@@ -53,3 +53,9 @@ O Ciclo 78 acrescenta regras versionadas de correspondencia, fila de revisao hum
 fusao reversivel e linhagem de campo por fingerprint. A plataforma nao executa
 fusoes automaticamente e nao armazena uma segunda copia do valor sensivel na
 trilha de origem.
+## Ingestao governada
+
+O Ciclo 79 implementa entrada em lote e incremental com idempotencia, regras
+de qualidade versionadas e fila de erros sem persistir a carga sensivel. Os
+registros aceitos atualizam o perfil canonico, identidades e linhagem na mesma
+transacao.
