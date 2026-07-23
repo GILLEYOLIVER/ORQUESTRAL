@@ -90,6 +90,7 @@
 }
 .agent-runtime-form input,
 .agent-runtime-form textarea,
+.agent-runtime-form select,
 .agent-runtime-binding-form input,
 .agent-runtime-binding-form select {
   min-height: 2.75rem;
@@ -172,6 +173,27 @@
   padding: 0.65rem;
   border-radius: 0.65rem;
   background: #eef2f1;
+}
+.agent-runtime-error {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d88f83;
+  border-radius: 0.65rem;
+  background: #fff1ed;
+  color: #7c291f;
+  font-weight: 700;
+}
+.runtime-dot-processing,
+.runtime-dot-awaiting_approval {
+  background: #c98224;
+}
+.runtime-dot-simulated {
+  background: #5574a6;
+}
+.runtime-dot-completed {
+  background: #238269;
+}
+.runtime-dot-failed {
+  background: #b53f32;
 }
 .agent-runtime-empty {
   min-height: 10rem;

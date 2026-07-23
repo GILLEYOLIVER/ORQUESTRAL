@@ -6,6 +6,7 @@ import {
   useAgentRuntime,
   useAgentRuntimeActions,
 } from "./useAgentRuntime";
+import { parseRuntimeToolArguments } from "./runtimeToolArguments";
 import "./agent-runtime.css";
 
 const statusLabels: Record<RuntimeStatus, string> = {
@@ -18,6 +19,17 @@ const blockReasons: Record<string, string> = {
   tool_unavailable: "Ferramenta não habilitada",
   credential_binding_missing: "Credencial ainda não vinculada",
   credential_unavailable: "Credencial expirada ou revogada",
+  execution_interrupted_manual_review:
+    "Execução interrompida; revise antes de tentar novamente",
+};
+const dispatchLabels: Record<string, string> = {
+  ready: "Pronto",
+  blocked: "Bloqueado",
+  processing: "Em execução",
+  awaiting_approval: "Aguardando aprovação",
+  simulated: "Simulado",
+  completed: "Concluído",
+  failed: "Falhou",
 };
 
 function toolKeys(value: string) {
@@ -45,10 +57,20 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
   const [scheduleObjective, setScheduleObjective] = useState("");
   const [scheduleCadence, setScheduleCadence] = useState(60);
   const [scheduleTools, setScheduleTools] = useState("");
+  const [scheduleMode, setScheduleMode] = useState<"shadow" | "live">(
+    "shadow",
+  );
+  const [scheduleCanary, setScheduleCanary] = useState(0);
+  const [scheduleArguments, setScheduleArguments] = useState("{}");
+  const [scheduleArgumentsError, setScheduleArgumentsError] = useState("");
   const [triggerName, setTriggerName] = useState("");
   const [triggerEvent, setTriggerEvent] = useState("");
   const [triggerObjective, setTriggerObjective] = useState("");
   const [triggerTools, setTriggerTools] = useState("");
+  const [triggerMode, setTriggerMode] = useState<"shadow" | "live">("shadow");
+  const [triggerCanary, setTriggerCanary] = useState(0);
+  const [triggerArguments, setTriggerArguments] = useState("{}");
+  const [triggerArgumentsError, setTriggerArgumentsError] = useState("");
   const [bindingTool, setBindingTool] = useState("");
   const [bindingCredential, setBindingCredential] = useState("");
   const usableCredentials = useMemo(
@@ -71,19 +93,39 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
 
   const submitSchedule = (event: FormEvent) => {
     event.preventDefault();
+    const requiredToolKeys = toolKeys(scheduleTools);
+    let toolArguments: Record<string, Record<string, unknown>>;
+    try {
+      toolArguments = parseRuntimeToolArguments(
+        scheduleArguments,
+        requiredToolKeys,
+      );
+      setScheduleArgumentsError("");
+    } catch (error) {
+      setScheduleArgumentsError(
+        error instanceof Error ? error.message : "JSON inválido.",
+      );
+      return;
+    }
     actions.createSchedule.mutate(
       {
         schedule_key: `agenda-${Date.now()}`,
         name: scheduleName,
         objective: scheduleObjective,
         cadence_minutes: scheduleCadence,
-        required_tool_keys: toolKeys(scheduleTools),
+        required_tool_keys: requiredToolKeys,
+        tool_arguments: toolArguments,
+        execution_mode: scheduleMode,
+        canary_percentage: scheduleMode === "shadow" ? 0 : scheduleCanary,
       },
       {
         onSuccess: () => {
           setScheduleName("");
           setScheduleObjective("");
           setScheduleTools("");
+          setScheduleMode("shadow");
+          setScheduleCanary(0);
+          setScheduleArguments("{}");
         },
       },
     );
@@ -91,6 +133,17 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
 
   const submitTrigger = (event: FormEvent) => {
     event.preventDefault();
+    const requiredToolKeys = toolKeys(triggerTools);
+    let toolArguments: Record<string, Record<string, unknown>>;
+    try {
+      toolArguments = parseRuntimeToolArguments(triggerArguments, requiredToolKeys);
+      setTriggerArgumentsError("");
+    } catch (error) {
+      setTriggerArgumentsError(
+        error instanceof Error ? error.message : "JSON inválido.",
+      );
+      return;
+    }
     actions.createTrigger.mutate(
       {
         trigger_key: `evento-${Date.now()}`,
@@ -99,7 +152,10 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
         min_event_version: 1,
         max_event_version: null,
         objective: triggerObjective,
-        required_tool_keys: toolKeys(triggerTools),
+        required_tool_keys: requiredToolKeys,
+        tool_arguments: toolArguments,
+        execution_mode: triggerMode,
+        canary_percentage: triggerMode === "shadow" ? 0 : triggerCanary,
       },
       {
         onSuccess: () => {
@@ -107,6 +163,9 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
           setTriggerEvent("");
           setTriggerObjective("");
           setTriggerTools("");
+          setTriggerMode("shadow");
+          setTriggerCanary(0);
+          setTriggerArguments("{}");
         },
       },
     );
@@ -140,6 +199,11 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                     A cada {item.cadence_minutes} min · versão {item.version}
                   </small>
                   <small>Próxima: {readableDate(item.next_run_at)}</small>
+                  <small>
+                    {item.execution_mode === "shadow"
+                      ? "Modo sombra, sem efeitos externos"
+                      : `Modo ao vivo · canary ${item.canary_percentage}%`}
+                  </small>
                 </div>
                 <div className="agent-runtime-actions">
                   <span
@@ -211,6 +275,48 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                   onChange={(event) => setScheduleTools(event.target.value)}
                 />
               </label>
+              <label>
+                Modo de execução
+                <select
+                  value={scheduleMode}
+                  onChange={(event) =>
+                    setScheduleMode(event.target.value as "shadow" | "live")
+                  }
+                >
+                  <option value="shadow">Sombra, somente simular</option>
+                  <option value="live">Ao vivo, com canary controlado</option>
+                </select>
+              </label>
+              {scheduleMode === "live" ? (
+                <label>
+                  Percentual canary ao vivo
+                  <input
+                    min={0}
+                    max={100}
+                    type="number"
+                    value={scheduleCanary}
+                    onChange={(event) =>
+                      setScheduleCanary(Number(event.target.value))
+                    }
+                  />
+                </label>
+              ) : null}
+              <label>
+                Argumentos por ferramenta em JSON
+                <textarea
+                  spellCheck={false}
+                  value={scheduleArguments}
+                  onChange={(event) => setScheduleArguments(event.target.value)}
+                />
+                <small>
+                  Exemplo: {`{"orkestral.company.summary": {}}`}
+                </small>
+              </label>
+              {scheduleArgumentsError ? (
+                <p className="agent-runtime-error" role="alert">
+                  {scheduleArgumentsError}
+                </p>
+              ) : null}
               <button disabled={actions.createSchedule.isPending} type="submit">
                 Criar agenda em rascunho
               </button>
@@ -231,6 +337,11 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                   <strong>{item.name}</strong>
                   <small>
                     {item.event_type} · versão {item.version}
+                  </small>
+                  <small>
+                    {item.execution_mode === "shadow"
+                      ? "Modo sombra, sem efeitos externos"
+                      : `Modo ao vivo · canary ${item.canary_percentage}%`}
                   </small>
                 </div>
                 <div className="agent-runtime-actions">
@@ -299,6 +410,45 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                   onChange={(event) => setTriggerTools(event.target.value)}
                 />
               </label>
+              <label>
+                Modo de execução
+                <select
+                  value={triggerMode}
+                  onChange={(event) =>
+                    setTriggerMode(event.target.value as "shadow" | "live")
+                  }
+                >
+                  <option value="shadow">Sombra, somente simular</option>
+                  <option value="live">Ao vivo, com canary controlado</option>
+                </select>
+              </label>
+              {triggerMode === "live" ? (
+                <label>
+                  Percentual canary ao vivo
+                  <input
+                    min={0}
+                    max={100}
+                    type="number"
+                    value={triggerCanary}
+                    onChange={(event) =>
+                      setTriggerCanary(Number(event.target.value))
+                    }
+                  />
+                </label>
+              ) : null}
+              <label>
+                Argumentos por ferramenta em JSON
+                <textarea
+                  spellCheck={false}
+                  value={triggerArguments}
+                  onChange={(event) => setTriggerArguments(event.target.value)}
+                />
+              </label>
+              {triggerArgumentsError ? (
+                <p className="agent-runtime-error" role="alert">
+                  {triggerArgumentsError}
+                </p>
+              ) : null}
               <button disabled={actions.createTrigger.isPending} type="submit">
                 Criar gatilho em rascunho
               </button>
@@ -389,10 +539,14 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
               <div>
                 <strong>
                   {item.source_type === "schedule" ? "Agenda" : "Evento"} ·{" "}
-                  {item.status === "ready" ? "pronto" : "bloqueado"}
+                  {dispatchLabels[item.status] ?? item.status}
                 </strong>
                 <small>
                   {readableDate(item.scheduled_for)}
+                  {` · ${item.execution_mode === "shadow" ? "sombra" : "ao vivo"}`}
+                  {item.attempt_count > 0
+                    ? ` · tentativa ${item.attempt_count}`
+                    : ""}
                   {item.reason_code
                     ? ` · ${blockReasons[item.reason_code] ?? item.reason_code}`
                     : ""}

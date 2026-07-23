@@ -14,8 +14,11 @@ from app.core.resources import create_resources
 from app.core.security import hash_password
 from app.main import create_app
 from app.modules.agents.dispatch_execution import execute_ready_agent_dispatches
-from app.modules.agents.models import AgentRun, AgentRunStep
-from app.modules.agents.runtime_models import AgentExecutionSchedule
+from app.modules.agents.models import AgentBudget, AgentRun, AgentRunStep
+from app.modules.agents.runtime_models import (
+    AgentExecutionSchedule,
+    AgentRuntimeDispatch,
+)
 from app.modules.agents.runtime_service import maintain_agent_runtime
 from app.modules.authorization.models import AuthorizationAuditEvent
 from app.modules.authorization.service import ensure_company_system_roles
@@ -180,6 +183,90 @@ async def _make_schedule_due(settings: Settings, schedule_id: UUID) -> None:
         await resources.close()
 
 
+async def _make_dispatch_stale(settings: Settings, dispatch_id: UUID) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            dispatch = await database.get(AgentRuntimeDispatch, dispatch_id)
+            assert dispatch is not None
+            run = await database.get(AgentRun, dispatch.agent_run_id)
+            assert run is not None
+            budget = await database.scalar(
+                select(AgentBudget).where(
+                    AgentBudget.company_id == dispatch.company_id,
+                    AgentBudget.agent_id == dispatch.agent_id,
+                )
+            )
+            assert budget is not None
+            interrupted_at = datetime.now(UTC) - timedelta(minutes=20)
+            dispatch.status = "processing"
+            dispatch.started_at = interrupted_at
+            dispatch.finished_at = None
+            dispatch.reason_code = None
+            dispatch.error_code = None
+            dispatch.reserved_microunits = 123
+            run.status = "running"
+            run.started_at = interrupted_at
+            run.finished_at = None
+            run.error_code = None
+            budget.reserved_microunits += 123
+            await database.commit()
+    finally:
+        await resources.close()
+
+
+async def _assert_interrupted_dispatch_reconciled(
+    settings: Settings, *, dispatch_id: UUID, run_id: UUID
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            dispatch = await database.get(AgentRuntimeDispatch, dispatch_id)
+            run = await database.get(AgentRun, run_id)
+            assert dispatch is not None
+            assert run is not None
+            assert dispatch.status == "failed"
+            assert dispatch.error_code == "execution_interrupted_manual_review"
+            assert dispatch.reserved_microunits == 0
+            assert run.status == "failed"
+            assert run.error_code == "execution_interrupted_manual_review"
+            budget = await database.scalar(
+                select(AgentBudget).where(
+                    AgentBudget.company_id == dispatch.company_id,
+                    AgentBudget.agent_id == dispatch.agent_id,
+                )
+            )
+            assert budget is not None
+            assert budget.reserved_microunits == 0
+            reconciliation_step = await database.scalar(
+                select(AgentRunStep).where(
+                    AgentRunStep.agent_run_id == run_id,
+                    AgentRunStep.summary_code == "dispatch.interrupted.manual_review",
+                )
+            )
+            assert reconciliation_step is not None
+            audit = await database.scalar(
+                select(AuthorizationAuditEvent).where(
+                    AuthorizationAuditEvent.company_id == dispatch.company_id,
+                    AuthorizationAuditEvent.action == "agent.dispatch.interrupted",
+                    AuthorizationAuditEvent.target_id == str(dispatch_id),
+                )
+            )
+            assert audit is not None
+            event = await database.scalar(
+                select(OutboxEvent).where(
+                    OutboxEvent.company_id == dispatch.company_id,
+                    OutboxEvent.event_type == "agent.dispatch.interrupted",
+                    OutboxEvent.payload["dispatch_id"].as_string()
+                    == str(dispatch_id),
+                )
+            )
+            assert event is not None
+            assert event.payload["retry_policy"] == "manual_review_required"
+    finally:
+        await resources.close()
+
+
 @pytest.mark.integration
 def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() -> None:
     settings = Settings(app_env="testing")
@@ -299,6 +386,22 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     foreign_company_id=identity.company_ids[0],
                     dispatch_id=UUID(dispatch["id"]),
                     run_id=UUID(dispatch["agent_run_id"]),
+                )
+            )
+            dispatch_id = UUID(dispatch["id"])
+            run_id = UUID(dispatch["agent_run_id"])
+            asyncio.run(_make_dispatch_stale(settings, dispatch_id))
+            reconciliation_result = asyncio.run(
+                execute_ready_agent_dispatches(settings=settings, limit=20)
+            )
+            assert reconciliation_result["reconciled"] == 1
+            assert reconciliation_result["claimed"] == 0
+            assert reconciliation_result["failed"] == 1
+            asyncio.run(
+                _assert_interrupted_dispatch_reconciled(
+                    settings,
+                    dispatch_id=dispatch_id,
+                    run_id=run_id,
                 )
             )
     finally:

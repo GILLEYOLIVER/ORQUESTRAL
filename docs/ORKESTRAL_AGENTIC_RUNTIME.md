@@ -131,3 +131,17 @@ versao, responsavel, ferramentas e argumentos, aplica permissao, orcamento, auto
 politica de aprovacao, e somente entao permite uma ferramenta real. O padrao e modo sombra;
 liberacao real exige `live` e percentual canario explicito. Cada decisao gera auditoria,
 evento de dominio e passos operacionais sem expor raciocinio interno ou segredos.
+
+## Ciclo 68 - reconciliacao fail-closed de despachos
+
+O executor reconcilia despachos abandonados em `processing` depois do limite
+de duracao do agente e de uma margem operacional. A reconciliacao encerra a
+execucao, libera a reserva de custo, grava trace e auditoria e publica
+`agent.dispatch.interrupted`. Como o resultado de uma ferramenta externa pode
+ser desconhecido apos uma queda, nenhuma repeticao e automatica: a politica
+registrada e `manual_review_required`.
+
+A configuracao de agendas e gatilhos expoe modo sombra, execucao real, percentual
+canario e argumentos JSON por ferramenta. O navegador bloqueia estruturas
+invalidas ou ferramentas nao declaradas, enquanto o backend continua sendo a
+autoridade final para autorizacao, politica, empresa e orcamento.

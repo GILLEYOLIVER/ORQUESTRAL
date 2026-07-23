@@ -11,6 +11,10 @@ export type AgentSchedule = {
   status: RuntimeStatus;
   name: string;
   cadence_minutes: number;
+  required_tool_keys: string[];
+  tool_arguments: Record<string, Record<string, unknown>>;
+  execution_mode: "shadow" | "live";
+  canary_percentage: number;
   next_run_at: string | null;
 };
 
@@ -21,6 +25,10 @@ export type AgentEventTrigger = {
   status: RuntimeStatus;
   name: string;
   event_type: string;
+  required_tool_keys: string[];
+  tool_arguments: Record<string, Record<string, unknown>>;
+  execution_mode: "shadow" | "live";
+  canary_percentage: number;
 };
 
 export type CredentialCatalogItem = {
@@ -39,8 +47,20 @@ export type CredentialBinding = {
 export type RuntimeDispatch = {
   id: string;
   source_type: "schedule" | "event";
-  status: "ready" | "blocked";
+  status:
+    | "ready"
+    | "blocked"
+    | "processing"
+    | "awaiting_approval"
+    | "simulated"
+    | "completed"
+    | "failed";
   reason_code: string | null;
+  error_code: string | null;
+  execution_mode: "shadow" | "live";
+  canary_percentage: number;
+  attempt_count: number;
+  agent_run_id: string | null;
   scheduled_for: string;
 };
 
@@ -50,6 +70,9 @@ export type ScheduleInput = {
   objective: string;
   cadence_minutes: number;
   required_tool_keys: string[];
+  tool_arguments: Record<string, Record<string, unknown>>;
+  execution_mode: "shadow" | "live";
+  canary_percentage: number;
 };
 
 export type TriggerInput = {
@@ -60,6 +83,9 @@ export type TriggerInput = {
   max_event_version: number | null;
   objective: string;
   required_tool_keys: string[];
+  tool_arguments: Record<string, Record<string, unknown>>;
+  execution_mode: "shadow" | "live";
+  canary_percentage: number;
 };
 
 export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
