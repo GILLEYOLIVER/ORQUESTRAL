@@ -131,6 +131,21 @@ PERMISSION_CATALOG = (
         "crm.leads.convert", "crm", "leads.convert", "Converter leads qualificados"
     ),
     PermissionDefinition(
+        "crm.catalog.view", "crm", "catalog.view", "Visualizar catálogo e tabelas de preços"
+    ),
+    PermissionDefinition(
+        "crm.catalog.manage", "crm", "catalog.manage", "Gerenciar tabelas de preços"
+    ),
+    PermissionDefinition(
+        "crm.quotes.view", "crm", "quotes.view", "Visualizar propostas comerciais"
+    ),
+    PermissionDefinition(
+        "crm.quotes.manage", "crm", "quotes.manage", "Criar e editar propostas comerciais"
+    ),
+    PermissionDefinition(
+        "crm.quotes.publish", "crm", "quotes.publish", "Publicar e decidir propostas comerciais"
+    ),
+    PermissionDefinition(
         "support.tickets.view", "support", "tickets.view", "Visualizar chamados de suporte"
     ),
     PermissionDefinition(

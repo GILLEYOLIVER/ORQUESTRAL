@@ -29,6 +29,7 @@ import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
 import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
 import { CRMPipelineView } from "./crm/CRMPipelineView";
+import { SalesCatalogPanel } from "./crm/SalesCatalogPanel";
 import { SalesProspectingPanel } from "./crm/SalesProspectingPanel";
 
 const contactSchema = z.object({
@@ -526,6 +527,7 @@ export function CRMContactsPage() {
         </PermissionGuard>
       </div>
       <SalesProspectingPanel />
+      <SalesCatalogPanel />
       <details className="crm-pipeline-disclosure" open>
         <summary>
           <span>Pipeline comercial</span>
