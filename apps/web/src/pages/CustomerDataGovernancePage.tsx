@@ -13,6 +13,7 @@ import {
 import { request } from "../lib/http";
 import { useSession } from "../session/context";
 import { CustomerPrivacyPanel } from "../components/CustomerPrivacyPanel";
+import { CustomerPrivacyRightsPanel } from "../components/CustomerPrivacyRightsPanel";
 
 type MatchRule = {
   id: string;
@@ -387,6 +388,7 @@ export function CustomerDataGovernancePage() {
       </section>
 
       <CustomerPrivacyPanel readOnly={readOnly} />
+      <CustomerPrivacyRightsPanel readOnly={readOnly} />
     </main>
   );
 }
