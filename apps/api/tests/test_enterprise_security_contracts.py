@@ -41,7 +41,12 @@ SELF_SERVICE_MUTATIONS = frozenset(
     }
 )
 
-SIGNED_WEBHOOKS = frozenset({"/webhooks/workflows/{public_key}"})
+SIGNED_WEBHOOKS = frozenset(
+    {
+        "/webhooks/workflows/{public_key}",
+        "/support/ingress/{company_id}/{public_key}",
+    }
+)
 SIGNED_MONITOR_READS = frozenset({"/health/agent-memory-scheduler"})
 PUBLIC_READ_ROUTES = frozenset(
     {

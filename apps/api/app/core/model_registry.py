@@ -84,6 +84,8 @@ from app.modules.projects.models import (
 from app.modules.support.models import (
     SupportAgentCapacity,
     SupportAgentSkill,
+    SupportChannelEndpoint,
+    SupportChannelIngressEvent,
     SupportInteraction,
     SupportQueue,
     SupportQueueSkill,
@@ -172,6 +174,8 @@ __all__ = [
     "Subscription",
     "SupportAgentCapacity",
     "SupportAgentSkill",
+    "SupportChannelEndpoint",
+    "SupportChannelIngressEvent",
     "SupportInteraction",
     "SupportQueue",
     "SupportQueueSkill",

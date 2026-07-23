@@ -16,6 +16,7 @@ import {
   SupportOperationsPanel,
   type SupportOperationalTicket,
 } from "./support/SupportOperationsPanel";
+import { SupportChannelsPanel } from "./support/SupportChannelsPanel";
 import { SupportRoutingPanel } from "./support/SupportRoutingPanel";
 
 type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
@@ -193,6 +194,7 @@ export function SupportPage() {
           )
         }
       />
+      <SupportChannelsPanel />
 
       {tickets.isError ? (
         <Alert variant="error">

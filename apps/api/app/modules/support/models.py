@@ -355,3 +355,103 @@ class SupportTicketEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
+
+
+class SupportChannelEndpoint(Base):
+    __tablename__ = "support_channel_endpoints"
+    __table_args__ = (
+        CheckConstraint(
+            "channel IN ('email', 'chat', 'whatsapp', 'form', 'portal')",
+            name="ck_support_channel_endpoints_channel",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'paused', 'revoked')",
+            name="ck_support_channel_endpoints_status",
+        ),
+        CheckConstraint(
+            "default_priority IN ('low', 'normal', 'high', 'urgent')",
+            name="ck_support_channel_endpoints_priority",
+        ),
+        UniqueConstraint(
+            "company_id",
+            "channel",
+            "name",
+            name="uq_support_channel_endpoints_company_channel_name",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    updated_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    default_queue_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("support_queues.id", ondelete="SET NULL"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(160))
+    channel: Mapped[str] = mapped_column(String(20), index=True)
+    public_key: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    encrypted_secret: Mapped[str] = mapped_column(Text)
+    secret_fingerprint: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(
+        String(20), default="active", server_default="active", index=True
+    )
+    default_priority: Mapped[str] = mapped_column(
+        String(20), default="normal", server_default="normal"
+    )
+    consent_required: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    last_received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class SupportChannelIngressEvent(Base):
+    __tablename__ = "support_channel_ingress_events"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('ticket_created', 'rejected')",
+            name="ck_support_channel_ingress_events_status",
+        ),
+        UniqueConstraint(
+            "endpoint_id",
+            "external_event_id",
+            name="uq_support_channel_ingress_events_endpoint_external",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    endpoint_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_channel_endpoints.id", ondelete="CASCADE"), index=True
+    )
+    ticket_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("support_tickets.id", ondelete="SET NULL"), index=True
+    )
+    external_event_id: Mapped[str] = mapped_column(String(160))
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    sender_reference_hash: Mapped[str | None] = mapped_column(String(64))
+    source_ip_hash: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(
+        String(24), default="ticket_created", server_default="ticket_created", index=True
+    )
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
