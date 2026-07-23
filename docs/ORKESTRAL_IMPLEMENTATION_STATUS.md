@@ -1275,3 +1275,15 @@ desfusao humana e linhagem por atributo.
 - Seguranca: RLS forcado nas novas tabelas, isolamento entre empresas testado e valores de identidade armazenados como fingerprint.
 - Validacao: 242 testes Python, 19 testes web, build, Ruff, mypy, rollback/upgrade 0091 e auditoria de seguranca aprovados.
 - Proximo passo exato: regras versionadas de correspondencia, fila humana de fusao/desfusao e linhagem por campo.
+### Ciclo 78 - correspondencia e governanca de identidade
+
+- Implementado: regras versionadas, analise explicavel, fila humana e fusao reversivel.
+- Implementado: linhagem por campo com fonte, classificacao e SHA-256.
+- Seguranca: RLS forcado, autorizacao de backend, justificativa e trilha imutavel.
+- Proximo passo exato: ingestao em lote e incremental, qualidade configuravel e dead-letter queue.
+
+### Validacao do Ciclo 78
+
+- Resultado: 246 testes Python, 19 testes web, build, Ruff, mypy e auditoria aprovados.
+- Sonda transacional: fusao e reversao reais executadas no PostgreSQL e totalmente revertidas.
+- Migracao: rollback/upgrade 0092 aprovado e RLS validado nas novas tabelas.

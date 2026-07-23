@@ -23,7 +23,12 @@ def test_registry_loads_only_installed_modules() -> None:
     assert installed[0].version == "1.0.0"
     assert installed[0].migrations == ("20260720_0022",)
     assert "analytics.measurements.manage" in installed[0].permissions
-    assert installed[1].migrations == ("20260716_0004", "20260720_0024")
+    assert installed[1].migrations == (
+        "20260716_0004",
+        "20260720_0024",
+        "20260723_0091",
+        "20260723_0092",
+    )
     assert "crm.contacts.view" in installed[1].permissions
     assert installed[2].migrations == ("20260720_0020",)
     assert "finance.entries.settle" in installed[2].permissions
