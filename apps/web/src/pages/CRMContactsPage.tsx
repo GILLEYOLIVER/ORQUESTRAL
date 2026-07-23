@@ -29,6 +29,7 @@ import { Alert, Button, Card, TextField } from "@orkestral/ui-components";
 import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
 import { CRMPipelineView } from "./crm/CRMPipelineView";
+import { SalesProspectingPanel } from "./crm/SalesProspectingPanel";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Informe o nome."),
@@ -509,7 +510,8 @@ export function CRMContactsPage() {
           <span className="eyebrow">CRM e vendas</span>
           <h1>Relacionamentos comerciais</h1>
           <p>
-            Conecte contatos, oportunidades, atividades e previsões de receita.
+            Conecte prospecção, contas, contatos, oportunidades, atividades e
+            previsões de receita.
           </p>
         </div>
         <PermissionGuard all={["crm.contacts.create"]}>
@@ -523,6 +525,7 @@ export function CRMContactsPage() {
           </Button>
         </PermissionGuard>
       </div>
+      <SalesProspectingPanel />
       <details className="crm-pipeline-disclosure" open>
         <summary>
           <span>Pipeline comercial</span>

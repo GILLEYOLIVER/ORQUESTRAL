@@ -11,6 +11,7 @@ from app.modules.crm.customer_sync_scheduler_routes import (
     router as customer_sync_scheduler_router,
 )
 from app.modules.crm.routes import router
+from app.modules.crm.sales_routes import router as sales_router
 from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 
 crm_module = ModuleDefinition(
@@ -32,9 +33,16 @@ crm_module = ModuleDefinition(
         "crm.opportunities.update",
         "crm.opportunities.delete",
         "crm.activities.manage",
+        "crm.accounts.view",
+        "crm.accounts.manage",
+        "crm.leads.view",
+        "crm.leads.manage",
+        "crm.leads.qualify",
+        "crm.leads.convert",
     ),
     routers=(
         router,
+        sales_router,
         customer_governance_router,
         customer_ingestion_router,
         customer_cdc_router,
@@ -62,6 +70,12 @@ crm_module = ModuleDefinition(
         "crm.opportunity.updated",
         "crm.opportunity.deleted",
         "crm.opportunity.activity.created",
+        "crm.account.created",
+        "crm.lead.created",
+        "crm.lead.updated",
+        "crm.lead.qualified",
+        "crm.lead.disqualified",
+        "crm.lead.converted",
         "customer.match_rule.published",
         "customer.merge.approved",
         "customer.merge.rejected",

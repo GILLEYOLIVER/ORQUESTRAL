@@ -1410,3 +1410,11 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Migração: `20260723_0102` com RLS forçada em segmentos, membros e ativações.
 - Segurança: perfis restritos sempre excluídos; busca não expõe identidade bruta; ativação sem webhook externo.
 - Próximo passo: validar o ciclo e encerrar a Fase 5; iniciar Fase 6 com fundação comercial empresarial.
+# Atualização - Ciclo 89
+
+- Fase atual: 6 - Vendas empresariais.
+- Fundação de contas e leads implementada.
+- Qualificação e conversão idempotente reutilizam CRM, perfil 360 e pipeline.
+- RLS forçada, permissões granulares, auditoria e eventos sem PII bruta.
+- Migração: `20260723_0103`.
+- Próximo passo: produtos, tabelas de preços, propostas e inteligência comercial.

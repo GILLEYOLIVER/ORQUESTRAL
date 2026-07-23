@@ -113,6 +113,24 @@ PERMISSION_CATALOG = (
         "crm.activities.manage", "crm", "activities.manage", "Registrar atividades comerciais"
     ),
     PermissionDefinition(
+        "crm.accounts.view", "crm", "accounts.view", "Visualizar contas empresariais"
+    ),
+    PermissionDefinition(
+        "crm.accounts.manage", "crm", "accounts.manage", "Gerenciar contas empresariais"
+    ),
+    PermissionDefinition(
+        "crm.leads.view", "crm", "leads.view", "Visualizar leads comerciais"
+    ),
+    PermissionDefinition(
+        "crm.leads.manage", "crm", "leads.manage", "Gerenciar leads comerciais"
+    ),
+    PermissionDefinition(
+        "crm.leads.qualify", "crm", "leads.qualify", "Qualificar leads comerciais"
+    ),
+    PermissionDefinition(
+        "crm.leads.convert", "crm", "leads.convert", "Converter leads qualificados"
+    ),
+    PermissionDefinition(
         "support.tickets.view", "support", "tickets.view", "Visualizar chamados de suporte"
     ),
     PermissionDefinition(
