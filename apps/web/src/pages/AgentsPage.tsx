@@ -59,6 +59,7 @@ import "../agents/agents.css";
 import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
 import { useSession } from "../session/context";
+import { AgentRuntimePanel } from "../agents/AgentRuntimePanel";
 
 function errorMessage(error: unknown) {
   return error instanceof ApiClientError
@@ -4227,6 +4228,7 @@ export function AgentsPage() {
           </div>
         </Card>
       </div>
+      <AgentRuntimePanel agentId={selectedId} />
     </div>
   );
 }

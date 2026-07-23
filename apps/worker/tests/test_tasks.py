@@ -4,6 +4,7 @@ from pytest import MonkeyPatch
 
 from worker.tasks import (
     diagnostic_ping,
+    dispatch_agent_runtime_task,
     maintain_agent_delegations_task,
     maintain_agent_memory_reencryption_task,
     process_agent_delegation_task,
@@ -32,6 +33,22 @@ def test_delegation_tasks_delegate_to_domain_services(monkeypatch: MonkeyPatch) 
     assert processed.successful()
     assert processed.result == {"status": "completed", "delegation_id": "delegation-id"}
     assert maintained.result == {"status": "ok", "expired": 1, "recovered": 2}
+
+
+def test_agent_runtime_dispatch_delegates_to_domain_service(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "worker.tasks.maintain_agent_runtime_sync",
+        lambda: {"scheduled": 1, "triggered": 2, "ready": 2, "blocked": 1},
+    )
+    result = dispatch_agent_runtime_task.apply()
+    assert result.successful()
+    assert result.result == {
+        "status": "ok",
+        "scheduled": 1,
+        "triggered": 2,
+        "ready": 2,
+        "blocked": 1,
+    }
 
 
 def test_memory_maintenance_delegates_to_domain_service(monkeypatch: MonkeyPatch) -> None:

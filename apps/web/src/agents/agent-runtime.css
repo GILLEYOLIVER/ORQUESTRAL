@@ -1,0 +1,204 @@
+.agent-runtime-panel {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid #b9d2ca;
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, #f3f8f6 0%, #fffaf0 100%);
+  color: #102b26;
+}
+
+.agent-runtime-heading,
+.agent-runtime-item,
+.agent-runtime-bindings,
+.agent-runtime-binding-form,
+.agent-runtime-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.agent-runtime-heading h2,
+.agent-runtime-card h3 {
+  margin: 0.2rem 0;
+}
+.agent-runtime-heading p,
+.agent-runtime-card p {
+  margin: 0.25rem 0;
+  line-height: 1.55;
+}
+.agent-runtime-safety,
+.runtime-status {
+  width: fit-content;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #a6cfc2;
+  border-radius: 999px;
+  background: #e4f4ee;
+  color: #174f43;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.agent-runtime-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.agent-runtime-card {
+  padding: 1rem;
+  border: 1px solid #cfddd8;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.88);
+}
+.agent-runtime-list,
+.agent-runtime-form,
+.agent-runtime-dispatches {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+.agent-runtime-item {
+  padding: 0.75rem;
+  border-radius: 0.8rem;
+  background: #edf5f2;
+}
+.agent-runtime-item > div:first-child,
+.agent-runtime-dispatch > div {
+  display: grid;
+  gap: 0.15rem;
+}
+.agent-runtime-item small,
+.agent-runtime-dispatch small {
+  color: #536761;
+}
+.agent-runtime-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.agent-runtime-form {
+  padding-top: 0.8rem;
+  border-top: 1px solid #d7e2de;
+}
+.agent-runtime-form label,
+.agent-runtime-binding-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: #294a42;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.agent-runtime-form input,
+.agent-runtime-form textarea,
+.agent-runtime-binding-form input,
+.agent-runtime-binding-form select {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #aebfba;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: #102b26;
+}
+.agent-runtime-form textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+.agent-runtime-panel button {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.8rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: #18584d;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.agent-runtime-panel button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.runtime-status-draft {
+  background: #f4f0e4;
+  color: #665222;
+}
+.runtime-status-paused {
+  background: #fff0db;
+  color: #784b0e;
+}
+.runtime-status-retired {
+  background: #eef0f0;
+  color: #53605d;
+}
+.agent-runtime-binding-form {
+  flex: 1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.agent-runtime-binding-form label {
+  min-width: 13rem;
+}
+.agent-runtime-binding-list {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.agent-runtime-binding-list span {
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.55rem;
+  background: #eaf2ef;
+  font-size: 0.82rem;
+}
+.agent-runtime-dispatch {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #e0e8e5;
+}
+.runtime-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: #c98224;
+}
+.runtime-dot-ready {
+  background: #238269;
+}
+.agent-runtime-muted,
+.agent-runtime-readonly {
+  color: #5d6b67;
+}
+.agent-runtime-readonly {
+  padding: 0.65rem;
+  border-radius: 0.65rem;
+  background: #eef2f1;
+}
+.agent-runtime-empty {
+  min-height: 10rem;
+  align-content: center;
+}
+
+@media (max-width: 860px) {
+  .agent-runtime-columns {
+    grid-template-columns: 1fr;
+  }
+  .agent-runtime-heading,
+  .agent-runtime-bindings {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .agent-runtime-binding-form {
+    display: grid;
+    justify-content: stretch;
+  }
+  .agent-runtime-binding-form label {
+    min-width: 0;
+  }
+  .agent-runtime-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .agent-runtime-actions {
+    justify-content: flex-start;
+  }
+}

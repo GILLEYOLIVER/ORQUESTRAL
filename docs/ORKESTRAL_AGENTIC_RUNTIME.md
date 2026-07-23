@@ -118,3 +118,9 @@ existentes; `deny` prevalece em prioridades equivalentes.
 As notificações recebem somente identificadores da política, nunca os argumentos da
 ferramenta. Antes de retomar uma ação aprovada, o worker reavalia as regras publicadas
 e interrompe a execução caso uma política nova seja mais restritiva.
+
+## Ciclo 66 — Agendas, eventos e credenciais governadas
+
+O runtime passa a receber trabalho por agendas e eventos versionados. Antes de liberar um despacho, o worker confirma no limite da empresa que a ferramenta está habilitada e que existe um vínculo com credencial ativa e não expirada. O registro operacional guarda apenas referências seguras e uma impressão HMAC do objetivo; segredos e payloads externos não entram na instrução do agente.
+
+A execução efetiva dos despachos prontos será adicionada no próximo recorte, com política, orçamento, aprovação, modo sombra e trace operacional.

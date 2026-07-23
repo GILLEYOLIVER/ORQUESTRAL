@@ -982,3 +982,19 @@ controlada de metadados entre ambientes.
 - Segurança: nenhum prompt, argumento, resultado completo, segredo ou raciocínio interno é persistido no trace.
 - Testes concluídos: 193 API, 5 worker, 13 front-end, 19 integrações, 7 E2E aprovados e 2 E2E condicionais ignorados; build, tipagem, migração reversível, auditoria de segurança e contratos CI/CD/remotos aprovados.
 - Próximo passo exato: agenda e gatilhos versionados por agente, com vínculo seguro de credenciais e enforcement no worker.
+
+## Atualização — Ciclo 66: agendas, gatilhos e credenciais de agentes
+
+- Fase atual: Fase 4 — Runtime de agentes.
+- Concluído: agendas e gatilhos versionados, publicação/pausa, vínculos seguros ferramenta-credencial, dispatcher idempotente, auditoria, eventos e painel administrativo.
+- Migração: `20260722_0083_agent_schedules_credentials.py`.
+- Segurança: isolamento por `company_id`, permissões no backend, validação de ferramenta e credencial, nenhuma exposição de segredo e bloqueio seguro da fila.
+- Próximo passo exato: consumir despachos `ready` pelo executor governado, aplicando política, orçamento, aprovação, modo sombra/canary e trace antes de qualquer ferramenta real.
+### Evidencias finais do ciclo 66
+
+- `20260722_0083` confirmado no head do Alembic.
+- 197 testes da API, 6 do worker, 19 de integracao, 13 da interface e 7 E2E aprovados.
+- Oito servicos locais saudaveis; health e readiness aprovados.
+- Rate limit independente para login automatico local, sem reduzir a protecao remota.
+- Proximo passo: consumir despachos prontos pelo executor governado, aplicando politica,
+  orcamento, aprovacao, modo sombra e rastreabilidade antes de chamar ferramentas reais.
