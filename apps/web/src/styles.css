@@ -4322,3 +4322,119 @@ p {
     align-self: flex-start;
   }
 }
+
+.sales-governance {
+  display: grid;
+  gap: 1rem;
+}
+
+.sales-governance__metrics {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sales-governance__metrics article {
+  background: #153f38;
+  border-radius: 18px;
+  color: #f7f3e8;
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem;
+}
+
+.sales-governance__metrics span {
+  color: #cce0da;
+  font-size: 0.8rem;
+}
+
+.sales-governance__metrics strong {
+  font-size: 1.2rem;
+}
+
+.sales-governance__forms {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sales-governance__forms form {
+  background: #fffaf0;
+  border: 1px solid #e4d6bb;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem;
+}
+
+.sales-governance__forms label {
+  color: #294a43;
+  display: grid;
+  font-size: 0.8rem;
+  font-weight: 700;
+  gap: 0.3rem;
+}
+
+.sales-governance__forms input,
+.sales-governance__forms select {
+  background: #fff;
+  border: 1px solid #b9cbc4;
+  border-radius: 10px;
+  color: #102f2a;
+  min-height: 42px;
+  padding: 0.6rem 0.7rem;
+  width: 100%;
+}
+
+.sales-governance__boards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sales-governance__boards > section {
+  background: #fff;
+  border: 1px solid #d7e1dd;
+  border-radius: 18px;
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.sales-governance__boards article {
+  border-top: 1px solid #e2e9e6;
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+}
+
+.sales-governance__boards article > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.sales-governance__boards small,
+.sales-governance__boards article > span {
+  color: #61716b;
+  font-size: 0.8rem;
+}
+
+.sales-governance__boards meter {
+  accent-color: #2d7d6c;
+  width: 100%;
+}
+
+@media (max-width: 1120px) {
+  .sales-governance__forms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .sales-governance__metrics,
+  .sales-governance__forms,
+  .sales-governance__boards {
+    grid-template-columns: 1fr;
+  }
+}

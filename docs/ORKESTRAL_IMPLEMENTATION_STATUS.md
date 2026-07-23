@@ -1438,3 +1438,14 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Segurança: consultas somente leitura, permissão de funil e filtros explícitos em todas as junções por empresa.
 - Validação: backend `272 passed`, frontend `19 passed`, build, Ruff, MyPy, auditoria e smoke HTTP aprovados.
 - Próximo passo: concluir a Fase 6 com metas, territórios e renovações.
+
+# Atualização - Ciclo 92
+
+- Fase atual: 6 - Vendas empresariais.
+- Territórios comerciais, metas mensuráveis e renovação governada implementados.
+- Progresso das metas usa oportunidades ganhas e contas reais, sem valores simulados.
+- RLS forçada, máquina de estados, auditoria e eventos sem notas ou dados pessoais.
+- Migração: `20260723_0105`.
+- Validação: backend `277 passed`, frontend `19 passed`, build, Ruff, MyPy, auditoria, migração reversível, smoke HTTP e teste RLS aprovados.
+- Fase 6 concluída neste roadmap; divisão de receita e comissionamento avançado seguem vinculados à Fase 9.
+- Próximo passo: iniciar a Fase 7 com SLA, filas, habilidades e roteamento de atendimento.

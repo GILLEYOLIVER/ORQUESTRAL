@@ -12,6 +12,7 @@ from app.modules.crm.customer_sync_scheduler_routes import (
 )
 from app.modules.crm.routes import router
 from app.modules.crm.sales_catalog_routes import router as sales_catalog_router
+from app.modules.crm.sales_governance_routes import router as sales_governance_router
 from app.modules.crm.sales_intelligence_routes import router as sales_intelligence_router
 from app.modules.crm.sales_routes import router as sales_router
 from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
@@ -19,7 +20,7 @@ from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 crm_module = ModuleDefinition(
     code="crm",
     name="CRM e Vendas",
-    version="0.8.0",
+    version="0.9.0",
     permissions=(
         "crm.contacts.view",
         "crm.contacts.create",
@@ -52,6 +53,7 @@ crm_module = ModuleDefinition(
         sales_router,
         sales_catalog_router,
         sales_intelligence_router,
+        sales_governance_router,
         customer_governance_router,
         customer_ingestion_router,
         customer_cdc_router,
@@ -91,6 +93,13 @@ crm_module = ModuleDefinition(
         "crm.quote.published",
         "crm.quote.accepted",
         "crm.quote.rejected",
+        "crm.sales_territory.created",
+        "crm.sales_goal.created",
+        "crm.renewal.created",
+        "crm.renewal.contacted",
+        "crm.renewal.negotiating",
+        "crm.renewal.renewed",
+        "crm.renewal.lost",
         "customer.match_rule.published",
         "customer.merge.approved",
         "customer.merge.rejected",
@@ -128,5 +137,6 @@ crm_module = ModuleDefinition(
         "20260723_0102",
         "20260723_0103",
         "20260723_0104",
+        "20260723_0105",
     ),
 )
