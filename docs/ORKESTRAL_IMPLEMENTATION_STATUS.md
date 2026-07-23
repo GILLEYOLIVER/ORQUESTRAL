@@ -1359,3 +1359,14 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
   identidade e fusao assistida;
 - documento tecnico:
   `docs/implementation/CYCLE_83_CUSTOMER_CDC_CHECKPOINTS.md`.
+# Atualizacao 2026-07-23 - Ciclo 84
+
+- fase atual: Fase 5, plataforma de dados;
+- concluido neste recorte: preview e expurgo seguro do CDC por menor checkpoint,
+  maior retencao, lote limitado e bloqueio transacional;
+- privacidade: nenhum payload bruto e preservado no registro da limpeza;
+- migracao: `20260723_0098`;
+- proximo passo exato: automatizar a manutencao e acrescentar qualidade,
+  consentimento e linhagem ao perfil 360;
+- documento tecnico:
+  `docs/implementation/CYCLE_84_CUSTOMER_CDC_SAFE_RETENTION.md`.
