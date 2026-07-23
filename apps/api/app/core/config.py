@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     workflow_circuit_reset_seconds: int = Field(default=60, ge=10, le=3_600)
     workflow_webhook_rate_limit: int = Field(default=60, ge=1, le=1_000)
     workflow_max_payload_bytes: int = Field(default=262_144, ge=1_024, le=5_242_880)
+    customer_sync_http_timeout_seconds: float = Field(default=10.0, gt=0, le=30)
+    customer_sync_http_max_response_bytes: int = Field(
+        default=1_048_576, ge=1_024, le=1_048_576
+    )
+    customer_sync_dispatch_claim_seconds: int = Field(default=120, ge=30, le=900)
+    customer_sync_dispatch_batch_size: int = Field(default=20, ge=1, le=100)
     ai_provider_api_key: str | None = None
     ai_provider_base_url: AnyHttpUrl = AnyHttpUrl("https://api.openai.com/v1")
     ai_provider_timeout_seconds: float = Field(default=30.0, gt=0, le=120)

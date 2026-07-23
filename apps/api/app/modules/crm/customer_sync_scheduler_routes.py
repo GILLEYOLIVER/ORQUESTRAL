@@ -10,14 +10,17 @@ from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.crm.customer_sync_scheduler_schemas import (
     CustomerSyncAdapterHealthResponse,
     CustomerSyncAdapterResponse,
+    CustomerSyncCredentialOptionResponse,
     CustomerSyncDispatchResponse,
     CustomerSyncSchedulerSummary,
 )
 from app.modules.crm.customer_sync_scheduler_service import (
     adapter_catalog,
     list_sync_adapter_health,
+    list_sync_credential_options,
     list_sync_dispatches,
     probe_sync_connector_health,
+    requeue_sync_dispatch,
     sync_scheduler_summary,
 )
 from app.modules.modularity.dependencies import require_active_module
@@ -89,6 +92,46 @@ async def get_dispatches(
         company_id=context.company_id,
         limit=limit,
     )
+
+
+@router.get(
+    "/credential-options",
+    response_model=list[CustomerSyncCredentialOptionResponse],
+)
+async def get_credential_options(
+    principal: CanView,
+    _: ActiveCRM,
+    database: DatabaseSession,
+) -> list[CustomerSyncCredentialOptionResponse]:
+    context = get_request_context(principal)
+    return await list_sync_credential_options(
+        database,
+        company_id=context.company_id,
+    )
+
+
+@router.post(
+    "/dispatches/{dispatch_id}/retry",
+    response_model=CustomerSyncDispatchResponse,
+)
+async def post_dispatch_retry(
+    dispatch_id: UUID,
+    principal: CanManage,
+    _: ActiveCRM,
+    database: DatabaseSession,
+) -> CustomerSyncDispatchResponse:
+    context = get_request_context(principal)
+    try:
+        response = await requeue_sync_dispatch(
+            database,
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            dispatch_id=dispatch_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await database.commit()
+    return response
 
 
 @router.get("/scheduler-summary", response_model=CustomerSyncSchedulerSummary)

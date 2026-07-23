@@ -9,6 +9,7 @@ import {
   KeyRound,
   RadioTower,
   RefreshCw,
+  RotateCcw,
   ShieldCheck,
 } from "lucide-react";
 import { request } from "../lib/http";
@@ -73,6 +74,42 @@ type AdapterHealth = {
   checked_at: string;
 };
 
+type CredentialOption = {
+  id: string;
+  name: string;
+  plugin_code: string;
+  plugin_name: string;
+  expires_at: string | null;
+};
+
+type SyncDispatch = {
+  id: string;
+  connector_id: string;
+  adapter_key: string;
+  schedule_slot: string;
+  status:
+    | "pending"
+    | "claimed"
+    | "acknowledged"
+    | "failed"
+    | "expired"
+    | "dead_letter";
+  attempts: number;
+  available_at: string;
+  error_code: string | null;
+  response_status_code: number | null;
+  response_bytes: number;
+  records_received: number;
+  completed_at: string | null;
+};
+
+type SchedulerSummary = {
+  dispatch_pending: number;
+  dispatch_claimed: number;
+  dispatch_failed: number;
+  dispatch_dead_letter: number;
+};
+
 const emptyObservability: SyncObservability = {
   connectors_total: 0,
   connectors_active: 0,
@@ -109,6 +146,7 @@ export function CustomerSyncPage() {
     max_attempts: 5,
     base_backoff_seconds: 30,
     lease_ttl_seconds: 300,
+    credential_binding_id: "",
   });
 
   const connectors = useQuery({
@@ -130,6 +168,23 @@ export function CustomerSyncPage() {
     queryFn: () =>
       request<AdapterHealth[]>("/crm/customer-data/sync/adapter-health"),
   });
+  const credentialOptions = useQuery({
+    queryKey: ["customer-sync-credential-options"],
+    queryFn: () =>
+      request<CredentialOption[]>(
+        "/crm/customer-data/sync/credential-options",
+      ),
+  });
+  const dispatches = useQuery({
+    queryKey: ["customer-sync-dispatches"],
+    queryFn: () =>
+      request<SyncDispatch[]>("/crm/customer-data/sync/dispatches?limit=50"),
+  });
+  const schedulerSummary = useQuery({
+    queryKey: ["customer-sync-scheduler-summary"],
+    queryFn: () =>
+      request<SchedulerSummary>("/crm/customer-data/sync/scheduler-summary"),
+  });
 
   const refresh = async () => {
     await Promise.all([
@@ -141,6 +196,12 @@ export function CustomerSyncPage() {
       queryClient.invalidateQueries({
         queryKey: ["customer-sync-adapter-health"],
       }),
+      queryClient.invalidateQueries({
+        queryKey: ["customer-sync-dispatches"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["customer-sync-scheduler-summary"],
+      }),
     ]);
   };
 
@@ -148,7 +209,10 @@ export function CustomerSyncPage() {
     mutationFn: () =>
       request<SyncConnector>("/crm/customer-data/sync/connectors", {
         method: "POST",
-        body: JSON.stringify({ ...form, credential_binding_id: null }),
+        body: JSON.stringify({
+          ...form,
+          credential_binding_id: form.credential_binding_id || null,
+        }),
       }),
     onSuccess: async () => {
       setFeedback(
@@ -198,6 +262,18 @@ export function CustomerSyncPage() {
           ? "Adaptador pronto para operar."
           : `Adaptador ${health.status}: ${health.error_code ?? "verificação pendente"}.`,
       );
+      await refresh();
+    },
+    onError: (error: Error) => setFeedback(error.message),
+  });
+  const retryDispatch = useMutation({
+    mutationFn: (dispatchId: string) =>
+      request<SyncDispatch>(
+        `/crm/customer-data/sync/dispatches/${dispatchId}/retry`,
+        { method: "POST" },
+      ),
+    onSuccess: async () => {
+      setFeedback("Despacho reenviado após revisão administrativa.");
       await refresh();
     },
     onError: (error: Error) => setFeedback(error.message),
@@ -305,6 +381,7 @@ export function CustomerSyncPage() {
                   setForm({
                     ...form,
                     adapter_key: adapterKey,
+                    credential_binding_id: "",
                     transport:
                       adapterKey === "generic_rest_pull"
                         ? "pull"
@@ -319,6 +396,29 @@ export function CustomerSyncPage() {
                 <option value="signed_webhook">Webhook assinado</option>
               </select>
             </label>
+            {form.adapter_key === "generic_rest_pull" ? (
+              <label>
+                Credencial REST no cofre
+                <select
+                  value={form.credential_binding_id}
+                  required
+                  disabled={!canManage}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      credential_binding_id: event.target.value,
+                    })
+                  }
+                >
+                  <option value="">Selecione uma credencial testada</option>
+                  {credentialOptions.data?.map((credential) => (
+                    <option key={credential.id} value={credential.id}>
+                      {credential.name} · {credential.plugin_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label>
               Transporte
               <select
@@ -400,6 +500,66 @@ export function CustomerSyncPage() {
             </li>
           </ul>
         </article>
+      </section>
+
+      <section className="customer-sync__panel">
+        <div className="customer-sync__section-heading">
+          <div>
+            <span className="eyebrow">FILA CONFIÁVEL</span>
+            <h2>Despachos e falhas isoladas</h2>
+          </div>
+          <span>
+            {schedulerSummary.data?.dispatch_pending ?? 0} aguardando ·{" "}
+            {schedulerSummary.data?.dispatch_dead_letter ?? 0} em revisão
+          </span>
+        </div>
+        <div className="customer-sync__dispatches">
+          {dispatches.data?.length ? (
+            dispatches.data.map((dispatch) => (
+              <article key={dispatch.id}>
+                <span
+                  className={`customer-sync__status customer-sync__status--${dispatch.status}`}
+                >
+                  {dispatch.status === "dead_letter"
+                    ? "REVISÃO"
+                    : dispatch.status.toUpperCase()}
+                </span>
+                <div>
+                  <strong>{formatDate(dispatch.schedule_slot)}</strong>
+                  <span>
+                    tentativa {dispatch.attempts} · {dispatch.adapter_key}
+                  </span>
+                </div>
+                <div>
+                  <strong>{dispatch.records_received}</strong>
+                  <span>registros recebidos</span>
+                </div>
+                <div>
+                  <strong>
+                    {dispatch.response_status_code
+                      ? `HTTP ${dispatch.response_status_code}`
+                      : "Sem resposta"}
+                  </strong>
+                  <span>{dispatch.error_code ?? "sem erro"}</span>
+                </div>
+                {dispatch.status === "dead_letter" ||
+                dispatch.status === "failed" ? (
+                  <button
+                    type="button"
+                    disabled={!canManage || retryDispatch.isPending}
+                    title={!canManage ? "Acesso somente leitura" : undefined}
+                    onClick={() => retryDispatch.mutate(dispatch.id)}
+                  >
+                    <RotateCcw />
+                    Reenviar
+                  </button>
+                ) : null}
+              </article>
+            ))
+          ) : (
+            <p>Nenhum despacho registrado para esta empresa.</p>
+          )}
+        </div>
       </section>
 
       <section className="customer-sync__panel">

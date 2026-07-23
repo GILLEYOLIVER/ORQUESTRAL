@@ -65,6 +65,10 @@ crm_module = ModuleDefinition(
         "customer.sync.failed",
         "customer.sync_adapter.health_checked",
         "customer.sync_dispatch.queued",
+        "customer.sync_dispatch.acknowledged",
+        "customer.sync_dispatch.retry_scheduled",
+        "customer.sync_dispatch.dead_letter",
+        "customer.sync_dispatch.requeued",
     ),
     migrations=(
         "20260716_0004",
@@ -74,5 +78,6 @@ crm_module = ModuleDefinition(
         "20260723_0093",
         "20260723_0094",
         "20260723_0095",
+        "20260723_0096",
     ),
 )
