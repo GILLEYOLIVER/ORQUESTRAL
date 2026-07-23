@@ -16,6 +16,9 @@ from app.modules.agents.memory_service import (
 )
 from app.modules.agents.review_sla_service import maintain_agent_dispatch_review_sla_sync
 from app.modules.agents.runtime_service import maintain_agent_runtime_sync
+from app.modules.crm.customer_sync_scheduler_service import (
+    maintain_customer_sync_schedules_sync,
+)
 from app.modules.knowledge.processing import process_document_sync
 from app.modules.metrics.aggregation import aggregate_metrics_sync
 from app.modules.notifications.service import run_notification_maintenance_sync
@@ -94,3 +97,8 @@ def run_due_agent_memory_response_exercises_task() -> dict[str, int | str]:
 @celery_app.task(name="orkestral.agents.maintain_memory_reencryption")
 def maintain_agent_memory_reencryption_task() -> dict[str, int | str]:
     return {"status": "ok", **maintain_agent_memory_reencryption_jobs_sync()}
+
+
+@celery_app.task(name="orkestral.customer_data.schedule_sync")
+def maintain_customer_sync_schedules_task() -> dict[str, int | str]:
+    return {"status": "ok", **maintain_customer_sync_schedules_sync()}

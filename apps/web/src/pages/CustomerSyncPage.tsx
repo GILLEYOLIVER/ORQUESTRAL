@@ -18,6 +18,8 @@ type SyncConnector = {
   id: string;
   source_code: string;
   source_name: string;
+  adapter_key: string;
+  adapter_version: string;
   transport: "push" | "pull" | "webhook";
   status: "active" | "paused";
   credential_configured: boolean;
@@ -60,6 +62,17 @@ type SyncObservability = {
   average_duration_ms: number;
 };
 
+type AdapterHealth = {
+  id: string;
+  connector_id: string;
+  adapter_key: string;
+  adapter_version: string;
+  status: "ready" | "unverified" | "degraded" | "blocked";
+  error_code: string | null;
+  latency_ms: number;
+  checked_at: string;
+};
+
 const emptyObservability: SyncObservability = {
   connectors_total: 0,
   connectors_active: 0,
@@ -90,6 +103,7 @@ export function CustomerSyncPage() {
   const [form, setForm] = useState({
     source_code: "",
     source_name: "",
+    adapter_key: "secure_push",
     transport: "push",
     schedule_minutes: 60,
     max_attempts: 5,
@@ -111,6 +125,11 @@ export function CustomerSyncPage() {
     queryFn: () =>
       request<SyncObservability>("/crm/customer-data/sync/observability"),
   });
+  const adapterHealth = useQuery({
+    queryKey: ["customer-sync-adapter-health"],
+    queryFn: () =>
+      request<AdapterHealth[]>("/crm/customer-data/sync/adapter-health"),
+  });
 
   const refresh = async () => {
     await Promise.all([
@@ -118,6 +137,9 @@ export function CustomerSyncPage() {
       queryClient.invalidateQueries({ queryKey: ["customer-sync-runs"] }),
       queryClient.invalidateQueries({
         queryKey: ["customer-sync-observability"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["customer-sync-adapter-health"],
       }),
     ]);
   };
@@ -159,6 +181,22 @@ export function CustomerSyncPage() {
         variables.action === "pause"
           ? "Conector pausado sem apagar histórico ou cursor."
           : "Conector retomado e marcado para a próxima execução.",
+      );
+      await refresh();
+    },
+    onError: (error: Error) => setFeedback(error.message),
+  });
+  const probeHealth = useMutation({
+    mutationFn: (connectorId: string) =>
+      request<AdapterHealth>(
+        `/crm/customer-data/sync/connectors/${connectorId}/health`,
+        { method: "POST" },
+      ),
+    onSuccess: async (health) => {
+      setFeedback(
+        health.status === "ready"
+          ? "Adaptador pronto para operar."
+          : `Adaptador ${health.status}: ${health.error_code ?? "verificação pendente"}.`,
       );
       await refresh();
     },
@@ -256,6 +294,30 @@ export function CustomerSyncPage() {
                   setForm({ ...form, source_name: event.target.value })
                 }
               />
+            </label>
+            <label>
+              Adaptador
+              <select
+                value={form.adapter_key}
+                disabled={!canManage}
+                onChange={(event) => {
+                  const adapterKey = event.target.value;
+                  setForm({
+                    ...form,
+                    adapter_key: adapterKey,
+                    transport:
+                      adapterKey === "generic_rest_pull"
+                        ? "pull"
+                        : adapterKey === "signed_webhook"
+                          ? "webhook"
+                          : "push",
+                  });
+                }}
+              >
+                <option value="secure_push">Envio seguro Orkestral</option>
+                <option value="generic_rest_pull">API REST governada</option>
+                <option value="signed_webhook">Webhook assinado</option>
+              </select>
             </label>
             <label>
               Transporte
@@ -374,6 +436,10 @@ export function CustomerSyncPage() {
                     <dd>{connector.transport}</dd>
                   </div>
                   <div>
+                    <dt>Adaptador</dt>
+                    <dd>{connector.adapter_key}</dd>
+                  </div>
+                  <div>
                     <dt>Falhas seguidas</dt>
                     <dd>{connector.consecutive_failures}</dd>
                   </div>
@@ -389,26 +455,50 @@ export function CustomerSyncPage() {
                       ? "Cofre vinculado"
                       : "Sem credencial"}
                   </span>
-                  <button
-                    type="button"
-                    disabled={!canManage || changeStatus.isPending}
-                    title={!canManage ? "Acesso somente leitura" : undefined}
-                    onClick={() =>
-                      changeStatus.mutate({
-                        connectorId: connector.id,
-                        action:
-                          connector.status === "active" ? "pause" : "resume",
-                      })
-                    }
-                  >
-                    {connector.status === "active" ? (
-                      <CirclePause />
-                    ) : (
-                      <CirclePlay />
-                    )}
-                    {connector.status === "active" ? "Pausar" : "Retomar"}
-                  </button>
+                  <div>
+                    <button
+                      type="button"
+                      disabled={!canManage || probeHealth.isPending}
+                      title={!canManage ? "Acesso somente leitura" : undefined}
+                      onClick={() => probeHealth.mutate(connector.id)}
+                    >
+                      <Activity />
+                      Verificar saúde
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canManage || changeStatus.isPending}
+                      title={!canManage ? "Acesso somente leitura" : undefined}
+                      onClick={() =>
+                        changeStatus.mutate({
+                          connectorId: connector.id,
+                          action:
+                            connector.status === "active" ? "pause" : "resume",
+                        })
+                      }
+                    >
+                      {connector.status === "active" ? (
+                        <CirclePause />
+                      ) : (
+                        <CirclePlay />
+                      )}
+                      {connector.status === "active" ? "Pausar" : "Retomar"}
+                    </button>
+                  </div>
                 </div>
+                {(() => {
+                  const latestHealth = adapterHealth.data?.find(
+                    (health) => health.connector_id === connector.id,
+                  );
+                  return latestHealth ? (
+                    <p className="customer-sync__health">
+                      Saúde: <strong>{latestHealth.status}</strong>
+                      {latestHealth.error_code
+                        ? ` · ${latestHealth.error_code}`
+                        : ""}
+                    </p>
+                  ) : null;
+                })()}
               </article>
             ))
           ) : (

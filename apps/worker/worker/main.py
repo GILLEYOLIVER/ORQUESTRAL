@@ -66,6 +66,10 @@ celery_app.conf.update(
             "task": "orkestral.events.process_deliveries",
             "schedule": 5.0,
         },
+        "schedule-customer-sync-every-minute": {
+            "task": "orkestral.customer_data.schedule_sync",
+            "schedule": 60.0,
+        },
     },
 )
 

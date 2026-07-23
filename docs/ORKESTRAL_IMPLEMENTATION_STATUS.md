@@ -1311,3 +1311,25 @@ desfusao humana e linhagem por atributo.
 - Validacao: 253 testes Python, 19 testes web, build, Ruff, mypy, sonda
   transacional, auditoria de seguranca e oito servicos locais aprovados.
 - Proximo passo exato: registro de adaptadores, scheduler no worker e health por provedor.
+
+### Ciclo 81 - adaptadores, scheduler e health
+
+- Implementado: catalogo tipado de adaptadores e capacidades por transporte.
+- Implementado: prontidao baseada em credencial ativa e teste de conexao.
+- Implementado: scheduler idempotente e fila sem carga de cliente.
+- Seguranca: descoberta global minima e processamento sob RLS por empresa.
+- Migracao: `20260723_0095` reversivel.
+- Proximo passo exato: executor HTTP seguro, mapeamento tipado e DLQ do adaptador.
+
+## Atualizacao - ciclo 81: adaptadores, agendamento e saude das sincronizacoes
+
+Situacao: concluido e validado localmente em 23 de julho de 2026.
+
+- Catalogo tipado para `secure_push`, `generic_rest_pull` e `signed_webhook`.
+- Verificacao de prontidao fechada por padrao, sem expor credenciais ou cursores.
+- Agendador multiempresa com selecao segura de empresas, contexto RLS por transacao e identificador de worker armazenado como hash.
+- Fila de despacho auditavel; o sistema nao declara que uma integracao externa foi executada antes do processamento real.
+- Interface de configuracao e verificacao de saude disponivel em `Sincronizar dados`.
+- Migracao: `20260723_0095`.
+- Validacao: 257 testes, 19 testes web, build web, Ruff, mypy em 237 arquivos e auditoria de seguranca aprovados.
+- Proximo passo exato: executor HTTP seguro para o adaptador REST, com protecao SSRF, claim atomico, retry, dead-letter queue e confirmacao real de resultado.
