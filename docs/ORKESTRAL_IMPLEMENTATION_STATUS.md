@@ -1248,3 +1248,30 @@ servicos locais terminaram saudaveis.
 
 **Proximo passo exato:** iniciar a Fase 5 com identidade canonica, fontes,
 qualidade, consentimento e visao 360 do cliente.
+
+## Atualizacao - Ciclo 77
+
+**Fase atual:** plataforma de dados e visao 360.
+
+**Concluido:**
+
+- perfil canonico ligado ao CRM existente;
+- identidades protegidas por hash e exibicao mascarada;
+- resolucao deterministica sem fusao autonoma;
+- fontes e modos de obtencao dos dados;
+- pontuacao e pendencias de qualidade;
+- consentimentos historicos por finalidade e canal;
+- oportunidades e atividades agregadas;
+- API e painel responsivo de visao 360;
+- auditoria, eventos e RLS nas novas tabelas;
+- migracao Alembic `20260723_0091` reversivel.
+
+**Proximo passo exato:** regras versionadas de correspondencia, fila de fusao e
+desfusao humana e linhagem por atributo.
+
+### Ciclo 77 - identidade canonica e visao 360
+
+- Entregue: perfil canonico por empresa, identidades mascaradas, qualidade de dados, fontes e historico de consentimento.
+- Seguranca: RLS forcado nas novas tabelas, isolamento entre empresas testado e valores de identidade armazenados como fingerprint.
+- Validacao: 242 testes Python, 19 testes web, build, Ruff, mypy, rollback/upgrade 0091 e auditoria de seguranca aprovados.
+- Proximo passo exato: regras versionadas de correspondencia, fila humana de fusao/desfusao e linhagem por campo.

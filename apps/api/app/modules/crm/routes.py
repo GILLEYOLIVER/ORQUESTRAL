@@ -14,6 +14,11 @@ from app.core.dependencies import DatabaseSession
 from app.core.security import utc_now
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.authorization.service import record_authorization_audit
+from app.modules.crm.customer_data_service import (
+    customer_360,
+    customer_profile_for_contact,
+    sync_customer_profile,
+)
 from app.modules.crm.models import (
     CRMContact,
     CRMContactTag,
@@ -22,6 +27,7 @@ from app.modules.crm.models import (
     CRMPipeline,
     CRMPipelineStage,
     CRMTag,
+    CustomerConsent,
 )
 from app.modules.crm.schemas import (
     CRMCommercialSummary,
@@ -29,6 +35,7 @@ from app.modules.crm.schemas import (
     CRMContactPage,
     CRMContactResponse,
     CRMContactUpdate,
+    CRMCustomer360Response,
     CRMOpportunityActivityCreate,
     CRMOpportunityActivityResponse,
     CRMOpportunityCreate,
@@ -40,7 +47,11 @@ from app.modules.crm.schemas import (
     CRMPipelineStageUpdate,
     CRMTagCreate,
     CRMTagResponse,
+    CustomerConsentCreate,
+    CustomerConsentResponse,
 )
+from app.modules.events.schemas import DomainEventCreate
+from app.modules.events.service import enqueue_domain_event
 from app.modules.modularity.dependencies import require_active_module
 from app.modules.users.models import CompanyUser
 
@@ -230,6 +241,11 @@ async def create_contact(
     )
     database.add(contact)
     await database.flush()
+    profile = await sync_customer_profile(
+        database,
+        contact=contact,
+        actor_user_id=context.user_id,
+    )
     database.add_all(CRMContactTag(contact_id=contact.id, tag_id=tag.id) for tag in tags)
     record_authorization_audit(
         database,
@@ -239,6 +255,16 @@ async def create_contact(
         target_type="crm_contact",
         target_id=contact.id,
         details={"fields": sorted(payload.model_fields_set)},
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="crm.contact.created",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={"contact_id": str(contact.id), "profile_id": str(profile.id)},
+        ),
     )
     await database.commit()
     tag_responses = [CRMTagResponse.model_validate(tag, from_attributes=True) for tag in tags]
@@ -279,6 +305,11 @@ async def update_contact(
     for field, value in payload.model_dump(exclude_unset=True, exclude={"tag_ids"}).items():
         setattr(contact, field, value)
     contact.updated_at = utc_now()
+    profile = await sync_customer_profile(
+        database,
+        contact=contact,
+        actor_user_id=context.user_id,
+    )
     record_authorization_audit(
         database,
         company_id=context.company_id,
@@ -288,10 +319,105 @@ async def update_contact(
         target_id=contact.id,
         details={"fields": sorted(payload.model_fields_set)},
     )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="crm.contact.updated",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="internal",
+            payload={"contact_id": str(contact.id), "profile_id": str(profile.id)},
+        ),
+    )
     await database.commit()
     await database.refresh(contact)
     tags = await _tags_by_contact(database, [contact.id])
     return _contact_response(contact, tags.get(contact.id, []))
+
+
+@router.get(
+    "/contacts/{contact_id}/customer-360",
+    response_model=CRMCustomer360Response,
+)
+async def get_customer_360(
+    contact_id: UUID,
+    principal: CanViewContacts,
+    _: ActiveCRM,
+    database: DatabaseSession,
+) -> CRMCustomer360Response:
+    context = get_request_context(principal)
+    contact = await _get_contact(database, context.company_id, contact_id)
+    try:
+        return await customer_360(database, contact=contact)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/contacts/{contact_id}/consents",
+    response_model=CustomerConsentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def record_customer_consent(
+    contact_id: UUID,
+    payload: CustomerConsentCreate,
+    principal: CanUpdateContacts,
+    _: ActiveCRM,
+    database: DatabaseSession,
+) -> CustomerConsent:
+    context = get_request_context(principal)
+    await _get_contact(database, context.company_id, contact_id)
+    try:
+        profile = await customer_profile_for_contact(
+            database,
+            company_id=context.company_id,
+            contact_id=contact_id,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    captured_at = utc_now()
+    if payload.expires_at is not None and payload.expires_at <= captured_at:
+        raise HTTPException(status_code=422, detail="A expiração deve estar no futuro.")
+    consent = CustomerConsent(
+        company_id=context.company_id,
+        profile_id=profile.id,
+        captured_at=captured_at,
+        recorded_by_user_id=context.user_id,
+        **payload.model_dump(),
+    )
+    database.add(consent)
+    await database.flush()
+    record_authorization_audit(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        action="crm.customer_consent.recorded",
+        target_type="customer_consent",
+        target_id=consent.id,
+        details={
+            "profile_id": str(profile.id),
+            "purpose": consent.purpose,
+            "status": consent.status,
+        },
+    )
+    enqueue_domain_event(
+        database,
+        DomainEventCreate(
+            event_type="customer.consent.recorded",
+            company_id=context.company_id,
+            actor_user_id=context.user_id,
+            classification="confidential",
+            payload={
+                "profile_id": str(profile.id),
+                "consent_id": str(consent.id),
+                "purpose": consent.purpose,
+                "status": consent.status,
+            },
+        ),
+    )
+    await database.commit()
+    await database.refresh(consent)
+    return consent
 
 
 @router.delete("/contacts/{contact_id}", status_code=status.HTTP_204_NO_CONTENT)

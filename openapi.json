@@ -1861,6 +1861,99 @@
         "title": "AgentDispatchReviewAssignmentResponse",
         "type": "object"
       },
+      "AgentDispatchReviewCoverageIssueResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "hour": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hour"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "weekday": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekday"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "weekday",
+          "hour",
+          "user_id"
+        ],
+        "title": "AgentDispatchReviewCoverageIssueResponse",
+        "type": "object"
+      },
+      "AgentDispatchReviewCoverageResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "covered_slots": {
+            "title": "Covered Slots",
+            "type": "integer"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/AgentDispatchReviewCoverageIssueResponse"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "minimum_coverage": {
+            "title": "Minimum Coverage",
+            "type": "integer"
+          },
+          "required_slots": {
+            "title": "Required Slots",
+            "type": "integer"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "minimum_coverage",
+          "required_slots",
+          "covered_slots",
+          "issues"
+        ],
+        "title": "AgentDispatchReviewCoverageResponse",
+        "type": "object"
+      },
       "AgentDispatchReviewCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1890,6 +1983,33 @@
           "idempotency_key"
         ],
         "title": "AgentDispatchReviewCreate",
+        "type": "object"
+      },
+      "AgentDispatchReviewHoliday": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage_required": {
+            "default": false,
+            "title": "Coverage Required",
+            "type": "boolean"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "name"
+        ],
+        "title": "AgentDispatchReviewHoliday",
         "type": "object"
       },
       "AgentDispatchReviewOnCallExceptionCreate": {
@@ -2307,6 +2427,21 @@
             "title": "Escalation Minutes",
             "type": "integer"
           },
+          "holiday_calendar": {
+            "items": {
+              "$ref": "#/components/schemas/AgentDispatchReviewHoliday"
+            },
+            "maxItems": 366,
+            "title": "Holiday Calendar",
+            "type": "array"
+          },
+          "minimum_coverage": {
+            "default": 1,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Minimum Coverage",
+            "type": "integer"
+          },
           "name": {
             "maxLength": 160,
             "minLength": 3,
@@ -2319,6 +2454,14 @@
             "minimum": 1.0,
             "title": "On Call End Hour",
             "type": "integer"
+          },
+          "on_call_shifts": {
+            "items": {
+              "$ref": "#/components/schemas/AgentDispatchReviewShift"
+            },
+            "maxItems": 100,
+            "title": "On Call Shifts",
+            "type": "array"
           },
           "on_call_start_hour": {
             "default": 0,
@@ -2387,10 +2530,21 @@
             "title": "Escalation Minutes",
             "type": "integer"
           },
+          "holiday_calendar": {
+            "items": {
+              "$ref": "#/components/schemas/AgentDispatchReviewHoliday"
+            },
+            "title": "Holiday Calendar",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "minimum_coverage": {
+            "title": "Minimum Coverage",
+            "type": "integer"
           },
           "name": {
             "title": "Name",
@@ -2399,6 +2553,13 @@
           "on_call_end_hour": {
             "title": "On Call End Hour",
             "type": "integer"
+          },
+          "on_call_shifts": {
+            "items": {
+              "$ref": "#/components/schemas/AgentDispatchReviewShift"
+            },
+            "title": "On Call Shifts",
+            "type": "array"
           },
           "on_call_start_hour": {
             "title": "On Call Start Hour",
@@ -2467,10 +2628,52 @@
           "on_call_start_hour",
           "on_call_end_hour",
           "on_call_weekdays",
+          "on_call_shifts",
+          "holiday_calendar",
+          "minimum_coverage",
           "created_at",
           "published_at"
         ],
         "title": "AgentDispatchReviewSLAPolicyResponse",
+        "type": "object"
+      },
+      "AgentDispatchReviewShift": {
+        "additionalProperties": false,
+        "properties": {
+          "end_hour": {
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "End Hour",
+            "type": "integer"
+          },
+          "start_hour": {
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Start Hour",
+            "type": "integer"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Weekdays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_id",
+          "weekdays",
+          "start_hour",
+          "end_hour"
+        ],
+        "title": "AgentDispatchReviewShift",
         "type": "object"
       },
       "AgentDispatchReviewSummaryResponse": {
@@ -10166,6 +10369,133 @@
         "title": "CRMContactUpdate",
         "type": "object"
       },
+      "CRMCustomer360Response": {
+        "additionalProperties": false,
+        "properties": {
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerConsentResponse"
+            },
+            "title": "Consents",
+            "type": "array"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "duplicate_candidate_profile_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Duplicate Candidate Profile Ids",
+            "type": "array"
+          },
+          "identities": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerIdentityResponse"
+            },
+            "title": "Identities",
+            "type": "array"
+          },
+          "lifecycle_status": {
+            "enum": [
+              "lead",
+              "prospect",
+              "customer",
+              "inactive"
+            ],
+            "title": "Lifecycle Status",
+            "type": "string"
+          },
+          "linked_contact_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Linked Contact Ids",
+            "type": "array"
+          },
+          "master_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Master Contact Id"
+          },
+          "open_opportunity_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Open Opportunity Value",
+            "type": "string"
+          },
+          "opportunity_count": {
+            "title": "Opportunity Count",
+            "type": "integer"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_type": {
+            "enum": [
+              "person",
+              "organization"
+            ],
+            "title": "Profile Type",
+            "type": "string"
+          },
+          "quality_issues": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quality Issues",
+            "type": "array"
+          },
+          "quality_score": {
+            "title": "Quality Score",
+            "type": "integer"
+          },
+          "recent_activities": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerActivityResponse"
+            },
+            "title": "Recent Activities",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerDataSourceResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "profile_id",
+          "display_name",
+          "profile_type",
+          "lifecycle_status",
+          "quality_score",
+          "quality_issues",
+          "master_contact_id",
+          "linked_contact_ids",
+          "duplicate_candidate_profile_ids",
+          "identities",
+          "sources",
+          "consents",
+          "opportunity_count",
+          "open_opportunity_value",
+          "recent_activities"
+        ],
+        "title": "CRMCustomer360Response",
+        "type": "object"
+      },
       "CRMOpportunityActivityCreate": {
         "additionalProperties": false,
         "properties": {
@@ -12538,6 +12868,306 @@
           "failed"
         ],
         "title": "CredentialRotationResponse",
+        "type": "object"
+      },
+      "CustomerActivityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "activity_type": {
+            "enum": [
+              "note",
+              "call",
+              "email",
+              "meeting",
+              "stage_change",
+              "status_change"
+            ],
+            "title": "Activity Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "activity_type",
+          "subject",
+          "occurred_at"
+        ],
+        "title": "CustomerActivityResponse",
+        "type": "object"
+      },
+      "CustomerConsentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "default": "all",
+            "enum": [
+              "all",
+              "email",
+              "phone",
+              "whatsapp",
+              "sms",
+              "web"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "evidence_reference": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Reference"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "lawful_basis": {
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Lawful Basis",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "marketing",
+              "service",
+              "analytics",
+              "ai_processing",
+              "data_sharing"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "granted",
+              "denied",
+              "revoked",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "purpose",
+          "status",
+          "lawful_basis"
+        ],
+        "title": "CustomerConsentCreate",
+        "type": "object"
+      },
+      "CustomerConsentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "channel": {
+            "enum": [
+              "all",
+              "email",
+              "phone",
+              "whatsapp",
+              "sms",
+              "web"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "evidence_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Reference"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lawful_basis": {
+            "title": "Lawful Basis",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "marketing",
+              "service",
+              "analytics",
+              "ai_processing",
+              "data_sharing"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "recorded_by_user_id": {
+            "format": "uuid",
+            "title": "Recorded By User Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "granted",
+              "denied",
+              "revoked",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "purpose",
+          "channel",
+          "status",
+          "lawful_basis",
+          "evidence_reference",
+          "captured_at",
+          "expires_at",
+          "recorded_by_user_id"
+        ],
+        "title": "CustomerConsentResponse",
+        "type": "object"
+      },
+      "CustomerDataSourceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "system_of_record",
+              "copied",
+              "federated",
+              "cached"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "paused",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "mode",
+          "status"
+        ],
+        "title": "CustomerDataSourceResponse",
+        "type": "object"
+      },
+      "CustomerIdentityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "display_hint": {
+            "title": "Display Hint",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "identity_type": {
+            "enum": [
+              "email",
+              "phone",
+              "external_id",
+              "document"
+            ],
+            "title": "Identity Type",
+            "type": "string"
+          },
+          "source_code": {
+            "title": "Source Code",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "identity_type",
+          "display_hint",
+          "verified",
+          "source_code",
+          "source_name"
+        ],
+        "title": "CustomerIdentityResponse",
         "type": "object"
       },
       "DashboardResponse": {
@@ -32369,6 +32999,84 @@
         ]
       }
     },
+    "/agents/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/coverage": {
+      "get": {
+        "operationId": "validate_agent_dispatch_review_coverage_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "policy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Policy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewCoverageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Validate Agent Dispatch Review Coverage",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
     "/agents/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-exceptions": {
       "get": {
         "operationId": "list_agent_dispatch_review_on_call_exceptions_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__on_call_exceptions_get",
@@ -38246,6 +38954,152 @@
           }
         ],
         "summary": "Update Contact",
+        "tags": [
+          "crm"
+        ]
+      }
+    },
+    "/crm/contacts/{contact_id}/consents": {
+      "post": {
+        "operationId": "record_customer_consent_crm_contacts__contact_id__consents_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerConsentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerConsentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Customer Consent",
+        "tags": [
+          "crm"
+        ]
+      }
+    },
+    "/crm/contacts/{contact_id}/customer-360": {
+      "get": {
+        "operationId": "get_customer_360_crm_contacts__contact_id__customer_360_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CRMCustomer360Response"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Customer 360",
         "tags": [
           "crm"
         ]

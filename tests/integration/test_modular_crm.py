@@ -159,6 +159,51 @@ def test_module_activation_crm_crud_and_tenant_isolation() -> None:
             assert contact.status_code == 201
             contact_id = contact.json()["id"]
             assert contact.json()["tags"][0]["name"] == "Prioritário"
+            customer_360 = client.get(
+                f"/crm/contacts/{contact_id}/customer-360",
+                headers=headers_a,
+            )
+            assert customer_360.status_code == 200, customer_360.text
+            profile_id = customer_360.json()["profile_id"]
+            assert customer_360.json()["quality_score"] >= 80
+            assert {item["identity_type"] for item in customer_360.json()["identities"]} == {
+                "email",
+                "phone",
+            }
+            assert all(
+                item["display_hint"] not in {"modular@example.com", "+55 11 99999-0000"}
+                for item in customer_360.json()["identities"]
+            )
+            consent = client.post(
+                f"/crm/contacts/{contact_id}/consents",
+                headers=headers_a,
+                json={
+                    "purpose": "service",
+                    "channel": "whatsapp",
+                    "status": "granted",
+                    "lawful_basis": "consentimento",
+                    "evidence_reference": "FORM-CRM-001",
+                },
+            )
+            assert consent.status_code == 201, consent.text
+            assert consent.json()["status"] == "granted"
+            duplicate = client.post(
+                "/crm/contacts",
+                headers=headers_a,
+                json={
+                    "name": "Contato modular duplicado",
+                    "email": "MODULAR@example.com",
+                    "status": "prospect",
+                },
+            )
+            assert duplicate.status_code == 201
+            duplicate_360 = client.get(
+                f"/crm/contacts/{duplicate.json()['id']}/customer-360",
+                headers=headers_a,
+            )
+            assert duplicate_360.status_code == 200
+            assert duplicate_360.json()["profile_id"] == profile_id
+            assert len(duplicate_360.json()["linked_contact_ids"]) == 2
 
             filtered = client.get(
                 "/crm/contacts",
@@ -194,10 +239,24 @@ def test_module_activation_crm_crud_and_tenant_isolation() -> None:
                 == 200
             )
             assert client.get(f"/crm/contacts/{contact_id}", headers=headers_b).status_code == 404
+            assert (
+                client.get(
+                    f"/crm/contacts/{contact_id}/customer-360",
+                    headers=headers_b,
+                ).status_code
+                == 404
+            )
 
             deleted = client.delete(f"/crm/contacts/{contact_id}", headers=headers_a)
             assert deleted.status_code == 204
             assert client.get(f"/crm/contacts/{contact_id}", headers=headers_a).status_code == 404
+            assert (
+                client.delete(
+                    f"/crm/contacts/{duplicate.json()['id']}",
+                    headers=headers_a,
+                ).status_code
+                == 204
+            )
             assert client.get("/crm/contacts", headers=headers_a).json()["total"] == 0
 
             audit = client.get("/authorization/audit-events", headers=headers_a)
@@ -207,6 +266,7 @@ def test_module_activation_crm_crud_and_tenant_isolation() -> None:
                 "crm.contact.created",
                 "crm.contact.updated",
                 "crm.contact.deleted",
+                "crm.customer_consent.recorded",
             } <= actions
     finally:
         asyncio.run(remove_crm_identities(settings, identity))

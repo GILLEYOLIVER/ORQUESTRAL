@@ -5,9 +5,11 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Integer,
     Numeric,
     PrimaryKeyConstraint,
     String,
@@ -82,6 +84,194 @@ class CRMContactTag(Base):
         ForeignKey("crm_contacts.id", ondelete="CASCADE"), index=True
     )
     tag_id: Mapped[UUID] = mapped_column(ForeignKey("crm_tags.id", ondelete="CASCADE"), index=True)
+
+
+class CustomerDataSource(Base):
+    __tablename__ = "customer_data_sources"
+    __table_args__ = (
+        UniqueConstraint("company_id", "code", name="uq_customer_data_source_code"),
+        CheckConstraint(
+            "mode IN ('system_of_record', 'copied', 'federated', 'cached')",
+            name="ck_customer_data_source_mode",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'paused', 'retired')",
+            name="ck_customer_data_source_status",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    code: Mapped[str] = mapped_column(String(80), index=True)
+    name: Mapped[str] = mapped_column(String(160))
+    mode: Mapped[str] = mapped_column(
+        String(24), default="system_of_record", server_default="system_of_record"
+    )
+    status: Mapped[str] = mapped_column(String(16), default="active", server_default="active")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CustomerProfile(Base):
+    __tablename__ = "customer_profiles"
+    __table_args__ = (
+        CheckConstraint(
+            "profile_type IN ('person', 'organization')",
+            name="ck_customer_profile_type",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('lead', 'prospect', 'customer', 'inactive')",
+            name="ck_customer_profile_lifecycle",
+        ),
+        CheckConstraint(
+            "quality_score BETWEEN 0 AND 100",
+            name="ck_customer_profile_quality",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    master_contact_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_contacts.id", ondelete="SET NULL"), index=True
+    )
+    display_name: Mapped[str] = mapped_column(String(180), index=True)
+    profile_type: Mapped[str] = mapped_column(String(20), default="person", server_default="person")
+    lifecycle_status: Mapped[str] = mapped_column(
+        String(20), default="lead", server_default="lead", index=True
+    )
+    quality_score: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    created_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CustomerProfileContact(Base):
+    __tablename__ = "customer_profile_contacts"
+    __table_args__ = (
+        PrimaryKeyConstraint("profile_id", "contact_id"),
+        CheckConstraint(
+            "link_role IN ('master', 'matched', 'duplicate_candidate')",
+            name="ck_customer_profile_contact_role",
+        ),
+        CheckConstraint(
+            "match_confidence BETWEEN 0 AND 100",
+            name="ck_customer_profile_contact_confidence",
+        ),
+    )
+
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[UUID] = mapped_column(
+        ForeignKey("customer_profiles.id", ondelete="CASCADE"), index=True
+    )
+    contact_id: Mapped[UUID] = mapped_column(
+        ForeignKey("crm_contacts.id", ondelete="CASCADE"), index=True
+    )
+    link_role: Mapped[str] = mapped_column(String(24))
+    match_confidence: Mapped[int] = mapped_column(Integer, default=100, server_default="100")
+    linked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class CustomerIdentity(Base):
+    __tablename__ = "customer_identities"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "identity_type",
+            "value_hash",
+            name="uq_customer_identity_fingerprint",
+        ),
+        CheckConstraint(
+            "identity_type IN ('email', 'phone', 'external_id', 'document')",
+            name="ck_customer_identity_type",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[UUID] = mapped_column(
+        ForeignKey("customer_profiles.id", ondelete="CASCADE"), index=True
+    )
+    data_source_id: Mapped[UUID] = mapped_column(
+        ForeignKey("customer_data_sources.id", ondelete="RESTRICT"), index=True
+    )
+    identity_type: Mapped[str] = mapped_column(String(24), index=True)
+    value_hash: Mapped[str] = mapped_column(String(64), index=True)
+    display_hint: Mapped[str] = mapped_column(String(100))
+    verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class CustomerConsent(Base):
+    __tablename__ = "customer_consents"
+    __table_args__ = (
+        CheckConstraint(
+            "purpose IN ('marketing', 'service', 'analytics', 'ai_processing', 'data_sharing')",
+            name="ck_customer_consent_purpose",
+        ),
+        CheckConstraint(
+            "status IN ('granted', 'denied', 'revoked', 'expired')",
+            name="ck_customer_consent_status",
+        ),
+        CheckConstraint(
+            "channel IN ('all', 'email', 'phone', 'whatsapp', 'sms', 'web')",
+            name="ck_customer_consent_channel",
+        ),
+        CheckConstraint(
+            "expires_at IS NULL OR expires_at > captured_at",
+            name="ck_customer_consent_expiry",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    profile_id: Mapped[UUID] = mapped_column(
+        ForeignKey("customer_profiles.id", ondelete="CASCADE"), index=True
+    )
+    purpose: Mapped[str] = mapped_column(String(24), index=True)
+    channel: Mapped[str] = mapped_column(String(16), default="all", server_default="all")
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    lawful_basis: Mapped[str] = mapped_column(String(80))
+    evidence_reference: Mapped[str | None] = mapped_column(String(240))
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    recorded_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
 
 
 class CRMPipeline(Base):

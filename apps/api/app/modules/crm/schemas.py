@@ -14,6 +14,13 @@ OpportunityStatus = Literal["open", "won", "lost"]
 OpportunityActivityType = Literal[
     "note", "call", "email", "meeting", "stage_change", "status_change"
 ]
+CustomerProfileType = Literal["person", "organization"]
+CustomerSourceMode = Literal["system_of_record", "copied", "federated", "cached"]
+CustomerConsentPurpose = Literal[
+    "marketing", "service", "analytics", "ai_processing", "data_sharing"
+]
+CustomerConsentStatus = Literal["granted", "denied", "revoked", "expired"]
+CustomerConsentChannel = Literal["all", "email", "phone", "whatsapp", "sms", "web"]
 
 
 class CRMTagResponse(StrictSchema):
@@ -103,6 +110,69 @@ class CRMContactPage(StrictSchema):
     page: int
     page_size: int
     pages: int
+
+
+class CustomerIdentityResponse(StrictSchema):
+    id: UUID
+    identity_type: Literal["email", "phone", "external_id", "document"]
+    display_hint: str
+    verified: bool
+    source_code: str
+    source_name: str
+
+
+class CustomerDataSourceResponse(StrictSchema):
+    id: UUID
+    code: str
+    name: str
+    mode: CustomerSourceMode
+    status: Literal["active", "paused", "retired"]
+
+
+class CustomerConsentCreate(StrictSchema):
+    purpose: CustomerConsentPurpose
+    channel: CustomerConsentChannel = "all"
+    status: CustomerConsentStatus
+    lawful_basis: str = Field(min_length=3, max_length=80)
+    evidence_reference: str | None = Field(default=None, max_length=240)
+    expires_at: datetime | None = None
+
+
+class CustomerConsentResponse(StrictSchema):
+    id: UUID
+    purpose: CustomerConsentPurpose
+    channel: CustomerConsentChannel
+    status: CustomerConsentStatus
+    lawful_basis: str
+    evidence_reference: str | None
+    captured_at: datetime
+    expires_at: datetime | None
+    recorded_by_user_id: UUID
+
+
+class CustomerActivityResponse(StrictSchema):
+    id: UUID
+    activity_type: OpportunityActivityType
+    subject: str
+    occurred_at: datetime
+
+
+class CRMCustomer360Response(StrictSchema):
+    profile_id: UUID
+    display_name: str
+    profile_type: CustomerProfileType
+    lifecycle_status: ContactStatus
+    quality_score: int
+    quality_issues: list[str]
+    master_contact_id: UUID | None
+    linked_contact_ids: list[UUID]
+    duplicate_candidate_profile_ids: list[UUID]
+    identities: list[CustomerIdentityResponse]
+    sources: list[CustomerDataSourceResponse]
+    consents: list[CustomerConsentResponse]
+    opportunity_count: int
+    open_opportunity_value: Decimal
+    recent_activities: list[CustomerActivityResponse]
 
 
 class CRMPipelineStageCreate(StrictSchema):
