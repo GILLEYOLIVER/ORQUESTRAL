@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { request } from "../lib/http";
 import { useSession } from "../session/context";
+import { CustomerCdcPanel } from "../components/CustomerCdcPanel";
 
 type QualityRule = {
   id: string;
@@ -412,6 +413,8 @@ export function CustomerIngestionPage() {
           ))}
         </div>
       </section>
+
+      <CustomerCdcPanel readOnly={readOnly} />
     </main>
   );
 }

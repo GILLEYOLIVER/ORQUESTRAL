@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.crm.customer_cdc_service import record_customer_change
 from app.modules.crm.customer_ingestion_schemas import (
     CustomerDeadLetterResponse,
     CustomerIngestionJobCreate,
@@ -667,6 +668,16 @@ async def ingest_customer_records(
                 record=record,
                 quality_score=quality_score,
             )
+            await record_customer_change(
+                database,
+                company_id=company_id,
+                actor_user_id=actor_user_id,
+                profile_id=profile_id,
+                source_id=source.id,
+                ingestion_job_id=job_id,
+                operation="upserted",
+                record=record.model_dump(mode="json"),
+            )
             accepted += 1
         else:
             rejected += 1
@@ -850,6 +861,16 @@ async def reprocess_dead_letter(
             source_id=stored.source_id,
             record=payload.record,
             quality_score=quality_score,
+        )
+        await record_customer_change(
+            database,
+            company_id=company_id,
+            actor_user_id=actor_user_id,
+            profile_id=profile_id,
+            source_id=stored.source_id,
+            ingestion_job_id=stored.job_id,
+            operation="upserted",
+            record=payload.record.model_dump(mode="json"),
         )
     row = (
         await database.execute(

@@ -22,6 +22,7 @@ def remote_settings(**overrides: Any) -> Settings:
         "encryption_key": "e" * 48,
         "agent_memory_monitor_secret": "m" * 48,
         "agent_memory_monitor_secret_rotated_at": datetime.now(UTC),
+        "agent_memory_monitor_secret_rotation_policy": "enforce",
         "cors_origins": [],
         "development_expose_tokens": False,
         "bootstrap_enabled": False,
