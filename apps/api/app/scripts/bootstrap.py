@@ -35,7 +35,7 @@ async def bootstrap() -> None:
     company_slug = cast(str, required["BOOTSTRAP_COMPANY_SLUG"])
     company_document = cast(str, required["BOOTSTRAP_COMPANY_DOCUMENT"])
 
-    resources = create_resources(settings)
+    resources = create_resources(settings, database_role="migration")
     try:
         async with resources.sessions() as database:
             company = await database.scalar(select(Company).where(Company.slug == company_slug))

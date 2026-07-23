@@ -8,8 +8,11 @@ from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, RedisDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import ArgumentError
 
 Environment = Literal["local", "development", "testing", "staging", "production"]
+DatabaseProcessRole = Literal["api", "worker", "migration"]
 
 _PLACEHOLDER_MARKERS = (
     "change-me",
@@ -31,6 +34,7 @@ class Settings(BaseSettings):
         env_prefix="",
         case_sensitive=False,
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     app_name: str = "Orkestral API"
@@ -47,6 +51,11 @@ class Settings(BaseSettings):
     render_git_commit: str | None = None
     deployed_at: str | None = None
     database_url: str = "postgresql+asyncpg://orkestral:development-only@localhost:5432/orkestral"
+    migration_database_url: str | None = None
+    api_database_url: str | None = None
+    worker_database_url: str | None = None
+    database_process_role: DatabaseProcessRole = "api"
+    database_role_separation_required: bool = False
     redis_url: RedisDsn = RedisDsn("redis://localhost:6379/0")
     celery_broker_url: RedisDsn = RedisDsn("redis://localhost:6379/1")
     celery_result_backend: RedisDsn = RedisDsn("redis://localhost:6379/2")
@@ -153,6 +162,18 @@ class Settings(BaseSettings):
             return None
         return value
 
+    @field_validator(
+        "migration_database_url",
+        "api_database_url",
+        "worker_database_url",
+        mode="before",
+    )
+    @classmethod
+    def normalize_optional_database_url(cls, value: object) -> object:
+        if value == "":
+            return None
+        return value
+
     @model_validator(mode="after")
     def reject_unsafe_production_values(self) -> Settings:
         jwt_keyring = (self.jwt_secret, *self.jwt_previous_secrets)
@@ -252,7 +273,7 @@ class Settings(BaseSettings):
                     "Desenvolvimento remoto exige AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT"
                 )
             remote_connections = {
-                "DATABASE_URL": self.database_url,
+                "DATABASE_URL": self.database_url_for("api"),
                 "REDIS_URL": str(self.redis_url),
             }
             unsafe_remote_connections = [
@@ -303,6 +324,11 @@ class Settings(BaseSettings):
                 )
             if self.security_hsts_seconds <= 0:
                 raise ValueError("SECURITY_HSTS_SECONDS deve permanecer ativo remotamente")
+        if self.database_role_separation_required and self.app_env not in {
+            "staging",
+            "production",
+        }:
+            self._validate_database_role_separation()
         if self.app_env not in {"staging", "production"}:
             return self
         secrets = {
@@ -326,6 +352,7 @@ class Settings(BaseSettings):
         if unsafe:
             joined = ", ".join(sorted(unsafe))
             raise ValueError(f"Valores inseguros para produção: {joined}")
+        self._validate_database_role_separation()
         if self.agent_memory_monitor_secret_rotated_at is None:
             raise ValueError("Produção exige AGENT_MEMORY_MONITOR_SECRET_ROTATED_AT")
         if self.encryption_key_provider != "external":
@@ -376,9 +403,15 @@ class Settings(BaseSettings):
         remote = self.remote_development_enabled or self.app_env in {"staging", "production"}
         if not remote:
             return self
-        database_value = self.database_url.lower()
-        if "sslmode=require" not in database_value and "ssl=require" not in database_value:
-            raise ValueError("DATABASE_URL remota deve exigir TLS com sslmode=require")
+        database_urls = {
+            "MIGRATION_DATABASE_URL": self.database_url_for("migration"),
+            "API_DATABASE_URL": self.database_url_for("api"),
+            "WORKER_DATABASE_URL": self.database_url_for("worker"),
+        }
+        for name, database_value in database_urls.items():
+            lowered = database_value.lower()
+            if "sslmode=require" not in lowered and "ssl=require" not in lowered:
+                raise ValueError(f"{name} remota deve exigir TLS com sslmode=require")
         if not str(self.redis_url).lower().startswith("rediss://"):
             raise ValueError("REDIS_URL remota deve utilizar TLS com rediss://")
         if self.object_storage_enabled and not str(self.storage_endpoint).lower().startswith(
@@ -399,6 +432,61 @@ class Settings(BaseSettings):
     @property
     def auth_cookie_secure(self) -> bool:
         return self.remote_development_enabled or self.app_env in {"staging", "production"}
+
+    def database_url_for(self, role: DatabaseProcessRole) -> str:
+        configured = {
+            "api": self.api_database_url,
+            "worker": self.worker_database_url,
+            "migration": self.migration_database_url,
+        }[role]
+        return configured or self.database_url
+
+    @property
+    def effective_database_url(self) -> str:
+        return self.database_url_for(self.database_process_role)
+
+    def _validate_database_role_separation(self) -> None:
+        if self.app_env in {"staging", "production"} and not self.database_role_separation_required:
+            raise ValueError(
+                "Staging e produção exigem DATABASE_ROLE_SEPARATION_REQUIRED=true"
+            )
+        if not self.database_role_separation_required:
+            return
+
+        configured = {
+            "MIGRATION_DATABASE_URL": self.migration_database_url,
+            "API_DATABASE_URL": self.api_database_url,
+            "WORKER_DATABASE_URL": self.worker_database_url,
+        }
+        missing = [name for name, value in configured.items() if not value]
+        if missing:
+            raise ValueError(
+                "Separação de banco incompleta; configure: " + ", ".join(sorted(missing))
+            )
+
+        usernames: dict[str, str] = {}
+        for name, value in configured.items():
+            try:
+                parsed = make_url(value or "")
+            except (ArgumentError, ValueError) as error:
+                raise ValueError(f"{name} possui formato inválido") from error
+            if not parsed.username or parsed.password is None:
+                raise ValueError(f"{name} deve possuir usuário e senha protegidos")
+            usernames[name] = parsed.username.lower()
+
+        if len(set(usernames.values())) != len(usernames):
+            raise ValueError("Migração, API e worker devem usar usuários PostgreSQL distintos")
+        privileged_runtime_names = {
+            "admin",
+            "administrator",
+            "owner",
+            "postgres",
+            "root",
+            "superuser",
+        }
+        for name in ("API_DATABASE_URL", "WORKER_DATABASE_URL"):
+            if usernames[name] in privileged_runtime_names:
+                raise ValueError(f"{name} não pode utilizar usuário administrativo")
 
     @property
     def effective_bootstrap_admin_password(self) -> str | None:
@@ -452,7 +540,7 @@ class Settings(BaseSettings):
         return state, remaining_days
 
     def readiness_is_configured(self) -> bool:
-        required = [bool(self.database_url), bool(self.redis_url)]
+        required = [bool(self.effective_database_url), bool(self.redis_url)]
         if self.object_storage_enabled:
             required.extend([bool(self.storage_endpoint), bool(self.storage_bucket)])
         if self.n8n_enabled:

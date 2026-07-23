@@ -53,6 +53,10 @@ done
 environment_keys=(
   APP_ENV
   DATABASE_URL
+  MIGRATION_DATABASE_URL
+  API_DATABASE_URL
+  WORKER_DATABASE_URL
+  DATABASE_ROLE_SEPARATION_REQUIRED
   REDIS_URL
   JWT_SECRET
   ENCRYPTION_KEY
@@ -70,6 +74,8 @@ done
 
 contains_fixed "APP_ENV=production" .env.production.example ||
   fail "APP_ENV must be production"
+contains_fixed "DATABASE_ROLE_SEPARATION_REQUIRED=true" .env.production.example ||
+  fail "database role separation must be required"
 contains_fixed "BILLING_ENFORCEMENT_ENABLED=true" .env.production.example ||
   fail "billing enforcement must be enabled"
 contains_fixed "KNOWLEDGE_EMBEDDING_PROVIDER=openai_compatible" .env.production.example ||

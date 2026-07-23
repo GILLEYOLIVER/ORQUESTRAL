@@ -140,6 +140,17 @@ async def _assert_database_rls(settings: Settings, identity: SecurityProbeIdenti
             await apply_tenant_database_context(
                 database,
                 company_id=identity.company_ids[0],
+                access_mode="standard",
+            )
+            await database.execute(text("SET LOCAL row_security = off"))
+            with pytest.raises(DBAPIError):
+                await database.execute(text("SELECT id FROM crm_contacts"))
+            await database.rollback()
+
+        async with resources.sessions() as database:
+            await apply_tenant_database_context(
+                database,
+                company_id=identity.company_ids[0],
                 access_mode="read_only",
             )
             own_contact = await database.get(CRMContact, identity.contact_ids[0])
@@ -217,6 +228,10 @@ def test_api_rejects_tenant_forgery_mass_assignment_and_sql_injection() -> None:
                 "token_hash",
                 "client_secret",
                 "encrypted_credentials",
+                "database_url",
+                "migration_database_url",
+                "api_database_url",
+                "worker_database_url",
             ):
                 assert forbidden not in serialized
     finally:

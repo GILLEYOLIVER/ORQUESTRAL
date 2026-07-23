@@ -15,6 +15,7 @@ required=(
   scripts/verify-deployment.sh
   scripts/deploy-development-manual.sh
   scripts/check-frontend-secret-boundary.sh
+  scripts/check-database-role-separation.sh
   scripts/security-audit.sh
 )
 
@@ -23,7 +24,9 @@ for file in "${required[@]}"; do
 done
 
 bash -n scripts/verify-deployment.sh scripts/deploy-development-manual.sh \
-  scripts/check-frontend-secret-boundary.sh scripts/check-cicd-contracts.sh
+  scripts/check-frontend-secret-boundary.sh scripts/check-database-role-separation.sh \
+  scripts/check-cicd-contracts.sh
+bash scripts/check-database-role-separation.sh
 grep -Fq 'autoDeployTrigger: off' render.yaml
 ! grep -Fq 'workflow_run:' .github/workflows/deploy-development.yml
 grep -Fq 'release_sha:' .github/workflows/deploy-development.yml

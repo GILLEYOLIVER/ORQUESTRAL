@@ -8,6 +8,7 @@ from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app.core.database import apply_tenant_database_context
 from app.core.dependencies import DatabaseSession, RedisClient, RequestSettings
 from app.core.schemas import StrictSchema
 from app.core.security import verify_password
@@ -63,6 +64,14 @@ async def create_company(
     database.add(company)
     try:
         await database.flush()
+        # A permissão de plataforma já foi validada. A partir deste ponto, as
+        # escritas de bootstrap pertencem à nova empresa e devem passar pela
+        # mesma política RLS usada por qualquer outro tenant.
+        await apply_tenant_database_context(
+            database,
+            company_id=company.id,
+            access_mode="standard",
+        )
         owner_role, _ = await ensure_company_system_roles(database, company.id)
         database.add(
             CompanyUser(

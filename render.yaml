@@ -43,6 +43,10 @@ services:
         value: REMOTE-DEVELOPMENT
       - key: DATABASE_URL
         sync: false
+      # Fallback DATABASE_URL remains active in reduced development until the
+      # provider receives three independent protected credentials.
+      - key: DATABASE_ROLE_SEPARATION_REQUIRED
+        value: "false"
       - key: REDIS_URL
         sync: false
       - key: CELERY_BROKER_URL
