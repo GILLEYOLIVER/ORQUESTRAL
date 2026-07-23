@@ -1223,3 +1223,28 @@ conhecidas nas dependencias e aprovou as sondas de RLS e fronteira do navegador.
 
 **Proximo passo exato:** provisionar as identidades protegidas no provedor e,
 depois, retomar multiplos turnos semanais e calendarios de feriados.
+
+## Atualizacao - Ciclo 76
+
+**Fase atual:** fechamento da governanca operacional do runtime de agentes.
+
+**Concluido:**
+
+- multiplos turnos semanais por plantonista;
+- calendario versionado de feriados;
+- cobertura minima simultanea configuravel;
+- deteccao de sobreposicao por usuario e dia;
+- diagnostico horario de lacunas;
+- publicacao recusada pelo backend quando a escala e insegura;
+- roteamento conforme o turno ativo e o feriado;
+- compatibilidade com politicas legadas;
+- interface responsiva de montagem e validacao;
+- migracao Alembic `20260723_0090` reversivel.
+
+**Validacao:** 242 testes de API, worker, integracao e seguranca e 19 testes da
+interface aprovados; build, lint, tipagem produtiva, auditoria de
+segredos/dependencias e downgrade/upgrade da migracao aprovados. Os oito
+servicos locais terminaram saudaveis.
+
+**Proximo passo exato:** iniciar a Fase 5 com identidade canonica, fontes,
+qualidade, consentimento e visao 360 do cliente.

@@ -420,20 +420,23 @@ class AgentDispatchReviewSLAPolicy(Base):
     name: Mapped[str] = mapped_column(String(160))
     sla_minutes: Mapped[int] = mapped_column(Integer)
     escalation_minutes: Mapped[int] = mapped_column(Integer)
-    acknowledgement_minutes: Mapped[int] = mapped_column(
-        Integer, default=15, server_default="15"
-    )
+    acknowledgement_minutes: Mapped[int] = mapped_column(Integer, default=15, server_default="15")
     on_call_user_ids: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
     )
-    on_call_timezone: Mapped[str] = mapped_column(
-        String(64), default="UTC", server_default="UTC"
-    )
+    on_call_timezone: Mapped[str] = mapped_column(String(64), default="UTC", server_default="UTC")
     on_call_start_hour: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     on_call_end_hour: Mapped[int] = mapped_column(Integer, default=24, server_default="24")
     on_call_weekdays: Mapped[list[int]] = mapped_column(
         JSONB, default=lambda: list(range(7)), server_default=text("'[0,1,2,3,4,5,6]'::jsonb")
     )
+    on_call_shifts: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    holiday_calendar: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    minimum_coverage: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -475,9 +478,7 @@ class AgentDispatchReviewAssignment(Base):
     company_id: Mapped[UUID] = mapped_column(
         ForeignKey("companies.id", ondelete="CASCADE"), index=True
     )
-    agent_id: Mapped[UUID] = mapped_column(
-        ForeignKey("agents.id", ondelete="CASCADE"), index=True
-    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     review_id: Mapped[UUID] = mapped_column(
         ForeignKey("agent_dispatch_reviews.id", ondelete="CASCADE"), index=True
     )
@@ -519,15 +520,11 @@ class AgentDispatchReviewOnCallException(Base):
     company_id: Mapped[UUID] = mapped_column(
         ForeignKey("companies.id", ondelete="CASCADE"), index=True
     )
-    agent_id: Mapped[UUID] = mapped_column(
-        ForeignKey("agents.id", ondelete="CASCADE"), index=True
-    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     policy_id: Mapped[UUID] = mapped_column(
         ForeignKey("agent_dispatch_review_sla_policies.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"), index=True
-    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), index=True)
     status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
     reason: Mapped[str] = mapped_column(String(500))
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
@@ -565,9 +562,7 @@ class AgentDispatchReviewOnCallHandoff(Base):
     company_id: Mapped[UUID] = mapped_column(
         ForeignKey("companies.id", ondelete="CASCADE"), index=True
     )
-    agent_id: Mapped[UUID] = mapped_column(
-        ForeignKey("agents.id", ondelete="CASCADE"), index=True
-    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
     policy_id: Mapped[UUID] = mapped_column(
         ForeignKey("agent_dispatch_review_sla_policies.id", ondelete="CASCADE"), index=True
     )

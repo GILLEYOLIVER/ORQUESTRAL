@@ -107,8 +107,38 @@ export type DispatchReviewSLAPolicy = {
   on_call_start_hour: number;
   on_call_end_hour: number;
   on_call_weekdays: number[];
+  on_call_shifts: DispatchReviewShift[];
+  holiday_calendar: DispatchReviewHoliday[];
+  minimum_coverage: number;
   created_at: string;
   published_at: string | null;
+};
+
+export type DispatchReviewShift = {
+  user_id: string;
+  weekdays: number[];
+  start_hour: number;
+  end_hour: number;
+};
+
+export type DispatchReviewHoliday = {
+  date: string;
+  name: string;
+  coverage_required: boolean;
+};
+
+export type DispatchReviewCoverage = {
+  valid: boolean;
+  minimum_coverage: number;
+  required_slots: number;
+  covered_slots: number;
+  issues: Array<{
+    code: string;
+    message: string;
+    weekday: number | null;
+    hour: number | null;
+    user_id: string | null;
+  }>;
 };
 
 export type DispatchReviewAssignment = {
@@ -454,6 +484,9 @@ export function useAgentRuntimeActions(agentId: string | null) {
       on_call_start_hour: number;
       on_call_end_hour: number;
       on_call_weekdays: number[];
+      on_call_shifts: DispatchReviewShift[];
+      holiday_calendar: DispatchReviewHoliday[];
+      minimum_coverage: number;
     }) =>
       request<DispatchReviewSLAPolicy>(
         `/agents/${agentId}/runtime-dispatch-review-sla-policies`,
@@ -468,6 +501,12 @@ export function useAgentRuntimeActions(agentId: string | null) {
         { method: "POST" },
       ),
     onSuccess: refresh,
+  });
+  const validateReviewSLAPolicy = useMutation({
+    mutationFn: (policyId: string) =>
+      request<DispatchReviewCoverage>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/${policyId}/coverage`,
+      ),
   });
   const acknowledgeReviewAssignment = useMutation({
     mutationFn: ({ reviewId, assignmentId }: { reviewId: string; assignmentId: string }) =>
@@ -593,6 +632,7 @@ export function useAgentRuntimeActions(agentId: string | null) {
     pauseTrigger,
     publishSchedule,
     publishReviewSLAPolicy,
+    validateReviewSLAPolicy,
     publishTrigger,
     reassignReview,
     cancelOnCallException,
