@@ -27,6 +27,8 @@ from app.modules.agents.runtime_models import (
     AgentCredentialBinding,
     AgentDispatchReview,
     AgentDispatchReviewAssignment,
+    AgentDispatchReviewOnCallException,
+    AgentDispatchReviewOnCallHandoff,
     AgentDispatchReviewSLAPolicy,
     AgentEventTrigger,
     AgentExecutionSchedule,
@@ -39,6 +41,11 @@ from app.modules.agents.runtime_schemas import (
     AgentDispatchRetryApproval,
     AgentDispatchReviewAssignmentResponse,
     AgentDispatchReviewCreate,
+    AgentDispatchReviewOnCallExceptionCreate,
+    AgentDispatchReviewOnCallExceptionResponse,
+    AgentDispatchReviewOnCallHandoffCreate,
+    AgentDispatchReviewOnCallHandoffDecision,
+    AgentDispatchReviewOnCallHandoffResponse,
     AgentDispatchReviewReassign,
     AgentDispatchReviewResponse,
     AgentDispatchReviewSLAPolicyCreate,
@@ -69,6 +76,25 @@ async def _tenant_agent(database: DatabaseSession, company_id: UUID, agent_id: U
     if agent is None:
         raise HTTPException(status_code=404, detail="Agente não encontrado.")
     return agent
+
+
+async def _tenant_review_sla_policy(
+    database: DatabaseSession,
+    *,
+    company_id: UUID,
+    agent_id: UUID,
+    policy_id: UUID,
+) -> AgentDispatchReviewSLAPolicy:
+    policy = await database.scalar(
+        select(AgentDispatchReviewSLAPolicy).where(
+            AgentDispatchReviewSLAPolicy.id == policy_id,
+            AgentDispatchReviewSLAPolicy.company_id == company_id,
+            AgentDispatchReviewSLAPolicy.agent_id == agent_id,
+        )
+    )
+    if policy is None:
+        raise HTTPException(status_code=404, detail="Política de SLA não encontrada.")
+    return policy
 
 
 async def _active_version(
@@ -840,6 +866,274 @@ async def publish_agent_dispatch_review_sla_policy(
     await database.commit()
     await database.refresh(policy)
     return policy
+
+
+@router.get(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-exceptions",
+    response_model=list[AgentDispatchReviewOnCallExceptionResponse],
+)
+async def list_agent_dispatch_review_on_call_exceptions(
+    agent_id: UUID,
+    policy_id: UUID,
+    principal: CanViewAgents,
+    database: DatabaseSession,
+) -> list[AgentDispatchReviewOnCallException]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    await _tenant_review_sla_policy(
+        database, company_id=context.company_id, agent_id=agent_id, policy_id=policy_id
+    )
+    return list(
+        await database.scalars(
+            select(AgentDispatchReviewOnCallException)
+            .where(
+                AgentDispatchReviewOnCallException.company_id == context.company_id,
+                AgentDispatchReviewOnCallException.agent_id == agent_id,
+                AgentDispatchReviewOnCallException.policy_id == policy_id,
+            )
+            .order_by(AgentDispatchReviewOnCallException.starts_at.desc())
+        )
+    )
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-exceptions",
+    response_model=AgentDispatchReviewOnCallExceptionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_dispatch_review_on_call_exception(
+    agent_id: UUID,
+    policy_id: UUID,
+    payload: AgentDispatchReviewOnCallExceptionCreate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewOnCallException:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    policy = await _tenant_review_sla_policy(
+        database, company_id=context.company_id, agent_id=agent_id, policy_id=policy_id
+    )
+    if str(payload.user_id) not in policy.on_call_user_ids:
+        raise HTTPException(status_code=422, detail="A ausência deve pertencer ao plantão da política.")
+    if payload.user_id not in await company_approver_user_ids(database, context.company_id):
+        raise HTTPException(status_code=422, detail="O plantonista não é um aprovador ativo.")
+    exception = AgentDispatchReviewOnCallException(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        policy_id=policy_id,
+        user_id=payload.user_id,
+        status="active",
+        reason=payload.reason,
+        starts_at=payload.starts_at,
+        ends_at=payload.ends_at,
+        created_by_user_id=context.user_id,
+    )
+    database.add(exception)
+    await database.flush()
+    _audit_event(
+        database,
+        company_id=context.company_id,
+        user_id=context.user_id,
+        action="agent.dispatch_review.on_call_exception_created",
+        target_type="agent_dispatch_review_on_call_exception",
+        target_id=exception.id,
+        agent_id=agent_id,
+    )
+    await database.commit()
+    await database.refresh(exception)
+    return exception
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-exceptions/"
+    "{exception_id}/cancel",
+    response_model=AgentDispatchReviewOnCallExceptionResponse,
+)
+async def cancel_agent_dispatch_review_on_call_exception(
+    agent_id: UUID,
+    policy_id: UUID,
+    exception_id: UUID,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewOnCallException:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    exception = await database.scalar(
+        select(AgentDispatchReviewOnCallException)
+        .where(
+            AgentDispatchReviewOnCallException.id == exception_id,
+            AgentDispatchReviewOnCallException.company_id == context.company_id,
+            AgentDispatchReviewOnCallException.agent_id == agent_id,
+            AgentDispatchReviewOnCallException.policy_id == policy_id,
+        )
+        .with_for_update()
+    )
+    if exception is None:
+        raise HTTPException(status_code=404, detail="Ausência de plantão não encontrada.")
+    if exception.status == "active":
+        exception.status = "cancelled"
+        _audit_event(
+            database,
+            company_id=context.company_id,
+            user_id=context.user_id,
+            action="agent.dispatch_review.on_call_exception_cancelled",
+            target_type="agent_dispatch_review_on_call_exception",
+            target_id=exception.id,
+            agent_id=agent_id,
+        )
+    await database.commit()
+    await database.refresh(exception)
+    return exception
+
+
+@router.get(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-handoffs",
+    response_model=list[AgentDispatchReviewOnCallHandoffResponse],
+)
+async def list_agent_dispatch_review_on_call_handoffs(
+    agent_id: UUID,
+    policy_id: UUID,
+    principal: CanViewAgents,
+    database: DatabaseSession,
+) -> list[AgentDispatchReviewOnCallHandoff]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    await _tenant_review_sla_policy(
+        database, company_id=context.company_id, agent_id=agent_id, policy_id=policy_id
+    )
+    return list(
+        await database.scalars(
+            select(AgentDispatchReviewOnCallHandoff)
+            .where(
+                AgentDispatchReviewOnCallHandoff.company_id == context.company_id,
+                AgentDispatchReviewOnCallHandoff.agent_id == agent_id,
+                AgentDispatchReviewOnCallHandoff.policy_id == policy_id,
+            )
+            .order_by(AgentDispatchReviewOnCallHandoff.created_at.desc())
+        )
+    )
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-handoffs",
+    response_model=AgentDispatchReviewOnCallHandoffResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_agent_dispatch_review_on_call_handoff(
+    agent_id: UUID,
+    policy_id: UUID,
+    payload: AgentDispatchReviewOnCallHandoffCreate,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewOnCallHandoff:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    policy = await _tenant_review_sla_policy(
+        database, company_id=context.company_id, agent_id=agent_id, policy_id=policy_id
+    )
+    existing = await database.scalar(
+        select(AgentDispatchReviewOnCallHandoff).where(
+            AgentDispatchReviewOnCallHandoff.company_id == context.company_id,
+            AgentDispatchReviewOnCallHandoff.request_idempotency_key
+            == payload.idempotency_key,
+        )
+    )
+    if existing is not None:
+        if existing.agent_id != agent_id or existing.policy_id != policy_id:
+            raise HTTPException(status_code=409, detail="Chave idempotente já utilizada.")
+        return existing
+    authorized = set(await company_approver_user_ids(database, context.company_id))
+    if (
+        str(payload.from_user_id) not in policy.on_call_user_ids
+        or payload.from_user_id not in authorized
+        or payload.to_user_id not in authorized
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Origem e substituto devem ser aprovadores ativos desta empresa.",
+        )
+    handoff = AgentDispatchReviewOnCallHandoff(
+        company_id=context.company_id,
+        agent_id=agent_id,
+        policy_id=policy_id,
+        from_user_id=payload.from_user_id,
+        to_user_id=payload.to_user_id,
+        requested_by_user_id=context.user_id,
+        request_idempotency_key=payload.idempotency_key,
+        status="pending",
+        reason=payload.reason,
+        starts_at=payload.starts_at,
+        ends_at=payload.ends_at,
+    )
+    database.add(handoff)
+    await database.flush()
+    _audit_event(
+        database,
+        company_id=context.company_id,
+        user_id=context.user_id,
+        action="agent.dispatch_review.on_call_handoff_requested",
+        target_type="agent_dispatch_review_on_call_handoff",
+        target_id=handoff.id,
+        agent_id=agent_id,
+    )
+    await database.commit()
+    await database.refresh(handoff)
+    return handoff
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/on-call-handoffs/"
+    "{handoff_id}/respond",
+    response_model=AgentDispatchReviewOnCallHandoffResponse,
+)
+async def respond_agent_dispatch_review_on_call_handoff(
+    agent_id: UUID,
+    policy_id: UUID,
+    handoff_id: UUID,
+    payload: AgentDispatchReviewOnCallHandoffDecision,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewOnCallHandoff:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    handoff = await database.scalar(
+        select(AgentDispatchReviewOnCallHandoff)
+        .where(
+            AgentDispatchReviewOnCallHandoff.id == handoff_id,
+            AgentDispatchReviewOnCallHandoff.company_id == context.company_id,
+            AgentDispatchReviewOnCallHandoff.agent_id == agent_id,
+            AgentDispatchReviewOnCallHandoff.policy_id == policy_id,
+        )
+        .with_for_update()
+    )
+    if handoff is None:
+        raise HTTPException(status_code=404, detail="Passagem de plantão não encontrada.")
+    if handoff.to_user_id != context.user_id:
+        raise HTTPException(status_code=403, detail="Somente o substituto pode responder.")
+    expected_status = "accepted" if payload.decision == "accept" else "rejected"
+    if handoff.status == expected_status:
+        return handoff
+    if handoff.status != "pending":
+        raise HTTPException(status_code=409, detail="A passagem já possui decisão final.")
+    if handoff.ends_at <= utc_now():
+        handoff.status = "expired"
+        await database.commit()
+        raise HTTPException(status_code=409, detail="A passagem de plantão expirou.")
+    handoff.status = expected_status
+    handoff.responded_by_user_id = context.user_id
+    handoff.responded_at = utc_now()
+    _audit_event(
+        database,
+        company_id=context.company_id,
+        user_id=context.user_id,
+        action=f"agent.dispatch_review.on_call_handoff_{expected_status}",
+        target_type="agent_dispatch_review_on_call_handoff",
+        target_id=handoff.id,
+        agent_id=agent_id,
+    )
+    await database.commit()
+    await database.refresh(handoff)
+    return handoff
 
 
 @router.post(

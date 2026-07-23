@@ -39,6 +39,7 @@ const dispatchLabels: Record<string, string> = {
   completed: "Concluído",
   failed: "Falhou",
 };
+const weekdayLabels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 function toolKeys(value: string) {
   return value
@@ -54,6 +55,11 @@ function readableDate(value: string | null) {
         timeStyle: "short",
       }).format(new Date(value))
     : "Ainda não executada";
+}
+
+function isoDateTime(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 }
 
 function DispatchReviewControls({
@@ -229,6 +235,18 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
   const [reviewOnCallTimezone, setReviewOnCallTimezone] = useState("UTC");
   const [reviewOnCallStartHour, setReviewOnCallStartHour] = useState(0);
   const [reviewOnCallEndHour, setReviewOnCallEndHour] = useState(24);
+  const [reviewOnCallWeekdays, setReviewOnCallWeekdays] = useState<number[]>(
+    () => Array.from({ length: 7 }, (_, day) => day),
+  );
+  const [absenceUserId, setAbsenceUserId] = useState("");
+  const [absenceReason, setAbsenceReason] = useState("");
+  const [absenceStartsAt, setAbsenceStartsAt] = useState("");
+  const [absenceEndsAt, setAbsenceEndsAt] = useState("");
+  const [handoffFromUserId, setHandoffFromUserId] = useState("");
+  const [handoffToUserId, setHandoffToUserId] = useState("");
+  const [handoffReason, setHandoffReason] = useState("");
+  const [handoffStartsAt, setHandoffStartsAt] = useState("");
+  const [handoffEndsAt, setHandoffEndsAt] = useState("");
   const usableCredentials = useMemo(
     () => runtime.credentials.data?.filter((item) => item.usable) ?? [],
     [runtime.credentials.data],
@@ -338,7 +356,51 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
       on_call_timezone: reviewOnCallTimezone,
       on_call_start_hour: reviewOnCallStartHour,
       on_call_end_hour: reviewOnCallEndHour,
+      on_call_weekdays: reviewOnCallWeekdays,
     });
+  };
+
+  const submitOnCallException = (event: FormEvent) => {
+    event.preventDefault();
+    if (!runtime.activeReviewPolicyId) return;
+    actions.createOnCallException.mutate(
+      {
+        policyId: runtime.activeReviewPolicyId,
+        userId: absenceUserId,
+        reason: absenceReason,
+        startsAt: isoDateTime(absenceStartsAt),
+        endsAt: isoDateTime(absenceEndsAt),
+      },
+      {
+        onSuccess: () => {
+          setAbsenceReason("");
+          setAbsenceStartsAt("");
+          setAbsenceEndsAt("");
+        },
+      },
+    );
+  };
+
+  const submitOnCallHandoff = (event: FormEvent) => {
+    event.preventDefault();
+    if (!runtime.activeReviewPolicyId) return;
+    actions.createOnCallHandoff.mutate(
+      {
+        policyId: runtime.activeReviewPolicyId,
+        fromUserId: handoffFromUserId,
+        toUserId: handoffToUserId,
+        reason: handoffReason,
+        startsAt: isoDateTime(handoffStartsAt),
+        endsAt: isoDateTime(handoffEndsAt),
+      },
+      {
+        onSuccess: () => {
+          setHandoffReason("");
+          setHandoffStartsAt("");
+          setHandoffEndsAt("");
+        },
+      },
+    );
   };
 
   return (
@@ -829,10 +891,30 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                     </label>
                   ))}
               </fieldset>
+              <fieldset className="dispatch-on-call-users">
+                <legend>Dias da semana</legend>
+                {weekdayLabels.map((label, day) => (
+                  <label key={label}>
+                    <input
+                      checked={reviewOnCallWeekdays.includes(day)}
+                      onChange={(event) =>
+                        setReviewOnCallWeekdays((current) =>
+                          event.target.checked
+                            ? [...current, day].sort()
+                            : current.filter((value) => value !== day),
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </fieldset>
               <button
                 disabled={
                   actions.createReviewSLAPolicy.isPending ||
-                  reviewEscalationMinutes <= reviewSlaMinutes
+                  reviewEscalationMinutes <= reviewSlaMinutes ||
+                  reviewOnCallWeekdays.length === 0
                 }
                 type="submit"
               >
@@ -850,7 +932,8 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                     Aviso {policy.sla_minutes} min · escalonamento {" "}
                     {policy.escalation_minutes} min · confirmação {" "}
                     {policy.acknowledgement_minutes} min · {" "}
-                    {policy.on_call_user_ids.length} plantonista(s)
+                    {policy.on_call_user_ids.length} plantonista(s) · {" "}
+                    {policy.on_call_weekdays.map((day) => weekdayLabels[day]).join(", ")}
                   </small>
                   {policy.status === "draft" ? (
                     <button
@@ -864,6 +947,179 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                 </div>
               ))}
             </div>
+            {runtime.activeReviewPolicyId ? (
+              <div className="dispatch-on-call-management">
+                <form className="agent-runtime-form" onSubmit={submitOnCallException}>
+                  <h4>Registrar ausência</h4>
+                  <select
+                    aria-label="Plantonista ausente"
+                    onChange={(event) => setAbsenceUserId(event.target.value)}
+                    required
+                    value={absenceUserId}
+                  >
+                    <option value="">Selecione o plantonista</option>
+                    {(runtime.companyUsers.data ?? [])
+                      .filter((user) =>
+                        runtime.reviewPolicies.data
+                          ?.find((policy) => policy.id === runtime.activeReviewPolicyId)
+                          ?.on_call_user_ids.includes(user.user_id),
+                      )
+                      .map((user) => (
+                        <option key={user.user_id} value={user.user_id}>
+                          {user.name}
+                        </option>
+                      ))}
+                  </select>
+                  <input
+                    onChange={(event) => setAbsenceStartsAt(event.target.value)}
+                    required
+                    type="datetime-local"
+                    value={absenceStartsAt}
+                  />
+                  <input
+                    onChange={(event) => setAbsenceEndsAt(event.target.value)}
+                    required
+                    type="datetime-local"
+                    value={absenceEndsAt}
+                  />
+                  <input
+                    minLength={10}
+                    onChange={(event) => setAbsenceReason(event.target.value)}
+                    placeholder="Motivo operacional da ausência"
+                    required
+                    value={absenceReason}
+                  />
+                  <button disabled={actions.createOnCallException.isPending} type="submit">
+                    Registrar ausência
+                  </button>
+                </form>
+                <div className="agent-runtime-policy-list">
+                  {(runtime.onCallExceptions.data ?? []).map((exception) => (
+                    <div key={exception.id}>
+                      <span>
+                        <strong>
+                          {runtime.companyUsers.data?.find(
+                            (user) => user.user_id === exception.user_id,
+                          )?.name ?? "Plantonista"}
+                        </strong> · {exception.status === "active" ? "ausente" : "cancelada"}
+                      </span>
+                      <small>
+                        {readableDate(exception.starts_at)} até {readableDate(exception.ends_at)}
+                      </small>
+                      {exception.status === "active" ? (
+                        <button
+                          disabled={actions.cancelOnCallException.isPending}
+                          onClick={() =>
+                            actions.cancelOnCallException.mutate({
+                              exceptionId: exception.id,
+                              policyId: runtime.activeReviewPolicyId!,
+                            })
+                          }
+                          type="button"
+                        >
+                          Cancelar ausência
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <form className="agent-runtime-form" onSubmit={submitOnCallHandoff}>
+                  <h4>Passagem de plantão</h4>
+                  <select
+                    aria-label="Responsável de origem"
+                    onChange={(event) => setHandoffFromUserId(event.target.value)}
+                    required
+                    value={handoffFromUserId}
+                  >
+                    <option value="">Responsável atual</option>
+                    {(runtime.companyUsers.data ?? []).map((user) => (
+                      <option key={user.user_id} value={user.user_id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Substituto do plantão"
+                    onChange={(event) => setHandoffToUserId(event.target.value)}
+                    required
+                    value={handoffToUserId}
+                  >
+                    <option value="">Substituto</option>
+                    {(runtime.companyUsers.data ?? [])
+                      .filter((user) => user.user_id !== handoffFromUserId)
+                      .map((user) => (
+                        <option key={user.user_id} value={user.user_id}>
+                          {user.name}
+                        </option>
+                      ))}
+                  </select>
+                  <input
+                    onChange={(event) => setHandoffStartsAt(event.target.value)}
+                    required
+                    type="datetime-local"
+                    value={handoffStartsAt}
+                  />
+                  <input
+                    onChange={(event) => setHandoffEndsAt(event.target.value)}
+                    required
+                    type="datetime-local"
+                    value={handoffEndsAt}
+                  />
+                  <input
+                    minLength={10}
+                    onChange={(event) => setHandoffReason(event.target.value)}
+                    placeholder="Motivo da passagem"
+                    required
+                    value={handoffReason}
+                  />
+                  <button disabled={actions.createOnCallHandoff.isPending} type="submit">
+                    Solicitar aceite
+                  </button>
+                </form>
+                <div className="agent-runtime-policy-list">
+                  {(runtime.onCallHandoffs.data ?? []).map((handoff) => (
+                    <div key={handoff.id}>
+                      <span>
+                        <strong>Passagem de plantão</strong> · {handoff.status}
+                      </span>
+                      <small>
+                        {readableDate(handoff.starts_at)} até {readableDate(handoff.ends_at)}
+                      </small>
+                      {handoff.status === "pending" && canExecute ? (
+                        <span className="dispatch-review-buttons">
+                          <button
+                            disabled={actions.respondOnCallHandoff.isPending}
+                            onClick={() =>
+                              actions.respondOnCallHandoff.mutate({
+                                decision: "accept",
+                                handoffId: handoff.id,
+                                policyId: runtime.activeReviewPolicyId!,
+                              })
+                            }
+                            type="button"
+                          >
+                            Aceitar
+                          </button>
+                          <button
+                            disabled={actions.respondOnCallHandoff.isPending}
+                            onClick={() =>
+                              actions.respondOnCallHandoff.mutate({
+                                decision: "reject",
+                                handoffId: handoff.id,
+                                policyId: runtime.activeReviewPolicyId!,
+                              })
+                            }
+                            type="button"
+                          >
+                            Recusar
+                          </button>
+                        </span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </article>

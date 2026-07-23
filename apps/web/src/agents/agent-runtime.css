@@ -329,6 +329,17 @@
   border-radius: 0.8rem;
 }
 
+.dispatch-on-call-management {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line, #d8e2df);
+}
+
+.dispatch-on-call-management h4 {
+  margin: 0;
+}
+
 .dispatch-on-call-users label {
   display: flex;
   align-items: center;

@@ -315,6 +315,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
         with TestClient(create_app(settings)) as client:
             headers_a = _login(client, identity.emails[0], identity.password)
             headers_b = _login(client, identity.emails[1], identity.password)
+            headers_c = _login(client, identity.emails[2], identity.password)
 
             created = client.post(
                 "/agents",
@@ -482,6 +483,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     "on_call_timezone": "UTC",
                     "on_call_start_hour": 0,
                     "on_call_end_hour": 24,
+                    "on_call_weekdays": [datetime.now(UTC).weekday()],
                 },
             )
             assert foreign_policy.status_code == 404
@@ -500,6 +502,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     "on_call_timezone": "UTC",
                     "on_call_start_hour": 0,
                     "on_call_end_hour": 24,
+                    "on_call_weekdays": [datetime.now(UTC).weekday()],
                 },
             )
             assert policy.status_code == 201
@@ -511,6 +514,89 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             )
             assert published_policy.status_code == 200
             assert published_policy.json()["status"] == "published"
+            assert published_policy.json()["on_call_weekdays"] == [
+                datetime.now(UTC).weekday()
+            ]
+
+            policy_id = published_policy.json()["id"]
+            now = datetime.now(UTC)
+            exception_payload = {
+                "user_id": str(identity.user_ids[1]),
+                "reason": "Ausência programada para validar o calendário de plantão.",
+                "starts_at": (now - timedelta(hours=1)).isoformat(),
+                "ends_at": (now + timedelta(hours=1)).isoformat(),
+            }
+            foreign_exception = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-exceptions",
+                headers=headers_a,
+                json=exception_payload,
+            )
+            assert foreign_exception.status_code == 404
+            exception = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-exceptions",
+                headers=headers_b,
+                json=exception_payload,
+            )
+            assert exception.status_code == 201
+            assert exception.json()["status"] == "active"
+
+            handoff_key = str(uuid4())
+            handoff_payload = {
+                "from_user_id": str(identity.user_ids[1]),
+                "to_user_id": str(identity.user_ids[2]),
+                "reason": "Substituição temporária durante a ausência programada.",
+                "starts_at": (now - timedelta(hours=1)).isoformat(),
+                "ends_at": (now + timedelta(hours=1)).isoformat(),
+                "idempotency_key": handoff_key,
+            }
+            foreign_handoff = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-handoffs",
+                headers=headers_a,
+                json=handoff_payload,
+            )
+            assert foreign_handoff.status_code == 404
+            handoff = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-handoffs",
+                headers=headers_b,
+                json=handoff_payload,
+            )
+            assert handoff.status_code == 201
+            assert handoff.json()["status"] == "pending"
+            replayed_handoff = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-handoffs",
+                headers=headers_b,
+                json=handoff_payload,
+            )
+            assert replayed_handoff.status_code == 201
+            assert replayed_handoff.json()["id"] == handoff.json()["id"]
+            forbidden_handoff_acceptance = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-handoffs/{handoff.json()['id']}/respond",
+                headers=headers_b,
+                json={"decision": "accept"},
+            )
+            assert forbidden_handoff_acceptance.status_code == 403
+            accepted_handoff = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-handoffs/{handoff.json()['id']}/respond",
+                headers=headers_c,
+                json={"decision": "accept"},
+            )
+            assert accepted_handoff.status_code == 200
+            assert accepted_handoff.json()["status"] == "accepted"
+            replayed_acceptance = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy_id}/on-call-handoffs/{handoff.json()['id']}/respond",
+                headers=headers_c,
+                json={"decision": "accept"},
+            )
+            assert replayed_acceptance.status_code == 200
+            assert replayed_acceptance.json()["id"] == handoff.json()["id"]
 
             initial_summary = client.get(
                 f"/agents/{agent_id}/runtime-dispatch-reviews/summary",
@@ -542,7 +628,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             active_assignment = next(
                 item for item in assignments.json() if item["ended_at"] is None
             )
-            assert active_assignment["assigned_to_user_id"] == str(identity.user_ids[1])
+            assert active_assignment["assigned_to_user_id"] == str(identity.user_ids[2])
             assert active_assignment["status"] == "pending"
             assert (
                 client.post(
@@ -555,14 +641,14 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             acknowledged = client.post(
                 f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/"
                 f"assignments/{active_assignment['id']}/acknowledge",
-                headers=headers_b,
+                headers=headers_c,
             )
             assert acknowledged.status_code == 200
             assert acknowledged.json()["status"] == "acknowledged"
             replayed_acknowledgement = client.post(
                 f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/"
                 f"assignments/{active_assignment['id']}/acknowledge",
-                headers=headers_b,
+                headers=headers_c,
             )
             assert replayed_acknowledgement.status_code == 200
             assert replayed_acknowledgement.json()["id"] == active_assignment["id"]
@@ -579,12 +665,12 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                 f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/reassign",
                 headers=headers_b,
                 json={
-                    "assigned_to_user_id": str(identity.user_ids[2]),
-                    "reason": "Suplente assumirá a análise desta execução interrompida.",
+                    "assigned_to_user_id": str(identity.user_ids[1]),
+                    "reason": "Responsável original retomará esta análise temporariamente.",
                 },
             )
             assert reassigned.status_code == 200
-            assert reassigned.json()["assigned_to_user_id"] == str(identity.user_ids[2])
+            assert reassigned.json()["assigned_to_user_id"] == str(identity.user_ids[1])
             assert reassigned.json()["previous_assignment_id"] == active_assignment["id"]
             asyncio.run(
                 _make_assignment_acknowledgement_overdue(
@@ -610,7 +696,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             rotated_active = next(
                 item for item in rotated_assignments.json() if item["ended_at"] is None
             )
-            assert rotated_active["assigned_to_user_id"] == str(identity.user_ids[1])
+            assert rotated_active["assigned_to_user_id"] == str(identity.user_ids[2])
             assert rotated_active["previous_assignment_id"] == reassigned.json()["id"]
 
             overdue_summary = client.get(

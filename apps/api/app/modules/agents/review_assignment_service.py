@@ -11,6 +11,8 @@ from app.core.security import utc_now
 from app.modules.agents.runtime_models import (
     AgentDispatchReview,
     AgentDispatchReviewAssignment,
+    AgentDispatchReviewOnCallException,
+    AgentDispatchReviewOnCallHandoff,
 )
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
@@ -29,24 +31,77 @@ async def _active_on_call_user_ids(
     database: AsyncSession,
     *,
     company_id: UUID,
+    agent_id: UUID,
+    policy_id: UUID | None,
     user_ids: tuple[UUID, ...],
     timezone: str,
     start_hour: int,
     end_hour: int,
+    weekdays: tuple[int, ...],
 ) -> list[UUID]:
-    local_hour = utc_now().astimezone(ZoneInfo(timezone)).hour
-    if not user_ids or not start_hour <= local_hour < end_hour:
+    now = utc_now()
+    local_now = now.astimezone(ZoneInfo(timezone))
+    if (
+        not user_ids
+        or local_now.weekday() not in weekdays
+        or not start_hour <= local_now.hour < end_hour
+    ):
         return []
-    active = set(
+    handoffs = (
+        list(
+            await database.scalars(
+                select(AgentDispatchReviewOnCallHandoff).where(
+                    AgentDispatchReviewOnCallHandoff.company_id == company_id,
+                    AgentDispatchReviewOnCallHandoff.agent_id == agent_id,
+                    AgentDispatchReviewOnCallHandoff.policy_id == policy_id,
+                    AgentDispatchReviewOnCallHandoff.status == "accepted",
+                    AgentDispatchReviewOnCallHandoff.starts_at <= now,
+                    AgentDispatchReviewOnCallHandoff.ends_at > now,
+                )
+            )
+        )
+        if policy_id is not None
+        else []
+    )
+    replacement_by_user = {handoff.from_user_id: handoff.to_user_id for handoff in handoffs}
+    candidate_ids = set(user_ids) | set(replacement_by_user.values())
+    active_members = set(
         await database.scalars(
             select(CompanyUser.user_id).where(
                 CompanyUser.company_id == company_id,
-                CompanyUser.user_id.in_(user_ids),
+                CompanyUser.user_id.in_(candidate_ids),
                 CompanyUser.status == "active",
             )
         )
     )
-    return [user_id for user_id in user_ids if user_id in active]
+    current_approvers = set(await company_approver_user_ids(database, company_id))
+    absent_user_ids = (
+        set(
+            await database.scalars(
+                select(AgentDispatchReviewOnCallException.user_id).where(
+                    AgentDispatchReviewOnCallException.company_id == company_id,
+                    AgentDispatchReviewOnCallException.agent_id == agent_id,
+                    AgentDispatchReviewOnCallException.policy_id == policy_id,
+                    AgentDispatchReviewOnCallException.status == "active",
+                    AgentDispatchReviewOnCallException.starts_at <= now,
+                    AgentDispatchReviewOnCallException.ends_at > now,
+                )
+            )
+        )
+        if policy_id is not None
+        else set()
+    )
+    routed: list[UUID] = []
+    for configured_user_id in user_ids:
+        effective_user_id = replacement_by_user.get(configured_user_id, configured_user_id)
+        if (
+            effective_user_id in active_members
+            and effective_user_id in current_approvers
+            and effective_user_id not in absent_user_ids
+            and effective_user_id not in routed
+        ):
+            routed.append(effective_user_id)
+    return routed
 
 
 def _audit_assignment(
@@ -104,19 +159,24 @@ async def assign_review_for_sla(
     database: AsyncSession,
     *,
     review: AgentDispatchReview,
+    policy_id: UUID | None,
     on_call_user_ids: tuple[UUID, ...],
     on_call_timezone: str,
     on_call_start_hour: int,
     on_call_end_hour: int,
+    on_call_weekdays: tuple[int, ...],
     escalated: bool,
 ) -> AgentDispatchReviewAssignment | None:
     configured = await _active_on_call_user_ids(
         database,
         company_id=review.company_id,
+        agent_id=review.agent_id,
+        policy_id=policy_id,
         user_ids=on_call_user_ids,
         timezone=on_call_timezone,
         start_hour=on_call_start_hour,
         end_hour=on_call_end_hour,
+        weekdays=on_call_weekdays,
     )
     candidates = configured or await company_approver_user_ids(database, review.company_id)
     if not candidates:
@@ -125,7 +185,9 @@ async def assign_review_for_sla(
         database, company_id=review.company_id, review_id=review.id, lock=True
     )
     if current is not None and (
-        not escalated or current.acknowledged_at is not None or len(candidates) < 2
+        not escalated
+        or current.acknowledged_at is not None
+        or (len(candidates) < 2 and current.assigned_to_user_id in candidates)
     ):
         return current
     previous_id = current.id if current is not None else None
