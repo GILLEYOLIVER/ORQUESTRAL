@@ -1382,3 +1382,15 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
   de minimizacao e atendimento de solicitacoes LGPD;
 - documento tecnico:
   `docs/implementation/CYCLE_85_CUSTOMER_CDC_RETENTION_WORKER.md`.
+# Atualizacao 2026-07-23 - Ciclo 86
+
+- fase atual: Fase 5, plataforma de dados;
+- concluido neste recorte: solicitacoes de anonimização e exclusao, verificacao,
+  decisao, retencao legal e execucao irreversivel;
+- migracao: `20260723_0100`;
+- seguranca: RLS, hashes por empresa, lock transacional e permissao de exclusao
+  exigida no backend;
+- proximo passo exato: exportacao segura do titular, correcao e restricao de
+  processamento com pacote temporario criptografado;
+- documento tecnico:
+  `docs/implementation/CYCLE_86_CUSTOMER_PRIVACY_REQUESTS.md`.
