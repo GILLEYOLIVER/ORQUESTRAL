@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.resources import create_resources
 from app.core.security import utc_now
-from app.modules.agents.runtime_models import AgentDispatchReview, AgentRuntimeDispatch
+from app.modules.agents.runtime_models import (
+    AgentDispatchReview,
+    AgentDispatchReviewSLAPolicy,
+    AgentRuntimeDispatch,
+)
 from app.modules.events.models import OutboxEvent
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
@@ -29,6 +33,32 @@ class DispatchReviewSummary:
     oldest_pending_minutes: int | None
     retry_rate_percent: float
     sla_minutes: int
+    escalation_minutes: int
+    policy_version: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewSLASettings:
+    sla_minutes: int
+    escalation_minutes: int
+    policy_version: int | None
+
+
+async def effective_review_sla(
+    database: AsyncSession, *, company_id: UUID, agent_id: UUID
+) -> ReviewSLASettings:
+    policy = await database.scalar(
+        select(AgentDispatchReviewSLAPolicy).where(
+            AgentDispatchReviewSLAPolicy.company_id == company_id,
+            AgentDispatchReviewSLAPolicy.agent_id == agent_id,
+            AgentDispatchReviewSLAPolicy.status == "published",
+        )
+    )
+    return (
+        ReviewSLASettings(policy.sla_minutes, policy.escalation_minutes, policy.version)
+        if policy is not None
+        else ReviewSLASettings(30, 120, None)
+    )
 
 
 async def dispatch_review_summary(
@@ -36,10 +66,14 @@ async def dispatch_review_summary(
     *,
     company_id: UUID,
     agent_id: UUID,
-    sla_minutes: int,
+    sla_minutes: int | None,
 ) -> DispatchReviewSummary:
+    configured = await effective_review_sla(
+        database, company_id=company_id, agent_id=agent_id
+    )
+    effective_minutes = sla_minutes or configured.sla_minutes
     now = utc_now()
-    overdue_before = now - timedelta(minutes=sla_minutes)
+    overdue_before = now - timedelta(minutes=effective_minutes)
     row = (
         await database.execute(
             select(
@@ -115,20 +149,21 @@ async def dispatch_review_summary(
         ),
         oldest_pending_minutes=oldest_pending_minutes,
         retry_rate_percent=round((retry_decisions / total) * 100, 2) if total else 0.0,
-        sla_minutes=sla_minutes,
+        sla_minutes=effective_minutes,
+        escalation_minutes=configured.escalation_minutes,
+        policy_version=configured.policy_version,
     )
 
 
 async def maintain_agent_dispatch_review_sla(
     *,
     settings: Settings | None = None,
-    sla_minutes: int = 30,
+    sla_minutes: int | None = None,
     limit: int = 200,
 ) -> dict[str, int]:
     active_settings = settings or get_settings()
     resources = create_resources(active_settings)
     now = utc_now()
-    overdue_before = now - timedelta(minutes=max(5, sla_minutes))
     result = {"review_breaches": 0, "notifications": 0}
     try:
         async with resources.sessions() as database:
@@ -137,7 +172,6 @@ async def maintain_agent_dispatch_review_sla(
                     select(AgentDispatchReview)
                     .where(
                         AgentDispatchReview.status == "pending_approval",
-                        AgentDispatchReview.created_at <= overdue_before,
                     )
                     .order_by(AgentDispatchReview.created_at)
                     .with_for_update(skip_locked=True)
@@ -145,16 +179,33 @@ async def maintain_agent_dispatch_review_sla(
                 )
             )
             for review in reviews:
+                policy = await effective_review_sla(
+                    database, company_id=review.company_id, agent_id=review.agent_id
+                )
+                initial_sla = max(5, sla_minutes) if sla_minutes is not None else policy.sla_minutes
+                escalation_minutes = (
+                    max(initial_sla + 1, policy.escalation_minutes)
+                    if sla_minutes is not None
+                    else policy.escalation_minutes
+                )
+                overdue_minutes = max(0, int((now - review.created_at).total_seconds() // 60))
+                if overdue_minutes < initial_sla:
+                    continue
+                escalated = overdue_minutes >= escalation_minutes
+                event_type = (
+                    "agent.dispatch.review_sla_escalated"
+                    if escalated
+                    else "agent.dispatch.review_sla_breached"
+                )
                 already_recorded = await database.scalar(
                     select(OutboxEvent.id).where(
                         OutboxEvent.company_id == review.company_id,
-                        OutboxEvent.event_type == "agent.dispatch.review_sla_breached",
+                        OutboxEvent.event_type == event_type,
                         OutboxEvent.payload["review_id"].as_string() == str(review.id),
                     )
                 )
                 if already_recorded is not None:
                     continue
-                overdue_minutes = max(0, int((now - review.created_at).total_seconds() // 60))
                 recipients = await company_approver_user_ids(database, review.company_id)
                 if not recipients:
                     recipients = [review.requested_by_user_id]
@@ -163,17 +214,22 @@ async def maintain_agent_dispatch_review_sla(
                         database,
                         company_id=review.company_id,
                         recipient_user_id=recipient_id,
-                        event_type="agent.dispatch.review_sla_breached",
-                        title="Revisão de agente fora do prazo",
+                        event_type=event_type,
+                        title=(
+                            "Revisão de agente exige escalonamento"
+                            if escalated
+                            else "Revisão de agente fora do prazo"
+                        ),
                         message="Uma execução interrompida aguarda aprovação administrativa.",
-                        severity="warning",
+                        severity="critical" if escalated else "warning",
                         resource_type="agent_dispatch_review",
                         resource_id=review.id,
                         data={
                             "agent_id": str(review.agent_id),
                             "review_id": str(review.id),
                             "overdue_minutes": overdue_minutes,
-                            "sla_minutes": max(5, sla_minutes),
+                            "sla_minutes": initial_sla,
+                            "escalation_minutes": escalation_minutes,
                         },
                     )
                     if notification is not None:
@@ -181,7 +237,7 @@ async def maintain_agent_dispatch_review_sla(
                 enqueue_domain_event(
                     database,
                     DomainEventCreate(
-                        event_type="agent.dispatch.review_sla_breached",
+                        event_type=event_type,
                         company_id=review.company_id,
                         actor_user_id=review.requested_by_user_id,
                         classification="internal",
@@ -189,7 +245,8 @@ async def maintain_agent_dispatch_review_sla(
                             "agent_id": str(review.agent_id),
                             "review_id": str(review.id),
                             "overdue_minutes": overdue_minutes,
-                            "sla_minutes": max(5, sla_minutes),
+                            "sla_minutes": initial_sla,
+                            "escalation_minutes": escalation_minutes,
                         },
                     ),
                 )

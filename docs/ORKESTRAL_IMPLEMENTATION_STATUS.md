@@ -1084,3 +1084,27 @@ empresa, agente ou risco.
 
 **Proximo passo exato:** criar politicas versionadas de SLA e escalonamento, com
 limites, auditoria e configuracao administrativa.
+
+## Atualizacao - Ciclo 71
+
+**Fase atual:** governanca operacional do runtime empresarial de agentes.
+
+**Concluido:**
+
+- politicas de SLA versionadas por empresa e agente;
+- publicacao atomica com aposentadoria da versao anterior;
+- limites fortes no schema e no banco;
+- SLA e escalonamento efetivos no resumo e no worker;
+- alertas idempotentes de aviso e escalonamento critico;
+- configuracao administrativa responsiva;
+- auditoria de criacao e publicacao;
+- teste de isolamento multiempresa e uso da politica publicada;
+- migracao Alembic `20260722_0086`.
+
+**Validacao:** 208 testes da API, 7 do worker, 20 de integracao e 19 da
+interface aprovados; 7 E2E aprovados e 2 condicionais ignorados; build,
+tipagem, lint, contratos CI/CD e remoto, health checks e auditoria de seguranca
+aprovados.
+
+**Proximo passo exato:** adicionar destinatarios e escalas de plantao versionados,
+com confirmacao de recebimento e reatribuicao auditada.

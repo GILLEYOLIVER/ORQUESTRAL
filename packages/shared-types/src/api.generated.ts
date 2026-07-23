@@ -1316,6 +1316,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/runtime-dispatch-review-sla-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Dispatch Review Sla Policies */
+        get: operations["list_agent_dispatch_review_sla_policies_agents__agent_id__runtime_dispatch_review_sla_policies_get"];
+        put?: never;
+        /** Create Agent Dispatch Review Sla Policy */
+        post: operations["create_agent_dispatch_review_sla_policy_agents__agent_id__runtime_dispatch_review_sla_policies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Agent Dispatch Review Sla Policy */
+        post: operations["publish_agent_dispatch_review_sla_policy_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/runtime-dispatch-reviews": {
         parameters: {
             query?: never;
@@ -5857,6 +5892,48 @@ export interface components {
              */
             updated_at: string;
         };
+        /** AgentDispatchReviewSLAPolicyCreate */
+        AgentDispatchReviewSLAPolicyCreate: {
+            /** Escalation Minutes */
+            escalation_minutes: number;
+            /** Name */
+            name: string;
+            /** Sla Minutes */
+            sla_minutes: number;
+        };
+        /** AgentDispatchReviewSLAPolicyResponse */
+        AgentDispatchReviewSLAPolicyResponse: {
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Escalation Minutes */
+            escalation_minutes: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Published At */
+            published_at: string | null;
+            /** Sla Minutes */
+            sla_minutes: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "published" | "retired";
+            /** Version */
+            version: number;
+        };
         /** AgentDispatchReviewSummaryResponse */
         AgentDispatchReviewSummaryResponse: {
             /** Approved */
@@ -5865,12 +5942,16 @@ export interface components {
             average_decision_minutes: number | null;
             /** Closed */
             closed: number;
+            /** Escalation Minutes */
+            escalation_minutes: number;
             /** Oldest Pending Minutes */
             oldest_pending_minutes: number | null;
             /** Overdue */
             overdue: number;
             /** Pending */
             pending: number;
+            /** Policy Version */
+            policy_version: number | null;
             /** Repeat Interruptions */
             repeat_interruptions: number;
             /** Retry Rate Percent */
@@ -19331,6 +19412,158 @@ export interface operations {
             };
         };
     };
+    list_agent_dispatch_review_sla_policies_agents__agent_id__runtime_dispatch_review_sla_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewSLAPolicyResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    create_agent_dispatch_review_sla_policy_agents__agent_id__runtime_dispatch_review_sla_policies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentDispatchReviewSLAPolicyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewSLAPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    publish_agent_dispatch_review_sla_policy_agents__agent_id__runtime_dispatch_review_sla_policies__policy_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewSLAPolicyResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     list_agent_dispatch_reviews_agents__agent_id__runtime_dispatch_reviews_get: {
         parameters: {
             query?: never;
@@ -19383,7 +19616,7 @@ export interface operations {
     get_agent_dispatch_review_summary_agents__agent_id__runtime_dispatch_reviews_summary_get: {
         parameters: {
             query?: {
-                sla_minutes?: number;
+                sla_minutes?: number | null;
             };
             header?: never;
             path: {

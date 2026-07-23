@@ -89,6 +89,20 @@ export type DispatchReviewSummary = {
   oldest_pending_minutes: number | null;
   retry_rate_percent: number;
   sla_minutes: number;
+  escalation_minutes: number;
+  policy_version: number | null;
+};
+
+export type DispatchReviewSLAPolicy = {
+  id: string;
+  agent_id: string;
+  version: number;
+  status: "draft" | "published" | "retired";
+  name: string;
+  sla_minutes: number;
+  escalation_minutes: number;
+  created_at: string;
+  published_at: string | null;
 };
 
 export type ScheduleInput = {
@@ -153,6 +167,14 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
     enabled,
     refetchInterval: 30_000,
   });
+  const reviewPolicies = useQuery({
+    queryKey: ["agent-runtime-dispatch-review-sla-policies", agentId],
+    queryFn: () =>
+      request<DispatchReviewSLAPolicy[]>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies`,
+      ),
+    enabled,
+  });
   const credentials = useQuery({
     queryKey: ["agent-runtime-credentials"],
     queryFn: () =>
@@ -170,6 +192,7 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
     credentials,
     dispatches,
     reviews,
+    reviewPolicies,
     reviewSummary,
     schedules,
     triggers,
@@ -197,6 +220,9 @@ export function useAgentRuntimeActions(agentId: string | null) {
       }),
       queryClient.invalidateQueries({
         queryKey: ["agent-runtime-dispatch-review-summary", agentId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["agent-runtime-dispatch-review-sla-policies", agentId],
       }),
     ]);
 
@@ -312,14 +338,36 @@ export function useAgentRuntimeActions(agentId: string | null) {
       ),
     onSuccess: refresh,
   });
+  const createReviewSLAPolicy = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      sla_minutes: number;
+      escalation_minutes: number;
+    }) =>
+      request<DispatchReviewSLAPolicy>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies`,
+        { method: "POST", body: payload },
+      ),
+    onSuccess: refresh,
+  });
+  const publishReviewSLAPolicy = useMutation({
+    mutationFn: (policyId: string) =>
+      request<DispatchReviewSLAPolicy>(
+        `/agents/${agentId}/runtime-dispatch-review-sla-policies/${policyId}/publish`,
+        { method: "POST" },
+      ),
+    onSuccess: refresh,
+  });
   return {
     approveDispatchRetry,
     bindCredential,
+    createReviewSLAPolicy,
     createSchedule,
     createTrigger,
     pauseSchedule,
     pauseTrigger,
     publishSchedule,
+    publishReviewSLAPolicy,
     publishTrigger,
     reviewDispatch,
   };

@@ -153,6 +153,9 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
   const [triggerArgumentsError, setTriggerArgumentsError] = useState("");
   const [bindingTool, setBindingTool] = useState("");
   const [bindingCredential, setBindingCredential] = useState("");
+  const [reviewPolicyName, setReviewPolicyName] = useState("Política operacional");
+  const [reviewSlaMinutes, setReviewSlaMinutes] = useState(30);
+  const [reviewEscalationMinutes, setReviewEscalationMinutes] = useState(120);
   const usableCredentials = useMemo(
     () => runtime.credentials.data?.filter((item) => item.usable) ?? [],
     [runtime.credentials.data],
@@ -249,6 +252,15 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
         },
       },
     );
+  };
+
+  const submitReviewPolicy = (event: FormEvent) => {
+    event.preventDefault();
+    actions.createReviewSLAPolicy.mutate({
+      name: reviewPolicyName,
+      sla_minutes: reviewSlaMinutes,
+      escalation_minutes: reviewEscalationMinutes,
+    });
   };
 
   return (
@@ -613,8 +625,9 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
       <article className="agent-runtime-card">
         <h3>Revisões operacionais</h3>
         <p className="agent-runtime-muted">
-          SLA padrão de {runtime.reviewSummary.data?.sla_minutes ?? 30} minutos,
-          sem exibir argumentos ou credenciais.
+          SLA de {runtime.reviewSummary.data?.sla_minutes ?? 30} minutos e
+          escalonamento em {runtime.reviewSummary.data?.escalation_minutes ?? 120}
+          minutos, sem exibir argumentos ou credenciais.
         </p>
         <div className="dispatch-review-metrics">
           <span>
@@ -634,6 +647,77 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
             Reincidências
           </span>
         </div>
+        {canConfigure ? (
+          <div className="dispatch-review-policy">
+            <form className="agent-runtime-form" onSubmit={submitReviewPolicy}>
+              <label>
+                Nome da política
+                <input
+                  minLength={3}
+                  onChange={(event) => setReviewPolicyName(event.target.value)}
+                  required
+                  value={reviewPolicyName}
+                />
+              </label>
+              <label>
+                Avisar após (minutos)
+                <input
+                  max={10080}
+                  min={5}
+                  onChange={(event) => setReviewSlaMinutes(Number(event.target.value))}
+                  required
+                  type="number"
+                  value={reviewSlaMinutes}
+                />
+              </label>
+              <label>
+                Escalonar após (minutos)
+                <input
+                  max={20160}
+                  min={reviewSlaMinutes + 1}
+                  onChange={(event) =>
+                    setReviewEscalationMinutes(Number(event.target.value))
+                  }
+                  required
+                  type="number"
+                  value={reviewEscalationMinutes}
+                />
+              </label>
+              <button
+                disabled={
+                  actions.createReviewSLAPolicy.isPending ||
+                  reviewEscalationMinutes <= reviewSlaMinutes
+                }
+                type="submit"
+              >
+                Criar nova versão
+              </button>
+            </form>
+            <div className="agent-runtime-policy-list">
+              {(runtime.reviewPolicies.data ?? []).map((policy) => (
+                <div key={policy.id}>
+                  <span>
+                    <strong>{policy.name}</strong> · versão {policy.version} · {" "}
+                    {statusLabels[policy.status]}
+                  </span>
+                  <small>
+                    Aviso {policy.sla_minutes} min · escalonamento {" "}
+                    {policy.escalation_minutes} min
+                  </small>
+                  {policy.status === "draft" ? (
+                    <button
+                      disabled={actions.publishReviewSLAPolicy.isPending}
+                      onClick={() => actions.publishReviewSLAPolicy.mutate(policy.id)}
+                      type="button"
+                    >
+                      Publicar política
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </article>
 
       <article className="agent-runtime-card">

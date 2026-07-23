@@ -369,3 +369,58 @@ class AgentDispatchReview(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
     )
+
+
+class AgentDispatchReviewSLAPolicy(Base):
+    __tablename__ = "agent_dispatch_review_sla_policies"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id", "agent_id", "version", name="uq_agent_dispatch_review_sla_version"
+        ),
+        CheckConstraint("version >= 1", name="ck_agent_dispatch_review_sla_version"),
+        CheckConstraint(
+            "status IN ('draft', 'published', 'retired')",
+            name="ck_agent_dispatch_review_sla_status",
+        ),
+        CheckConstraint(
+            "sla_minutes BETWEEN 5 AND 10080",
+            name="ck_agent_dispatch_review_sla_minutes",
+        ),
+        CheckConstraint(
+            "escalation_minutes > sla_minutes AND escalation_minutes <= 20160",
+            name="ck_agent_dispatch_review_sla_escalation",
+        ),
+        Index(
+            "uq_agent_dispatch_review_sla_published",
+            "company_id",
+            "agent_id",
+            unique=True,
+            postgresql_where=text("status = 'published'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(ForeignKey("agents.id", ondelete="CASCADE"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="draft")
+    name: Mapped[str] = mapped_column(String(160))
+    sla_minutes: Mapped[int] = mapped_column(Integer)
+    escalation_minutes: Mapped[int] = mapped_column(Integer)
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    published_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
