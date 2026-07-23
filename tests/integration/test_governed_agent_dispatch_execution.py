@@ -271,8 +271,7 @@ async def _assert_interrupted_dispatch_reconciled(
                 select(OutboxEvent).where(
                     OutboxEvent.company_id == dispatch.company_id,
                     OutboxEvent.event_type == "agent.dispatch.interrupted",
-                    OutboxEvent.payload["dispatch_id"].as_string()
-                    == str(dispatch_id),
+                    OutboxEvent.payload["dispatch_id"].as_string() == str(dispatch_id),
                 )
             )
             assert event is not None
@@ -293,9 +292,7 @@ async def _make_review_overdue(settings: Settings, review_id: UUID) -> None:
         await resources.close()
 
 
-async def _make_assignment_acknowledgement_overdue(
-    settings: Settings, assignment_id: UUID
-) -> None:
+async def _make_assignment_acknowledgement_overdue(settings: Settings, assignment_id: UUID) -> None:
     resources = create_resources(settings)
     try:
         async with resources.sessions() as database:
@@ -408,9 +405,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert execution_result["simulated"] == 1
             assert execution_result["failed"] == 0
 
-            dispatches = client.get(
-                f"/agents/{agent_id}/runtime-dispatches", headers=headers_b
-            )
+            dispatches = client.get(f"/agents/{agent_id}/runtime-dispatches", headers=headers_b)
             assert dispatches.status_code == 200
             dispatch = next(
                 item for item in dispatches.json() if item["schedule_id"] == schedule_id
@@ -484,6 +479,34 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     "on_call_start_hour": 0,
                     "on_call_end_hour": 24,
                     "on_call_weekdays": [datetime.now(UTC).weekday()],
+                    "on_call_shifts": [
+                        {
+                            "user_id": str(identity.user_ids[1]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 0,
+                            "end_hour": 12,
+                        },
+                        {
+                            "user_id": str(identity.user_ids[1]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 12,
+                            "end_hour": 24,
+                        },
+                        {
+                            "user_id": str(identity.user_ids[2]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 0,
+                            "end_hour": 24,
+                        },
+                    ],
+                    "holiday_calendar": [
+                        {
+                            "date": datetime.now(UTC).date().isoformat(),
+                            "name": "Feriado operacional",
+                            "coverage_required": True,
+                        }
+                    ],
+                    "minimum_coverage": 2,
                 },
             )
             assert foreign_policy.status_code == 404
@@ -503,10 +526,46 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     "on_call_start_hour": 0,
                     "on_call_end_hour": 24,
                     "on_call_weekdays": [datetime.now(UTC).weekday()],
+                    "on_call_shifts": [
+                        {
+                            "user_id": str(identity.user_ids[1]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 0,
+                            "end_hour": 12,
+                        },
+                        {
+                            "user_id": str(identity.user_ids[1]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 12,
+                            "end_hour": 24,
+                        },
+                        {
+                            "user_id": str(identity.user_ids[2]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 0,
+                            "end_hour": 24,
+                        },
+                    ],
+                    "holiday_calendar": [
+                        {
+                            "date": datetime.now(UTC).date().isoformat(),
+                            "name": "Feriado operacional",
+                            "coverage_required": True,
+                        }
+                    ],
+                    "minimum_coverage": 2,
                 },
             )
             assert policy.status_code == 201
             assert policy.json()["status"] == "draft"
+            coverage = client.get(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{policy.json()['id']}/coverage",
+                headers=headers_b,
+            )
+            assert coverage.status_code == 200
+            assert coverage.json()["valid"] is True
+            assert coverage.json()["minimum_coverage"] == 2
             published_policy = client.post(
                 f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
                 f"{policy.json()['id']}/publish",
@@ -514,9 +573,57 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             )
             assert published_policy.status_code == 200
             assert published_policy.json()["status"] == "published"
-            assert published_policy.json()["on_call_weekdays"] == [
-                datetime.now(UTC).weekday()
-            ]
+            assert published_policy.json()["on_call_weekdays"] == [datetime.now(UTC).weekday()]
+            assert published_policy.json()["on_call_shifts"][0]["end_hour"] == 12
+            assert published_policy.json()["holiday_calendar"][0]["coverage_required"] is True
+
+            invalid_policy = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies",
+                headers=headers_b,
+                json={
+                    "name": "Escala com sobreposição",
+                    "sla_minutes": 20,
+                    "escalation_minutes": 40,
+                    "acknowledgement_minutes": 10,
+                    "on_call_user_ids": [str(identity.user_ids[1])],
+                    "on_call_timezone": "UTC",
+                    "on_call_start_hour": 0,
+                    "on_call_end_hour": 24,
+                    "on_call_weekdays": [datetime.now(UTC).weekday()],
+                    "on_call_shifts": [
+                        {
+                            "user_id": str(identity.user_ids[1]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 0,
+                            "end_hour": 16,
+                        },
+                        {
+                            "user_id": str(identity.user_ids[1]),
+                            "weekdays": [datetime.now(UTC).weekday()],
+                            "start_hour": 8,
+                            "end_hour": 24,
+                        },
+                    ],
+                    "minimum_coverage": 1,
+                },
+            )
+            assert invalid_policy.status_code == 201
+            invalid_coverage = client.get(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{invalid_policy.json()['id']}/coverage",
+                headers=headers_b,
+            )
+            assert invalid_coverage.status_code == 200
+            assert invalid_coverage.json()["valid"] is False
+            assert any(
+                issue["code"] == "overlapping_shift" for issue in invalid_coverage.json()["issues"]
+            )
+            blocked_publication = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-review-sla-policies/"
+                f"{invalid_policy.json()['id']}/publish",
+                headers=headers_b,
+            )
+            assert blocked_publication.status_code == 422
 
             policy_id = published_policy.json()["id"]
             now = datetime.now(UTC)
@@ -610,12 +717,8 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert initial_summary.json()["policy_version"] == 1
 
             asyncio.run(_make_review_overdue(settings, UUID(review.json()["id"])))
-            first_sla_result = asyncio.run(
-                maintain_agent_dispatch_review_sla(settings=settings)
-            )
-            second_sla_result = asyncio.run(
-                maintain_agent_dispatch_review_sla(settings=settings)
-            )
+            first_sla_result = asyncio.run(maintain_agent_dispatch_review_sla(settings=settings))
+            second_sla_result = asyncio.run(maintain_agent_dispatch_review_sla(settings=settings))
             assert first_sla_result["review_breaches"] == 1
             assert first_sla_result["notifications"] >= 1
             assert second_sla_result == {"review_breaches": 0, "notifications": 0}
@@ -673,9 +776,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert reassigned.json()["assigned_to_user_id"] == str(identity.user_ids[1])
             assert reassigned.json()["previous_assignment_id"] == active_assignment["id"]
             asyncio.run(
-                _make_assignment_acknowledgement_overdue(
-                    settings, UUID(reassigned.json()["id"])
-                )
+                _make_assignment_acknowledgement_overdue(settings, UUID(reassigned.json()["id"]))
             )
             overdue_acknowledgement = asyncio.run(
                 maintain_agent_dispatch_review_sla(settings=settings)
@@ -758,9 +859,7 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert replacement["retry_of_dispatch_id"] == str(dispatch_id)
             assert replacement["status"] == "ready"
 
-            retry_result = asyncio.run(
-                execute_ready_agent_dispatches(settings=settings, limit=20)
-            )
+            retry_result = asyncio.run(execute_ready_agent_dispatches(settings=settings, limit=20))
             assert retry_result["claimed"] == 1
             assert retry_result["simulated"] == 1
     finally:

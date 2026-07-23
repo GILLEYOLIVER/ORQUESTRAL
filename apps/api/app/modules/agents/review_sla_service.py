@@ -53,6 +53,9 @@ class ReviewSLASettings:
     on_call_start_hour: int
     on_call_end_hour: int
     on_call_weekdays: tuple[int, ...]
+    on_call_shifts: tuple[dict[str, object], ...]
+    holiday_calendar: tuple[dict[str, object], ...]
+    minimum_coverage: int
 
 
 async def effective_review_sla(
@@ -77,9 +80,14 @@ async def effective_review_sla(
             policy.on_call_start_hour,
             policy.on_call_end_hour,
             tuple(policy.on_call_weekdays),
+            tuple(policy.on_call_shifts),
+            tuple(policy.holiday_calendar),
+            policy.minimum_coverage,
         )
         if policy is not None
-        else ReviewSLASettings(None, 30, 120, None, 15, (), "UTC", 0, 24, tuple(range(7)))
+        else ReviewSLASettings(
+            None, 30, 120, None, 15, (), "UTC", 0, 24, tuple(range(7)), (), (), 1
+        )
     )
 
 
@@ -90,9 +98,7 @@ async def dispatch_review_summary(
     agent_id: UUID,
     sla_minutes: int | None,
 ) -> DispatchReviewSummary:
-    configured = await effective_review_sla(
-        database, company_id=company_id, agent_id=agent_id
-    )
+    configured = await effective_review_sla(database, company_id=company_id, agent_id=agent_id)
     effective_minutes = sla_minutes or configured.sla_minutes
     now = utc_now()
     overdue_before = now - timedelta(minutes=effective_minutes)
@@ -217,9 +223,7 @@ async def maintain_agent_dispatch_review_sla(
                 acknowledgement_overdue = bool(
                     current_assignment is not None
                     and current_assignment.acknowledged_at is None
-                    and (
-                        now - current_assignment.assigned_at
-                    ).total_seconds()
+                    and (now - current_assignment.assigned_at).total_seconds()
                     >= policy.acknowledgement_minutes * 60
                 )
                 if acknowledgement_overdue:
@@ -252,6 +256,8 @@ async def maintain_agent_dispatch_review_sla(
                     on_call_start_hour=policy.on_call_start_hour,
                     on_call_end_hour=policy.on_call_end_hour,
                     on_call_weekdays=policy.on_call_weekdays,
+                    on_call_shifts=policy.on_call_shifts,
+                    holiday_calendar=policy.holiday_calendar,
                     escalated=escalated,
                 )
                 recipients = (

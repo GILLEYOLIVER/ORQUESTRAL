@@ -5,6 +5,9 @@ import {
   type CompanyUserOption,
   type DispatchReview,
   type DispatchReviewAssignment,
+  type DispatchReviewCoverage,
+  type DispatchReviewHoliday,
+  type DispatchReviewShift,
   type RuntimeDispatch,
   type RuntimeStatus,
   useAgentRuntime,
@@ -238,6 +241,14 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
   const [reviewOnCallWeekdays, setReviewOnCallWeekdays] = useState<number[]>(
     () => Array.from({ length: 7 }, (_, day) => day),
   );
+  const [reviewShifts, setReviewShifts] = useState<DispatchReviewShift[]>([]);
+  const [reviewMinimumCoverage, setReviewMinimumCoverage] = useState(1);
+  const [reviewHolidayDate, setReviewHolidayDate] = useState("");
+  const [reviewHolidayName, setReviewHolidayName] = useState("");
+  const [reviewHolidayCoverage, setReviewHolidayCoverage] = useState(false);
+  const [reviewHolidays, setReviewHolidays] = useState<DispatchReviewHoliday[]>([]);
+  const [coverageReport, setCoverageReport] =
+    useState<DispatchReviewCoverage | null>(null);
   const [absenceUserId, setAbsenceUserId] = useState("");
   const [absenceReason, setAbsenceReason] = useState("");
   const [absenceStartsAt, setAbsenceStartsAt] = useState("");
@@ -357,7 +368,36 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
       on_call_start_hour: reviewOnCallStartHour,
       on_call_end_hour: reviewOnCallEndHour,
       on_call_weekdays: reviewOnCallWeekdays,
+      on_call_shifts: reviewShifts,
+      holiday_calendar: reviewHolidays,
+      minimum_coverage: reviewMinimumCoverage,
     });
+  };
+
+  const addReviewShifts = () => {
+    const additions = reviewOnCallIds.map((userId) => ({
+      user_id: userId,
+      weekdays: reviewOnCallWeekdays,
+      start_hour: reviewOnCallStartHour,
+      end_hour: reviewOnCallEndHour,
+    }));
+    setReviewShifts((current) => [...current, ...additions]);
+    setReviewOnCallIds([]);
+  };
+
+  const addReviewHoliday = () => {
+    if (!reviewHolidayDate || reviewHolidayName.trim().length < 2) return;
+    setReviewHolidays((current) => [
+      ...current.filter((item) => item.date !== reviewHolidayDate),
+      {
+        date: reviewHolidayDate,
+        name: reviewHolidayName.trim(),
+        coverage_required: reviewHolidayCoverage,
+      },
+    ]);
+    setReviewHolidayDate("");
+    setReviewHolidayName("");
+    setReviewHolidayCoverage(false);
   };
 
   const submitOnCallException = (event: FormEvent) => {
@@ -911,10 +951,101 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                 ))}
               </fieldset>
               <button
+                disabled={reviewOnCallIds.length === 0}
+                onClick={addReviewShifts}
+                type="button"
+              >
+                Adicionar turno aos selecionados
+              </button>
+              <div className="dispatch-shift-list">
+                {reviewShifts.map((shift, index) => (
+                  <div key={`${shift.user_id}-${index}`}>
+                    <span>
+                      {runtime.companyUsers.data?.find(
+                        (user) => user.user_id === shift.user_id,
+                      )?.name ?? "Responsável"}{" "}
+                      · {shift.start_hour}:00–{shift.end_hour}:00 ·{" "}
+                      {shift.weekdays.map((day) => weekdayLabels[day]).join(", ")}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setReviewShifts((current) =>
+                          current.filter((_, itemIndex) => itemIndex !== index),
+                        )
+                      }
+                      type="button"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <label>
+                Cobertura mínima simultânea
+                <input
+                  max={20}
+                  min={1}
+                  onChange={(event) =>
+                    setReviewMinimumCoverage(Number(event.target.value))
+                  }
+                  required
+                  type="number"
+                  value={reviewMinimumCoverage}
+                />
+              </label>
+              <fieldset className="dispatch-holiday-builder">
+                <legend>Calendário de feriados</legend>
+                <input
+                  aria-label="Data do feriado"
+                  onChange={(event) => setReviewHolidayDate(event.target.value)}
+                  type="date"
+                  value={reviewHolidayDate}
+                />
+                <input
+                  aria-label="Nome do feriado"
+                  minLength={2}
+                  onChange={(event) => setReviewHolidayName(event.target.value)}
+                  placeholder="Nome do feriado"
+                  value={reviewHolidayName}
+                />
+                <label>
+                  <input
+                    checked={reviewHolidayCoverage}
+                    onChange={(event) => setReviewHolidayCoverage(event.target.checked)}
+                    type="checkbox"
+                  />
+                  Exigir cobertura neste feriado
+                </label>
+                <button onClick={addReviewHoliday} type="button">
+                  Adicionar feriado
+                </button>
+              </fieldset>
+              <div className="dispatch-shift-list">
+                {reviewHolidays.map((holiday) => (
+                  <div key={holiday.date}>
+                    <span>
+                      {holiday.date} · {holiday.name} ·{" "}
+                      {holiday.coverage_required ? "com cobertura" : "sem expediente"}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setReviewHolidays((current) =>
+                          current.filter((item) => item.date !== holiday.date),
+                        )
+                      }
+                      type="button"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
                 disabled={
                   actions.createReviewSLAPolicy.isPending ||
                   reviewEscalationMinutes <= reviewSlaMinutes ||
-                  reviewOnCallWeekdays.length === 0
+                  reviewOnCallWeekdays.length === 0 ||
+                  reviewShifts.length === 0
                 }
                 type="submit"
               >
@@ -934,19 +1065,56 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                     {policy.acknowledgement_minutes} min · {" "}
                     {policy.on_call_user_ids.length} plantonista(s) · {" "}
                     {policy.on_call_weekdays.map((day) => weekdayLabels[day]).join(", ")}
+                    {" "}· {policy.on_call_shifts.length} turno(s) · cobertura mínima{" "}
+                    {policy.minimum_coverage} · {policy.holiday_calendar.length} feriado(s)
                   </small>
                   {policy.status === "draft" ? (
-                    <button
-                      disabled={actions.publishReviewSLAPolicy.isPending}
-                      onClick={() => actions.publishReviewSLAPolicy.mutate(policy.id)}
-                      type="button"
-                    >
-                      Publicar política
-                    </button>
+                    <span className="dispatch-review-buttons">
+                      <button
+                        disabled={actions.validateReviewSLAPolicy.isPending}
+                        onClick={() =>
+                          actions.validateReviewSLAPolicy.mutate(policy.id, {
+                            onSuccess: setCoverageReport,
+                          })
+                        }
+                        type="button"
+                      >
+                        Validar cobertura
+                      </button>
+                      <button
+                        disabled={actions.publishReviewSLAPolicy.isPending}
+                        onClick={() => actions.publishReviewSLAPolicy.mutate(policy.id)}
+                        type="button"
+                      >
+                        Publicar política
+                      </button>
+                    </span>
                   ) : null}
                 </div>
               ))}
             </div>
+            {coverageReport ? (
+              <div
+                className={`dispatch-coverage-report ${
+                  coverageReport.valid ? "is-valid" : "is-invalid"
+                }`}
+              >
+                <strong>
+                  {coverageReport.valid
+                    ? "Cobertura pronta para publicação"
+                    : "Cobertura incompleta"}
+                </strong>
+                <span>
+                  {coverageReport.covered_slots}/{coverageReport.required_slots} horários
+                  protegidos
+                </span>
+                {coverageReport.issues.slice(0, 12).map((issue, index) => (
+                  <small key={`${issue.code}-${issue.weekday}-${issue.hour}-${index}`}>
+                    {issue.message}
+                  </small>
+                ))}
+              </div>
+            ) : null}
             {runtime.activeReviewPolicyId ? (
               <div className="dispatch-on-call-management">
                 <form className="agent-runtime-form" onSubmit={submitOnCallException}>

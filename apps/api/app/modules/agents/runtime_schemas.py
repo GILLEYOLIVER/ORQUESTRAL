@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal, Self
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -194,6 +194,32 @@ class AgentDispatchReviewSummaryResponse(StrictSchema):
     policy_version: int | None
 
 
+class AgentDispatchReviewShift(StrictSchema):
+    user_id: UUID
+    weekdays: list[int] = Field(min_length=1, max_length=7)
+    start_hour: int = Field(ge=0, le=23)
+    end_hour: int = Field(ge=1, le=24)
+
+    @field_validator("weekdays")
+    @classmethod
+    def valid_weekdays(cls, value: list[int]) -> list[int]:
+        if len(set(value)) != len(value) or any(day < 0 or day > 6 for day in value):
+            raise ValueError("Informe dias da semana únicos entre 0 e 6.")
+        return sorted(value)
+
+    @model_validator(mode="after")
+    def valid_window(self) -> Self:
+        if self.start_hour >= self.end_hour:
+            raise ValueError("O início do turno deve ocorrer antes do término.")
+        return self
+
+
+class AgentDispatchReviewHoliday(StrictSchema):
+    date: date
+    name: str = Field(min_length=2, max_length=120)
+    coverage_required: bool = False
+
+
 class AgentDispatchReviewSLAPolicyCreate(StrictSchema):
     name: str = Field(min_length=3, max_length=160)
     sla_minutes: int = Field(ge=5, le=10_080)
@@ -204,6 +230,9 @@ class AgentDispatchReviewSLAPolicyCreate(StrictSchema):
     on_call_start_hour: int = Field(default=0, ge=0, le=23)
     on_call_end_hour: int = Field(default=24, ge=1, le=24)
     on_call_weekdays: list[int] = Field(default_factory=lambda: list(range(7)), min_length=1)
+    on_call_shifts: list[AgentDispatchReviewShift] = Field(default_factory=list, max_length=100)
+    holiday_calendar: list[AgentDispatchReviewHoliday] = Field(default_factory=list, max_length=366)
+    minimum_coverage: int = Field(default=1, ge=1, le=20)
 
     @field_validator("on_call_user_ids")
     @classmethod
@@ -229,6 +258,16 @@ class AgentDispatchReviewSLAPolicyCreate(StrictSchema):
             raise ValueError("Informe um fuso horário IANA válido.") from exc
         return timezone
 
+    @field_validator("holiday_calendar")
+    @classmethod
+    def unique_holidays(
+        cls, value: list[AgentDispatchReviewHoliday]
+    ) -> list[AgentDispatchReviewHoliday]:
+        dates = [item.date for item in value]
+        if len(set(dates)) != len(dates):
+            raise ValueError("Cada data pode aparecer somente uma vez no calendário.")
+        return sorted(value, key=lambda item: item.date)
+
     @model_validator(mode="after")
     def validate_escalation(self) -> Self:
         if self.escalation_minutes <= self.sla_minutes:
@@ -252,8 +291,27 @@ class AgentDispatchReviewSLAPolicyResponse(StrictSchema):
     on_call_start_hour: int
     on_call_end_hour: int
     on_call_weekdays: list[int]
+    on_call_shifts: list[AgentDispatchReviewShift]
+    holiday_calendar: list[AgentDispatchReviewHoliday]
+    minimum_coverage: int
     created_at: datetime
     published_at: datetime | None
+
+
+class AgentDispatchReviewCoverageIssueResponse(StrictSchema):
+    code: str
+    message: str
+    weekday: int | None
+    hour: int | None
+    user_id: UUID | None
+
+
+class AgentDispatchReviewCoverageResponse(StrictSchema):
+    valid: bool
+    minimum_coverage: int
+    required_slots: int
+    covered_slots: int
+    issues: list[AgentDispatchReviewCoverageIssueResponse]
 
 
 class AgentDispatchReviewAssignmentResponse(StrictSchema):

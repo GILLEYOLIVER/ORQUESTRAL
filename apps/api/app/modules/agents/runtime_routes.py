@@ -22,6 +22,7 @@ from app.modules.agents.review_assignment_service import (
     acknowledge_review_assignment,
     reassign_review,
 )
+from app.modules.agents.review_coverage_service import review_policy_coverage
 from app.modules.agents.review_sla_service import dispatch_review_summary
 from app.modules.agents.runtime_models import (
     AgentCredentialBinding,
@@ -40,6 +41,7 @@ from app.modules.agents.runtime_schemas import (
     AgentCredentialCatalogResponse,
     AgentDispatchRetryApproval,
     AgentDispatchReviewAssignmentResponse,
+    AgentDispatchReviewCoverageResponse,
     AgentDispatchReviewCreate,
     AgentDispatchReviewOnCallExceptionCreate,
     AgentDispatchReviewOnCallExceptionResponse,
@@ -602,7 +604,9 @@ async def list_agent_runtime_dispatches(
 
 
 def _raise_review_error(error: DispatchReviewError) -> None:
-    status_code = status.HTTP_404_NOT_FOUND if error.code.endswith("not_found") else status.HTTP_409_CONFLICT
+    status_code = (
+        status.HTTP_404_NOT_FOUND if error.code.endswith("not_found") else status.HTTP_409_CONFLICT
+    )
     raise HTTPException(status_code=status_code, detail=error.detail) from error
 
 
@@ -663,8 +667,7 @@ async def list_agent_dispatch_review_assignments(
 
 
 @router.post(
-    "/{agent_id}/runtime-dispatch-reviews/{review_id}/assignments/"
-    "{assignment_id}/acknowledge",
+    "/{agent_id}/runtime-dispatch-reviews/{review_id}/assignments/{assignment_id}/acknowledge",
     response_model=AgentDispatchReviewAssignmentResponse,
 )
 async def acknowledge_agent_dispatch_review_assignment(
@@ -779,9 +782,8 @@ async def create_agent_dispatch_review_sla_policy(
     context = get_request_context(principal)
     await _tenant_agent(database, context.company_id, agent_id)
     requested_on_call_ids = set(payload.on_call_user_ids)
-    authorized_on_call_ids = set(
-        await company_approver_user_ids(database, context.company_id)
-    )
+    requested_on_call_ids.update(shift.user_id for shift in payload.on_call_shifts)
+    authorized_on_call_ids = set(await company_approver_user_ids(database, context.company_id))
     if not requested_on_call_ids.issubset(authorized_on_call_ids):
         raise HTTPException(
             status_code=422,
@@ -842,6 +844,15 @@ async def publish_agent_dispatch_review_sla_policy(
         raise HTTPException(status_code=404, detail="Política de SLA não encontrada.")
     if policy.status != "draft":
         raise HTTPException(status_code=409, detail="Somente rascunhos podem ser publicados.")
+    coverage = review_policy_coverage(policy)
+    if not coverage.valid:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "A política não pode ser publicada sem cobertura operacional.",
+                "issues": [asdict(issue) for issue in coverage.issues],
+            },
+        )
     await database.execute(
         update(AgentDispatchReviewSLAPolicy)
         .where(
@@ -866,6 +877,31 @@ async def publish_agent_dispatch_review_sla_policy(
     await database.commit()
     await database.refresh(policy)
     return policy
+
+
+@router.get(
+    "/{agent_id}/runtime-dispatch-review-sla-policies/{policy_id}/coverage",
+    response_model=AgentDispatchReviewCoverageResponse,
+)
+async def validate_agent_dispatch_review_coverage(
+    agent_id: UUID,
+    policy_id: UUID,
+    principal: CanViewAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewCoverageResponse:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    policy = await database.scalar(
+        select(AgentDispatchReviewSLAPolicy).where(
+            AgentDispatchReviewSLAPolicy.id == policy_id,
+            AgentDispatchReviewSLAPolicy.company_id == context.company_id,
+            AgentDispatchReviewSLAPolicy.agent_id == agent_id,
+        )
+    )
+    if policy is None:
+        raise HTTPException(status_code=404, detail="Política de SLA não encontrada.")
+    report = review_policy_coverage(policy)
+    return AgentDispatchReviewCoverageResponse.model_validate(asdict(report))
 
 
 @router.get(
@@ -914,7 +950,9 @@ async def create_agent_dispatch_review_on_call_exception(
         database, company_id=context.company_id, agent_id=agent_id, policy_id=policy_id
     )
     if str(payload.user_id) not in policy.on_call_user_ids:
-        raise HTTPException(status_code=422, detail="A ausência deve pertencer ao plantão da política.")
+        raise HTTPException(
+            status_code=422, detail="A ausência deve pertencer ao plantão da política."
+        )
     if payload.user_id not in await company_approver_user_ids(database, context.company_id):
         raise HTTPException(status_code=422, detail="O plantonista não é um aprovador ativo.")
     exception = AgentDispatchReviewOnCallException(
@@ -1034,8 +1072,7 @@ async def create_agent_dispatch_review_on_call_handoff(
     existing = await database.scalar(
         select(AgentDispatchReviewOnCallHandoff).where(
             AgentDispatchReviewOnCallHandoff.company_id == context.company_id,
-            AgentDispatchReviewOnCallHandoff.request_idempotency_key
-            == payload.idempotency_key,
+            AgentDispatchReviewOnCallHandoff.request_idempotency_key == payload.idempotency_key,
         )
     )
     if existing is not None:

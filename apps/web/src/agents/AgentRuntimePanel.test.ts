@@ -46,6 +46,22 @@ describe("DispatchReviewSLAPolicy", () => {
       on_call_start_hour: 8,
       on_call_end_hour: 18,
       on_call_weekdays: [0, 1, 2, 3, 4],
+      on_call_shifts: [
+        {
+          user_id: "user-1",
+          weekdays: [0, 1, 2, 3, 4],
+          start_hour: 8,
+          end_hour: 18,
+        },
+      ],
+      holiday_calendar: [
+        {
+          date: "2026-09-07",
+          name: "Independência do Brasil",
+          coverage_required: false,
+        },
+      ],
+      minimum_coverage: 1,
       created_at: "2026-07-22T12:00:00Z",
       published_at: "2026-07-22T12:05:00Z",
     };
@@ -54,5 +70,7 @@ describe("DispatchReviewSLAPolicy", () => {
     expect(policy.status).toBe("published");
     expect(policy.on_call_user_ids).toHaveLength(1);
     expect(policy.on_call_weekdays).toEqual([0, 1, 2, 3, 4]);
+    expect(policy.on_call_shifts).toHaveLength(1);
+    expect(policy.holiday_calendar[0].coverage_required).toBe(false);
   });
 });

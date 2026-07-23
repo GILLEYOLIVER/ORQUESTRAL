@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -38,14 +39,37 @@ async def _active_on_call_user_ids(
     start_hour: int,
     end_hour: int,
     weekdays: tuple[int, ...],
+    shifts: tuple[dict[str, object], ...],
+    holiday_calendar: tuple[dict[str, object], ...],
 ) -> list[UUID]:
     now = utc_now()
     local_now = now.astimezone(ZoneInfo(timezone))
-    if (
-        not user_ids
-        or local_now.weekday() not in weekdays
-        or not start_hour <= local_now.hour < end_hour
-    ):
+    holiday = next(
+        (
+            item
+            for item in holiday_calendar
+            if str(item.get("date")) == local_now.date().isoformat()
+        ),
+        None,
+    )
+    if holiday is not None and not bool(holiday.get("coverage_required", False)):
+        return []
+    scheduled_user_ids = (
+        tuple(
+            UUID(str(shift["user_id"]))
+            for shift in shifts
+            if local_now.weekday() in cast(list[int], shift["weekdays"])
+            and int(str(shift["start_hour"])) <= local_now.hour
+            and local_now.hour < int(str(shift["end_hour"]))
+        )
+        if shifts
+        else (
+            user_ids
+            if (local_now.weekday() in weekdays and start_hour <= local_now.hour < end_hour)
+            else ()
+        )
+    )
+    if not scheduled_user_ids:
         return []
     handoffs = (
         list(
@@ -64,7 +88,7 @@ async def _active_on_call_user_ids(
         else []
     )
     replacement_by_user = {handoff.from_user_id: handoff.to_user_id for handoff in handoffs}
-    candidate_ids = set(user_ids) | set(replacement_by_user.values())
+    candidate_ids = set(scheduled_user_ids) | set(replacement_by_user.values())
     active_members = set(
         await database.scalars(
             select(CompanyUser.user_id).where(
@@ -92,7 +116,7 @@ async def _active_on_call_user_ids(
         else set()
     )
     routed: list[UUID] = []
-    for configured_user_id in user_ids:
+    for configured_user_id in scheduled_user_ids:
         effective_user_id = replacement_by_user.get(configured_user_id, configured_user_id)
         if (
             effective_user_id in active_members
@@ -165,6 +189,8 @@ async def assign_review_for_sla(
     on_call_start_hour: int,
     on_call_end_hour: int,
     on_call_weekdays: tuple[int, ...],
+    on_call_shifts: tuple[dict[str, object], ...],
+    holiday_calendar: tuple[dict[str, object], ...],
     escalated: bool,
 ) -> AgentDispatchReviewAssignment | None:
     configured = await _active_on_call_user_ids(
@@ -177,6 +203,8 @@ async def assign_review_for_sla(
         start_hour=on_call_start_hour,
         end_hour=on_call_end_hour,
         weekdays=on_call_weekdays,
+        shifts=on_call_shifts,
+        holiday_calendar=holiday_calendar,
     )
     candidates = configured or await company_approver_user_ids(database, review.company_id)
     if not candidates:
