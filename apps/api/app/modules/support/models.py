@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -56,6 +57,10 @@ class SupportTicket(Base):
     assignee_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
+    required_skill_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("support_skills.id", ondelete="SET NULL"), index=True
+    )
+    language_code: Mapped[str | None] = mapped_column(String(12))
     created_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -151,6 +156,145 @@ class SupportQueue(Base):
     )
 
 
+class SupportSkill(Base):
+    __tablename__ = "support_skills"
+    __table_args__ = (
+        UniqueConstraint("company_id", "key", name="uq_support_skills_company_key"),
+        Index("ix_support_skills_company_active", "company_id", "is_active"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(120))
+    key: Mapped[str] = mapped_column(String(80))
+    description: Mapped[str | None] = mapped_column(String(500))
+    is_active: Mapped[bool] = mapped_column(Boolean(), default=True, server_default="true")
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SupportAgentCapacity(Base):
+    __tablename__ = "support_agent_capacities"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "user_id",
+            name="uq_support_agent_capacities_company_user",
+        ),
+        CheckConstraint(
+            "status IN ('offline', 'available', 'busy', 'away')",
+            name="ck_support_agent_capacities_status",
+        ),
+        CheckConstraint(
+            "max_active_tickets >= 1 AND max_active_tickets <= 100",
+            name="ck_support_agent_capacities_max_active",
+        ),
+        Index("ix_support_agent_capacities_company_status", "company_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    queue_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("support_queues.id", ondelete="SET NULL"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(16), default="offline", server_default="offline")
+    max_active_tickets: Mapped[int] = mapped_column(Integer(), default=5, server_default="5")
+    languages: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    accepted_channels: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    updated_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class SupportAgentSkill(Base):
+    __tablename__ = "support_agent_skills"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "user_id",
+            "skill_id",
+            name="uq_support_agent_skills_company_user_skill",
+        ),
+        CheckConstraint(
+            "proficiency >= 1 AND proficiency <= 5",
+            name="ck_support_agent_skills_proficiency",
+        ),
+        Index("ix_support_agent_skills_company_user", "company_id", "user_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    skill_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_skills.id", ondelete="CASCADE"), index=True
+    )
+    proficiency: Mapped[int] = mapped_column(Integer(), default=1, server_default="1")
+    created_by_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class SupportQueueSkill(Base):
+    __tablename__ = "support_queue_skills"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "queue_id",
+            "skill_id",
+            name="uq_support_queue_skills_company_queue_skill",
+        ),
+        Index("ix_support_queue_skills_company_queue", "company_id", "queue_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    queue_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_queues.id", ondelete="CASCADE"), index=True
+    )
+    skill_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_skills.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
 class SupportSLAPolicy(Base):
     __tablename__ = "support_sla_policies"
     __table_args__ = (UniqueConstraint("company_id", "name", name="uq_support_sla_company_name"),)
@@ -184,7 +328,8 @@ class SupportTicketEvent(Base):
     __table_args__ = (
         CheckConstraint(
             "event_type IN ('created', 'assigned', 'queue_changed', 'priority_changed', "
-            "'status_changed', 'first_response', 'sla_breached', 'satisfaction_received')",
+            "'status_changed', 'first_response', 'sla_breached', 'satisfaction_received', "
+            "'routed')",
             name="ck_support_ticket_events_type",
         ),
         Index("ix_support_ticket_events_company_ticket", "company_id", "ticket_id", "created_at"),

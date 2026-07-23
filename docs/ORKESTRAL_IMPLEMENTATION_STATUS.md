@@ -1449,3 +1449,17 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Validação: backend `277 passed`, frontend `19 passed`, build, Ruff, MyPy, auditoria, migração reversível, smoke HTTP e teste RLS aprovados.
 - Fase 6 concluída neste roadmap; divisão de receita e comissionamento avançado seguem vinculados à Fase 9.
 - Próximo passo: iniciar a Fase 7 com SLA, filas, habilidades e roteamento de atendimento.
+
+# Atualização - Ciclo 93
+
+- Fase atual: 7 - Atendimento empresarial.
+- Habilidades, disponibilidade, capacidade, idiomas e canais implementados.
+- Roteamento determinístico recomenda sem escrever e atribui somente em uma
+  operação separada e autorizada.
+- RLS forçada, filtros explícitos por empresa, auditoria e eventos sem conteúdo
+  de chamados ou credenciais.
+- Migração reversível: `20260723_0106`.
+- Validação: backend `283 passed`, frontend `19 passed`, build, Ruff, MyPy,
+  auditoria de segurança, smoke pela interface e teste RLS aprovados.
+- Próximo passo: entrada omnichannel governada por e-mail, chat, WhatsApp,
+  formulário e portal.

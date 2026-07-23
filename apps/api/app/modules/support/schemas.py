@@ -68,6 +68,8 @@ class SupportTicketResponse(StrictSchema):
     id: UUID
     requester_contact_id: UUID | None
     assignee_user_id: UUID | None
+    required_skill_id: UUID | None
+    language_code: str | None
     created_by_user_id: UUID
     subject: str
     description: str

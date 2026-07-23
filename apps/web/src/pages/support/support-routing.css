@@ -1,0 +1,195 @@
+.support-routing {
+  margin-bottom: 22px;
+  overflow: hidden;
+  border: 1px solid #cbded8;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 8%, rgb(59 132 111 / 16%), transparent 30%),
+    linear-gradient(145deg, #f8fcfa, #eff7f3);
+  box-shadow: 0 16px 45px rgb(18 61 53 / 8%);
+}
+
+.support-routing > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 27px 17px;
+}
+
+.support-routing > header h2 {
+  margin: 5px 0;
+  color: #153b34;
+}
+
+.support-routing > header p,
+.support-routing-body p {
+  margin: 0;
+  color: #526861;
+}
+
+.support-routing .rotated {
+  transform: rotate(180deg);
+}
+
+.support-routing-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  border-top: 1px solid #d7e5e0;
+  background: #d7e5e0;
+}
+
+.support-routing-summary article {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 17px 24px;
+  color: #1c5148;
+  background: rgb(255 255 255 / 80%);
+}
+
+.support-routing-summary strong {
+  font-size: 1.25rem;
+}
+
+.support-routing-body {
+  display: grid;
+  gap: 16px;
+  padding: 22px 26px 27px;
+  border-top: 1px solid #d7e5e0;
+}
+
+.support-routing-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 13px;
+}
+
+.support-routing-fields label {
+  display: grid;
+  gap: 7px;
+  color: #294e47;
+  font-weight: 700;
+}
+
+.support-routing-fields input,
+.support-routing-fields select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #bcd0ca;
+  border-radius: 12px;
+  color: #173c35;
+  background: #fff;
+}
+
+.support-routing-note {
+  margin-top: 14px !important;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: #edf6f2;
+}
+
+.support-routing-recommendation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.support-routing-recommendation h3 {
+  margin: 0 0 5px;
+}
+
+.support-routing-candidates {
+  display: grid;
+  gap: 11px;
+}
+
+.support-routing-candidates > p {
+  padding: 12px 14px;
+  border: 1px solid #c6dcd4;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.support-routing-candidates article {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 15px;
+  padding: 17px;
+  border: 1px solid #cbded8;
+  border-radius: 17px;
+  background: #fff;
+}
+
+.support-routing-rank {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: #fff;
+  font-weight: 800;
+  background: #1f6356;
+}
+
+.support-routing-candidates small {
+  display: block;
+  margin-top: 3px;
+  color: #61736e;
+}
+
+.support-routing-candidates ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 13px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.support-routing-candidates li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #35675d;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+  .support-routing > header,
+  .support-routing-recommendation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .support-routing-summary,
+  .support-routing-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .support-routing-candidates article {
+    grid-template-columns: auto 1fr;
+  }
+
+  .support-routing-candidates article button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .support-routing > header,
+  .support-routing-body {
+    padding: 19px 16px;
+  }
+
+  .support-routing-summary article {
+    padding: 14px 17px;
+  }
+}

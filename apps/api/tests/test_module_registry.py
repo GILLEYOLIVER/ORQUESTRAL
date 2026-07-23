@@ -35,13 +35,13 @@ def test_registry_loads_only_installed_modules() -> None:
         "20260723_0097",
         "20260723_0098",
         "20260723_0099",
-            "20260723_0100",
-            "20260723_0101",
-            "20260723_0102",
-            "20260723_0103",
-            "20260723_0104",
-            "20260723_0105",
-        )
+        "20260723_0100",
+        "20260723_0101",
+        "20260723_0102",
+        "20260723_0103",
+        "20260723_0104",
+        "20260723_0105",
+    )
     assert "crm.contacts.view" in installed[1].permissions
     assert "crm.contacts.export" in installed[1].permissions
     assert "crm.segments.activate" in installed[1].permissions
@@ -55,7 +55,11 @@ def test_registry_loads_only_installed_modules() -> None:
     assert "marketing.journeys.manage" in installed[5].permissions
     assert installed[6].migrations == ("20260720_0017", "20260720_0027")
     assert "projects.tasks.manage" in installed[6].permissions
-    assert installed[7].migrations == ("20260720_0016", "20260720_0026")
+    assert installed[7].migrations == (
+        "20260720_0016",
+        "20260720_0026",
+        "20260723_0106",
+    )
     assert "support.tickets.view" in installed[7].permissions
     for module in installed:
         assert set(module.permissions) <= TENANT_PERMISSION_CODES
