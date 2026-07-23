@@ -30,6 +30,7 @@ import { PermissionGuard } from "../components/PermissionGuard";
 import { ApiClientError, request } from "../lib/http";
 import { CRMPipelineView } from "./crm/CRMPipelineView";
 import { SalesCatalogPanel } from "./crm/SalesCatalogPanel";
+import { SalesIntelligencePanel } from "./crm/SalesIntelligencePanel";
 import { SalesProspectingPanel } from "./crm/SalesProspectingPanel";
 
 const contactSchema = z.object({
@@ -528,6 +529,7 @@ export function CRMContactsPage() {
       </div>
       <SalesProspectingPanel />
       <SalesCatalogPanel />
+      <SalesIntelligencePanel />
       <details className="crm-pipeline-disclosure" open>
         <summary>
           <span>Pipeline comercial</span>

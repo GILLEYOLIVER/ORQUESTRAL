@@ -1428,5 +1428,13 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Validação: backend `267 passed`, frontend `19 passed`, build, Ruff, MyPy e auditoria de segurança aprovados.
 - Smoke HTTP aprovado com proposta publicada e aceita por `R$ 2.250,90`.
 - Próximo passo: saúde explicável da oportunidade, previsão comercial e recomendação de próxima ação.
-- Migração: `20260723_0104`.
-- Próximo passo: interface, previsão e saúde explicável das oportunidades.
+
+# Atualização - Ciclo 91
+
+- Fase atual: 6 - Vendas empresariais.
+- Saúde de oportunidades calculada por regras determinísticas e explicáveis.
+- Previsão separa funil, melhor cenário, receita comprometida e valor ponderado.
+- Recomendações indicam o próximo passo sem executar ações automaticamente.
+- Segurança: consultas somente leitura, permissão de funil e filtros explícitos em todas as junções por empresa.
+- Validação: backend `272 passed`, frontend `19 passed`, build, Ruff, MyPy, auditoria e smoke HTTP aprovados.
+- Próximo passo: concluir a Fase 6 com metas, territórios e renovações.
