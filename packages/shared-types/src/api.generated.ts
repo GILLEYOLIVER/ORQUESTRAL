@@ -1316,6 +1316,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/agents/{agent_id}/runtime-dispatch-review-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agent Dispatch Review Assignments */
+        get: operations["list_agent_dispatch_review_assignments_agents__agent_id__runtime_dispatch_review_assignments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agents/{agent_id}/runtime-dispatch-review-sla-policies": {
         parameters: {
             query?: never;
@@ -1396,6 +1413,40 @@ export interface paths {
         put?: never;
         /** Approve Interrupted Dispatch Retry */
         post: operations["approve_interrupted_dispatch_retry_agents__agent_id__runtime_dispatch_reviews__review_id__approve_retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/runtime-dispatch-reviews/{review_id}/assignments/{assignment_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge Agent Dispatch Review Assignment */
+        post: operations["acknowledge_agent_dispatch_review_assignment_agents__agent_id__runtime_dispatch_reviews__review_id__assignments__assignment_id__acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/agents/{agent_id}/runtime-dispatch-reviews/{review_id}/reassign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reassign Agent Dispatch Review */
+        post: operations["reassign_agent_dispatch_review_agents__agent_id__runtime_dispatch_reviews__review_id__reassign_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5826,6 +5877,56 @@ export interface components {
              */
             idempotency_key: string;
         };
+        /** AgentDispatchReviewAssignmentResponse */
+        AgentDispatchReviewAssignmentResponse: {
+            /** Acknowledged At */
+            acknowledged_at: string | null;
+            /** Acknowledged By User Id */
+            acknowledged_by_user_id: string | null;
+            /**
+             * Agent Id
+             * Format: uuid
+             */
+            agent_id: string;
+            /**
+             * Assigned At
+             * Format: date-time
+             */
+            assigned_at: string;
+            /** Assigned By User Id */
+            assigned_by_user_id: string | null;
+            /**
+             * Assigned To User Id
+             * Format: uuid
+             */
+            assigned_to_user_id: string;
+            /** Ended At */
+            ended_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Previous Assignment Id */
+            previous_assignment_id: string | null;
+            /** Reason Code */
+            reason_code: string;
+            /**
+             * Review Id
+             * Format: uuid
+             */
+            review_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "on_call" | "manual" | "fallback";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "acknowledged" | "reassigned" | "closed";
+        };
         /** AgentDispatchReviewCreate */
         AgentDispatchReviewCreate: {
             /**
@@ -5838,6 +5939,16 @@ export interface components {
              * Format: uuid
              */
             idempotency_key: string;
+            /** Reason */
+            reason: string;
+        };
+        /** AgentDispatchReviewReassign */
+        AgentDispatchReviewReassign: {
+            /**
+             * Assigned To User Id
+             * Format: uuid
+             */
+            assigned_to_user_id: string;
             /** Reason */
             reason: string;
         };
@@ -5894,15 +6005,39 @@ export interface components {
         };
         /** AgentDispatchReviewSLAPolicyCreate */
         AgentDispatchReviewSLAPolicyCreate: {
+            /**
+             * Acknowledgement Minutes
+             * @default 15
+             */
+            acknowledgement_minutes: number;
             /** Escalation Minutes */
             escalation_minutes: number;
             /** Name */
             name: string;
+            /**
+             * On Call End Hour
+             * @default 24
+             */
+            on_call_end_hour: number;
+            /**
+             * On Call Start Hour
+             * @default 0
+             */
+            on_call_start_hour: number;
+            /**
+             * On Call Timezone
+             * @default UTC
+             */
+            on_call_timezone: string;
+            /** On Call User Ids */
+            on_call_user_ids?: string[];
             /** Sla Minutes */
             sla_minutes: number;
         };
         /** AgentDispatchReviewSLAPolicyResponse */
         AgentDispatchReviewSLAPolicyResponse: {
+            /** Acknowledgement Minutes */
+            acknowledgement_minutes: number;
             /**
              * Agent Id
              * Format: uuid
@@ -5922,6 +6057,14 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+            /** On Call End Hour */
+            on_call_end_hour: number;
+            /** On Call Start Hour */
+            on_call_start_hour: number;
+            /** On Call Timezone */
+            on_call_timezone: string;
+            /** On Call User Ids */
+            on_call_user_ids: string[];
             /** Published At */
             published_at: string | null;
             /** Sla Minutes */
@@ -19412,6 +19555,55 @@ export interface operations {
             };
         };
     };
+    list_agent_dispatch_review_assignments_agents__agent_id__runtime_dispatch_review_assignments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewAssignmentResponse"][];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     list_agent_dispatch_review_sla_policies_agents__agent_id__runtime_dispatch_review_sla_policies_get: {
         parameters: {
             query?: never;
@@ -19687,6 +19879,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentDispatchReviewResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    acknowledge_agent_dispatch_review_assignment_agents__agent_id__runtime_dispatch_reviews__review_id__assignments__assignment_id__acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                review_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewAssignmentResponse"];
+                };
+            };
+            /** @description Solicitação inválida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Dados inválidos */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Erro interno */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    reassign_agent_dispatch_review_agents__agent_id__runtime_dispatch_reviews__review_id__reassign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                agent_id: string;
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentDispatchReviewReassign"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentDispatchReviewAssignmentResponse"];
                 };
             };
             /** @description Solicitação inválida */

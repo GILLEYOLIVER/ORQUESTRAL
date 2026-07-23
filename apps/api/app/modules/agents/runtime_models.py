@@ -390,6 +390,15 @@ class AgentDispatchReviewSLAPolicy(Base):
             "escalation_minutes > sla_minutes AND escalation_minutes <= 20160",
             name="ck_agent_dispatch_review_sla_escalation",
         ),
+        CheckConstraint(
+            "acknowledgement_minutes BETWEEN 1 AND 1440",
+            name="ck_agent_dispatch_review_sla_acknowledgement",
+        ),
+        CheckConstraint(
+            "on_call_start_hour BETWEEN 0 AND 23 AND on_call_end_hour BETWEEN 1 AND 24 "
+            "AND on_call_start_hour < on_call_end_hour",
+            name="ck_agent_dispatch_review_sla_on_call_window",
+        ),
         Index(
             "uq_agent_dispatch_review_sla_published",
             "company_id",
@@ -411,6 +420,17 @@ class AgentDispatchReviewSLAPolicy(Base):
     name: Mapped[str] = mapped_column(String(160))
     sla_minutes: Mapped[int] = mapped_column(Integer)
     escalation_minutes: Mapped[int] = mapped_column(Integer)
+    acknowledgement_minutes: Mapped[int] = mapped_column(
+        Integer, default=15, server_default="15"
+    )
+    on_call_user_ids: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    on_call_timezone: Mapped[str] = mapped_column(
+        String(64), default="UTC", server_default="UTC"
+    )
+    on_call_start_hour: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    on_call_end_hour: Mapped[int] = mapped_column(Integer, default=24, server_default="24")
     created_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -424,3 +444,57 @@ class AgentDispatchReviewSLAPolicy(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
     )
+
+
+class AgentDispatchReviewAssignment(Base):
+    __tablename__ = "agent_dispatch_review_assignments"
+    __table_args__ = (
+        CheckConstraint(
+            "source IN ('on_call', 'manual', 'fallback')",
+            name="ck_agent_dispatch_review_assignment_source",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'acknowledged', 'reassigned', 'closed')",
+            name="ck_agent_dispatch_review_assignment_status",
+        ),
+        Index(
+            "uq_agent_dispatch_review_assignment_active",
+            "company_id",
+            "review_id",
+            unique=True,
+            postgresql_where=text("ended_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    agent_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agents.id", ondelete="CASCADE"), index=True
+    )
+    review_id: Mapped[UUID] = mapped_column(
+        ForeignKey("agent_dispatch_reviews.id", ondelete="CASCADE"), index=True
+    )
+    previous_assignment_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_dispatch_review_assignments.id", ondelete="SET NULL"), index=True
+    )
+    assigned_to_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    assigned_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    acknowledged_by_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    source: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(20), default="pending", server_default="pending")
+    reason_code: Mapped[str] = mapped_column(String(80))
+    assigned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)

@@ -1108,3 +1108,27 @@ aprovados.
 
 **Proximo passo exato:** adicionar destinatarios e escalas de plantao versionados,
 com confirmacao de recebimento e reatribuicao auditada.
+
+## Atualizacao - Ciclo 72
+
+**Fase atual:** governanca e continuidade operacional do runtime de agentes.
+
+**Concluido:**
+
+- plantao ordenado e versionado por empresa e agente;
+- fuso e janela de atendimento validados;
+- validacao de aprovadores ativos do mesmo tenant;
+- atribuicao automatica e fallback seguro;
+- confirmacao idempotente pelo responsavel;
+- reatribuicao manual autorizada e rotacao automatica por falta de confirmacao;
+- historico encadeado e somente uma atribuicao ativa;
+- auditoria, eventos e notificacoes minimizados;
+- configuracao e operacao responsivas na interface;
+- migracao Alembic `20260722_0087` reversivel.
+
+**Validacao:** 208 testes da API, 7 do worker, 20 de integracao e 19 da
+interface aprovados; 7 E2E aprovados e 2 condicionais ignorados; build,
+tipagem, lint, contratos, health checks e auditoria de seguranca aprovados.
+
+**Proximo passo exato:** adicionar calendario semanal, excecoes de ausencia e
+passagem de plantao com aceite do substituto.

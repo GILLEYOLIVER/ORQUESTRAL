@@ -321,6 +321,36 @@
   grid-row: 1 / span 2;
 }
 
+.dispatch-on-call-users {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line, #d8e2df);
+  border-radius: 0.8rem;
+}
+
+.dispatch-on-call-users label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dispatch-assignment-controls {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.65rem 0;
+  padding: 0.75rem;
+  border: 1px solid #b9d4cb;
+  border-radius: 0.8rem;
+  background: #edf7f3;
+}
+
+.dispatch-assignment-reassign {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) minmax(12rem, 2fr) auto;
+  gap: 0.5rem;
+}
+
 @media (max-width: 640px) {
   .agent-runtime-policy-list > div {
     grid-template-columns: 1fr;
@@ -329,5 +359,9 @@
   .agent-runtime-policy-list button {
     grid-column: 1;
     grid-row: auto;
+  }
+
+  .dispatch-assignment-reassign {
+    grid-template-columns: 1fr;
   }
 }

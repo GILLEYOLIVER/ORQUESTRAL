@@ -11,6 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.resources import create_resources
 from app.core.security import utc_now
+from app.modules.agents.review_assignment_service import (
+    assign_review_for_sla,
+    current_review_assignment,
+)
 from app.modules.agents.runtime_models import (
     AgentDispatchReview,
     AgentDispatchReviewSLAPolicy,
@@ -42,6 +46,11 @@ class ReviewSLASettings:
     sla_minutes: int
     escalation_minutes: int
     policy_version: int | None
+    acknowledgement_minutes: int
+    on_call_user_ids: tuple[UUID, ...]
+    on_call_timezone: str
+    on_call_start_hour: int
+    on_call_end_hour: int
 
 
 async def effective_review_sla(
@@ -55,9 +64,18 @@ async def effective_review_sla(
         )
     )
     return (
-        ReviewSLASettings(policy.sla_minutes, policy.escalation_minutes, policy.version)
+        ReviewSLASettings(
+            policy.sla_minutes,
+            policy.escalation_minutes,
+            policy.version,
+            policy.acknowledgement_minutes,
+            tuple(UUID(value) for value in policy.on_call_user_ids),
+            policy.on_call_timezone,
+            policy.on_call_start_hour,
+            policy.on_call_end_hour,
+        )
         if policy is not None
-        else ReviewSLASettings(30, 120, None)
+        else ReviewSLASettings(30, 120, None, 15, (), "UTC", 0, 24)
     )
 
 
@@ -189,14 +207,29 @@ async def maintain_agent_dispatch_review_sla(
                     else policy.escalation_minutes
                 )
                 overdue_minutes = max(0, int((now - review.created_at).total_seconds() // 60))
-                if overdue_minutes < initial_sla:
-                    continue
-                escalated = overdue_minutes >= escalation_minutes
-                event_type = (
-                    "agent.dispatch.review_sla_escalated"
-                    if escalated
-                    else "agent.dispatch.review_sla_breached"
+                current_assignment = await current_review_assignment(
+                    database, company_id=review.company_id, review_id=review.id
                 )
+                acknowledgement_overdue = bool(
+                    current_assignment is not None
+                    and current_assignment.acknowledged_at is None
+                    and (
+                        now - current_assignment.assigned_at
+                    ).total_seconds()
+                    >= policy.acknowledgement_minutes * 60
+                )
+                if acknowledgement_overdue:
+                    escalated = True
+                    event_type = "agent.dispatch.review_acknowledgement_overdue"
+                else:
+                    if overdue_minutes < initial_sla:
+                        continue
+                    escalated = overdue_minutes >= escalation_minutes
+                    event_type = (
+                        "agent.dispatch.review_sla_escalated"
+                        if escalated
+                        else "agent.dispatch.review_sla_breached"
+                    )
                 already_recorded = await database.scalar(
                     select(OutboxEvent.id).where(
                         OutboxEvent.company_id == review.company_id,
@@ -206,7 +239,20 @@ async def maintain_agent_dispatch_review_sla(
                 )
                 if already_recorded is not None:
                     continue
-                recipients = await company_approver_user_ids(database, review.company_id)
+                assignment = await assign_review_for_sla(
+                    database,
+                    review=review,
+                    on_call_user_ids=policy.on_call_user_ids,
+                    on_call_timezone=policy.on_call_timezone,
+                    on_call_start_hour=policy.on_call_start_hour,
+                    on_call_end_hour=policy.on_call_end_hour,
+                    escalated=escalated,
+                )
+                recipients = (
+                    [assignment.assigned_to_user_id]
+                    if assignment is not None
+                    else await company_approver_user_ids(database, review.company_id)
+                )
                 if not recipients:
                     recipients = [review.requested_by_user_id]
                 for recipient_id in dict.fromkeys(recipients):
@@ -216,9 +262,13 @@ async def maintain_agent_dispatch_review_sla(
                         recipient_user_id=recipient_id,
                         event_type=event_type,
                         title=(
-                            "Revisão de agente exige escalonamento"
-                            if escalated
-                            else "Revisão de agente fora do prazo"
+                            "Plantão de agente sem confirmação"
+                            if acknowledgement_overdue
+                            else (
+                                "Revisão de agente exige escalonamento"
+                                if escalated
+                                else "Revisão de agente fora do prazo"
+                            )
                         ),
                         message="Uma execução interrompida aguarda aprovação administrativa.",
                         severity="critical" if escalated else "warning",
@@ -230,6 +280,8 @@ async def maintain_agent_dispatch_review_sla(
                             "overdue_minutes": overdue_minutes,
                             "sla_minutes": initial_sla,
                             "escalation_minutes": escalation_minutes,
+                            "acknowledgement_minutes": policy.acknowledgement_minutes,
+                            "assignment_id": str(assignment.id) if assignment else None,
                         },
                     )
                     if notification is not None:
@@ -247,6 +299,7 @@ async def maintain_agent_dispatch_review_sla(
                             "overdue_minutes": overdue_minutes,
                             "sla_minutes": initial_sla,
                             "escalation_minutes": escalation_minutes,
+                            "assignment_id": str(assignment.id) if assignment else None,
                         },
                     ),
                 )

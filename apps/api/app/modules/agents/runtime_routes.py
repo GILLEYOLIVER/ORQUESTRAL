@@ -17,10 +17,16 @@ from app.modules.agents.dispatch_review_service import (
     create_dispatch_review,
 )
 from app.modules.agents.models import Agent, AgentTool, AgentVersion
+from app.modules.agents.review_assignment_service import (
+    ReviewAssignmentError,
+    acknowledge_review_assignment,
+    reassign_review,
+)
 from app.modules.agents.review_sla_service import dispatch_review_summary
 from app.modules.agents.runtime_models import (
     AgentCredentialBinding,
     AgentDispatchReview,
+    AgentDispatchReviewAssignment,
     AgentDispatchReviewSLAPolicy,
     AgentEventTrigger,
     AgentExecutionSchedule,
@@ -31,7 +37,9 @@ from app.modules.agents.runtime_schemas import (
     AgentCredentialBindingResponse,
     AgentCredentialCatalogResponse,
     AgentDispatchRetryApproval,
+    AgentDispatchReviewAssignmentResponse,
     AgentDispatchReviewCreate,
+    AgentDispatchReviewReassign,
     AgentDispatchReviewResponse,
     AgentDispatchReviewSLAPolicyCreate,
     AgentDispatchReviewSLAPolicyResponse,
@@ -45,6 +53,7 @@ from app.modules.agents.runtime_schemas import (
 from app.modules.authorization.service import record_authorization_audit
 from app.modules.events.schemas import DomainEventCreate
 from app.modules.events.service import enqueue_domain_event
+from app.modules.notifications.service import company_approver_user_ids
 from app.modules.plugins.models import IntegrationCredential
 
 router = APIRouter(prefix="/agents", tags=["agents-runtime"])
@@ -571,6 +580,18 @@ def _raise_review_error(error: DispatchReviewError) -> None:
     raise HTTPException(status_code=status_code, detail=error.detail) from error
 
 
+def _raise_assignment_error(error: ReviewAssignmentError) -> None:
+    if error.code.endswith("not_found"):
+        status_code = status.HTTP_404_NOT_FOUND
+    elif error.code.endswith("forbidden"):
+        status_code = status.HTTP_403_FORBIDDEN
+    elif error.code == "assignee_invalid":
+        status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+    else:
+        status_code = status.HTTP_409_CONFLICT
+    raise HTTPException(status_code=status_code, detail=error.detail) from error
+
+
 @router.get(
     "/{agent_id}/runtime-dispatch-reviews",
     response_model=list[AgentDispatchReviewResponse],
@@ -591,6 +612,87 @@ async def list_agent_dispatch_reviews(
             .limit(100)
         )
     )
+
+
+@router.get(
+    "/{agent_id}/runtime-dispatch-review-assignments",
+    response_model=list[AgentDispatchReviewAssignmentResponse],
+)
+async def list_agent_dispatch_review_assignments(
+    agent_id: UUID, principal: CanViewAgents, database: DatabaseSession
+) -> list[AgentDispatchReviewAssignment]:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    return list(
+        await database.scalars(
+            select(AgentDispatchReviewAssignment)
+            .where(
+                AgentDispatchReviewAssignment.company_id == context.company_id,
+                AgentDispatchReviewAssignment.agent_id == agent_id,
+            )
+            .order_by(AgentDispatchReviewAssignment.assigned_at.desc())
+            .limit(200)
+        )
+    )
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-reviews/{review_id}/assignments/"
+    "{assignment_id}/acknowledge",
+    response_model=AgentDispatchReviewAssignmentResponse,
+)
+async def acknowledge_agent_dispatch_review_assignment(
+    agent_id: UUID,
+    review_id: UUID,
+    assignment_id: UUID,
+    principal: CanExecuteAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewAssignment:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    try:
+        assignment = await acknowledge_review_assignment(
+            database,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            review_id=review_id,
+            assignment_id=assignment_id,
+            actor_user_id=context.user_id,
+        )
+    except ReviewAssignmentError as error:
+        _raise_assignment_error(error)
+    await database.commit()
+    await database.refresh(assignment)
+    return assignment
+
+
+@router.post(
+    "/{agent_id}/runtime-dispatch-reviews/{review_id}/reassign",
+    response_model=AgentDispatchReviewAssignmentResponse,
+)
+async def reassign_agent_dispatch_review(
+    agent_id: UUID,
+    review_id: UUID,
+    payload: AgentDispatchReviewReassign,
+    principal: CanConfigureAgents,
+    database: DatabaseSession,
+) -> AgentDispatchReviewAssignment:
+    context = get_request_context(principal)
+    await _tenant_agent(database, context.company_id, agent_id)
+    try:
+        assignment = await reassign_review(
+            database,
+            company_id=context.company_id,
+            agent_id=agent_id,
+            review_id=review_id,
+            assigned_to_user_id=payload.assigned_to_user_id,
+            actor_user_id=context.user_id,
+        )
+    except ReviewAssignmentError as error:
+        _raise_assignment_error(error)
+    await database.commit()
+    await database.refresh(assignment)
+    return assignment
 
 
 @router.get(
@@ -650,6 +752,15 @@ async def create_agent_dispatch_review_sla_policy(
 ) -> AgentDispatchReviewSLAPolicy:
     context = get_request_context(principal)
     await _tenant_agent(database, context.company_id, agent_id)
+    requested_on_call_ids = set(payload.on_call_user_ids)
+    authorized_on_call_ids = set(
+        await company_approver_user_ids(database, context.company_id)
+    )
+    if not requested_on_call_ids.issubset(authorized_on_call_ids):
+        raise HTTPException(
+            status_code=422,
+            detail="Todos os plantonistas devem ser aprovadores ativos desta empresa.",
+        )
     current = await database.scalar(
         select(func.max(AgentDispatchReviewSLAPolicy.version)).where(
             AgentDispatchReviewSLAPolicy.company_id == context.company_id,
@@ -662,7 +773,7 @@ async def create_agent_dispatch_review_sla_policy(
         version=(current or 0) + 1,
         status="draft",
         created_by_user_id=context.user_id,
-        **payload.model_dump(),
+        **payload.model_dump(mode="json"),
     )
     database.add(policy)
     await database.flush()
