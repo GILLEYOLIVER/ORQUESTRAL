@@ -308,7 +308,7 @@ class AgentRunStepResponse(StrictSchema):
     id: UUID
     agent_run_id: UUID
     sequence: int
-    step_type: Literal["provider", "tool"]
+    step_type: Literal["provider", "runtime", "tool"]
     status: Literal[
         "planned",
         "completed",

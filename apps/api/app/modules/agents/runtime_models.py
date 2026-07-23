@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -40,6 +41,14 @@ class AgentExecutionSchedule(Base):
             "cadence_minutes BETWEEN 5 AND 10080",
             name="ck_agent_execution_schedule_cadence",
         ),
+        CheckConstraint(
+            "execution_mode IN ('shadow', 'live')",
+            name="ck_agent_execution_schedule_mode",
+        ),
+        CheckConstraint(
+            "canary_percentage BETWEEN 0 AND 100",
+            name="ck_agent_execution_schedule_canary",
+        ),
         Index(
             "ix_agent_execution_schedule_due",
             "status",
@@ -67,6 +76,13 @@ class AgentExecutionSchedule(Base):
     required_tool_keys: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
     )
+    tool_arguments: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    execution_mode: Mapped[str] = mapped_column(
+        String(16), default="shadow", server_default="shadow"
+    )
+    canary_percentage: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by_user_id: Mapped[UUID] = mapped_column(
@@ -104,6 +120,14 @@ class AgentEventTrigger(Base):
             "max_event_version IS NULL OR max_event_version >= min_event_version",
             name="ck_agent_event_trigger_version_range",
         ),
+        CheckConstraint(
+            "execution_mode IN ('shadow', 'live')",
+            name="ck_agent_event_trigger_mode",
+        ),
+        CheckConstraint(
+            "canary_percentage BETWEEN 0 AND 100",
+            name="ck_agent_event_trigger_canary",
+        ),
         Index(
             "ix_agent_event_trigger_match",
             "status",
@@ -133,6 +157,13 @@ class AgentEventTrigger(Base):
     required_tool_keys: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
     )
+    tool_arguments: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    execution_mode: Mapped[str] = mapped_column(
+        String(16), default="shadow", server_default="shadow"
+    )
+    canary_percentage: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_by_user_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
@@ -188,7 +219,23 @@ class AgentRuntimeDispatch(Base):
         CheckConstraint(
             "source_type IN ('schedule', 'event')", name="ck_agent_runtime_dispatch_source"
         ),
-        CheckConstraint("status IN ('ready', 'blocked')", name="ck_agent_runtime_dispatch_status"),
+        CheckConstraint(
+            "status IN ('ready', 'blocked', 'processing', 'awaiting_approval', "
+            "'simulated', 'completed', 'failed')",
+            name="ck_agent_runtime_dispatch_status",
+        ),
+        CheckConstraint(
+            "execution_mode IN ('shadow', 'live')",
+            name="ck_agent_runtime_dispatch_mode",
+        ),
+        CheckConstraint(
+            "canary_percentage BETWEEN 0 AND 100",
+            name="ck_agent_runtime_dispatch_canary",
+        ),
+        CheckConstraint(
+            "attempt_count >= 0 AND reserved_microunits >= 0",
+            name="ck_agent_runtime_dispatch_counters",
+        ),
         CheckConstraint(
             "(source_type = 'schedule' AND schedule_id IS NOT NULL AND trigger_id IS NULL) OR "
             "(source_type = 'event' AND trigger_id IS NOT NULL AND schedule_id IS NULL "
@@ -220,6 +267,7 @@ class AgentRuntimeDispatch(Base):
     source_type: Mapped[str] = mapped_column(String(20), index=True)
     status: Mapped[str] = mapped_column(String(20), index=True)
     reason_code: Mapped[str | None] = mapped_column(String(120))
+    error_code: Mapped[str | None] = mapped_column(String(120), index=True)
     objective_fingerprint: Mapped[str] = mapped_column(String(64))
     required_tool_keys: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
@@ -227,7 +275,21 @@ class AgentRuntimeDispatch(Base):
     credential_binding_ids: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
     )
+    tool_arguments: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    execution_mode: Mapped[str] = mapped_column(
+        String(16), default="shadow", server_default="shadow", index=True
+    )
+    canary_percentage: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    agent_run_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, unique=True, index=True
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    reserved_microunits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     scheduled_for: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )

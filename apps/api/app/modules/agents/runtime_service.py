@@ -51,18 +51,24 @@ async def credential_readiness(
 ) -> CredentialReadiness:
     if not required_tool_keys:
         return CredentialReadiness(True, None, ())
-    enabled_tools = set(
-        await database.scalars(
-            select(AgentTool.tool_key).where(
+    enabled_tool_rows = (
+        await database.execute(
+            select(AgentTool.tool_key, AgentTool.is_sensitive).where(
                 AgentTool.company_id == company_id,
                 AgentTool.agent_id == agent_id,
                 AgentTool.tool_key.in_(required_tool_keys),
                 AgentTool.enabled.is_(True),
             )
         )
-    )
+    ).all()
+    enabled_tools = {tool_key for tool_key, _ in enabled_tool_rows}
     if enabled_tools != set(required_tool_keys):
         return CredentialReadiness(False, "tool_unavailable", ())
+    credential_tool_keys = {
+        tool_key for tool_key, is_sensitive in enabled_tool_rows if is_sensitive
+    }
+    if not credential_tool_keys:
+        return CredentialReadiness(True, None, ())
     rows = (
         await database.execute(
             select(AgentCredentialBinding, IntegrationCredential)
@@ -73,14 +79,14 @@ async def credential_readiness(
             .where(
                 AgentCredentialBinding.company_id == company_id,
                 AgentCredentialBinding.agent_id == agent_id,
-                AgentCredentialBinding.tool_key.in_(required_tool_keys),
+                AgentCredentialBinding.tool_key.in_(credential_tool_keys),
                 AgentCredentialBinding.enabled.is_(True),
                 IntegrationCredential.company_id == company_id,
             )
         )
     ).all()
     by_tool = {binding.tool_key: (binding, credential) for binding, credential in rows}
-    if set(by_tool) != set(required_tool_keys):
+    if set(by_tool) != credential_tool_keys:
         return CredentialReadiness(False, "credential_binding_missing", ())
     now = utc_now()
     if any(
@@ -105,6 +111,9 @@ async def _create_dispatch(
     agent_version_id: UUID,
     objective: str,
     required_tool_keys: list[str],
+    tool_arguments: dict[str, dict[str, object]],
+    execution_mode: str,
+    canary_percentage: int,
     scheduled_for: datetime,
     schedule_id: UUID | None = None,
     trigger_id: UUID | None = None,
@@ -134,6 +143,9 @@ async def _create_dispatch(
         ),
         required_tool_keys=required_tool_keys,
         credential_binding_ids=[str(value) for value in readiness.binding_ids],
+        tool_arguments=tool_arguments,
+        execution_mode=execution_mode,
+        canary_percentage=canary_percentage,
         scheduled_for=scheduled_for,
     )
     database.add(dispatch)
@@ -195,6 +207,9 @@ async def maintain_agent_runtime(
                         agent_version_id=schedule.agent_version_id,
                         objective=schedule.objective,
                         required_tool_keys=schedule.required_tool_keys,
+                        tool_arguments=schedule.tool_arguments,
+                        execution_mode=schedule.execution_mode,
+                        canary_percentage=schedule.canary_percentage,
                         scheduled_for=scheduled_for,
                         schedule_id=schedule.id,
                     )
@@ -250,6 +265,9 @@ async def maintain_agent_runtime(
                             agent_version_id=trigger.agent_version_id,
                             objective=trigger.objective,
                             required_tool_keys=trigger.required_tool_keys,
+                            tool_arguments=trigger.tool_arguments,
+                            execution_mode=trigger.execution_mode,
+                            canary_percentage=trigger.canary_percentage,
                             scheduled_for=event.created_at,
                             trigger_id=trigger.id,
                             source_event_id=event.id,

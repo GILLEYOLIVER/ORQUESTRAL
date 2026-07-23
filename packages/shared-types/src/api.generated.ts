@@ -7252,7 +7252,7 @@ export interface components {
              * Step Type
              * @enum {string}
              */
-            step_type: "provider" | "tool";
+            step_type: "provider" | "runtime" | "tool";
             /** Summary Code */
             summary_code: string;
             /** Tool Key */
@@ -7265,16 +7265,31 @@ export interface components {
              * Format: uuid
              */
             agent_id: string;
+            /** Agent Run Id */
+            agent_run_id: string | null;
             /**
              * Agent Version Id
              * Format: uuid
              */
             agent_version_id: string;
+            /** Attempt Count */
+            attempt_count: number;
+            /** Canary Percentage */
+            canary_percentage: number;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Error Code */
+            error_code: string | null;
+            /**
+             * Execution Mode
+             * @enum {string}
+             */
+            execution_mode: "shadow" | "live";
+            /** Finished At */
+            finished_at: string | null;
             /**
              * Id
              * Format: uuid
@@ -7298,11 +7313,19 @@ export interface components {
              * @enum {string}
              */
             source_type: "schedule" | "event";
+            /** Started At */
+            started_at: string | null;
             /**
              * Status
              * @enum {string}
              */
-            status: "ready" | "blocked";
+            status: "ready" | "blocked" | "processing" | "awaiting_approval" | "simulated" | "completed" | "failed";
+            /** Tool Arguments */
+            tool_arguments: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
             /** Trigger Id */
             trigger_id: string | null;
         };
@@ -7310,6 +7333,17 @@ export interface components {
         AgentScheduleCreate: {
             /** Cadence Minutes */
             cadence_minutes: number;
+            /**
+             * Canary Percentage
+             * @default 0
+             */
+            canary_percentage: number;
+            /**
+             * Execution Mode
+             * @default shadow
+             * @enum {string}
+             */
+            execution_mode: "shadow" | "live";
             /** First Run At */
             first_run_at?: string | null;
             /** Name */
@@ -7320,6 +7354,12 @@ export interface components {
             required_tool_keys?: string[];
             /** Schedule Key */
             schedule_key: string;
+            /** Tool Arguments */
+            tool_arguments?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
         };
         /** AgentScheduleResponse */
         AgentScheduleResponse: {
@@ -7335,11 +7375,18 @@ export interface components {
             agent_version_id: string;
             /** Cadence Minutes */
             cadence_minutes: number;
+            /** Canary Percentage */
+            canary_percentage: number;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Execution Mode
+             * @enum {string}
+             */
+            execution_mode: "shadow" | "live";
             /**
              * Id
              * Format: uuid
@@ -7364,6 +7411,12 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "published" | "paused" | "retired";
+            /** Tool Arguments */
+            tool_arguments: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
             /** Version */
             version: number;
         };
@@ -7973,8 +8026,19 @@ export interface components {
         };
         /** AgentTriggerCreate */
         AgentTriggerCreate: {
+            /**
+             * Canary Percentage
+             * @default 0
+             */
+            canary_percentage: number;
             /** Event Type */
             event_type: string;
+            /**
+             * Execution Mode
+             * @default shadow
+             * @enum {string}
+             */
+            execution_mode: "shadow" | "live";
             /** Max Event Version */
             max_event_version?: number | null;
             /**
@@ -7988,6 +8052,12 @@ export interface components {
             objective: string;
             /** Required Tool Keys */
             required_tool_keys?: string[];
+            /** Tool Arguments */
+            tool_arguments?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
             /** Trigger Key */
             trigger_key: string;
         };
@@ -8003,6 +8073,8 @@ export interface components {
              * Format: uuid
              */
             agent_version_id: string;
+            /** Canary Percentage */
+            canary_percentage: number;
             /**
              * Created At
              * Format: date-time
@@ -8010,6 +8082,11 @@ export interface components {
             created_at: string;
             /** Event Type */
             event_type: string;
+            /**
+             * Execution Mode
+             * @enum {string}
+             */
+            execution_mode: "shadow" | "live";
             /**
              * Id
              * Format: uuid
@@ -8032,6 +8109,12 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "published" | "paused" | "retired";
+            /** Tool Arguments */
+            tool_arguments: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
             /** Trigger Key */
             trigger_key: string;
             /** Version */

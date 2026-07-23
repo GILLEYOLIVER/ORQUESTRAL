@@ -998,3 +998,20 @@ controlada de metadados entre ambientes.
 - Rate limit independente para login automatico local, sem reduzir a protecao remota.
 - Proximo passo: consumir despachos prontos pelo executor governado, aplicando politica,
   orcamento, aprovacao, modo sombra e rastreabilidade antes de chamar ferramentas reais.
+## Ciclo 67 - Em desenvolvimento
+
+- executor duravel para despachos prontos;
+- pre-validacao de tenant, versao, responsavel, ferramenta, argumentos e permissao;
+- reserva de orcamento e liberacao segura;
+- modo sombra por padrao e rollout canario deterministico;
+- aprovacao humana sincronizada com despacho e `AgentRun`;
+- trilha operacional sem argumentos ou resultados em texto aberto;
+- proximo passo: migracao, contratos, testes completos, PR e deploy manual.
+
+### Ciclo 67 - executor governado de despachos concluido
+
+- agendas e eventos agora alimentam um executor governado com isolamento por empresa, permissao do ator, politica publicada, autonomia, orcamento, modo sombra, canary e aprovacao humana;
+- execucoes geram `AgentRun`, trace operacional, auditoria e eventos sem armazenar objetivos ou resultados sensiveis em texto livre;
+- ferramentas internas nao sensiveis dispensam credenciais externas; ferramentas sensiveis permanecem fail-closed;
+- validacao: API `207 passed`, integracao `20 passed`, worker `6 passed`, E2E `7 passed / 2 skipped`, auditoria de seguranca aprovada;
+- proximo passo exato: controles visuais para modo sombra/canary e reconciliacao fail-closed de despachos interrompidos.

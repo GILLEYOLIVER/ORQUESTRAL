@@ -136,7 +136,7 @@ export interface AgentRunStepResponse {
   id: string;
   agent_run_id: string;
   sequence: number;
-  step_type: "provider" | "tool";
+  step_type: "provider" | "runtime" | "tool";
   status:
     | "planned"
     | "completed"
