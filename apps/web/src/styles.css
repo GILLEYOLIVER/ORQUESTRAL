@@ -1531,6 +1531,15 @@ p {
   grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
 }
 
+.plugin-credential-anchor {
+  min-width: 0;
+  scroll-margin-top: 6rem;
+}
+
+.plugin-credential-anchor > .plugin-credential-form {
+  height: 100%;
+}
+
 .plugin-credential-form,
 .plugin-credential-list {
   min-width: 0;
