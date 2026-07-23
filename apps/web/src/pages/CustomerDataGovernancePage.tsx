@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { request } from "../lib/http";
 import { useSession } from "../session/context";
+import { CustomerPrivacyPanel } from "../components/CustomerPrivacyPanel";
 
 type MatchRule = {
   id: string;
@@ -384,6 +385,8 @@ export function CustomerDataGovernancePage() {
           ))}
         </div>
       </section>
+
+      <CustomerPrivacyPanel readOnly={readOnly} />
     </main>
   );
 }
