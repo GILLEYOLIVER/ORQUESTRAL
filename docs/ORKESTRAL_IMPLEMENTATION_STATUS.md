@@ -1370,3 +1370,15 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
   consentimento e linhagem ao perfil 360;
 - documento tecnico:
   `docs/implementation/CYCLE_84_CUSTOMER_CDC_SAFE_RETENTION.md`.
+# Atualizacao 2026-07-23 - Ciclo 85
+
+- fase atual: Fase 5, plataforma de dados;
+- concluido neste recorte: manutencao horaria da retencao CDC pelo worker,
+  descoberta minima por funcao segura e isolamento de falhas por empresa;
+- migracao: `20260723_0099`;
+- seguranca: o executor automatico nao assume identidade humana e continua sob
+  contexto RLS;
+- proximo passo exato: qualidade e consentimento do perfil 360, com politicas
+  de minimizacao e atendimento de solicitacoes LGPD;
+- documento tecnico:
+  `docs/implementation/CYCLE_85_CUSTOMER_CDC_RETENTION_WORKER.md`.

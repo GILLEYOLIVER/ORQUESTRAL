@@ -74,6 +74,10 @@ celery_app.conf.update(
             "task": "orkestral.customer_data.execute_sync_dispatches",
             "schedule": 15.0,
         },
+        "maintain-customer-cdc-retention-every-hour": {
+            "task": "orkestral.customer_data.maintain_cdc_retention",
+            "schedule": 3600.0,
+        },
     },
 )
 
