@@ -101,8 +101,36 @@ export type DispatchReviewSLAPolicy = {
   name: string;
   sla_minutes: number;
   escalation_minutes: number;
+  acknowledgement_minutes: number;
+  on_call_user_ids: string[];
+  on_call_timezone: string;
+  on_call_start_hour: number;
+  on_call_end_hour: number;
   created_at: string;
   published_at: string | null;
+};
+
+export type DispatchReviewAssignment = {
+  id: string;
+  agent_id: string;
+  review_id: string;
+  previous_assignment_id: string | null;
+  assigned_to_user_id: string;
+  assigned_by_user_id: string | null;
+  acknowledged_by_user_id: string | null;
+  source: "on_call" | "manual" | "fallback";
+  status: "pending" | "acknowledged" | "reassigned" | "closed";
+  reason_code: string;
+  assigned_at: string;
+  acknowledged_at: string | null;
+  ended_at: string | null;
+};
+
+export type CompanyUserOption = {
+  user_id: string;
+  name: string;
+  email: string;
+  membership_status: string;
 };
 
 export type ScheduleInput = {
@@ -175,6 +203,20 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
       ),
     enabled,
   });
+  const reviewAssignments = useQuery({
+    queryKey: ["agent-runtime-dispatch-review-assignments", agentId],
+    queryFn: () =>
+      request<DispatchReviewAssignment[]>(
+        `/agents/${agentId}/runtime-dispatch-review-assignments`,
+      ),
+    enabled,
+    refetchInterval: 30_000,
+  });
+  const companyUsers = useQuery({
+    queryKey: ["company-users"],
+    queryFn: () => request<CompanyUserOption[]>("/company/users"),
+    enabled: enabled && canConfigure,
+  });
   const credentials = useQuery({
     queryKey: ["agent-runtime-credentials"],
     queryFn: () =>
@@ -189,10 +231,12 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
   });
   return {
     bindings,
+    companyUsers,
     credentials,
     dispatches,
     reviews,
     reviewPolicies,
+    reviewAssignments,
     reviewSummary,
     schedules,
     triggers,
@@ -223,6 +267,9 @@ export function useAgentRuntimeActions(agentId: string | null) {
       }),
       queryClient.invalidateQueries({
         queryKey: ["agent-runtime-dispatch-review-sla-policies", agentId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["agent-runtime-dispatch-review-assignments", agentId],
       }),
     ]);
 
@@ -343,6 +390,11 @@ export function useAgentRuntimeActions(agentId: string | null) {
       name: string;
       sla_minutes: number;
       escalation_minutes: number;
+      acknowledgement_minutes: number;
+      on_call_user_ids: string[];
+      on_call_timezone: string;
+      on_call_start_hour: number;
+      on_call_end_hour: number;
     }) =>
       request<DispatchReviewSLAPolicy>(
         `/agents/${agentId}/runtime-dispatch-review-sla-policies`,
@@ -358,7 +410,36 @@ export function useAgentRuntimeActions(agentId: string | null) {
       ),
     onSuccess: refresh,
   });
+  const acknowledgeReviewAssignment = useMutation({
+    mutationFn: ({ reviewId, assignmentId }: { reviewId: string; assignmentId: string }) =>
+      request<DispatchReviewAssignment>(
+        `/agents/${agentId}/runtime-dispatch-reviews/${reviewId}/assignments/` +
+          `${assignmentId}/acknowledge`,
+        { method: "POST" },
+      ),
+    onSuccess: refresh,
+  });
+  const reassignReview = useMutation({
+    mutationFn: ({
+      reviewId,
+      assignedToUserId,
+      reason,
+    }: {
+      reviewId: string;
+      assignedToUserId: string;
+      reason: string;
+    }) =>
+      request<DispatchReviewAssignment>(
+        `/agents/${agentId}/runtime-dispatch-reviews/${reviewId}/reassign`,
+        {
+          method: "POST",
+          body: { assigned_to_user_id: assignedToUserId, reason },
+        },
+      ),
+    onSuccess: refresh,
+  });
   return {
+    acknowledgeReviewAssignment,
     approveDispatchRetry,
     bindCredential,
     createReviewSLAPolicy,
@@ -369,6 +450,7 @@ export function useAgentRuntimeActions(agentId: string | null) {
     publishSchedule,
     publishReviewSLAPolicy,
     publishTrigger,
+    reassignReview,
     reviewDispatch,
   };
 }

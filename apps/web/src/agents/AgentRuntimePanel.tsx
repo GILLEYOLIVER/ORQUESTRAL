@@ -2,7 +2,9 @@ import { type FormEvent, useMemo, useState } from "react";
 
 import { useSession } from "../session/context";
 import {
+  type CompanyUserOption,
   type DispatchReview,
+  type DispatchReviewAssignment,
   type RuntimeDispatch,
   type RuntimeStatus,
   useAgentRuntime,
@@ -59,7 +61,11 @@ function DispatchReviewControls({
   canExecute,
   dispatch,
   review,
+  assignment,
+  companyUsers,
+  onAcknowledge,
   onApprove,
+  onReassign,
   onReview,
   pending,
 }: {
@@ -67,11 +73,72 @@ function DispatchReviewControls({
   canExecute: boolean;
   dispatch: RuntimeDispatch;
   review: DispatchReview | undefined;
+  assignment: DispatchReviewAssignment | undefined;
+  companyUsers: CompanyUserOption[];
+  onAcknowledge: (assignmentId: string) => void;
   onApprove: (reviewId: string) => void;
+  onReassign: (userId: string, reason: string) => void;
   onReview: (decision: "close" | "retry", reason: string) => void;
   pending: boolean;
 }) {
   const [reason, setReason] = useState("");
+  const [reassignUserId, setReassignUserId] = useState("");
+  const [reassignReason, setReassignReason] = useState("");
+  const assignee = companyUsers.find(
+    (user) => user.user_id === assignment?.assigned_to_user_id,
+  );
+  const assignmentControls = assignment ? (
+    <div className="dispatch-assignment-controls">
+      <p>
+        <strong>Responsável:</strong> {assignee?.name ?? "Usuário do plantão"} · {" "}
+        {assignment.acknowledged_at ? "recebimento confirmado" : "aguardando confirmação"}
+      </p>
+      {!assignment.acknowledged_at ? (
+        <button
+          disabled={!canExecute || pending}
+          onClick={() => onAcknowledge(assignment.id)}
+          type="button"
+        >
+          Confirmar recebimento
+        </button>
+      ) : null}
+      {canConfigure ? (
+        <div className="dispatch-assignment-reassign">
+          <select
+            aria-label="Novo responsável"
+            onChange={(event) => setReassignUserId(event.target.value)}
+            value={reassignUserId}
+          >
+            <option value="">Selecione outro responsável</option>
+            {companyUsers
+              .filter(
+                (user) =>
+                  user.membership_status === "active" &&
+                  user.user_id !== assignment.assigned_to_user_id,
+              )
+              .map((user) => (
+                <option key={user.user_id} value={user.user_id}>
+                  {user.name}
+                </option>
+              ))}
+          </select>
+          <input
+            aria-label="Motivo da reatribuição"
+            onChange={(event) => setReassignReason(event.target.value)}
+            placeholder="Motivo da reatribuição"
+            value={reassignReason}
+          />
+          <button
+            disabled={!reassignUserId || reassignReason.trim().length < 10 || pending}
+            onClick={() => onReassign(reassignUserId, reassignReason)}
+            type="button"
+          >
+            Reatribuir com auditoria
+          </button>
+        </div>
+      ) : null}
+    </div>
+  ) : null;
   if (!requiresDispatchReview(dispatch)) return null;
   if (review?.status === "closed") {
     return <p className="dispatch-review-state">Revisão encerrada sem repetição.</p>;
@@ -83,6 +150,7 @@ function DispatchReviewControls({
     return (
       <div className="dispatch-review-actions">
         <p className="dispatch-review-state">Repetição preparada; falta aprovação explícita.</p>
+        {assignmentControls}
         <button
           disabled={!canExecute || pending}
           onClick={() => onApprove(review.id)}
@@ -156,6 +224,11 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
   const [reviewPolicyName, setReviewPolicyName] = useState("Política operacional");
   const [reviewSlaMinutes, setReviewSlaMinutes] = useState(30);
   const [reviewEscalationMinutes, setReviewEscalationMinutes] = useState(120);
+  const [reviewAcknowledgementMinutes, setReviewAcknowledgementMinutes] = useState(15);
+  const [reviewOnCallIds, setReviewOnCallIds] = useState<string[]>([]);
+  const [reviewOnCallTimezone, setReviewOnCallTimezone] = useState("UTC");
+  const [reviewOnCallStartHour, setReviewOnCallStartHour] = useState(0);
+  const [reviewOnCallEndHour, setReviewOnCallEndHour] = useState(24);
   const usableCredentials = useMemo(
     () => runtime.credentials.data?.filter((item) => item.usable) ?? [],
     [runtime.credentials.data],
@@ -260,6 +333,11 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
       name: reviewPolicyName,
       sla_minutes: reviewSlaMinutes,
       escalation_minutes: reviewEscalationMinutes,
+      acknowledgement_minutes: reviewAcknowledgementMinutes,
+      on_call_user_ids: reviewOnCallIds,
+      on_call_timezone: reviewOnCallTimezone,
+      on_call_start_hour: reviewOnCallStartHour,
+      on_call_end_hour: reviewOnCallEndHour,
     });
   };
 
@@ -683,6 +761,74 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                   value={reviewEscalationMinutes}
                 />
               </label>
+              <label>
+                Confirmar recebimento em (minutos)
+                <input
+                  max={1440}
+                  min={1}
+                  onChange={(event) =>
+                    setReviewAcknowledgementMinutes(Number(event.target.value))
+                  }
+                  required
+                  type="number"
+                  value={reviewAcknowledgementMinutes}
+                />
+              </label>
+              <label>
+                Fuso do plantão
+                <input
+                  onChange={(event) => setReviewOnCallTimezone(event.target.value)}
+                  required
+                  value={reviewOnCallTimezone}
+                />
+              </label>
+              <label>
+                Início do plantão (hora)
+                <input
+                  max={23}
+                  min={0}
+                  onChange={(event) =>
+                    setReviewOnCallStartHour(Number(event.target.value))
+                  }
+                  required
+                  type="number"
+                  value={reviewOnCallStartHour}
+                />
+              </label>
+              <label>
+                Fim do plantão (hora)
+                <input
+                  max={24}
+                  min={1}
+                  onChange={(event) =>
+                    setReviewOnCallEndHour(Number(event.target.value))
+                  }
+                  required
+                  type="number"
+                  value={reviewOnCallEndHour}
+                />
+              </label>
+              <fieldset className="dispatch-on-call-users">
+                <legend>Responsáveis de plantão</legend>
+                {(runtime.companyUsers.data ?? [])
+                  .filter((user) => user.membership_status === "active")
+                  .map((user) => (
+                    <label key={user.user_id}>
+                      <input
+                        checked={reviewOnCallIds.includes(user.user_id)}
+                        onChange={(event) =>
+                          setReviewOnCallIds((current) =>
+                            event.target.checked
+                              ? [...current, user.user_id]
+                              : current.filter((id) => id !== user.user_id),
+                          )
+                        }
+                        type="checkbox"
+                      />
+                      {user.name}
+                    </label>
+                  ))}
+              </fieldset>
               <button
                 disabled={
                   actions.createReviewSLAPolicy.isPending ||
@@ -702,7 +848,9 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                   </span>
                   <small>
                     Aviso {policy.sla_minutes} min · escalonamento {" "}
-                    {policy.escalation_minutes} min
+                    {policy.escalation_minutes} min · confirmação {" "}
+                    {policy.acknowledgement_minutes} min · {" "}
+                    {policy.on_call_user_ids.length} plantonista(s)
                   </small>
                   {policy.status === "draft" ? (
                     <button
@@ -727,6 +875,10 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
             const review = runtime.reviews.data?.find(
               (candidate) => candidate.interrupted_dispatch_id === item.id,
             );
+            const assignment = runtime.reviewAssignments.data?.find(
+              (candidate) =>
+                candidate.review_id === review?.id && candidate.ended_at === null,
+            );
             return (
               <div className="agent-runtime-dispatch" key={item.id}>
                 <span className={`runtime-dot runtime-dot-${item.status}`} />
@@ -746,9 +898,18 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                       : ""}
                   </small>
                   <DispatchReviewControls
+                    assignment={assignment}
                     canConfigure={canConfigure}
                     canExecute={canExecute}
+                    companyUsers={runtime.companyUsers.data ?? []}
                     dispatch={item}
+                    onAcknowledge={(assignmentId) =>
+                      review &&
+                      actions.acknowledgeReviewAssignment.mutate({
+                        assignmentId,
+                        reviewId: review.id,
+                      })
+                    }
                     onApprove={(reviewId) =>
                       actions.approveDispatchRetry.mutate({
                         reviewId,
@@ -763,9 +924,19 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
                         reason,
                       })
                     }
+                    onReassign={(userId, reassignReason) =>
+                      review &&
+                      actions.reassignReview.mutate({
+                        assignedToUserId: userId,
+                        reason: reassignReason,
+                        reviewId: review.id,
+                      })
+                    }
                     pending={
                       actions.reviewDispatch.isPending ||
-                      actions.approveDispatchRetry.isPending
+                      actions.approveDispatchRetry.isPending ||
+                      actions.acknowledgeReviewAssignment.isPending ||
+                      actions.reassignReview.isPending
                     }
                     review={review}
                   />

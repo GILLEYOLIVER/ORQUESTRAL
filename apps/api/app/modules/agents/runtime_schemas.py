@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal, Self
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, field_validator, model_validator
 
@@ -197,11 +198,35 @@ class AgentDispatchReviewSLAPolicyCreate(StrictSchema):
     name: str = Field(min_length=3, max_length=160)
     sla_minutes: int = Field(ge=5, le=10_080)
     escalation_minutes: int = Field(ge=6, le=20_160)
+    acknowledgement_minutes: int = Field(default=15, ge=1, le=1440)
+    on_call_user_ids: list[UUID] = Field(default_factory=list, max_length=20)
+    on_call_timezone: str = Field(default="UTC", min_length=1, max_length=64)
+    on_call_start_hour: int = Field(default=0, ge=0, le=23)
+    on_call_end_hour: int = Field(default=24, ge=1, le=24)
+
+    @field_validator("on_call_user_ids")
+    @classmethod
+    def unique_on_call_users(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Cada usuário de plantão pode aparecer somente uma vez.")
+        return value
+
+    @field_validator("on_call_timezone")
+    @classmethod
+    def valid_on_call_timezone(cls, value: str) -> str:
+        timezone = value.strip()
+        try:
+            ZoneInfo(timezone)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError("Informe um fuso horário IANA válido.") from exc
+        return timezone
 
     @model_validator(mode="after")
     def validate_escalation(self) -> Self:
         if self.escalation_minutes <= self.sla_minutes:
             raise ValueError("O escalonamento deve ocorrer depois do SLA inicial.")
+        if self.on_call_start_hour >= self.on_call_end_hour:
+            raise ValueError("O início do plantão deve ocorrer antes do término.")
         return self
 
 
@@ -213,5 +238,31 @@ class AgentDispatchReviewSLAPolicyResponse(StrictSchema):
     name: str
     sla_minutes: int
     escalation_minutes: int
+    acknowledgement_minutes: int
+    on_call_user_ids: list[UUID]
+    on_call_timezone: str
+    on_call_start_hour: int
+    on_call_end_hour: int
     created_at: datetime
     published_at: datetime | None
+
+
+class AgentDispatchReviewAssignmentResponse(StrictSchema):
+    id: UUID
+    agent_id: UUID
+    review_id: UUID
+    previous_assignment_id: UUID | None
+    assigned_to_user_id: UUID
+    assigned_by_user_id: UUID | None
+    acknowledged_by_user_id: UUID | None
+    source: Literal["on_call", "manual", "fallback"]
+    status: Literal["pending", "acknowledged", "reassigned", "closed"]
+    reason_code: str
+    assigned_at: datetime
+    acknowledged_at: datetime | None
+    ended_at: datetime | None
+
+
+class AgentDispatchReviewReassign(StrictSchema):
+    assigned_to_user_id: UUID
+    reason: str = Field(min_length=10, max_length=500)

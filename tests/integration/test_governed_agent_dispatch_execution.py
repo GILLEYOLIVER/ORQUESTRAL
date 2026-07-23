@@ -18,6 +18,7 @@ from app.modules.agents.models import AgentBudget, AgentRun, AgentRunStep
 from app.modules.agents.review_sla_service import maintain_agent_dispatch_review_sla
 from app.modules.agents.runtime_models import (
     AgentDispatchReview,
+    AgentDispatchReviewAssignment,
     AgentExecutionSchedule,
     AgentRuntimeDispatch,
 )
@@ -32,8 +33,8 @@ from app.modules.users.models import CompanyUser, User
 @dataclass(frozen=True, slots=True)
 class DispatchIdentity:
     company_ids: tuple[UUID, UUID]
-    user_ids: tuple[UUID, UUID]
-    emails: tuple[str, str]
+    user_ids: tuple[UUID, ...]
+    emails: tuple[str, ...]
     password: str
 
 
@@ -60,12 +61,14 @@ async def _seed(settings: Settings) -> DispatchIdentity:
                     password_hash=hash_password(password),
                     status="active",
                 )
-                for label in ("A", "B")
+                for label in ("A", "B", "C")
             )
             database.add_all((*companies, *users))
             await database.flush()
-            for company, user in zip(companies, users, strict=True):
+            role_ids: list[UUID] = []
+            for company, user in zip(companies, users[:2], strict=True):
                 owner, _ = await ensure_company_system_roles(database, company.id)
+                role_ids.append(owner.id)
                 database.add(
                     CompanyUser(
                         company_id=company.id,
@@ -75,11 +78,20 @@ async def _seed(settings: Settings) -> DispatchIdentity:
                         is_owner=True,
                     )
                 )
+            database.add(
+                CompanyUser(
+                    company_id=companies[1].id,
+                    user_id=users[2].id,
+                    role_id=role_ids[1],
+                    status="active",
+                    is_owner=False,
+                )
+            )
             await database.commit()
             return DispatchIdentity(
                 company_ids=(companies[0].id, companies[1].id),
-                user_ids=(users[0].id, users[1].id),
-                emails=(users[0].email, users[1].email),
+                user_ids=(users[0].id, users[1].id, users[2].id),
+                emails=(users[0].email, users[1].email, users[2].email),
                 password=password,
             )
     finally:
@@ -281,6 +293,20 @@ async def _make_review_overdue(settings: Settings, review_id: UUID) -> None:
         await resources.close()
 
 
+async def _make_assignment_acknowledgement_overdue(
+    settings: Settings, assignment_id: UUID
+) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            assignment = await database.get(AgentDispatchReviewAssignment, assignment_id)
+            assert assignment is not None
+            assignment.assigned_at = datetime.now(UTC) - timedelta(minutes=15)
+            await database.commit()
+    finally:
+        await resources.close()
+
+
 @pytest.mark.integration
 def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() -> None:
     settings = Settings(app_env="testing")
@@ -448,6 +474,14 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     "name": "SLA crítico",
                     "sla_minutes": 20,
                     "escalation_minutes": 40,
+                    "acknowledgement_minutes": 10,
+                    "on_call_user_ids": [
+                        str(identity.user_ids[1]),
+                        str(identity.user_ids[2]),
+                    ],
+                    "on_call_timezone": "UTC",
+                    "on_call_start_hour": 0,
+                    "on_call_end_hour": 24,
                 },
             )
             assert foreign_policy.status_code == 404
@@ -458,6 +492,14 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     "name": "SLA crítico",
                     "sla_minutes": 20,
                     "escalation_minutes": 40,
+                    "acknowledgement_minutes": 10,
+                    "on_call_user_ids": [
+                        str(identity.user_ids[1]),
+                        str(identity.user_ids[2]),
+                    ],
+                    "on_call_timezone": "UTC",
+                    "on_call_start_hour": 0,
+                    "on_call_end_hour": 24,
                 },
             )
             assert policy.status_code == 201
@@ -491,6 +533,85 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert first_sla_result["review_breaches"] == 1
             assert first_sla_result["notifications"] >= 1
             assert second_sla_result == {"review_breaches": 0, "notifications": 0}
+
+            assignments = client.get(
+                f"/agents/{agent_id}/runtime-dispatch-review-assignments",
+                headers=headers_b,
+            )
+            assert assignments.status_code == 200
+            active_assignment = next(
+                item for item in assignments.json() if item["ended_at"] is None
+            )
+            assert active_assignment["assigned_to_user_id"] == str(identity.user_ids[1])
+            assert active_assignment["status"] == "pending"
+            assert (
+                client.post(
+                    f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/"
+                    f"assignments/{active_assignment['id']}/acknowledge",
+                    headers=headers_a,
+                ).status_code
+                == 404
+            )
+            acknowledged = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/"
+                f"assignments/{active_assignment['id']}/acknowledge",
+                headers=headers_b,
+            )
+            assert acknowledged.status_code == 200
+            assert acknowledged.json()["status"] == "acknowledged"
+            replayed_acknowledgement = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/"
+                f"assignments/{active_assignment['id']}/acknowledge",
+                headers=headers_b,
+            )
+            assert replayed_acknowledgement.status_code == 200
+            assert replayed_acknowledgement.json()["id"] == active_assignment["id"]
+            invalid_reassignment = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/reassign",
+                headers=headers_b,
+                json={
+                    "assigned_to_user_id": str(identity.user_ids[0]),
+                    "reason": "Tentativa deliberada de cruzar empresas.",
+                },
+            )
+            assert invalid_reassignment.status_code == 422
+            reassigned = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/reassign",
+                headers=headers_b,
+                json={
+                    "assigned_to_user_id": str(identity.user_ids[2]),
+                    "reason": "Suplente assumirá a análise desta execução interrompida.",
+                },
+            )
+            assert reassigned.status_code == 200
+            assert reassigned.json()["assigned_to_user_id"] == str(identity.user_ids[2])
+            assert reassigned.json()["previous_assignment_id"] == active_assignment["id"]
+            asyncio.run(
+                _make_assignment_acknowledgement_overdue(
+                    settings, UUID(reassigned.json()["id"])
+                )
+            )
+            overdue_acknowledgement = asyncio.run(
+                maintain_agent_dispatch_review_sla(settings=settings)
+            )
+            replayed_overdue_acknowledgement = asyncio.run(
+                maintain_agent_dispatch_review_sla(settings=settings)
+            )
+            assert overdue_acknowledgement["review_breaches"] == 1
+            assert overdue_acknowledgement["notifications"] >= 1
+            assert replayed_overdue_acknowledgement == {
+                "review_breaches": 0,
+                "notifications": 0,
+            }
+            rotated_assignments = client.get(
+                f"/agents/{agent_id}/runtime-dispatch-review-assignments",
+                headers=headers_b,
+            )
+            rotated_active = next(
+                item for item in rotated_assignments.json() if item["ended_at"] is None
+            )
+            assert rotated_active["assigned_to_user_id"] == str(identity.user_ids[1])
+            assert rotated_active["previous_assignment_id"] == reassigned.json()["id"]
 
             overdue_summary = client.get(
                 f"/agents/{agent_id}/runtime-dispatch-reviews/summary",

@@ -1731,6 +1731,136 @@
         "title": "AgentDispatchRetryApproval",
         "type": "object"
       },
+      "AgentDispatchReviewAssignmentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "acknowledged_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged By User Id"
+          },
+          "agent_id": {
+            "format": "uuid",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "assigned_at": {
+            "format": "date-time",
+            "title": "Assigned At",
+            "type": "string"
+          },
+          "assigned_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned By User Id"
+          },
+          "assigned_to_user_id": {
+            "format": "uuid",
+            "title": "Assigned To User Id",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "previous_assignment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Assignment Id"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "review_id": {
+            "format": "uuid",
+            "title": "Review Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "on_call",
+              "manual",
+              "fallback"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "acknowledged",
+              "reassigned",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "agent_id",
+          "review_id",
+          "previous_assignment_id",
+          "assigned_to_user_id",
+          "assigned_by_user_id",
+          "acknowledged_by_user_id",
+          "source",
+          "status",
+          "reason_code",
+          "assigned_at",
+          "acknowledged_at",
+          "ended_at"
+        ],
+        "title": "AgentDispatchReviewAssignmentResponse",
+        "type": "object"
+      },
       "AgentDispatchReviewCreate": {
         "additionalProperties": false,
         "properties": {
@@ -1760,6 +1890,28 @@
           "idempotency_key"
         ],
         "title": "AgentDispatchReviewCreate",
+        "type": "object"
+      },
+      "AgentDispatchReviewReassign": {
+        "additionalProperties": false,
+        "properties": {
+          "assigned_to_user_id": {
+            "format": "uuid",
+            "title": "Assigned To User Id",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assigned_to_user_id",
+          "reason"
+        ],
+        "title": "AgentDispatchReviewReassign",
         "type": "object"
       },
       "AgentDispatchReviewResponse": {
@@ -1873,6 +2025,13 @@
       "AgentDispatchReviewSLAPolicyCreate": {
         "additionalProperties": false,
         "properties": {
+          "acknowledgement_minutes": {
+            "default": 15,
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Acknowledgement Minutes",
+            "type": "integer"
+          },
           "escalation_minutes": {
             "maximum": 20160.0,
             "minimum": 6.0,
@@ -1884,6 +2043,36 @@
             "minLength": 3,
             "title": "Name",
             "type": "string"
+          },
+          "on_call_end_hour": {
+            "default": 24,
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "On Call End Hour",
+            "type": "integer"
+          },
+          "on_call_start_hour": {
+            "default": 0,
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "On Call Start Hour",
+            "type": "integer"
+          },
+          "on_call_timezone": {
+            "default": "UTC",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "On Call Timezone",
+            "type": "string"
+          },
+          "on_call_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "On Call User Ids",
+            "type": "array"
           },
           "sla_minutes": {
             "maximum": 10080.0,
@@ -1903,6 +2092,10 @@
       "AgentDispatchReviewSLAPolicyResponse": {
         "additionalProperties": false,
         "properties": {
+          "acknowledgement_minutes": {
+            "title": "Acknowledgement Minutes",
+            "type": "integer"
+          },
           "agent_id": {
             "format": "uuid",
             "title": "Agent Id",
@@ -1925,6 +2118,26 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "on_call_end_hour": {
+            "title": "On Call End Hour",
+            "type": "integer"
+          },
+          "on_call_start_hour": {
+            "title": "On Call Start Hour",
+            "type": "integer"
+          },
+          "on_call_timezone": {
+            "title": "On Call Timezone",
+            "type": "string"
+          },
+          "on_call_user_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "On Call User Ids",
+            "type": "array"
           },
           "published_at": {
             "anyOf": [
@@ -1964,6 +2177,11 @@
           "name",
           "sla_minutes",
           "escalation_minutes",
+          "acknowledgement_minutes",
+          "on_call_user_ids",
+          "on_call_timezone",
+          "on_call_start_hour",
+          "on_call_end_hour",
           "created_at",
           "published_at"
         ],
@@ -31646,6 +31864,78 @@
         ]
       }
     },
+    "/agents/{agent_id}/runtime-dispatch-review-assignments": {
+      "get": {
+        "operationId": "list_agent_dispatch_review_assignments_agents__agent_id__runtime_dispatch_review_assignments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentDispatchReviewAssignmentResponse"
+                  },
+                  "title": "Response List Agent Dispatch Review Assignments Agents  Agent Id  Runtime Dispatch Review Assignments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Agent Dispatch Review Assignments",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
     "/agents/{agent_id}/runtime-dispatch-review-sla-policies": {
       "get": {
         "operationId": "list_agent_dispatch_review_sla_policies_agents__agent_id__runtime_dispatch_review_sla_policies_get",
@@ -32111,6 +32401,182 @@
           }
         ],
         "summary": "Approve Interrupted Dispatch Retry",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runtime-dispatch-reviews/{review_id}/assignments/{assignment_id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledge_agent_dispatch_review_assignment_agents__agent_id__runtime_dispatch_reviews__review_id__assignments__assignment_id__acknowledge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Review Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Acknowledge Agent Dispatch Review Assignment",
+        "tags": [
+          "agents-runtime"
+        ]
+      }
+    },
+    "/agents/{agent_id}/runtime-dispatch-reviews/{review_id}/reassign": {
+      "post": {
+        "operationId": "reassign_agent_dispatch_review_agents__agent_id__runtime_dispatch_reviews__review_id__reassign_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Agent Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Review Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentDispatchReviewReassign"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDispatchReviewAssignmentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Solicitação inválida"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Erro interno"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reassign Agent Dispatch Review",
         "tags": [
           "agents-runtime"
         ]
