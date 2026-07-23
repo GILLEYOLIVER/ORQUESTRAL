@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.crm.customer_ingestion_schemas import CustomerIngestionJobCreate
 from app.modules.crm.customer_ingestion_service import ingest_customer_records
+from app.modules.crm.customer_sync_adapters import get_sync_adapter_definition
 from app.modules.crm.customer_sync_schemas import (
     CustomerSyncConnectorCreate,
     CustomerSyncConnectorResponse,
@@ -69,6 +70,8 @@ def _connector_response(row: Any) -> CustomerSyncConnectorResponse:
         id=row.id,
         source_code=row.source_code,
         source_name=row.source_name,
+        adapter_key=row.adapter_key,
+        adapter_version=row.adapter_version,
         transport=row.transport,
         status=row.status,
         credential_configured=row.credential_binding_id is not None,
@@ -113,6 +116,8 @@ _CONNECTOR_SELECT = """
         connector.id,
         source.code AS source_code,
         source.name AS source_name,
+        connector.adapter_key,
+        connector.adapter_version,
         connector.transport,
         connector.status,
         connector.credential_binding_id,
@@ -195,6 +200,12 @@ async def create_sync_connector(
     if duplicate is not None:
         raise ValueError("Já existe um conector com esse código.")
 
+    adapter = get_sync_adapter_definition(payload.adapter_key)
+    if adapter is None:
+        raise ValueError("O adaptador informado não está registrado.")
+    if payload.transport not in adapter.transports:
+        raise ValueError("O transporte não é compatível com o adaptador.")
+
     if payload.credential_binding_id is not None:
         credential = (
             await database.execute(
@@ -245,14 +256,15 @@ async def create_sync_connector(
                 """
                 INSERT INTO customer_sync_connectors (
                     id, company_id, source_id, source_code, transport,
-                    credential_binding_id, status, schedule_minutes, max_attempts,
-                    base_backoff_seconds, lease_ttl_seconds, next_run_at,
-                    created_by_user_id
+                    adapter_key, adapter_version, credential_binding_id, status,
+                    schedule_minutes, max_attempts, base_backoff_seconds,
+                    lease_ttl_seconds, next_run_at, created_by_user_id
                 ) VALUES (
                     gen_random_uuid(), :company_id, :source_id, :source_code,
-                    :transport, :credential_binding_id, 'active', :schedule_minutes,
-                    :max_attempts, :base_backoff_seconds, :lease_ttl_seconds,
-                    now(), :actor_user_id
+                    :transport, :adapter_key, :adapter_version,
+                    :credential_binding_id, 'active', :schedule_minutes,
+                    :max_attempts, :base_backoff_seconds,
+                    :lease_ttl_seconds, now(), :actor_user_id
                 )
                 RETURNING id
                 """
@@ -262,6 +274,8 @@ async def create_sync_connector(
                 "source_id": source_id,
                 "source_code": payload.source_code,
                 "transport": payload.transport,
+                "adapter_key": payload.adapter_key,
+                "adapter_version": adapter.version,
                 "credential_binding_id": payload.credential_binding_id,
                 "schedule_minutes": payload.schedule_minutes,
                 "max_attempts": payload.max_attempts,
@@ -293,6 +307,7 @@ async def create_sync_connector(
         payload={
             "source_code": payload.source_code,
             "transport": payload.transport,
+            "adapter_key": payload.adapter_key,
             "credential_configured": payload.credential_binding_id is not None,
         },
     )

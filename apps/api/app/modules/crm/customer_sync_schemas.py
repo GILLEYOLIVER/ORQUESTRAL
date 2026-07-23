@@ -14,6 +14,10 @@ class CustomerSyncConnectorCreate(BaseModel):
 
     source_code: str = Field(pattern=r"^[a-z][a-z0-9._-]{1,79}$")
     source_name: str = Field(min_length=2, max_length=120)
+    adapter_key: str = Field(
+        default="secure_push",
+        pattern=r"^[a-z][a-z0-9._-]{1,79}$",
+    )
     transport: Literal["push", "pull", "webhook"] = "push"
     credential_binding_id: UUID | None = None
     schedule_minutes: int = Field(default=60, ge=5, le=10_080)
@@ -28,6 +32,8 @@ class CustomerSyncConnectorResponse(BaseModel):
     id: UUID
     source_code: str
     source_name: str
+    adapter_key: str
+    adapter_version: str
     transport: Literal["push", "pull", "webhook"]
     status: Literal["active", "paused"]
     credential_configured: bool

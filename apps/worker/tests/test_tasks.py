@@ -8,6 +8,7 @@ from worker.tasks import (
     maintain_agent_delegations_task,
     maintain_agent_dispatch_review_sla_task,
     maintain_agent_memory_reencryption_task,
+    maintain_customer_sync_schedules_task,
     process_agent_delegation_task,
     purge_expired_agent_memories_task,
     run_due_agent_memory_response_exercises_task,
@@ -18,6 +19,22 @@ def test_diagnostic_task_can_run_eagerly() -> None:
     result = diagnostic_ping.apply()
     assert result.successful()
     assert result.result == {"status": "ok", "service": "orkestral-worker"}
+
+
+def test_customer_sync_scheduler_task_can_run_eagerly(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "worker.tasks.maintain_customer_sync_schedules_sync",
+        lambda: {"companies": 2, "evaluated": 3, "dispatched": 1, "blocked": 2},
+    )
+    result = maintain_customer_sync_schedules_task.apply()
+    assert result.successful()
+    assert result.result == {
+        "status": "ok",
+        "companies": 2,
+        "evaluated": 3,
+        "dispatched": 1,
+        "blocked": 2,
+    }
 
 
 def test_delegation_tasks_delegate_to_domain_services(monkeypatch: MonkeyPatch) -> None:

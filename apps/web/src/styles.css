@@ -2800,6 +2800,18 @@ p {
   gap: 0.4rem;
 }
 
+.customer-sync__connector-actions > div {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.customer-sync__health {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #526c65;
+  font-size: 0.8rem;
+}
+
 .customer-sync__status {
   align-self: start;
   border-radius: 999px;
@@ -2874,6 +2886,11 @@ p {
   .customer-sync__section-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .customer-sync__connector-actions > div {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }
 .customer-ingestion {
