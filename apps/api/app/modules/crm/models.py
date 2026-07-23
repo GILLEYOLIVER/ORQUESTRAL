@@ -51,6 +51,9 @@ class CRMContact(Base):
     assigned_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
+    account_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_accounts.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
@@ -355,6 +358,9 @@ class CRMOpportunity(Base):
     contact_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("crm_contacts.id", ondelete="SET NULL"), index=True
     )
+    account_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_accounts.id", ondelete="SET NULL"), index=True
+    )
     assigned_user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), index=True
     )
@@ -411,3 +417,98 @@ class CRMOpportunityActivity(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
+
+
+class CRMAccount(Base):
+    __tablename__ = "crm_accounts"
+    __table_args__ = (
+        UniqueConstraint("company_id", "name", name="uq_crm_accounts_company_name"),
+        CheckConstraint(
+            "status IN ('prospect', 'customer', 'partner', 'inactive')",
+            name="ck_crm_accounts_status",
+        ),
+        CheckConstraint(
+            "annual_revenue >= 0",
+            name="ck_crm_accounts_annual_revenue",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(CITEXT(), index=True)
+    legal_name: Mapped[str | None] = mapped_column(String(200))
+    website: Mapped[str | None] = mapped_column(String(240))
+    industry: Mapped[str | None] = mapped_column(String(120), index=True)
+    employee_count: Mapped[int | None] = mapped_column(Integer)
+    annual_revenue: Mapped[Decimal] = mapped_column(
+        Numeric(16, 2), default=Decimal("0"), server_default="0"
+    )
+    currency: Mapped[str] = mapped_column(String(3), default="BRL", server_default="BRL")
+    status: Mapped[str] = mapped_column(
+        String(16), default="prospect", server_default="prospect", index=True
+    )
+    owner_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class CRMLead(Base):
+    __tablename__ = "crm_leads"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('new', 'working', 'qualified', 'converted', 'disqualified')",
+            name="ck_crm_leads_status",
+        ),
+        CheckConstraint("score >= 0 AND score <= 100", name="ck_crm_leads_score"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(180), index=True)
+    email: Mapped[str | None] = mapped_column(CITEXT(), index=True)
+    phone: Mapped[str | None] = mapped_column(String(64))
+    company_name: Mapped[str | None] = mapped_column(String(180), index=True)
+    job_title: Mapped[str | None] = mapped_column(String(120))
+    source: Mapped[str | None] = mapped_column(String(80), index=True)
+    status: Mapped[str] = mapped_column(
+        String(20), default="new", server_default="new", index=True
+    )
+    score: Mapped[int] = mapped_column(Integer, default=0, server_default="0", index=True)
+    owner_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    notes: Mapped[str | None] = mapped_column(Text)
+    qualification_note: Mapped[str | None] = mapped_column(Text)
+    qualified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    converted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    converted_account_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_accounts.id", ondelete="SET NULL"), index=True
+    )
+    converted_contact_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_contacts.id", ondelete="SET NULL"), index=True
+    )
+    converted_opportunity_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("crm_opportunities.id", ondelete="SET NULL"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)

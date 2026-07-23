@@ -3862,3 +3862,171 @@ p {
     flex-direction: column;
   }
 }
+.sales-prospecting {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sales-prospecting__header,
+.sales-prospecting__toolbar,
+.sales-prospecting__actions,
+.sales-prospecting__metrics {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.sales-prospecting__header h2,
+.sales-prospecting__header p,
+.sales-prospecting__lead h3,
+.sales-prospecting__lead p {
+  margin: 0;
+}
+
+.sales-prospecting__header p,
+.sales-prospecting__lead p,
+.sales-prospecting__account small {
+  color: var(--text-muted);
+}
+
+.sales-prospecting__metrics {
+  justify-content: flex-start;
+}
+
+.sales-prospecting__metric {
+  background: #edf6f2;
+  border: 1px solid #c9dfd6;
+  border-radius: 14px;
+  min-width: 130px;
+  padding: 0.75rem 0.9rem;
+}
+
+.sales-prospecting__metric strong,
+.sales-prospecting__metric span {
+  display: block;
+}
+
+.sales-prospecting__metric strong {
+  color: #113f37;
+  font-size: 1.25rem;
+}
+
+.sales-prospecting__metric span {
+  color: #47685f;
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.sales-prospecting__forms,
+.sales-prospecting__content {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.sales-prospecting__form,
+.sales-prospecting__list,
+.sales-prospecting__accounts {
+  background: #fff;
+  border: 1px solid #d6e2dd;
+  border-radius: 18px;
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.sales-prospecting__form label {
+  color: #23473f;
+  display: grid;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 0.35rem;
+}
+
+.sales-prospecting__form input,
+.sales-prospecting__form select,
+.sales-prospecting__toolbar select {
+  background: #fff;
+  border: 1px solid #b9cbc4;
+  border-radius: 10px;
+  color: #102f2a;
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+}
+
+.sales-prospecting__lead,
+.sales-prospecting__account {
+  border: 1px solid #d9e4df;
+  border-radius: 14px;
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.85rem;
+}
+
+.sales-prospecting__lead-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.sales-prospecting__status {
+  background: #e9f4f0;
+  border: 1px solid #bcd8cf;
+  border-radius: 999px;
+  color: #17594e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.55rem;
+  text-transform: uppercase;
+}
+
+.sales-prospecting__score {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sales-prospecting__score meter {
+  accent-color: #1e695b;
+  flex: 1;
+}
+
+.sales-prospecting__conversion {
+  background: #f6f2e8;
+  border: 1px solid #ded1b5;
+  border-radius: 12px;
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.75rem;
+}
+
+.sales-prospecting__empty {
+  color: var(--text-muted);
+  padding: 1rem 0;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .sales-prospecting__forms,
+  .sales-prospecting__content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .sales-prospecting__header,
+  .sales-prospecting__toolbar,
+  .sales-prospecting__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sales-prospecting__actions button,
+  .sales-prospecting__toolbar select {
+    width: 100%;
+  }
+}
