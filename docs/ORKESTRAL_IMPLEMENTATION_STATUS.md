@@ -1063,3 +1063,24 @@ pendentes por tempo excessivo.
 
 **Proximo passo exato:** implementar metricas e alertas de SLA da fila de revisao,
 com agregacao por empresa e sem armazenar argumentos de ferramentas.
+
+## Atualizacao - Ciclo 70
+
+**Fase atual:** observabilidade operacional do runtime de agentes.
+
+**Concluido:**
+
+- resumo de SLA por empresa e agente;
+- contagem de pendencias, atrasos, decisoes e reincidencias;
+- alerta idempotente sem payload sensivel;
+- job Celery a cada cinco minutos;
+- notificacao para responsaveis autorizados;
+- painel com atualizacao periodica;
+- teste de atraso real, idempotencia e isolamento;
+- nenhuma migracao adicional neste ciclo.
+
+**Risco residual:** o SLA ainda e padrao e nao possui politica versionada por
+empresa, agente ou risco.
+
+**Proximo passo exato:** criar politicas versionadas de SLA e escalonamento, com
+limites, auditoria e configuracao administrativa.

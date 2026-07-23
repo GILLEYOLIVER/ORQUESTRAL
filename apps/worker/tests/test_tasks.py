@@ -6,6 +6,7 @@ from worker.tasks import (
     diagnostic_ping,
     dispatch_agent_runtime_task,
     maintain_agent_delegations_task,
+    maintain_agent_dispatch_review_sla_task,
     maintain_agent_memory_reencryption_task,
     process_agent_delegation_task,
     purge_expired_agent_memories_task,
@@ -48,6 +49,20 @@ def test_agent_runtime_dispatch_delegates_to_domain_service(monkeypatch: MonkeyP
         "triggered": 2,
         "ready": 2,
         "blocked": 1,
+    }
+
+
+def test_agent_review_sla_delegates_to_domain_service(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "worker.tasks.maintain_agent_dispatch_review_sla_sync",
+        lambda: {"review_breaches": 2, "notifications": 3},
+    )
+    result = maintain_agent_dispatch_review_sla_task.apply()
+    assert result.successful()
+    assert result.result == {
+        "status": "ok",
+        "review_breaches": 2,
+        "notifications": 3,
     }
 
 

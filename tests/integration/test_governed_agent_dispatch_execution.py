@@ -15,7 +15,9 @@ from app.core.security import hash_password
 from app.main import create_app
 from app.modules.agents.dispatch_execution import execute_ready_agent_dispatches
 from app.modules.agents.models import AgentBudget, AgentRun, AgentRunStep
+from app.modules.agents.review_sla_service import maintain_agent_dispatch_review_sla
 from app.modules.agents.runtime_models import (
+    AgentDispatchReview,
     AgentExecutionSchedule,
     AgentRuntimeDispatch,
 )
@@ -267,6 +269,18 @@ async def _assert_interrupted_dispatch_reconciled(
         await resources.close()
 
 
+async def _make_review_overdue(settings: Settings, review_id: UUID) -> None:
+    resources = create_resources(settings)
+    try:
+        async with resources.sessions() as database:
+            review = await database.get(AgentDispatchReview, review_id)
+            assert review is not None
+            review.created_at = datetime.now(UTC) - timedelta(minutes=45)
+            await database.commit()
+    finally:
+        await resources.close()
+
+
 @pytest.mark.integration
 def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() -> None:
     settings = Settings(app_env="testing")
@@ -426,6 +440,40 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
             assert review.status_code == 201
             assert review.json()["status"] == "pending_approval"
             assert review.json()["replacement_dispatch_id"] is None
+
+            initial_summary = client.get(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/summary",
+                headers=headers_b,
+            )
+            assert initial_summary.status_code == 200
+            assert initial_summary.json()["pending"] == 1
+            assert initial_summary.json()["overdue"] == 0
+
+            asyncio.run(_make_review_overdue(settings, UUID(review.json()["id"])))
+            first_sla_result = asyncio.run(
+                maintain_agent_dispatch_review_sla(settings=settings, sla_minutes=30)
+            )
+            second_sla_result = asyncio.run(
+                maintain_agent_dispatch_review_sla(settings=settings, sla_minutes=30)
+            )
+            assert first_sla_result["review_breaches"] == 1
+            assert first_sla_result["notifications"] >= 1
+            assert second_sla_result == {"review_breaches": 0, "notifications": 0}
+
+            overdue_summary = client.get(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/summary",
+                headers=headers_b,
+            )
+            assert overdue_summary.status_code == 200
+            assert overdue_summary.json()["overdue"] == 1
+            assert overdue_summary.json()["oldest_pending_minutes"] >= 44
+            assert (
+                client.get(
+                    f"/agents/{agent_id}/runtime-dispatch-reviews/summary",
+                    headers=headers_a,
+                ).status_code
+                == 404
+            )
 
             replayed_review = client.post(
                 f"/agents/{agent_id}/runtime-dispatches/{dispatch_id}/reviews",

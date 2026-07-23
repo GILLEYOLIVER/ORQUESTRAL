@@ -42,6 +42,10 @@ celery_app.conf.update(
             "task": "orkestral.agents.execute_runtime_dispatches",
             "schedule": 15.0,
         },
+        "maintain-agent-dispatch-review-sla-every-five-minutes": {
+            "task": "orkestral.agents.maintain_dispatch_review_sla",
+            "schedule": 300.0,
+        },
         "purge-expired-agent-memories-every-five-minutes": {
             "task": "orkestral.agents.purge_expired_memories",
             "schedule": 300.0,

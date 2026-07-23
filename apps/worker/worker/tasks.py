@@ -14,6 +14,7 @@ from app.modules.agents.memory_service import (
     maintain_due_agent_memory_response_exercises_sync,
     purge_expired_agent_memories_sync,
 )
+from app.modules.agents.review_sla_service import maintain_agent_dispatch_review_sla_sync
 from app.modules.agents.runtime_service import maintain_agent_runtime_sync
 from app.modules.knowledge.processing import process_document_sync
 from app.modules.metrics.aggregation import aggregate_metrics_sync
@@ -73,6 +74,11 @@ def dispatch_agent_runtime_task() -> dict[str, int | str]:
 @celery_app.task(name="orkestral.agents.execute_runtime_dispatches")
 def execute_agent_runtime_dispatches_task() -> dict[str, int | str]:
     return {"status": "ok", **execute_ready_agent_dispatches_sync()}
+
+
+@celery_app.task(name="orkestral.agents.maintain_dispatch_review_sla")
+def maintain_agent_dispatch_review_sla_task() -> dict[str, int | str]:
+    return {"status": "ok", **maintain_agent_dispatch_review_sla_sync()}
 
 
 @celery_app.task(name="orkestral.agents.purge_expired_memories")

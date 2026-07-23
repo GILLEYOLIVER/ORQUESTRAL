@@ -259,3 +259,31 @@
   color: var(--ink, #112d29);
   font-weight: 700;
 }
+
+.dispatch-review-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.dispatch-review-metrics span {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line, #d8e2df);
+  border-radius: 0.8rem;
+  background: var(--surface-soft, #f5f8f7);
+  color: var(--muted, #536966);
+}
+
+.dispatch-review-metrics span[data-alert="true"] {
+  border-color: #c7672a;
+  background: #fff4ea;
+  color: #7a3512;
+}
+
+.dispatch-review-metrics strong {
+  color: var(--ink, #112d29);
+  font-size: 1.35rem;
+}

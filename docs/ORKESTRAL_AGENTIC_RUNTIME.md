@@ -158,3 +158,10 @@ O novo despacho usa `source_type=retry`, referencia o anterior por
 processamento, reserva de custo ou execucao anterior. Orcamento, politicas,
 aprovacoes por ferramenta, trace e auditoria sao aplicados novamente pelo
 executor comum.
+
+## Ciclo 70 - SLA e alertas de revisao
+
+Revisoes pendentes possuem resumo operacional por empresa e agente. O painel
+mostra contagens e duracoes sem consultar ou expor argumentos de ferramentas.
+Um job idempotente identifica itens acima do SLA, notifica responsaveis e emite
+`agent.dispatch.review_sla_breached` apenas uma vez por revisao.
