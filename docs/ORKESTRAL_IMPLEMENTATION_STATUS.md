@@ -1463,3 +1463,12 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
   auditoria de segurança, smoke pela interface e teste RLS aprovados.
 - Próximo passo: entrada omnichannel governada por e-mail, chat, WhatsApp,
   formulário e portal.
+# Atualização - ciclo 94
+
+- Fase atual: Fase 7 - Atendimento empresarial.
+- Entrega: entrada omnichannel governada para e-mail, chat, WhatsApp, formulário e portal.
+- Banco: `20260723_0107`, com RLS forçado em endpoints e eventos de entrada.
+- Segurança: AES-GCM, HMAC com timestamp, antirreplay, idempotência, rate limit e
+  persistência apenas de hashes para remetente, IP e chave idempotente.
+- Interface: painel responsivo de canais, segredo exibido somente uma vez.
+- Próximo passo exato: SLAs avançados, escalonamento e calendário de atendimento.
