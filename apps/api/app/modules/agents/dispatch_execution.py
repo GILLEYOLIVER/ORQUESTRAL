@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from time import perf_counter
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -159,7 +159,7 @@ async def _actor_permissions(
 
 async def _claim_ready_dispatches(
     database: AsyncSession, settings: Settings, *, limit: int
-) -> list[UUID]:
+) -> tuple[list[UUID], int]:
     now = utc_now()
     dispatches = list(
         await database.scalars(
@@ -171,6 +171,7 @@ async def _claim_ready_dispatches(
         )
     )
     claimed: list[UUID] = []
+    failed = 0
     for dispatch in dispatches:
         run: AgentRun | None = None
         try:
@@ -230,6 +231,7 @@ async def _claim_ready_dispatches(
             dispatch.reserved_microunits = reservation
             claimed.append(dispatch.id)
         except (DispatchExecutionBlocked, AgentBudgetExceededError) as exc:
+            failed += 1
             dispatch.status = "failed"
             dispatch.error_code = (
                 exc.code if isinstance(exc, DispatchExecutionBlocked) else "budget_exceeded"
@@ -256,7 +258,7 @@ async def _claim_ready_dispatches(
                     )
                 )
     await database.commit()
-    return claimed
+    return claimed, failed
 
 
 async def _prepare_tools(
@@ -417,6 +419,127 @@ async def _settle_reservation(database: AsyncSession, dispatch: AgentRuntimeDisp
         consumed_microunits=0,
     )
     dispatch.reserved_microunits = 0
+
+
+def is_dispatch_stale(
+    *,
+    started_at: datetime,
+    max_runtime_seconds: int,
+    now: datetime,
+    grace_seconds: int = 300,
+) -> bool:
+    deadline = started_at + timedelta(
+        seconds=max(1, max_runtime_seconds) + max(0, grace_seconds)
+    )
+    return deadline < now
+
+
+async def _reconcile_interrupted_dispatches(
+    database: AsyncSession, *, limit: int
+) -> int:
+    now = utc_now()
+    candidates = list(
+        await database.scalars(
+            select(AgentRuntimeDispatch)
+            .where(
+                AgentRuntimeDispatch.status == "processing",
+                AgentRuntimeDispatch.started_at.is_not(None),
+            )
+            .order_by(AgentRuntimeDispatch.started_at)
+            .with_for_update(skip_locked=True)
+            .limit(limit)
+        )
+    )
+    reconciled = 0
+    for dispatch in candidates:
+        run = (
+            await database.scalar(
+                select(AgentRun).where(
+                    AgentRun.id == dispatch.agent_run_id,
+                    AgentRun.company_id == dispatch.company_id,
+                )
+            )
+            if dispatch.agent_run_id is not None
+            else None
+        )
+        max_runtime_seconds = run.max_runtime_seconds if run is not None else 120
+        if dispatch.started_at is None or not is_dispatch_stale(
+            started_at=dispatch.started_at,
+            max_runtime_seconds=max_runtime_seconds,
+            now=now,
+        ):
+            continue
+        await _settle_reservation(database, dispatch)
+        code = "execution_interrupted_manual_review"
+        dispatch.status = "failed"
+        dispatch.reason_code = code
+        dispatch.error_code = code
+        dispatch.finished_at = now
+        actor_user_id = run.requested_by_user_id if run is not None else None
+        if run is not None:
+            max_sequence = await database.scalar(
+                select(func.max(AgentRunStep.sequence)).where(
+                    AgentRunStep.agent_run_id == run.id
+                )
+            )
+            sequence = (max_sequence or 0) + 1
+            run.status = "failed"
+            run.error_code = code
+            run.finished_at = now
+            run.duration_ms = max(
+                run.duration_ms,
+                round(max(0.0, (now - run.started_at).total_seconds()) * 1_000),
+            )
+            run.step_count = sequence
+            database.add(
+                AgentRunStep(
+                    company_id=run.company_id,
+                    agent_id=run.agent_id,
+                    agent_run_id=run.id,
+                    sequence=sequence,
+                    step_type="runtime",
+                    status="failed",
+                    summary_code="dispatch.interrupted.manual_review",
+                    error_code=code,
+                    duration_ms=0,
+                    started_at=dispatch.started_at,
+                    finished_at=now,
+                )
+            )
+        if actor_user_id is not None:
+            record_authorization_audit(
+                database,
+                company_id=dispatch.company_id,
+                actor_user_id=actor_user_id,
+                action="agent.dispatch.interrupted",
+                target_type="agent_runtime_dispatch",
+                target_id=dispatch.id,
+                details={
+                    "agent_id": str(dispatch.agent_id),
+                    "agent_run_id": str(dispatch.agent_run_id or ""),
+                    "retry_policy": "manual_review_required",
+                },
+            )
+        enqueue_domain_event(
+            database,
+            DomainEventCreate(
+                event_type="agent.dispatch.interrupted",
+                company_id=dispatch.company_id,
+                actor_user_id=actor_user_id,
+                classification="confidential",
+                payload={
+                    "agent_id": str(dispatch.agent_id),
+                    "dispatch_id": str(dispatch.id),
+                    "agent_run_id": str(dispatch.agent_run_id or ""),
+                    "status": "failed",
+                    "reason_code": code,
+                    "retry_policy": "manual_review_required",
+                },
+            ),
+        )
+        reconciled += 1
+    await database.commit()
+    return reconciled
 
 
 async def _execute_claimed_dispatch(
@@ -639,6 +762,7 @@ async def execute_ready_agent_dispatches(
     active_settings = settings or get_settings()
     resources = create_resources(active_settings)
     result = {
+        "reconciled": 0,
         "claimed": 0,
         "completed": 0,
         "simulated": 0,
@@ -648,10 +772,15 @@ async def execute_ready_agent_dispatches(
     }
     try:
         async with resources.sessions() as database:
-            dispatch_ids = await _claim_ready_dispatches(
+            reconciled = await _reconcile_interrupted_dispatches(
+                database, limit=max(1, min(limit, 100))
+            )
+            dispatch_ids, claim_failures = await _claim_ready_dispatches(
                 database, active_settings, limit=max(1, min(limit, 100))
             )
+        result["reconciled"] = reconciled
         result["claimed"] = len(dispatch_ids)
+        result["failed"] += reconciled + claim_failures
         for dispatch_id in dispatch_ids:
             try:
                 async with resources.sessions() as database:

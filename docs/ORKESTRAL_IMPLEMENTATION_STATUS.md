@@ -1015,3 +1015,28 @@ controlada de metadados entre ambientes.
 - ferramentas internas nao sensiveis dispensam credenciais externas; ferramentas sensiveis permanecem fail-closed;
 - validacao: API `207 passed`, integracao `20 passed`, worker `6 passed`, E2E `7 passed / 2 skipped`, auditoria de seguranca aprovada;
 - proximo passo exato: controles visuais para modo sombra/canary e reconciliacao fail-closed de despachos interrompidos.
+
+## Atualizacao - Ciclo 68
+
+**Fase atual:** runtime empresarial de agentes, reconciliacao e controles de
+despacho.
+
+**Concluido:**
+
+- reconciliacao fail-closed de despachos interrompidos;
+- liberacao idempotente da reserva de custo;
+- bloqueio de repeticao automatica para ferramentas externas;
+- trace, auditoria e evento de dominio de interrupcao;
+- controles de modo sombra, execucao real e canario;
+- argumentos JSON validados por ferramenta;
+- visualizacao dos estados completos da fila;
+- testes unitarios, de interface e de integracao do recorte.
+
+**Migracoes:** nenhuma; o ciclo utiliza contratos persistidos existentes.
+
+**Risco residual:** uma repeticao deliberada ainda precisa de uma operacao
+administrativa dedicada, com nova aprovacao e idempotencia explicita.
+
+**Proximo passo exato:** implementar a central administrativa de revisao de
+despachos interrompidos, com decisao auditada de encerrar ou preparar nova
+execucao.

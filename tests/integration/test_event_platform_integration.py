@@ -14,7 +14,7 @@ from app.core.security import hash_password
 from app.main import create_app
 from app.modules.authorization.service import ensure_company_system_roles
 from app.modules.companies.models import Company
-from app.modules.events.models import EventConsumption, EventDelivery, OutboxEvent
+from app.modules.events.models import EventConsumption
 from app.modules.events.operations_service import (
     EventConsumerRegistry,
     LedgerEventConsumer,
