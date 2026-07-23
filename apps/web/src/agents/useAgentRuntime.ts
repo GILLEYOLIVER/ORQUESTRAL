@@ -46,7 +46,8 @@ export type CredentialBinding = {
 
 export type RuntimeDispatch = {
   id: string;
-  source_type: "schedule" | "event";
+  source_type: "schedule" | "event" | "retry";
+  retry_of_dispatch_id: string | null;
   status:
     | "ready"
     | "blocked"
@@ -62,6 +63,20 @@ export type RuntimeDispatch = {
   attempt_count: number;
   agent_run_id: string | null;
   scheduled_for: string;
+};
+
+export type DispatchReview = {
+  id: string;
+  interrupted_dispatch_id: string;
+  replacement_dispatch_id: string | null;
+  decision: "close" | "retry";
+  status: "closed" | "pending_approval" | "approved";
+  reason: string;
+  requested_by_user_id: string;
+  approved_by_user_id: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ScheduleInput = {
@@ -108,6 +123,15 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
     enabled,
     refetchInterval: 30_000,
   });
+  const reviews = useQuery({
+    queryKey: ["agent-runtime-dispatch-reviews", agentId],
+    queryFn: () =>
+      request<DispatchReview[]>(
+        `/agents/${agentId}/runtime-dispatch-reviews`,
+      ),
+    enabled,
+    refetchInterval: 30_000,
+  });
   const credentials = useQuery({
     queryKey: ["agent-runtime-credentials"],
     queryFn: () =>
@@ -120,7 +144,7 @@ export function useAgentRuntime(agentId: string | null, canConfigure: boolean) {
       request<CredentialBinding[]>(`/agents/${agentId}/credential-bindings`),
     enabled: enabled && canConfigure,
   });
-  return { bindings, credentials, dispatches, schedules, triggers };
+  return { bindings, credentials, dispatches, reviews, schedules, triggers };
 }
 
 export function useAgentRuntimeActions(agentId: string | null) {
@@ -138,6 +162,9 @@ export function useAgentRuntimeActions(agentId: string | null) {
       }),
       queryClient.invalidateQueries({
         queryKey: ["agent-runtime-dispatches", agentId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["agent-runtime-dispatch-reviews", agentId],
       }),
     ]);
 
@@ -211,7 +238,50 @@ export function useAgentRuntimeActions(agentId: string | null) {
       ),
     onSuccess: refresh,
   });
+  const reviewDispatch = useMutation({
+    mutationFn: ({
+      dispatchId,
+      decision,
+      reason,
+      idempotencyKey,
+    }: {
+      dispatchId: string;
+      decision: "close" | "retry";
+      reason: string;
+      idempotencyKey: string;
+    }) =>
+      request<DispatchReview>(
+        `/agents/${agentId}/runtime-dispatches/${dispatchId}/reviews`,
+        {
+          method: "POST",
+          body: {
+            decision,
+            reason,
+            idempotency_key: idempotencyKey,
+          },
+        },
+      ),
+    onSuccess: refresh,
+  });
+  const approveDispatchRetry = useMutation({
+    mutationFn: ({
+      reviewId,
+      idempotencyKey,
+    }: {
+      reviewId: string;
+      idempotencyKey: string;
+    }) =>
+      request<DispatchReview>(
+        `/agents/${agentId}/runtime-dispatch-reviews/${reviewId}/approve-retry`,
+        {
+          method: "POST",
+          body: { idempotency_key: idempotencyKey },
+        },
+      ),
+    onSuccess: refresh,
+  });
   return {
+    approveDispatchRetry,
     bindCredential,
     createSchedule,
     createTrigger,
@@ -219,5 +289,6 @@ export function useAgentRuntimeActions(agentId: string | null) {
     pauseTrigger,
     publishSchedule,
     publishTrigger,
+    reviewDispatch,
   };
 }

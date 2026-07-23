@@ -2,10 +2,16 @@ import { type FormEvent, useMemo, useState } from "react";
 
 import { useSession } from "../session/context";
 import {
+  type DispatchReview,
+  type RuntimeDispatch,
   type RuntimeStatus,
   useAgentRuntime,
   useAgentRuntimeActions,
 } from "./useAgentRuntime";
+import {
+  dispatchSourceLabel,
+  requiresDispatchReview,
+} from "./dispatchReviewState";
 import { parseRuntimeToolArguments } from "./runtimeToolArguments";
 import "./agent-runtime.css";
 
@@ -48,9 +54,83 @@ function readableDate(value: string | null) {
     : "Ainda não executada";
 }
 
+function DispatchReviewControls({
+  canConfigure,
+  canExecute,
+  dispatch,
+  review,
+  onApprove,
+  onReview,
+  pending,
+}: {
+  canConfigure: boolean;
+  canExecute: boolean;
+  dispatch: RuntimeDispatch;
+  review: DispatchReview | undefined;
+  onApprove: (reviewId: string) => void;
+  onReview: (decision: "close" | "retry", reason: string) => void;
+  pending: boolean;
+}) {
+  const [reason, setReason] = useState("");
+  if (!requiresDispatchReview(dispatch)) return null;
+  if (review?.status === "closed") {
+    return <p className="dispatch-review-state">Revisão encerrada sem repetição.</p>;
+  }
+  if (review?.status === "approved") {
+    return <p className="dispatch-review-state">Nova execução aprovada e enfileirada.</p>;
+  }
+  if (review?.status === "pending_approval") {
+    return (
+      <div className="dispatch-review-actions">
+        <p className="dispatch-review-state">Repetição preparada; falta aprovação explícita.</p>
+        <button
+          disabled={!canExecute || pending}
+          onClick={() => onApprove(review.id)}
+          type="button"
+        >
+          Aprovar nova execução
+        </button>
+        {!canExecute ? <small>Permissão agents.execute necessária.</small> : null}
+      </div>
+    );
+  }
+  return (
+    <div className="dispatch-review-actions">
+      <label>
+        Motivo da decisão
+        <textarea
+          disabled={!canConfigure || pending}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="Descreva o que foi verificado antes de decidir."
+          rows={2}
+          value={reason}
+        />
+      </label>
+      <div className="dispatch-review-buttons">
+        <button
+          disabled={!canConfigure || pending || reason.trim().length < 10}
+          onClick={() => onReview("close", reason)}
+          type="button"
+        >
+          Encerrar sem repetir
+        </button>
+        <button
+          disabled={!canConfigure || pending || reason.trim().length < 10}
+          onClick={() => onReview("retry", reason)}
+          type="button"
+        >
+          Preparar repetição
+        </button>
+      </div>
+      {!canConfigure ? <small>Somente administradores podem decidir.</small> : null}
+    </div>
+  );
+}
+
 export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
   const { me } = useSession();
   const canConfigure = Boolean(me?.permissions.includes("agents.configure"));
+  const canExecute = Boolean(me?.permissions.includes("agents.execute"));
   const runtime = useAgentRuntime(agentId, canConfigure);
   const actions = useAgentRuntimeActions(agentId);
   const [scheduleName, setScheduleName] = useState("");
@@ -533,27 +613,56 @@ export function AgentRuntimePanel({ agentId }: { agentId: string | null }) {
       <article className="agent-runtime-card">
         <h3>Fila segura recente</h3>
         <div className="agent-runtime-dispatches">
-          {(runtime.dispatches.data ?? []).slice(0, 12).map((item) => (
-            <div className="agent-runtime-dispatch" key={item.id}>
-              <span className={`runtime-dot runtime-dot-${item.status}`} />
-              <div>
-                <strong>
-                  {item.source_type === "schedule" ? "Agenda" : "Evento"} ·{" "}
-                  {dispatchLabels[item.status] ?? item.status}
-                </strong>
-                <small>
-                  {readableDate(item.scheduled_for)}
-                  {` · ${item.execution_mode === "shadow" ? "sombra" : "ao vivo"}`}
-                  {item.attempt_count > 0
-                    ? ` · tentativa ${item.attempt_count}`
-                    : ""}
-                  {item.reason_code
-                    ? ` · ${blockReasons[item.reason_code] ?? item.reason_code}`
-                    : ""}
-                </small>
+          {(runtime.dispatches.data ?? []).slice(0, 12).map((item) => {
+            const review = runtime.reviews.data?.find(
+              (candidate) => candidate.interrupted_dispatch_id === item.id,
+            );
+            return (
+              <div className="agent-runtime-dispatch" key={item.id}>
+                <span className={`runtime-dot runtime-dot-${item.status}`} />
+                <div>
+                  <strong>
+                    {dispatchSourceLabel(item.source_type)} ·{" "}
+                    {dispatchLabels[item.status] ?? item.status}
+                  </strong>
+                  <small>
+                    {readableDate(item.scheduled_for)}
+                    {` · ${item.execution_mode === "shadow" ? "sombra" : "ao vivo"}`}
+                    {item.attempt_count > 0
+                      ? ` · tentativa ${item.attempt_count}`
+                      : ""}
+                    {item.reason_code
+                      ? ` · ${blockReasons[item.reason_code] ?? item.reason_code}`
+                      : ""}
+                  </small>
+                  <DispatchReviewControls
+                    canConfigure={canConfigure}
+                    canExecute={canExecute}
+                    dispatch={item}
+                    onApprove={(reviewId) =>
+                      actions.approveDispatchRetry.mutate({
+                        reviewId,
+                        idempotencyKey: crypto.randomUUID(),
+                      })
+                    }
+                    onReview={(decision, reason) =>
+                      actions.reviewDispatch.mutate({
+                        decision,
+                        dispatchId: item.id,
+                        idempotencyKey: crypto.randomUUID(),
+                        reason,
+                      })
+                    }
+                    pending={
+                      actions.reviewDispatch.isPending ||
+                      actions.approveDispatchRetry.isPending
+                    }
+                    review={review}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {runtime.dispatches.data?.length === 0 ? (
             <p className="agent-runtime-muted">
               Nenhum trabalho recebido até agora.

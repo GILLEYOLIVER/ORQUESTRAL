@@ -404,5 +404,77 @@ def test_governed_dispatch_executes_in_shadow_with_trace_and_tenant_isolation() 
                     run_id=run_id,
                 )
             )
+
+            review_key = str(uuid4())
+            review_payload = {
+                "decision": "retry",
+                "reason": "A interrupção foi analisada e a repetição controlada é necessária.",
+                "idempotency_key": review_key,
+            }
+            foreign_review = client.post(
+                f"/agents/{agent_id}/runtime-dispatches/{dispatch_id}/reviews",
+                headers=headers_a,
+                json=review_payload,
+            )
+            assert foreign_review.status_code == 404
+
+            review = client.post(
+                f"/agents/{agent_id}/runtime-dispatches/{dispatch_id}/reviews",
+                headers=headers_b,
+                json=review_payload,
+            )
+            assert review.status_code == 201
+            assert review.json()["status"] == "pending_approval"
+            assert review.json()["replacement_dispatch_id"] is None
+
+            replayed_review = client.post(
+                f"/agents/{agent_id}/runtime-dispatches/{dispatch_id}/reviews",
+                headers=headers_b,
+                json=review_payload,
+            )
+            assert replayed_review.status_code == 201
+            assert replayed_review.json()["id"] == review.json()["id"]
+
+            conflicting_review = client.post(
+                f"/agents/{agent_id}/runtime-dispatches/{dispatch_id}/reviews",
+                headers=headers_b,
+                json={**review_payload, "idempotency_key": str(uuid4())},
+            )
+            assert conflicting_review.status_code == 409
+
+            approval_key = str(uuid4())
+            approved = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/approve-retry",
+                headers=headers_b,
+                json={"idempotency_key": approval_key},
+            )
+            assert approved.status_code == 200
+            assert approved.json()["status"] == "approved"
+            replacement_id = approved.json()["replacement_dispatch_id"]
+            assert replacement_id
+
+            replayed_approval = client.post(
+                f"/agents/{agent_id}/runtime-dispatch-reviews/{review.json()['id']}/approve-retry",
+                headers=headers_b,
+                json={"idempotency_key": approval_key},
+            )
+            assert replayed_approval.status_code == 200
+            assert replayed_approval.json()["replacement_dispatch_id"] == replacement_id
+
+            replacement_dispatches = client.get(
+                f"/agents/{agent_id}/runtime-dispatches", headers=headers_b
+            )
+            replacement = next(
+                item for item in replacement_dispatches.json() if item["id"] == replacement_id
+            )
+            assert replacement["source_type"] == "retry"
+            assert replacement["retry_of_dispatch_id"] == str(dispatch_id)
+            assert replacement["status"] == "ready"
+
+            retry_result = asyncio.run(
+                execute_ready_agent_dispatches(settings=settings, limit=20)
+            )
+            assert retry_result["claimed"] == 1
+            assert retry_result["simulated"] == 1
     finally:
         asyncio.run(_remove(settings, identity))

@@ -145,3 +145,16 @@ A configuracao de agendas e gatilhos expoe modo sombra, execucao real, percentua
 canario e argumentos JSON por ferramenta. O navegador bloqueia estruturas
 invalidas ou ferramentas nao declaradas, enquanto o backend continua sendo a
 autoridade final para autorizacao, politica, empresa e orcamento.
+
+## Ciclo 69 - revisao administrativa e repeticao controlada
+
+Interrupcoes com resultado externo incerto passam por uma decisao persistida e
+idempotente. `agents.configure` registra o motivo e decide encerrar ou preparar
+uma repeticao; `agents.execute` concede a aprovacao explicita. Somente depois
+dessa segunda etapa um novo despacho e criado.
+
+O novo despacho usa `source_type=retry`, referencia o anterior por
+`retry_of_dispatch_id` e revalida credenciais. Ele nao herda estado de
+processamento, reserva de custo ou execucao anterior. Orcamento, politicas,
+aprovacoes por ferramenta, trace e auditoria sao aplicados novamente pelo
+executor comum.

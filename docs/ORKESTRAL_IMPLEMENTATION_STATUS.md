@@ -1040,3 +1040,26 @@ administrativa dedicada, com nova aprovacao e idempotencia explicita.
 **Proximo passo exato:** implementar a central administrativa de revisao de
 despachos interrompidos, com decisao auditada de encerrar ou preparar nova
 execucao.
+
+## Atualizacao - Ciclo 69
+
+**Fase atual:** runtime empresarial de agentes, revisao humana de interrupcoes.
+
+**Concluido:**
+
+- decisao imutavel de encerrar ou preparar repeticao;
+- aprovacao explicita com permissao `agents.execute`;
+- idempotencia independente para solicitacao e aprovacao;
+- nova linhagem persistida por `retry_of_dispatch_id`;
+- revalidacao de credenciais antes da nova fila;
+- auditoria e eventos confidenciais;
+- isolamento multiempresa com resposta 404;
+- central de revisao dentro da fila segura;
+- migracao Alembic `20260722_0085`;
+- teste de integracao ponta a ponta e testes de interface.
+
+**Risco residual:** faltam indicadores operacionais e alertas para revisoes
+pendentes por tempo excessivo.
+
+**Proximo passo exato:** implementar metricas e alertas de SLA da fila de revisao,
+com agregacao por empresa e sem armazenar argumentos de ferramentas.
