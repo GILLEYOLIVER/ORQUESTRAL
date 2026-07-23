@@ -16,6 +16,9 @@ from app.modules.crm.customer_cdc_schemas import (
     CustomerCdcAcknowledgeRequest,
     CustomerCdcCheckpointResponse,
     CustomerCdcEventPage,
+    CustomerCdcRetentionPreviewResponse,
+    CustomerCdcRetentionPurgeRequest,
+    CustomerCdcRetentionPurgeResponse,
     CustomerCdcSubscriptionCreate,
     CustomerCdcSubscriptionResponse,
     CustomerCdcSummaryResponse,
@@ -588,3 +591,183 @@ async def get_customer_cdc_summary(
         .one()
     )
     return CustomerCdcSummaryResponse(**row)
+
+
+async def preview_customer_cdc_retention(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+) -> CustomerCdcRetentionPreviewResponse:
+    row = (
+        (
+            await database.execute(
+                text(
+                    """
+                    WITH policy AS (
+                        SELECT
+                            COUNT(*) FILTER (WHERE status = 'active') AS active_count,
+                            COALESCE(
+                                MIN(last_acknowledged_sequence)
+                                    FILTER (WHERE status = 'active'),
+                                0
+                            ) AS cutoff_sequence,
+                            COALESCE(
+                                MAX(retention_days) FILTER (WHERE status = 'active'),
+                                0
+                            ) AS retention_days
+                        FROM customer_cdc_subscriptions
+                        WHERE company_id = :company_id
+                    )
+                    SELECT
+                        policy.active_count AS active_subscriptions,
+                        policy.cutoff_sequence,
+                        policy.retention_days AS effective_retention_days,
+                        COUNT(event.id) FILTER (
+                            WHERE policy.active_count > 0
+                              AND event.sequence_number <= policy.cutoff_sequence
+                              AND event.occurred_at < (
+                                  now() - make_interval(days => policy.retention_days)
+                              )
+                        ) AS eligible_events,
+                        COUNT(event.id) FILTER (
+                            WHERE NOT (
+                                policy.active_count > 0
+                                AND event.sequence_number <= policy.cutoff_sequence
+                                AND event.occurred_at < (
+                                    now() - make_interval(days => policy.retention_days)
+                                )
+                            )
+                        ) AS protected_events
+                    FROM policy
+                    LEFT JOIN customer_change_events AS event
+                      ON event.company_id = :company_id
+                    GROUP BY
+                        policy.active_count,
+                        policy.cutoff_sequence,
+                        policy.retention_days
+                    """
+                ),
+                {"company_id": company_id},
+            )
+        )
+        .mappings()
+        .one()
+    )
+    active_subscriptions = int(row["active_subscriptions"])
+    eligible_events = int(row["eligible_events"] or 0)
+    if active_subscriptions == 0:
+        reason = "Nenhum evento pode ser removido sem consumidor ativo."
+    elif eligible_events == 0:
+        reason = "Nenhum evento reconhecido ultrapassou o prazo de retencao."
+    else:
+        reason = "Somente eventos reconhecidos por todos e vencidos serao removidos."
+    return CustomerCdcRetentionPreviewResponse(
+        active_subscriptions=active_subscriptions,
+        cutoff_sequence=int(row["cutoff_sequence"]),
+        effective_retention_days=int(row["effective_retention_days"]),
+        eligible_events=eligible_events,
+        protected_events=int(row["protected_events"] or 0),
+        reason=reason,
+    )
+
+
+async def purge_expired_customer_cdc_events(
+    database: AsyncSession,
+    *,
+    company_id: UUID,
+    actor_user_id: UUID,
+    payload: CustomerCdcRetentionPurgeRequest,
+) -> CustomerCdcRetentionPurgeResponse:
+    await database.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:company_key, 0))"),
+        {"company_key": str(company_id)},
+    )
+    preview = await preview_customer_cdc_retention(database, company_id=company_id)
+    run_id = uuid4()
+    executed_at = datetime.now(UTC)
+    deleted_events = 0
+
+    if preview.active_subscriptions > 0 and preview.eligible_events > 0:
+        deleted_events = int(
+            (
+                await database.execute(
+                    text(
+                        """
+                        WITH candidates AS (
+                            SELECT id
+                            FROM customer_change_events
+                            WHERE company_id = :company_id
+                              AND sequence_number <= :cutoff_sequence
+                              AND occurred_at < (
+                                  now() - make_interval(days => :retention_days)
+                              )
+                            ORDER BY sequence_number
+                            LIMIT :max_delete
+                            FOR UPDATE SKIP LOCKED
+                        ),
+                        removed AS (
+                            DELETE FROM customer_change_events AS event
+                            USING candidates
+                            WHERE event.id = candidates.id
+                              AND event.company_id = :company_id
+                            RETURNING event.id
+                        )
+                        SELECT COUNT(*) FROM removed
+                        """
+                    ),
+                    {
+                        "company_id": company_id,
+                        "cutoff_sequence": preview.cutoff_sequence,
+                        "retention_days": preview.effective_retention_days,
+                        "max_delete": payload.max_delete,
+                    },
+                )
+            ).scalar_one()
+        )
+
+    await database.execute(
+        text(
+            """
+            INSERT INTO customer_cdc_retention_runs (
+                id,
+                company_id,
+                cutoff_sequence,
+                effective_retention_days,
+                eligible_events,
+                deleted_events,
+                max_delete,
+                executed_by_user_id,
+                executed_at
+            )
+            VALUES (
+                :id,
+                :company_id,
+                :cutoff_sequence,
+                :effective_retention_days,
+                :eligible_events,
+                :deleted_events,
+                :max_delete,
+                :actor_user_id,
+                :executed_at
+            )
+            """
+        ),
+        {
+            "id": run_id,
+            "company_id": company_id,
+            "cutoff_sequence": preview.cutoff_sequence,
+            "effective_retention_days": preview.effective_retention_days,
+            "eligible_events": preview.eligible_events,
+            "deleted_events": deleted_events,
+            "max_delete": payload.max_delete,
+            "actor_user_id": actor_user_id,
+            "executed_at": executed_at,
+        },
+    )
+    return CustomerCdcRetentionPurgeResponse(
+        run_id=run_id,
+        cutoff_sequence=preview.cutoff_sequence,
+        effective_retention_days=preview.effective_retention_days,
+        deleted_events=deleted_events,
+        executed_at=executed_at,
+    )

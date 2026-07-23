@@ -3318,6 +3318,29 @@ p {
   border-radius: 999px;
 }
 
+.customer-cdc-retention {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  color: #163d35;
+  background: #edf6f1;
+  border: 1px dashed #9ebdb2;
+  border-radius: 1rem;
+}
+
+.customer-cdc-retention div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.customer-cdc-retention p {
+  margin: 0;
+  color: #4e6c64;
+}
+
 @media (max-width: 760px) {
   .customer-cdc-heading,
   .customer-cdc-stream-header {
@@ -3331,5 +3354,10 @@ p {
 
   .customer-cdc-metrics {
     width: 100%;
+  }
+
+  .customer-cdc-retention {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

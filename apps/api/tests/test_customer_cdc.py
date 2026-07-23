@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from app.modules.crm.customer_cdc_schemas import CustomerCdcSubscriptionCreate
+import pytest
+from pydantic import ValidationError
+
+from app.modules.crm.customer_cdc_schemas import (
+    CustomerCdcRetentionPurgeRequest,
+    CustomerCdcSubscriptionCreate,
+)
 from app.modules.crm.customer_cdc_service import customer_change_metadata
 
 
@@ -30,3 +36,18 @@ def test_customer_cdc_subscription_deduplicates_operations() -> None:
 
     assert subscription.operations == ["upserted", "deleted"]
 
+
+def test_customer_cdc_purge_requires_literal_confirmation() -> None:
+    with pytest.raises(ValidationError):
+        CustomerCdcRetentionPurgeRequest(
+            confirmation="delete",
+            max_delete=100,
+        )
+
+
+def test_customer_cdc_purge_has_a_bounded_batch() -> None:
+    with pytest.raises(ValidationError):
+        CustomerCdcRetentionPurgeRequest(
+            confirmation="PURGE_EXPIRED_CDC_EVENTS",
+            max_delete=5_001,
+        )

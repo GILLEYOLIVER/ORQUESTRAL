@@ -38,6 +38,15 @@ type CdcEventPage = {
   last_acknowledged_sequence: number | null;
 };
 
+type CdcRetentionPreview = {
+  active_subscriptions: number;
+  cutoff_sequence: number;
+  effective_retention_days: number;
+  eligible_events: number;
+  protected_events: number;
+  reason: string;
+};
+
 const cdcBasePath = "/crm/customer-data/cdc";
 
 function operationLabel(operation: CdcEvent["operation"]) {
@@ -83,12 +92,18 @@ export function CustomerCdcPanel({ readOnly }: { readOnly: boolean }) {
       ),
     enabled: activeSubscription?.status !== "paused",
   });
+  const retentionQuery = useQuery({
+    queryKey: ["customer-cdc-retention"],
+    queryFn: () =>
+      request<CdcRetentionPreview>(`${cdcBasePath}/retention/preview`),
+  });
 
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["customer-cdc-summary"] }),
       queryClient.invalidateQueries({ queryKey: ["customer-cdc-subscriptions"] }),
       queryClient.invalidateQueries({ queryKey: ["customer-cdc-events"] }),
+      queryClient.invalidateQueries({ queryKey: ["customer-cdc-retention"] }),
     ]);
   };
 
@@ -136,6 +151,17 @@ export function CustomerCdcPanel({ readOnly }: { readOnly: boolean }) {
       request(`${cdcBasePath}/subscriptions/${subscription.id}/acknowledge`, {
         method: "POST",
         body: { through_sequence: sequence },
+      }),
+    onSuccess: refresh,
+  });
+  const purgeMutation = useMutation({
+    mutationFn: () =>
+      request(`${cdcBasePath}/retention/purge`, {
+        method: "POST",
+        body: {
+          confirmation: "PURGE_EXPIRED_CDC_EVENTS",
+          max_delete: 1_000,
+        },
       }),
     onSuccess: refresh,
   });
@@ -314,7 +340,36 @@ export function CustomerCdcPanel({ readOnly }: { readOnly: boolean }) {
           ) : null}
         </div>
       </div>
+
+      <div className="customer-cdc-retention">
+        <div>
+          <span className="eyebrow">RETENCAO SEGURA</span>
+          <strong>
+            {retentionQuery.data?.eligible_events ?? 0} eventos vencidos elegiveis
+          </strong>
+          <p>
+            {retentionQuery.data?.reason ??
+              "Calculando a fronteira protegida pelos checkpoints..."}
+          </p>
+          <small>
+            {retentionQuery.data?.protected_events ?? 0} protegidos · corte #
+            {retentionQuery.data?.cutoff_sequence ?? 0} ·{" "}
+            {retentionQuery.data?.effective_retention_days ?? 0} dias
+          </small>
+        </div>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={
+            readOnly ||
+            purgeMutation.isPending ||
+            (retentionQuery.data?.eligible_events ?? 0) === 0
+          }
+          onClick={() => purgeMutation.mutate()}
+        >
+          {purgeMutation.isPending ? "Limpando..." : "Remover lote vencido"}
+        </button>
+      </div>
     </section>
   );
 }
-

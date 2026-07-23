@@ -88,3 +88,25 @@ class CustomerCdcEventPage(BaseModel):
     items: list[CustomerChangeEventResponse]
     next_sequence: int | None
     last_acknowledged_sequence: int | None = None
+
+
+class CustomerCdcRetentionPreviewResponse(BaseModel):
+    active_subscriptions: int
+    cutoff_sequence: int
+    effective_retention_days: int
+    eligible_events: int
+    protected_events: int
+    reason: str
+
+
+class CustomerCdcRetentionPurgeRequest(BaseModel):
+    confirmation: Literal["PURGE_EXPIRED_CDC_EVENTS"]
+    max_delete: int = Field(default=1_000, ge=1, le=5_000)
+
+
+class CustomerCdcRetentionPurgeResponse(BaseModel):
+    run_id: UUID
+    cutoff_sequence: int
+    effective_retention_days: int
+    deleted_events: int
+    executed_at: datetime

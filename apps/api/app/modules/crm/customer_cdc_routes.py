@@ -11,6 +11,9 @@ from app.modules.crm.customer_cdc_schemas import (
     CustomerCdcAcknowledgeRequest,
     CustomerCdcCheckpointResponse,
     CustomerCdcEventPage,
+    CustomerCdcRetentionPreviewResponse,
+    CustomerCdcRetentionPurgeRequest,
+    CustomerCdcRetentionPurgeResponse,
     CustomerCdcSubscriptionCreate,
     CustomerCdcSubscriptionResponse,
     CustomerCdcSummaryResponse,
@@ -21,6 +24,8 @@ from app.modules.crm.customer_cdc_service import (
     get_customer_cdc_summary,
     list_customer_cdc_subscriptions,
     list_customer_change_events,
+    preview_customer_cdc_retention,
+    purge_expired_customer_cdc_events,
     set_customer_cdc_subscription_status,
 )
 from app.modules.modularity.dependencies import require_active_module
@@ -191,3 +196,40 @@ async def resume_cdc_subscription(
     )
     await database.commit()
     return subscription
+
+
+@router.get(
+    "/retention/preview",
+    response_model=CustomerCdcRetentionPreviewResponse,
+)
+async def customer_cdc_retention_preview(
+    principal: CustomerDataReader,
+    _: ActiveCRM,
+    database: DatabaseSession,
+) -> CustomerCdcRetentionPreviewResponse:
+    context = get_request_context(principal)
+    return await preview_customer_cdc_retention(
+        database,
+        company_id=context.company_id,
+    )
+
+
+@router.post(
+    "/retention/purge",
+    response_model=CustomerCdcRetentionPurgeResponse,
+)
+async def purge_customer_cdc_retention(
+    payload: CustomerCdcRetentionPurgeRequest,
+    principal: CustomerDataManager,
+    _: ActiveCRM,
+    database: DatabaseSession,
+) -> CustomerCdcRetentionPurgeResponse:
+    context = get_request_context(principal)
+    response = await purge_expired_customer_cdc_events(
+        database,
+        company_id=context.company_id,
+        actor_user_id=context.user_id,
+        payload=payload,
+    )
+    await database.commit()
+    return response
