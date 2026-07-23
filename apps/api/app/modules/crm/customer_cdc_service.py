@@ -675,8 +675,9 @@ async def purge_expired_customer_cdc_events(
     database: AsyncSession,
     *,
     company_id: UUID,
-    actor_user_id: UUID,
+    actor_user_id: UUID | None,
     payload: CustomerCdcRetentionPurgeRequest,
+    execution_source: str = "manual",
 ) -> CustomerCdcRetentionPurgeResponse:
     await database.execute(
         text("SELECT pg_advisory_xact_lock(hashtextextended(:company_key, 0))"),
@@ -737,6 +738,7 @@ async def purge_expired_customer_cdc_events(
                 deleted_events,
                 max_delete,
                 executed_by_user_id,
+                execution_source,
                 executed_at
             )
             VALUES (
@@ -748,6 +750,7 @@ async def purge_expired_customer_cdc_events(
                 :deleted_events,
                 :max_delete,
                 :actor_user_id,
+                :execution_source,
                 :executed_at
             )
             """
@@ -761,6 +764,7 @@ async def purge_expired_customer_cdc_events(
             "deleted_events": deleted_events,
             "max_delete": payload.max_delete,
             "actor_user_id": actor_user_id,
+            "execution_source": execution_source,
             "executed_at": executed_at,
         },
     )

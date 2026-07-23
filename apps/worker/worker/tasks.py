@@ -16,6 +16,9 @@ from app.modules.agents.memory_service import (
 )
 from app.modules.agents.review_sla_service import maintain_agent_dispatch_review_sla_sync
 from app.modules.agents.runtime_service import maintain_agent_runtime_sync
+from app.modules.crm.customer_cdc_maintenance_service import (
+    maintain_customer_cdc_retention_sync,
+)
 from app.modules.crm.customer_sync_dispatch_service import (
     execute_customer_sync_dispatches_sync,
 )
@@ -110,3 +113,8 @@ def maintain_customer_sync_schedules_task() -> dict[str, int | str]:
 @celery_app.task(name="orkestral.customer_data.execute_sync_dispatches")
 def execute_customer_sync_dispatches_task() -> dict[str, int | str]:
     return {"status": "ok", **execute_customer_sync_dispatches_sync()}
+
+
+@celery_app.task(name="orkestral.customer_data.maintain_cdc_retention")
+def maintain_customer_cdc_retention_task() -> dict[str, int | str]:
+    return {"status": "ok", **maintain_customer_cdc_retention_sync()}
