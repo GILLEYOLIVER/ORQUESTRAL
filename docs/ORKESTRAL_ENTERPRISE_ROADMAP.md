@@ -446,3 +446,9 @@ O runtime agora persiste trace operacional seguro por etapa para execuções dir
 
 A entrada omnichannel governada foi implementada para e-mail, chat, WhatsApp,
 formulário e portal. O próximo recorte aprofunda SLAs, escalonamento e calendário.
+
+# Progresso da Fase 7 - ciclo 95
+
+O SLA agora dispara aviso e escalonamento idempotente por worker, respeitando
+calendário, fuso e feriados da empresa. O próximo recorte entrega macros,
+respostas rápidas, conhecimento citado e satisfação aprofundada.

@@ -1472,3 +1472,11 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
   persistência apenas de hashes para remetente, IP e chave idempotente.
 - Interface: painel responsivo de canais, segredo exibido somente uma vez.
 - Próximo passo exato: SLAs avançados, escalonamento e calendário de atendimento.
+# Atualização - ciclo 95
+
+- Fase atual: Fase 7 - Atendimento empresarial.
+- Entrega: calendários de atendimento, políticas de SLA e escalonamento automático.
+- Banco: `20260727_0108`, com RLS forçado em calendários, políticas e eventos.
+- Worker: manutenção idempotente a cada minuto por empresa.
+- Segurança: alvos validados no tenant, auditoria e eventos sem conteúdo sensível.
+- Próximo passo exato: macros, respostas rápidas, conhecimento citado e satisfação.

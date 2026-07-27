@@ -10,6 +10,7 @@ from worker.tasks import (
     maintain_agent_dispatch_review_sla_task,
     maintain_agent_memory_reencryption_task,
     maintain_customer_sync_schedules_task,
+    maintain_support_sla_escalations_task,
     process_agent_delegation_task,
     purge_expired_agent_memories_task,
     run_due_agent_memory_response_exercises_task,
@@ -106,6 +107,31 @@ def test_agent_review_sla_delegates_to_domain_service(monkeypatch: MonkeyPatch) 
         "status": "ok",
         "review_breaches": 2,
         "notifications": 3,
+    }
+
+
+def test_support_sla_escalation_delegates_to_domain_service(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "worker.tasks.maintain_support_sla_escalations_sync",
+        lambda: {
+            "companies": 2,
+            "evaluated": 4,
+            "warnings": 1,
+            "escalations": 2,
+            "skipped_outside_calendar": 1,
+        },
+    )
+    result = maintain_support_sla_escalations_task.apply()
+    assert result.successful()
+    assert result.result == {
+        "status": "ok",
+        "companies": 2,
+        "evaluated": 4,
+        "warnings": 1,
+        "escalations": 2,
+        "skipped_outside_calendar": 1,
     }
 
 
