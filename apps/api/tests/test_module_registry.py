@@ -60,6 +60,7 @@ def test_registry_loads_only_installed_modules() -> None:
         "20260720_0026",
         "20260723_0106",
         "20260723_0107",
+        "20260727_0108",
     )
     assert "support.tickets.view" in installed[7].permissions
     for module in installed:

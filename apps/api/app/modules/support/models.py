@@ -455,3 +455,158 @@ class SupportChannelIngressEvent(Base):
     received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
+
+
+class SupportBusinessCalendar(Base):
+    __tablename__ = "support_business_calendars"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "name",
+            name="uq_support_business_calendars_company_name",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    updated_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(160))
+    timezone: Mapped[str] = mapped_column(
+        String(80), default="America/Sao_Paulo", server_default="America/Sao_Paulo"
+    )
+    weekly_schedule: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    holidays: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    is_default: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class SupportEscalationPolicy(Base):
+    __tablename__ = "support_escalation_policies"
+    __table_args__ = (
+        CheckConstraint(
+            "action IN ('notify', 'prioritize', 'reassign_queue', 'reassign_user')",
+            name="ck_support_escalation_policies_action",
+        ),
+        CheckConstraint(
+            "warning_minutes_before BETWEEN 0 AND 10080",
+            name="ck_support_escalation_policies_warning",
+        ),
+        CheckConstraint(
+            "(action <> 'reassign_queue' OR escalation_queue_id IS NOT NULL) AND "
+            "(action <> 'reassign_user' OR escalation_user_id IS NOT NULL)",
+            name="ck_support_escalation_policies_target",
+        ),
+        UniqueConstraint(
+            "company_id",
+            "name",
+            name="uq_support_escalation_policies_company_name",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    sla_policy_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_sla_policies.id", ondelete="CASCADE"), index=True
+    )
+    calendar_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_business_calendars.id", ondelete="RESTRICT"), index=True
+    )
+    escalation_queue_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("support_queues.id", ondelete="SET NULL"), index=True
+    )
+    escalation_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(160))
+    warning_minutes_before: Mapped[int] = mapped_column(
+        Integer, default=30, server_default="30"
+    )
+    action: Mapped[str] = mapped_column(
+        String(24), default="notify", server_default="notify", index=True
+    )
+    is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class SupportEscalationEvent(Base):
+    __tablename__ = "support_escalation_events"
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('warning', 'breach')",
+            name="ck_support_escalation_events_kind",
+        ),
+        CheckConstraint(
+            "status IN ('applied', 'skipped')",
+            name="ck_support_escalation_events_status",
+        ),
+        UniqueConstraint(
+            "company_id",
+            "ticket_id",
+            "policy_id",
+            "kind",
+            "deadline_at",
+            name="uq_support_escalation_events_idempotency",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    ticket_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_tickets.id", ondelete="CASCADE"), index=True
+    )
+    policy_id: Mapped[UUID] = mapped_column(
+        ForeignKey("support_escalation_policies.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    status: Mapped[str] = mapped_column(
+        String(16), default="applied", server_default="applied", index=True
+    )
+    action: Mapped[str] = mapped_column(String(24))
+    deadline_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    details: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
+    )

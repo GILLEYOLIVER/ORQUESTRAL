@@ -28,6 +28,7 @@ from app.modules.crm.customer_sync_scheduler_service import (
 from app.modules.knowledge.processing import process_document_sync
 from app.modules.metrics.aggregation import aggregate_metrics_sync
 from app.modules.notifications.service import run_notification_maintenance_sync
+from app.modules.support.escalation_service import maintain_support_sla_escalations_sync
 from worker.main import celery_app
 
 
@@ -118,3 +119,8 @@ def execute_customer_sync_dispatches_task() -> dict[str, int | str]:
 @celery_app.task(name="orkestral.customer_data.maintain_cdc_retention")
 def maintain_customer_cdc_retention_task() -> dict[str, int | str]:
     return {"status": "ok", **maintain_customer_cdc_retention_sync()}
+
+
+@celery_app.task(name="orkestral.support.maintain_sla_escalations")
+def maintain_support_sla_escalations_task() -> dict[str, int | str]:
+    return {"status": "ok", **maintain_support_sla_escalations_sync()}
