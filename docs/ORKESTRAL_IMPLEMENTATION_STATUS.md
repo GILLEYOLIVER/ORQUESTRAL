@@ -1497,3 +1497,14 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Segurança: contexto apenas por referências; nenhuma mensagem, prompt ou chave é copiada.
 - Fase 7 concluída no recorte estrutural do roadmap.
 - Próximo passo exato: iniciar a Fase 8 com segmentos dinâmicos e listas.
+
+## Ciclo 101 - Encerramento da Fase 8 (27/07/2026)
+
+- Jornadas de marketing simuláveis, versionadas e publicáveis por checksum imutável.
+- Conteúdo aprovado obrigatório para e-mail, WhatsApp e SMS; webhook não governado bloqueado.
+- Evidências auditáveis para testes A/B e recomendações de agentes sem efeitos automáticos.
+- Migração `20260727_0114` validada em upgrade, downgrade e novo upgrade.
+- RLS habilitado e forçado em versões, simulações, evidências e recomendações.
+- Validação: 313 testes da API, 19 testes web, Ruff, MyPy, TypeScript e build aprovados.
+- Fase atual concluída: Fase 8 - Marketing.
+- Próximo passo exato: Fase 9 - Receita e comércio, iniciando pelo catálogo canônico, variantes, listas de preço e promoções.

@@ -61,6 +61,12 @@ from app.modules.marketing.governance_models import (
     MarketingContactPolicy,
     MarketingDeliveryAttempt,
 )
+from app.modules.marketing.lifecycle_models import (
+    MarketingAgentRecommendation,
+    MarketingExperimentEvidence,
+    MarketingJourneySimulation,
+    MarketingJourneyVersion,
+)
 from app.modules.marketing.models import (
     MarketingAttribution,
     MarketingAudience,
@@ -167,6 +173,7 @@ __all__ = [
     "KnowledgeBase",
     "KnowledgeChunk",
     "KnowledgeDocument",
+    "MarketingAgentRecommendation",
     "MarketingAttribution",
     "MarketingAudience",
     "MarketingAudienceMember",
@@ -179,9 +186,12 @@ __all__ = [
     "MarketingContentVersion",
     "MarketingDeliveryAttempt",
     "MarketingExperiment",
+    "MarketingExperimentEvidence",
     "MarketingFormSubmission",
     "MarketingJourney",
+    "MarketingJourneySimulation",
     "MarketingJourneyStep",
+    "MarketingJourneyVersion",
     "MarketingLandingPage",
     "MarketingPublicPageRegistry",
     "MetricAggregationRun",

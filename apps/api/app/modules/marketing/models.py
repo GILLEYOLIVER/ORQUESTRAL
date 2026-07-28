@@ -153,7 +153,7 @@ class MarketingJourneyStep(Base):
     __tablename__ = "marketing_journey_steps"
     __table_args__ = (
         CheckConstraint(
-            "action_type IN ('wait', 'email', 'whatsapp', 'task', 'webhook')",
+            "action_type IN ('wait', 'email', 'whatsapp', 'sms', 'task', 'webhook')",
             name="ck_marketing_journey_steps_action_type",
         ),
         CheckConstraint("position >= 0", name="ck_marketing_journey_steps_position"),

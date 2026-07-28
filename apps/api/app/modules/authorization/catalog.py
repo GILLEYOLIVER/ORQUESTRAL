@@ -195,6 +195,12 @@ PERMISSION_CATALOG = (
         "content.manage",
         "Gerenciar canais, conteúdos, páginas e formulários",
     ),
+    PermissionDefinition(
+        "marketing.agents.manage",
+        "marketing",
+        "agents.manage",
+        "Gerenciar recomendações de agentes de marketing",
+    ),
     PermissionDefinition("inventory.view", "inventory", "view", "Visualizar estoque"),
     PermissionDefinition(
         "inventory.items.manage", "inventory", "items.manage", "Gerenciar itens de estoque"
