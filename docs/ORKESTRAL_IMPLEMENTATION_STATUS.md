@@ -1480,3 +1480,11 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Worker: manutenção idempotente a cada minuto por empresa.
 - Segurança: alvos validados no tenant, auditoria e eventos sem conteúdo sensível.
 - Próximo passo exato: macros, respostas rápidas, conhecimento citado e satisfação.
+
+# Atualização - ciclo 96
+
+- Fase atual: Fase 7 - Atendimento empresarial.
+- Entrega: macros, respostas rápidas, citações verificáveis e satisfação multidimensional.
+- Banco: `20260727_0109`, com RLS forçado em modelos, citações e avaliações.
+- Segurança: conhecimento e chamados validados por empresa; comentários preservados somente como SHA-256.
+- Próximo passo exato: agente de atendimento governado e transferência humana com contexto autorizado.
