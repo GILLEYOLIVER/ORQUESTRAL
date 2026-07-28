@@ -183,9 +183,12 @@ __all__ = [
     "SupportEscalationEvent",
     "SupportEscalationPolicy",
     "SupportInteraction",
+    "SupportResponseCitation",
+    "SupportResponseTemplate",
     "SupportQueue",
     "SupportQueueSkill",
     "SupportSLAPolicy",
+    "SupportSatisfactionSurvey",
     "SupportSkill",
     "SupportTicket",
     "SupportTicketEvent",
@@ -204,3 +207,4 @@ from app.modules.agents import runtime_models as _agent_runtime_models  # noqa: 
 from app.modules.authorization import policy_models as _policy_models  # noqa: F401
 from app.modules.events import models as _event_models  # noqa: F401
 from app.modules.metadata import models as _metadata_models  # noqa: F401
+from app.modules.support import engagement_models as _support_engagement_models  # noqa: F401

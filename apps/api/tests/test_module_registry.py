@@ -59,9 +59,10 @@ def test_registry_loads_only_installed_modules() -> None:
         "20260720_0016",
         "20260720_0026",
         "20260723_0106",
-        "20260723_0107",
-        "20260727_0108",
-    )
+            "20260723_0107",
+            "20260727_0108",
+            "20260727_0109",
+        )
     assert "support.tickets.view" in installed[7].permissions
     for module in installed:
         assert set(module.permissions) <= TENANT_PERMISSION_CODES

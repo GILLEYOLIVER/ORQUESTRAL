@@ -452,3 +452,11 @@ formulário e portal. O próximo recorte aprofunda SLAs, escalonamento e calend�
 O SLA agora dispara aviso e escalonamento idempotente por worker, respeitando
 calendário, fuso e feriados da empresa. O próximo recorte entrega macros,
 respostas rápidas, conhecimento citado e satisfação aprofundada.
+
+# Progresso da Fase 7 - ciclo 96
+
+Macros e respostas rápidas agora compõem interações reais com fontes de
+conhecimento verificadas e persistidas. A satisfação mede nota geral, resolução
+e esforço sem guardar comentários em texto claro. O próximo recorte conclui a
+Fase 7 com agente de atendimento governado e transferência humana preservando
+contexto autorizado.

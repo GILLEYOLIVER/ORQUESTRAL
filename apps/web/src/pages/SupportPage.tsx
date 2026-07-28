@@ -18,6 +18,7 @@ import {
 } from "./support/SupportOperationsPanel";
 import { SupportChannelsPanel } from "./support/SupportChannelsPanel";
 import { SupportEscalationPanel } from "./support/SupportEscalationPanel";
+import { SupportEngagementPanel } from "./support/SupportEngagementPanel";
 import { SupportRoutingPanel } from "./support/SupportRoutingPanel";
 
 type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
@@ -197,6 +198,14 @@ export function SupportPage() {
       />
       <SupportChannelsPanel />
       <SupportEscalationPanel />
+      <SupportEngagementPanel
+        ticketId={selected?.id ?? null}
+        onSent={async () => {
+          await queryClient.invalidateQueries({
+            queryKey: ["support-interactions", selected?.id],
+          });
+        }}
+      />
 
       {tickets.isError ? (
         <Alert variant="error">
