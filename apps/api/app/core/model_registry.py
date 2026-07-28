@@ -29,6 +29,7 @@ from app.modules.authorization.models import (
     RolePermission,
 )
 from app.modules.billing.models import Plan, Subscription, UsageRecord
+from app.modules.commerce.models import CommerceProductVariant, CommercePromotion
 from app.modules.companies.models import Company
 from app.modules.crm.models import (
     CRMContact,
@@ -153,6 +154,8 @@ __all__ = [
     "CRMPipeline",
     "CRMPipelineStage",
     "CRMTag",
+    "CommerceProductVariant",
+    "CommercePromotion",
     "Company",
     "CompanyInvitation",
     "CompanyModule",

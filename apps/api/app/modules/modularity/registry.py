@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.modules.analytics.manifest import analytics_module
+from app.modules.commerce.manifest import commerce_module
 from app.modules.crm.manifest import crm_module
 from app.modules.finance.manifest import finance_module
 from app.modules.hr.manifest import hr_module
@@ -12,6 +13,7 @@ from app.modules.support.manifest import support_module
 
 module_registry = ModuleRegistry()
 module_registry.register(analytics_module)
+module_registry.register(commerce_module)
 module_registry.register(crm_module)
 module_registry.register(finance_module)
 module_registry.register(hr_module)

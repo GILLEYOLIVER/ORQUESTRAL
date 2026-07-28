@@ -7,6 +7,7 @@ import {
   ChartColumnBig,
   ContactRound,
   CreditCard,
+  HandCoins,
   Database,
   FolderKanban,
   LayoutDashboard,
@@ -188,6 +189,14 @@ export function AuthenticatedLayout({
             <NavLink className="sidebar__link" to="/app/projetos">
               <FolderKanban size={18} />
               Projetos
+            </NavLink>
+          ) : null}
+          {!preview &&
+          session.me?.permissions.includes("commerce.view") &&
+          isModuleActive(modules.data, "commerce") ? (
+            <NavLink className="sidebar__link" to="/app/comercio">
+              <HandCoins size={18} />
+              Comércio e receita
             </NavLink>
           ) : null}
           {!preview &&

@@ -1,0 +1,12 @@
+.commerce-page { display: grid; gap: 1.25rem; }
+.commerce-page > header { align-items: center; background: linear-gradient(120deg,#123c35,#2d6f5f); border-radius: 1.5rem; color: #fff; display: flex; justify-content: space-between; padding: 2rem; }
+.commerce-page header span { font-size: .75rem; font-weight: 800; letter-spacing: .18em; }
+.commerce-page header h1 { font-size: clamp(2rem,5vw,3.6rem); line-height: .98; margin: .65rem 0; max-width: 760px; }
+.commerce-page header p { color: #d9eee7; max-width: 650px; }
+.commerce-page > section { display: grid; gap: 1rem; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.commerce-page section > * { display: grid; gap: .8rem; }
+.commerce-page h2 { align-items: center; display: flex; gap: .5rem; }
+.commerce-page input,.commerce-page select { border: 1px solid #c7d7d2; border-radius: .75rem; padding: .8rem; }
+.commerce-page small { display: block; color: #566b65; }
+.commerce-row { align-items: center; border-top: 1px solid #dbe5e1; display: flex; justify-content: space-between; padding-top: .75rem; }
+@media (max-width: 760px) { .commerce-page > section { grid-template-columns: 1fr; } .commerce-page > header svg { display: none; } }
