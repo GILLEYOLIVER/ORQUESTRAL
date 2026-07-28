@@ -13,6 +13,7 @@ import { Alert, Button, Card } from "@orkestral/ui-components";
 import { ApiClientError, request } from "../lib/http";
 import { useSession } from "../session/context";
 import { MarketingIntelligencePanel } from "./marketing/MarketingIntelligencePanel";
+import { MarketingAudiencesPanel } from "./marketing/MarketingAudiencesPanel";
 import "./marketing.css";
 
 type CampaignStatus =
@@ -312,6 +313,7 @@ export function MarketingPage() {
           <span>conversões registradas</span>
         </Card>
       </section>
+      <MarketingAudiencesPanel canManage={canAudience} />
       <MarketingIntelligencePanel
         campaigns={campaigns.data ?? []}
         canUpdate={canUpdate}

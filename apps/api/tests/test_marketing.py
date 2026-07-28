@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
+from app.modules.marketing.audience_schemas import MarketingAudienceCreate
 from app.modules.marketing.schemas import CampaignCreate, JourneyStepCreate
 
 
@@ -23,3 +24,17 @@ def test_marketing_defaults_and_journey_step() -> None:
     assert campaign.status == "draft"
     assert campaign.budget_cents == 0
     assert step.configuration == {}
+
+
+def test_dynamic_audience_requires_segment() -> None:
+    with pytest.raises(ValidationError):
+        MarketingAudienceCreate(name="Clientes ativos", kind="dynamic")
+
+
+def test_static_audience_rejects_segment() -> None:
+    with pytest.raises(ValidationError):
+        MarketingAudienceCreate(
+            name="Lista manual",
+            kind="static",
+            segment_id="f9c76ed5-146d-4e31-84f0-cbc19f318f9e",
+        )

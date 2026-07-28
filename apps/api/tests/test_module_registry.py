@@ -51,7 +51,11 @@ def test_registry_loads_only_installed_modules() -> None:
     assert "hr.leave.decide" in installed[3].permissions
     assert installed[4].migrations == ("20260720_0019",)
     assert "inventory.movements.create" in installed[4].permissions
-    assert installed[5].migrations == ("20260720_0018", "20260720_0025")
+    assert installed[5].migrations == (
+        "20260720_0018",
+        "20260720_0025",
+        "20260727_0111",
+    )
     assert "marketing.journeys.manage" in installed[5].permissions
     assert installed[6].migrations == ("20260720_0017", "20260720_0027")
     assert "projects.tasks.manage" in installed[6].permissions

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.modules.marketing.audience_routes import router as audience_router
 from app.modules.marketing.growth_routes import router as growth_router
 from app.modules.marketing.routes import router
 from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
@@ -7,7 +8,7 @@ from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 marketing_module = ModuleDefinition(
     code="marketing",
     name="Marketing",
-    version="1.1.0",
+    version="1.2.0",
     permissions=(
         "marketing.view",
         "marketing.create",
@@ -16,7 +17,7 @@ marketing_module = ModuleDefinition(
         "marketing.audience.manage",
         "marketing.journeys.manage",
     ),
-    routers=(router, growth_router),
+    routers=(router, growth_router, audience_router),
     menus=(
         ModuleMenu(
             label="Marketing",
@@ -32,7 +33,9 @@ marketing_module = ModuleDefinition(
         "marketing.metric.recorded",
         "marketing.experiment.created",
         "marketing.attribution.created",
+        "marketing.audience.created",
+        "marketing.audience.synchronized",
     ),
     events_consumed=("crm.contact.updated",),
-    migrations=("20260720_0018", "20260720_0025"),
+    migrations=("20260720_0018", "20260720_0025", "20260727_0111"),
 )

@@ -51,6 +51,8 @@ from app.modules.inventory.models import (
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
 from app.modules.marketing.models import (
     MarketingAttribution,
+    MarketingAudience,
+    MarketingAudienceMember,
     MarketingCampaign,
     MarketingCampaignContact,
     MarketingCampaignMetric,
@@ -80,6 +82,12 @@ from app.modules.projects.models import (
     ProjectRisk,
     ProjectTask,
     ProjectTaskDependency,
+)
+from app.modules.support.agent_handoff_models import SupportAgentAssistRun, SupportHumanHandoff
+from app.modules.support.engagement_models import (
+    SupportResponseCitation,
+    SupportResponseTemplate,
+    SupportSatisfactionSurvey,
 )
 from app.modules.support.models import (
     SupportAgentCapacity,
@@ -148,6 +156,8 @@ __all__ = [
     "KnowledgeChunk",
     "KnowledgeDocument",
     "MarketingAttribution",
+    "MarketingAudience",
+    "MarketingAudienceMember",
     "MarketingCampaign",
     "MarketingCampaignContact",
     "MarketingCampaignMetric",
@@ -175,20 +185,20 @@ __all__ = [
     "Role",
     "RolePermission",
     "Subscription",
-    "SupportAgentCapacity",
     "SupportAgentAssistRun",
+    "SupportAgentCapacity",
     "SupportAgentSkill",
     "SupportBusinessCalendar",
     "SupportChannelEndpoint",
     "SupportChannelIngressEvent",
     "SupportEscalationEvent",
     "SupportEscalationPolicy",
-    "SupportInteraction",
     "SupportHumanHandoff",
-    "SupportResponseCitation",
-    "SupportResponseTemplate",
+    "SupportInteraction",
     "SupportQueue",
     "SupportQueueSkill",
+    "SupportResponseCitation",
+    "SupportResponseTemplate",
     "SupportSLAPolicy",
     "SupportSatisfactionSurvey",
     "SupportSkill",
@@ -209,5 +219,5 @@ from app.modules.agents import runtime_models as _agent_runtime_models  # noqa: 
 from app.modules.authorization import policy_models as _policy_models  # noqa: F401
 from app.modules.events import models as _event_models  # noqa: F401
 from app.modules.metadata import models as _metadata_models  # noqa: F401
-from app.modules.support import engagement_models as _support_engagement_models  # noqa: F401
 from app.modules.support import agent_handoff_models as _support_agent_handoff_models  # noqa: F401
+from app.modules.support import engagement_models as _support_engagement_models  # noqa: F401
