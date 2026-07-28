@@ -7,6 +7,7 @@ from app.modules.marketing.audience_schemas import MarketingAudienceCreate
 from app.modules.marketing.content_schemas import LandingPageCreate
 from app.modules.marketing.governance_routes import _inside_window
 from app.modules.marketing.governance_schemas import MarketingContactPolicyUpsert
+from app.modules.marketing.lifecycle_routes import _definition_checksum, _validate_journey
 from app.modules.marketing.schemas import CampaignCreate, JourneyStepCreate
 
 
@@ -72,3 +73,44 @@ def test_landing_page_requires_explicit_consent() -> None:
                 "require_consent": False,
             },
         )
+
+
+def test_journey_lifecycle_blocks_uncontrolled_external_effects() -> None:
+    definition = {
+        "name": "Recuperação",
+        "description": None,
+        "trigger_type": "manual",
+        "steps": [
+            {
+                "id": "step-1",
+                "name": "Chamar serviço",
+                "action_type": "webhook",
+                "position": 0,
+                "configuration": {},
+            }
+        ],
+    }
+    issues = _validate_journey(definition)
+    assert {issue["code"] for issue in issues} == {"unsupported_external_effect"}
+    assert _definition_checksum(definition) == _definition_checksum(definition)
+
+
+def test_journey_sms_requires_governed_content() -> None:
+    step = JourneyStepCreate(name="Enviar SMS", action_type="sms", position=0)
+    issues = _validate_journey(
+        {
+            "name": "SMS",
+            "description": None,
+            "trigger_type": "manual",
+            "steps": [
+                {
+                    "id": "step-1",
+                    "name": step.name,
+                    "action_type": step.action_type,
+                    "position": step.position,
+                    "configuration": step.configuration,
+                }
+            ],
+        }
+    )
+    assert {issue["code"] for issue in issues} == {"content_required"}

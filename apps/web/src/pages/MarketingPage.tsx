@@ -63,6 +63,17 @@ type JourneyStep = {
   action_type: string;
   position: number;
 };
+type JourneySimulation = {
+  id: string;
+  status: "passed" | "failed";
+  definition_checksum: string;
+  issues: Array<{ code: string; message: string }>;
+};
+type JourneyVersion = {
+  id: string;
+  version: number;
+  checksum: string;
+};
 
 const channelLabels: Record<CampaignChannel, string> = {
   email: "E-mail",
@@ -285,6 +296,42 @@ export function MarketingPage() {
     },
     onError: (caught) =>
       setError(errorMessage(caught, "Não foi possível adicionar a etapa.")),
+  });
+  const simulateJourney = useMutation({
+    mutationFn: () =>
+      request<JourneySimulation>(
+        `/marketing/lifecycle/journeys/${selectedJourneyId}/simulate`,
+        { method: "POST", body: { sample_contact: {} } },
+      ),
+    onSuccess: (result) => {
+      if (result.status === "passed") {
+        setFeedback(
+          `Simulação aprovada. Definição ${result.definition_checksum.slice(0, 8)} pronta para publicar.`,
+        );
+        return;
+      }
+      setError(result.issues.map((issue) => issue.message).join(" "));
+    },
+    onError: (caught) =>
+      setError(errorMessage(caught, "Não foi possível simular a jornada.")),
+  });
+  const publishJourney = useMutation({
+    mutationFn: () =>
+      request<JourneyVersion>(
+        `/marketing/lifecycle/journeys/${selectedJourneyId}/publish`,
+        { method: "POST" },
+      ),
+    onSuccess: async (result) => {
+      setFeedback(`Jornada publicada na versão ${result.version}.`);
+      await queryClient.invalidateQueries({ queryKey: ["marketing", "journeys"] });
+    },
+    onError: (caught) =>
+      setError(
+        errorMessage(
+          caught,
+          "Simule novamente a definição atual antes de publicar.",
+        ),
+      ),
   });
   return (
     <div className="marketing-page">
@@ -651,25 +698,44 @@ export function MarketingPage() {
                     ))}
                   </div>
                   {canJourneys ? (
-                    <form
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        if (stepName.trim().length >= 2) createStep.mutate();
-                      }}
-                    >
-                      <input
-                        placeholder="Nome da próxima etapa"
-                        value={stepName}
-                        onChange={(event) => setStepName(event.target.value)}
-                      />
-                      <Button
-                        disabled={stepName.trim().length < 2}
-                        loading={createStep.isPending}
-                        type="submit"
+                    <>
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          if (stepName.trim().length >= 2) createStep.mutate();
+                        }}
                       >
-                        Adicionar etapa
-                      </Button>
-                    </form>
+                        <input
+                          placeholder="Nome da próxima etapa"
+                          value={stepName}
+                          onChange={(event) => setStepName(event.target.value)}
+                        />
+                        <Button
+                          disabled={stepName.trim().length < 2}
+                          loading={createStep.isPending}
+                          type="submit"
+                        >
+                          Adicionar etapa
+                        </Button>
+                      </form>
+                      <div className="journey-lifecycle-actions">
+                        <Button
+                          loading={simulateJourney.isPending}
+                          onClick={() => simulateJourney.mutate()}
+                        >
+                          Simular sem executar
+                        </Button>
+                        <Button
+                          loading={publishJourney.isPending}
+                          onClick={() => publishJourney.mutate()}
+                        >
+                          Publicar versão
+                        </Button>
+                      </div>
+                      <small>
+                        A publicação só aceita a mesma definição aprovada na simulação.
+                      </small>
+                    </>
                   ) : null}
                 </>
               ) : (

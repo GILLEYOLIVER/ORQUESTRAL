@@ -363,6 +363,13 @@
   gap: 9px;
   grid-template-columns: 1fr auto;
 }
+
+.journey-lifecycle-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
 .marketing-empty {
   color: #71817d;
   padding: 28px 15px;

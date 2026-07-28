@@ -15,7 +15,7 @@ AudienceStatus = Literal[
 ]
 JourneyTrigger = Literal["manual", "contact_created", "contact_tagged", "scheduled"]
 JourneyStatus = Literal["draft", "active", "paused", "archived"]
-JourneyAction = Literal["wait", "email", "whatsapp", "task", "webhook"]
+JourneyAction = Literal["wait", "email", "whatsapp", "sms", "task", "webhook"]
 ExperimentStatus = Literal["draft", "running", "completed", "cancelled"]
 ExperimentMetric = Literal["click_rate", "lead_rate", "conversion_rate", "revenue"]
 AttributionTouchpoint = Literal[
