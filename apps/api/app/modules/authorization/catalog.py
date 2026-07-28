@@ -189,6 +189,12 @@ PERMISSION_CATALOG = (
         "governance.manage",
         "Gerenciar consentimento, frequência e horários de contato",
     ),
+    PermissionDefinition(
+        "marketing.content.manage",
+        "marketing",
+        "content.manage",
+        "Gerenciar canais, conteúdos, páginas e formulários",
+    ),
     PermissionDefinition("inventory.view", "inventory", "view", "Visualizar estoque"),
     PermissionDefinition(
         "inventory.items.manage", "inventory", "items.manage", "Gerenciar itens de estoque"
