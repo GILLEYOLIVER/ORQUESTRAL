@@ -177,6 +177,18 @@ PERMISSION_CATALOG = (
     PermissionDefinition(
         "commerce.pricing.resolve", "commerce", "pricing.resolve", "Calcular preços e descontos"
     ),
+    PermissionDefinition(
+        "commerce.orders.manage", "commerce", "orders.manage", "Criar e reservar pedidos"
+    ),
+    PermissionDefinition(
+        "commerce.orders.confirm",
+        "commerce",
+        "orders.confirm",
+        "Confirmar pedidos e gerar efeitos financeiros",
+    ),
+    PermissionDefinition(
+        "commerce.contracts.view", "commerce", "contracts.view", "Visualizar contratos comerciais"
+    ),
     PermissionDefinition("marketing.view", "marketing", "view", "Visualizar marketing"),
     PermissionDefinition("marketing.create", "marketing", "create", "Criar campanhas"),
     PermissionDefinition("marketing.update", "marketing", "update", "Alterar campanhas"),

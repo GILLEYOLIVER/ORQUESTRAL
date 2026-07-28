@@ -9,4 +9,9 @@
 .commerce-page input,.commerce-page select { border: 1px solid #c7d7d2; border-radius: .75rem; padding: .8rem; }
 .commerce-page small { display: block; color: #566b65; }
 .commerce-row { align-items: center; border-top: 1px solid #dbe5e1; display: flex; justify-content: space-between; padding-top: .75rem; }
+.commerce-orders { display: grid; gap: 1rem; }
+.commerce-order-create { align-items: center; display: grid; gap: .75rem; grid-template-columns: 2fr auto 2fr auto auto; }
+.commerce-order-create label { align-items: center; display: flex; gap: .4rem; }
+.commerce-order { align-items: center; border-top: 1px solid #dbe5e1; display: grid; gap: 1rem; grid-template-columns: 2fr 1fr auto; padding-top: 1rem; }
 @media (max-width: 760px) { .commerce-page > section { grid-template-columns: 1fr; } .commerce-page > header svg { display: none; } }
+@media (max-width: 900px) { .commerce-order-create,.commerce-order { grid-template-columns: 1fr; } }

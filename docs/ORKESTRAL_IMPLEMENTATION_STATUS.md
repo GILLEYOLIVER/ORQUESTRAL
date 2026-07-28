@@ -1516,3 +1516,15 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Migração `20260727_0115` reversível; RLS habilitado e forçado nas duas tabelas.
 - Validação: 315 testes da API, 19 testes web, Ruff, MyPy, TypeScript e build aprovados.
 - Próximo passo exato: pedidos, contratos, assinaturas, cobrança e integração transacional com Estoque e Financeiro.
+
+## Ciclo 103 - Fase 9: pedidos, contratos e integracao transacional (2026-07-28)
+
+- **Concluido:** pedido criado a partir de cotacao aceita, com snapshot comercial, idempotencia, bloqueio transacional e isolamento por empresa.
+- **Concluido:** reserva de estoque, confirmacao atomica, baixa de saldo, movimento de inventario e conta a receber vinculada.
+- **Concluido:** contratos e assinaturas comerciais separados da assinatura SaaS da plataforma.
+- **Concluido:** cancelamento com liberacao de reservas e conclusao de pedidos confirmados, com auditoria e eventos de dominio.
+- **Seguranca:** RLS habilitado e forcado nas cinco novas tabelas; permissoes de pedidos, confirmacao e contratos aplicadas no backend.
+- **Migracao:** `20260728_0116_commerce_orders_contracts.py`, validada em upgrade, downgrade para 0115 e novo upgrade.
+- **Testes:** Ruff e MyPy aprovados; API com 318 testes aprovados; frontend com 19 testes, typecheck e build aprovados; fluxo transacional real validado com rollback integral.
+- **Risco conhecido:** o bundle principal do frontend permanece acima de 500 kB e requer divisao futura de codigo; nao impede o funcionamento.
+- **Proximo passo exato:** concluir a Fase 9 com pagamentos por adaptadores, devolucoes/reembolsos, creditos e comissoes, preservando idempotencia e integracao contabil.
