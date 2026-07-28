@@ -48,6 +48,9 @@ SIGNED_WEBHOOKS = frozenset(
     }
 )
 SIGNED_MONITOR_READS = frozenset({"/health/agent-memory-scheduler"})
+GOVERNED_PUBLIC_MUTATIONS = frozenset(
+    {"/public/marketing/pages/{public_id}/submit"}
+)
 PUBLIC_READ_ROUTES = frozenset(
     {
         "/auth/development-access",
@@ -56,6 +59,7 @@ PUBLIC_READ_ROUTES = frozenset(
         "/system/capabilities",
         "/system/features",
         "/system/version",
+        "/public/marketing/pages/{public_id}",
     }
 )
 
@@ -178,6 +182,12 @@ def test_business_mutations_require_an_explicit_security_boundary() -> None:
 
         dependency_names = _dependency_names(route)
         if route.path in SIGNED_WEBHOOKS:
+            continue
+        if route.path in GOVERNED_PUBLIC_MUTATIONS:
+            if "get_request_settings" not in dependency_names:
+                failures.append(
+                    f"{sorted(methods)} {route.path}: sem HMAC/configuracao de protecao"
+                )
             continue
         if route.path in SELF_SERVICE_MUTATIONS:
             if "get_current_principal" not in dependency_names:

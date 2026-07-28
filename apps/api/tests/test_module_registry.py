@@ -55,8 +55,9 @@ def test_registry_loads_only_installed_modules() -> None:
         "20260720_0018",
         "20260720_0025",
         "20260727_0111",
-        "20260727_0112",
-    )
+            "20260727_0112",
+            "20260727_0113",
+        )
     assert "marketing.journeys.manage" in installed[5].permissions
     assert installed[6].migrations == ("20260720_0017", "20260720_0027")
     assert "projects.tasks.manage" in installed[6].permissions

@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.modules.marketing.audience_schemas import MarketingAudienceCreate
+from app.modules.marketing.content_schemas import LandingPageCreate
 from app.modules.marketing.governance_routes import _inside_window
 from app.modules.marketing.governance_schemas import MarketingContactPolicyUpsert
 from app.modules.marketing.schemas import CampaignCreate, JourneyStepCreate
@@ -58,3 +59,16 @@ def test_contact_window_supports_overnight_period() -> None:
     assert _inside_window(time(23), time(22), time(6))
     assert _inside_window(time(5), time(22), time(6))
     assert not _inside_window(time(12), time(22), time(6))
+
+
+def test_landing_page_requires_explicit_consent() -> None:
+    with pytest.raises(ValidationError):
+        LandingPageCreate(
+            content_id="f9c76ed5-146d-4e31-84f0-cbc19f318f9e",
+            slug="captura-segura",
+            title="Receba novidades",
+            form_schema={
+                "fields": [{"name": "email", "type": "email", "required": True}],
+                "require_consent": False,
+            },
+        )

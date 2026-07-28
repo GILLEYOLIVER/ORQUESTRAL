@@ -15,6 +15,7 @@ import { useSession } from "../session/context";
 import { MarketingIntelligencePanel } from "./marketing/MarketingIntelligencePanel";
 import { MarketingAudiencesPanel } from "./marketing/MarketingAudiencesPanel";
 import { MarketingGovernancePanel } from "./marketing/MarketingGovernancePanel";
+import { MarketingContentPanel } from "./marketing/MarketingContentPanel";
 import "./marketing.css";
 
 type CampaignStatus =
@@ -317,6 +318,9 @@ export function MarketingPage() {
       <MarketingAudiencesPanel canManage={canAudience} />
       <MarketingGovernancePanel
         canManage={me?.permissions.includes("marketing.governance.manage") ?? false}
+      />
+      <MarketingContentPanel
+        canManage={me?.permissions.includes("marketing.content.manage") ?? false}
       />
       <MarketingIntelligencePanel
         campaigns={campaigns.data ?? []}

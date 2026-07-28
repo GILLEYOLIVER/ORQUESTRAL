@@ -49,6 +49,14 @@ from app.modules.inventory.models import (
     InventoryMovement,
 )
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeChunk, KnowledgeDocument
+from app.modules.marketing.content_models import (
+    MarketingChannelConnector,
+    MarketingContent,
+    MarketingContentVersion,
+    MarketingFormSubmission,
+    MarketingLandingPage,
+    MarketingPublicPageRegistry,
+)
 from app.modules.marketing.governance_models import (
     MarketingContactPolicy,
     MarketingDeliveryAttempt,
@@ -165,11 +173,17 @@ __all__ = [
     "MarketingCampaign",
     "MarketingCampaignContact",
     "MarketingCampaignMetric",
+    "MarketingChannelConnector",
     "MarketingContactPolicy",
+    "MarketingContent",
+    "MarketingContentVersion",
     "MarketingDeliveryAttempt",
     "MarketingExperiment",
+    "MarketingFormSubmission",
     "MarketingJourney",
     "MarketingJourneyStep",
+    "MarketingLandingPage",
+    "MarketingPublicPageRegistry",
     "MetricAggregationRun",
     "MetricDailySummary",
     "ModuleCatalog",
