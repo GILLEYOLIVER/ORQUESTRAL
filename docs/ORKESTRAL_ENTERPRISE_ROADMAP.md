@@ -460,3 +460,11 @@ conhecimento verificadas e persistidas. A satisfação mede nota geral, resoluç
 e esforço sem guardar comentários em texto claro. O próximo recorte conclui a
 Fase 7 com agente de atendimento governado e transferência humana preservando
 contexto autorizado.
+
+# Progresso da Fase 7 - ciclo 97
+
+O agente de atendimento usa agente ativo e versão publicada, avalia somente
+metadados autorizados e nunca executa uma resposta sozinho. A transferência
+humana exige destinatário da empresa e aceite explícito, preservando contexto
+por referências. A Fase 7 atende agora seus critérios estruturais; o próximo
+recorte inicia a Fase 8 com segmentos dinâmicos e listas de marketing.

@@ -1488,3 +1488,12 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Banco: `20260727_0109`, com RLS forçado em modelos, citações e avaliações.
 - Segurança: conhecimento e chamados validados por empresa; comentários preservados somente como SHA-256.
 - Próximo passo exato: agente de atendimento governado e transferência humana com contexto autorizado.
+
+# Atualização - ciclo 97
+
+- Fase atual: Fase 7 - Atendimento empresarial.
+- Entrega: assistência governada por agente publicado e transferência humana.
+- Banco: `20260727_0110`, com RLS forçada em execuções e handoffs.
+- Segurança: contexto apenas por referências; nenhuma mensagem, prompt ou chave é copiada.
+- Fase 7 concluída no recorte estrutural do roadmap.
+- Próximo passo exato: iniciar a Fase 8 com segmentos dinâmicos e listas.
