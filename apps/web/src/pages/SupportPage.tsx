@@ -19,6 +19,7 @@ import {
 import { SupportChannelsPanel } from "./support/SupportChannelsPanel";
 import { SupportEscalationPanel } from "./support/SupportEscalationPanel";
 import { SupportEngagementPanel } from "./support/SupportEngagementPanel";
+import { SupportAgentHandoffPanel } from "./support/SupportAgentHandoffPanel";
 import { SupportRoutingPanel } from "./support/SupportRoutingPanel";
 
 type TicketStatus = "open" | "in_progress" | "waiting" | "resolved" | "closed";
@@ -205,6 +206,14 @@ export function SupportPage() {
             queryKey: ["support-interactions", selected?.id],
           });
         }}
+      />
+      <SupportAgentHandoffPanel
+        ticketId={selected?.id ?? null}
+        onAssigned={(userId) =>
+          setSelected((current) =>
+            current ? { ...current, assignee_user_id: userId } : current,
+          )
+        }
       />
 
       {tickets.isError ? (

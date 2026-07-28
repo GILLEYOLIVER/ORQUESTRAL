@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 from app.modules.support.channels_routes import ingress_router
+from app.modules.support.agent_handoff_routes import router as agent_handoff_router
 from app.modules.support.channels_routes import router as channels_router
 from app.modules.support.escalation_routes import router as escalation_router
 from app.modules.support.engagement_routes import router as engagement_router
@@ -12,7 +13,7 @@ from app.modules.support.routing_routes import router as routing_router
 support_module = ModuleDefinition(
     code="support",
     name="Suporte",
-    version="1.5.0",
+    version="1.6.0",
     permissions=(
         "support.tickets.view",
         "support.tickets.create",
@@ -27,6 +28,7 @@ support_module = ModuleDefinition(
         ingress_router,
         escalation_router,
         engagement_router,
+        agent_handoff_router,
     ),
     menus=(
         ModuleMenu(
@@ -52,6 +54,8 @@ support_module = ModuleDefinition(
         "support.sla.escalated",
         "support.guided_response.sent",
         "support.satisfaction.measured",
+        "support.agent_assist.proposed",
+        "support.human_handoff.decided",
     ),
     events_consumed=("crm.contact.updated",),
     migrations=(
@@ -61,5 +65,6 @@ support_module = ModuleDefinition(
         "20260723_0107",
         "20260727_0108",
         "20260727_0109",
+        "20260727_0110",
     ),
 )
