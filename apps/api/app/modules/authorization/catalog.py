@@ -167,6 +167,16 @@ PERMISSION_CATALOG = (
     PermissionDefinition(
         "projects.tasks.manage", "projects", "tasks.manage", "Gerenciar tarefas de projetos"
     ),
+    PermissionDefinition("commerce.view", "commerce", "view", "Visualizar comércio e receita"),
+    PermissionDefinition(
+        "commerce.catalog.manage", "commerce", "catalog.manage", "Gerenciar variantes comerciais"
+    ),
+    PermissionDefinition(
+        "commerce.promotions.manage", "commerce", "promotions.manage", "Gerenciar promoções"
+    ),
+    PermissionDefinition(
+        "commerce.pricing.resolve", "commerce", "pricing.resolve", "Calcular preços e descontos"
+    ),
     PermissionDefinition("marketing.view", "marketing", "view", "Visualizar marketing"),
     PermissionDefinition("marketing.create", "marketing", "create", "Criar campanhas"),
     PermissionDefinition("marketing.update", "marketing", "update", "Alterar campanhas"),

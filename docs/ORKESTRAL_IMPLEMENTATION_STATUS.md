@@ -1508,3 +1508,11 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - Validação: 313 testes da API, 19 testes web, Ruff, MyPy, TypeScript e build aprovados.
 - Fase atual concluída: Fase 8 - Marketing.
 - Próximo passo exato: Fase 9 - Receita e comércio, iniciando pelo catálogo canônico, variantes, listas de preço e promoções.
+
+## Ciclo 102 - Fase 9: catálogo e precificação (27/07/2026)
+
+- Novo módulo Comércio e receita sem duplicar produtos do Estoque nem tabelas de preço do CRM.
+- Variantes, promoções governadas e resolução determinística de preço no backend.
+- Migração `20260727_0115` reversível; RLS habilitado e forçado nas duas tabelas.
+- Validação: 315 testes da API, 19 testes web, Ruff, MyPy, TypeScript e build aprovados.
+- Próximo passo exato: pedidos, contratos, assinaturas, cobrança e integração transacional com Estoque e Financeiro.

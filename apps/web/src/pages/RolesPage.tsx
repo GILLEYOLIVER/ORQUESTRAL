@@ -30,6 +30,7 @@ const moduleLabels: Record<string, string> = {
   events: "Eventos empresariais",
   integrations: "Integrações",
   billing: "Faturamento",
+  commerce: "Comércio e receita",
 };
 
 function errorMessage(caught: unknown, fallback: string) {

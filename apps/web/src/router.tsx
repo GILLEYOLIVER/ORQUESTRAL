@@ -9,6 +9,7 @@ import { AgentsPage } from "./pages/AgentsPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { BillingPage } from "./pages/BillingPage";
 import { CompaniesPage } from "./pages/CompaniesPage";
+import { CommercePage } from "./pages/CommercePage";
 import { CompanySelectionPage } from "./pages/CompanySelectionPage";
 import { CompanyUsersPage } from "./pages/CompanyUsersPage";
 import { CRMContactsPage } from "./pages/CRMContactsPage";
@@ -280,6 +281,14 @@ export const router = createBrowserRouter([
         element: (
           <ModuleRoute moduleCode="projects" permission="projects.view">
             <ProjectsPage />
+          </ModuleRoute>
+        ),
+      },
+      {
+        path: "comercio",
+        element: (
+          <ModuleRoute moduleCode="commerce" permission="commerce.view">
+            <CommercePage />
           </ModuleRoute>
         ),
       },
