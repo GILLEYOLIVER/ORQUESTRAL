@@ -30,6 +30,13 @@ from app.modules.authorization.models import (
 )
 from app.modules.billing.models import Plan, Subscription, UsageRecord
 from app.modules.commerce.models import CommerceProductVariant, CommercePromotion
+from app.modules.commerce.transaction_models import (
+    CommerceContract,
+    CommerceCustomerSubscription,
+    CommerceInventoryReservation,
+    CommerceOrder,
+    CommerceOrderItem,
+)
 from app.modules.companies.models import Company
 from app.modules.crm.models import (
     CRMContact,
@@ -154,6 +161,11 @@ __all__ = [
     "CRMPipeline",
     "CRMPipelineStage",
     "CRMTag",
+    "CommerceContract",
+    "CommerceCustomerSubscription",
+    "CommerceInventoryReservation",
+    "CommerceOrder",
+    "CommerceOrderItem",
     "CommerceProductVariant",
     "CommercePromotion",
     "Company",
