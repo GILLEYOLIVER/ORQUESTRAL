@@ -308,3 +308,74 @@ class MarketingAttribution(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
+
+
+class MarketingAudience(Base):
+    __tablename__ = "marketing_audiences"
+    __table_args__ = (
+        CheckConstraint("kind IN ('dynamic', 'static')", name="ck_marketing_audiences_kind"),
+        CheckConstraint(
+            "status IN ('draft', 'active', 'paused', 'archived')",
+            name="ck_marketing_audiences_status",
+        ),
+        CheckConstraint(
+            "(kind = 'dynamic' AND segment_id IS NOT NULL) OR "
+            "(kind = 'static' AND segment_id IS NULL)",
+            name="ck_marketing_audiences_segment",
+        ),
+        Index("ix_marketing_audiences_company_status", "company_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    segment_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("customer_segments.id", ondelete="RESTRICT"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(180), index=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    status: Mapped[str] = mapped_column(
+        String(16), default="draft", server_default="draft", index=True
+    )
+    member_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    synchronized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class MarketingAudienceMember(Base):
+    __tablename__ = "marketing_audience_members"
+    __table_args__ = (
+        CheckConstraint("source IN ('segment', 'manual')", name="ck_marketing_audience_members_source"),
+        UniqueConstraint("audience_id", "contact_id", name="uq_marketing_audience_members_contact"),
+        Index("ix_marketing_audience_members_company_audience", "company_id", "audience_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    audience_id: Mapped[UUID] = mapped_column(
+        ForeignKey("marketing_audiences.id", ondelete="CASCADE"), index=True
+    )
+    contact_id: Mapped[UUID] = mapped_column(
+        ForeignKey("crm_contacts.id", ondelete="CASCADE"), index=True
+    )
+    source: Mapped[str] = mapped_column(String(16), index=True)
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
