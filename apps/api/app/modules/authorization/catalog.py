@@ -183,6 +183,12 @@ PERMISSION_CATALOG = (
         "journeys.manage",
         "Gerenciar jornadas de marketing",
     ),
+    PermissionDefinition(
+        "marketing.governance.manage",
+        "marketing",
+        "governance.manage",
+        "Gerenciar consentimento, frequência e horários de contato",
+    ),
     PermissionDefinition("inventory.view", "inventory", "view", "Visualizar estoque"),
     PermissionDefinition(
         "inventory.items.manage", "inventory", "items.manage", "Gerenciar itens de estoque"

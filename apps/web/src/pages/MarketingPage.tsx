@@ -14,6 +14,7 @@ import { ApiClientError, request } from "../lib/http";
 import { useSession } from "../session/context";
 import { MarketingIntelligencePanel } from "./marketing/MarketingIntelligencePanel";
 import { MarketingAudiencesPanel } from "./marketing/MarketingAudiencesPanel";
+import { MarketingGovernancePanel } from "./marketing/MarketingGovernancePanel";
 import "./marketing.css";
 
 type CampaignStatus =
@@ -314,6 +315,9 @@ export function MarketingPage() {
         </Card>
       </section>
       <MarketingAudiencesPanel canManage={canAudience} />
+      <MarketingGovernancePanel
+        canManage={me?.permissions.includes("marketing.governance.manage") ?? false}
+      />
       <MarketingIntelligencePanel
         campaigns={campaigns.data ?? []}
         canUpdate={canUpdate}
