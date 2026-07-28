@@ -1,0 +1,11 @@
+.marketing-governance{display:grid;gap:1.1rem;margin:1.5rem 0;background:linear-gradient(135deg,#f8fbfa,#edf5f1)}
+.marketing-governance>header{display:flex;justify-content:space-between;gap:1rem}
+.marketing-governance h2,.marketing-governance p{margin:.25rem 0 0}
+.marketing-governance__form{display:grid;grid-template-columns:1.25fr repeat(4,1fr) auto;align-items:end;gap:.65rem}
+.marketing-governance__form label{display:grid;gap:.35rem;color:#274a43;font-size:.82rem;font-weight:700}
+.marketing-governance__form input,.marketing-governance__form select{min-height:42px;border:1px solid #bfd0ca;border-radius:9px;padding:0 .65rem;background:#fff;color:#102e29}
+.marketing-governance__policies{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.7rem}
+.marketing-governance__policies article{display:flex;align-items:center;gap:.7rem;padding:.85rem;border:1px solid #d1ded9;border-radius:12px;background:#fff}
+.marketing-governance__policies span{display:grid}
+@media(max-width:900px){.marketing-governance__form{grid-template-columns:1fr 1fr}}
+@media(max-width:540px){.marketing-governance__form{grid-template-columns:1fr}}
