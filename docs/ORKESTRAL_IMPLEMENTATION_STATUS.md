@@ -1593,3 +1593,15 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Portabilidade:** `release.json` produzido pela CLI usa o mesmo contrato aceito pela API do marketplace.
 - **Testes:** Ruff e MyPy aprovados; 333 testes completos da API aprovados.
 - **Proximo passo exato:** fechar a Fase 11 com sandboxes isolados, solicitacoes de promocao e aprovacao entre ambientes.
+
+## Ciclo 110 - Fase 11: sandboxes e promocoes governadas (2026-07-29)
+
+- **Concluido:** sandboxes logicos por empresa com dados vazios, sinteticos ou mascarados, expiracao e arquivamento.
+- **Concluido:** solicitacoes de promocao para metadados, automacoes, agentes e plugins, vinculadas ao checksum do artefato.
+- **Governanca:** rotas progressivas entre ambientes e separacao obrigatoria entre solicitante e aprovador.
+- **Transparencia:** aprovacao nao e tratada como deploy; aplicacao ou falha dependem de executor real.
+- **Seguranca:** permissoes dedicadas, auditoria, eventos transacionais, isolamento por tenant e RLS forcado.
+- **Banco:** migracao `20260729_0122_governed_sandboxes.py` validada em upgrade, downgrade para 0121 e novo upgrade.
+- **Testes:** Ruff e MyPy aprovados; 336 testes completos da API aprovados.
+- **Fase atual concluida:** Fase 11 - Marketplace e plataforma para desenvolvedores, no recorte estrutural do roadmap.
+- **Proximo passo exato:** Fase 12 - identidade empresarial com OIDC/SSO e provisionamento SCIM, seguida de resiliencia, RLS ampliado e recuperacao de desastre.

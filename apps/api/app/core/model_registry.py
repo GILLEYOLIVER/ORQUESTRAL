@@ -47,6 +47,10 @@ from app.modules.crm.models import (
     CRMPipelineStage,
     CRMTag,
 )
+from app.modules.developer.models import (  # noqa: F401
+    ArtifactPromotion,
+    DeveloperSandbox,
+)
 from app.modules.finance.models import FinancialAccount, FinancialCategory, FinancialEntry
 from app.modules.hr.models import HRDepartment, HREmployee, HRLeaveRequest
 from app.modules.inventory.models import (

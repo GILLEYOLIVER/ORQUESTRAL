@@ -22,6 +22,7 @@ from app.modules.authentication.routes import router as authentication_router
 from app.modules.authorization.routes import router as authorization_router
 from app.modules.billing.routes import router as billing_router
 from app.modules.companies.routes import router as companies_router
+from app.modules.developer.routes import router as developer_router
 from app.modules.events.routes import router as events_router
 from app.modules.knowledge.routes import router as knowledge_router
 from app.modules.metadata.routes import router as metadata_router
@@ -86,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(authorization_router)
     application.include_router(billing_router)
     application.include_router(companies_router)
+    application.include_router(developer_router)
     application.include_router(events_router)
     application.include_router(knowledge_router)
     application.include_router(metrics_router)
