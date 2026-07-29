@@ -45,6 +45,7 @@ SIGNED_WEBHOOKS = frozenset(
     {
         "/webhooks/workflows/{public_key}",
         "/support/ingress/{company_id}/{public_key}",
+        "/commerce/payments/webhooks/{provider}",
     }
 )
 SIGNED_MONITOR_READS = frozenset({"/health/agent-memory-scheduler"})

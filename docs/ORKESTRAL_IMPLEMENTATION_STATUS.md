@@ -1528,3 +1528,16 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Testes:** Ruff e MyPy aprovados; API com 318 testes aprovados; frontend com 19 testes, typecheck e build aprovados; fluxo transacional real validado com rollback integral.
 - **Risco conhecido:** o bundle principal do frontend permanece acima de 500 kB e requer divisao futura de codigo; nao impede o funcionamento.
 - **Proximo passo exato:** concluir a Fase 9 com pagamentos por adaptadores, devolucoes/reembolsos, creditos e comissoes, preservando idempotencia e integracao contabil.
+
+## Ciclo 104 - Fase 9: liquidacao comercial governada (2026-07-28)
+
+- **Concluido:** intencoes de pagamento idempotentes por adaptadores, sem aceitar dados brutos de cartao ou segredos no frontend.
+- **Concluido:** webhooks HMAC com comparacao constante, deduplicacao por evento e persistencia somente do hash do payload.
+- **Concluido:** devolucoes limitadas ao vendido, recebimento atomico, recomposicao de estoque e credito/reembolso pendente real.
+- **Concluido:** comissoes por membro ativo, calculo monetario, aprovacao auditada e conta a pagar vinculada.
+- **Seguranca:** seis tabelas com `company_id`, indices, RLS habilitado e RLS forcado; mutacoes internas exigem permissao no backend.
+- **Migracao:** `20260728_0117_commerce_settlement.py`, validada em downgrade para 0116 e novo upgrade.
+- **Testes:** Ruff e MyPy aprovados; API com 322 testes; frontend com 19 testes, typecheck e build aprovados.
+- **Limitacao transparente:** nao havia pedido ficticio no banco local restaurado para uma prova manual ponta a ponta; nenhum dado artificial foi persistido.
+- **Divida de interface:** operacoes de liquidacao estao disponiveis por API governada; o painel operacional dedicado sera incorporado junto da experiencia analitica da Fase 10.
+- **Proximo passo exato:** Fase 10, iniciando por camada semantica, relatorios configuraveis e dashboards com isolamento multiempresa.
