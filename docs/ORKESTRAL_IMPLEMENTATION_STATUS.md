@@ -1541,3 +1541,15 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Limitacao transparente:** nao havia pedido ficticio no banco local restaurado para uma prova manual ponta a ponta; nenhum dado artificial foi persistido.
 - **Divida de interface:** operacoes de liquidacao estao disponiveis por API governada; o painel operacional dedicado sera incorporado junto da experiencia analitica da Fase 10.
 - **Proximo passo exato:** Fase 10, iniciando por camada semantica, relatorios configuraveis e dashboards com isolamento multiempresa.
+
+## Ciclo 105 - Fase 10: camada semantica, relatorios e dashboards (2026-07-28)
+
+- **Concluido:** catalogo versionado de metricas por empresa, com agregacao, unidade, origem e filtros governados.
+- **Concluido:** definicoes de relatorios com rascunho/publicacao e execucao limitada a 500 linhas.
+- **Concluido:** compilador semantico com datasets, dimensoes, medidas e operadores em allowlist; valores usam bind parameters e toda consulta exige `company_id`.
+- **Concluido:** dashboards configuraveis que aceitam somente relatorios da mesma empresa.
+- **Observabilidade:** execucoes registram status, linhas e duracao sem copiar o resultado empresarial.
+- **Seguranca:** quatro novas tabelas com indices de tenant, RLS habilitado e RLS forcado.
+- **Migracao:** `20260728_0118_semantic_analytics.py`, validada em downgrade para 0117 e novo upgrade.
+- **Testes:** Ruff e MyPy aprovados; conjunto completo alcançou 324 aprovados antes da correcao da expectativa de manifesto, seguida de 11 testes criticos aprovados; total logico atual 325.
+- **Proximo passo exato:** completar a Fase 10 com portais externos governados e colaboracao contextual em registros.
