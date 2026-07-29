@@ -1,9 +1,12 @@
 [project]
 name = "orkestral-plugin-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "Contrato de extensibilidade para plugins da plataforma Orkestral"
 requires-python = ">=3.13,<3.14"
-dependencies = []
+dependencies = ["cryptography==48.0.1"]
+
+[project.scripts]
+orkestral-plugin = "orkestral_plugin_sdk.cli:main"
 
 [build-system]
 requires = ["hatchling==1.29.0"]

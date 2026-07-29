@@ -701,8 +701,14 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "orkestral-plugin-sdk"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/plugin-sdk" }
+dependencies = [
+    { name = "cryptography" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "cryptography", specifier = "==48.0.1" }]
 
 [[package]]
 name = "orkestral-worker"

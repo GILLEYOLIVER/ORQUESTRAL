@@ -1584,3 +1584,12 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Banco:** migracao `20260729_0121_marketplace_supply_chain.py` validada em upgrade, downgrade para 0120 e novo upgrade; RLS forcado no historico de instalacoes.
 - **Testes:** Ruff e MyPy aprovados; 332 testes completos da API aprovados.
 - **Proximo passo exato:** concluir a Fase 11 com SDK, CLI, sandboxes e promocao governada entre ambientes.
+
+## Ciclo 109 - Fase 11: SDK e CLI para desenvolvedores (2026-07-29)
+
+- **Concluido:** contrato canonico de pacote incorporado ao SDK publico `0.2.0` e reutilizado pelo backend.
+- **Concluido:** CLI `orkestral-plugin` com geracao de chaves, assinatura e verificacao offline.
+- **Seguranca:** chave privada nunca impressa, arquivo protegido com modo `0600` e digest calculado diretamente do artefato.
+- **Portabilidade:** `release.json` produzido pela CLI usa o mesmo contrato aceito pela API do marketplace.
+- **Testes:** Ruff e MyPy aprovados; 333 testes completos da API aprovados.
+- **Proximo passo exato:** fechar a Fase 11 com sandboxes isolados, solicitacoes de promocao e aprovacao entre ambientes.
