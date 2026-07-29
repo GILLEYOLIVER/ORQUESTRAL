@@ -4,7 +4,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
 from app.core.dependencies import DatabaseSession
@@ -217,3 +217,189 @@ async def create_dashboard(
     await database.commit()
     await database.refresh(dashboard)
     return DashboardResponse.model_validate(dashboard, from_attributes=True)
+
+
+from app.modules.analytics.collaboration_schemas import (  # noqa: E402
+    CommentCreate,
+    CommentResponse,
+    FollowResponse,
+)
+from app.modules.analytics.semantic_models import (  # noqa: E402
+    AnalyticsCollaborationComment,
+    AnalyticsCollaborationFollower,
+    AnalyticsCollaborationMention,
+)
+
+
+async def _resource_exists(
+    database: DatabaseSession, company_id: UUID, resource_type: str, resource_id: UUID
+) -> bool:
+    model = (
+        AnalyticsReportDefinition
+        if resource_type == "report"
+        else AnalyticsDashboardDefinition
+    )
+    return bool(
+        await database.scalar(
+            select(model.id).where(model.id == resource_id, model.company_id == company_id)
+        )
+    )
+
+
+@router.get(
+    "/collaboration/{resource_type}/{resource_id}/comments",
+    response_model=list[CommentResponse],
+)
+async def comments(
+    resource_type: str,
+    resource_id: UUID,
+    principal: CanView,
+    database: DatabaseSession,
+) -> list[CommentResponse]:
+    context = get_request_context(principal)
+    if resource_type not in {"report", "dashboard"} or not await _resource_exists(
+        database, context.company_id, resource_type, resource_id
+    ):
+        raise HTTPException(status_code=404, detail="Recurso não encontrado.")
+    rows = list(
+        await database.scalars(
+            select(AnalyticsCollaborationComment)
+            .where(
+                AnalyticsCollaborationComment.company_id == context.company_id,
+                AnalyticsCollaborationComment.resource_type == resource_type,
+                AnalyticsCollaborationComment.resource_id == resource_id,
+            )
+            .order_by(AnalyticsCollaborationComment.created_at)
+        )
+    )
+    mentions = list(
+        await database.execute(
+            select(
+                AnalyticsCollaborationMention.comment_id,
+                AnalyticsCollaborationMention.mentioned_user_id,
+            ).where(
+                AnalyticsCollaborationMention.company_id == context.company_id,
+                AnalyticsCollaborationMention.comment_id.in_([row.id for row in rows]),
+            )
+        )
+    ) if rows else []
+    grouped: dict[UUID, list[UUID]] = {}
+    for comment_id, user_id in mentions:
+        grouped.setdefault(comment_id, []).append(user_id)
+    return [
+        CommentResponse(
+            **CommentResponse.model_validate(row, from_attributes=True).model_dump(
+                exclude={"mentioned_user_ids"}
+            ),
+            mentioned_user_ids=grouped.get(row.id, []),
+        )
+        for row in rows
+    ]
+
+
+@router.post(
+    "/collaboration/{resource_type}/{resource_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_comment(
+    resource_type: str,
+    resource_id: UUID,
+    payload: CommentCreate,
+    principal: CanView,
+    database: DatabaseSession,
+) -> CommentResponse:
+    context = get_request_context(principal)
+    if resource_type not in {"report", "dashboard"} or not await _resource_exists(
+        database, context.company_id, resource_type, resource_id
+    ):
+        raise HTTPException(status_code=404, detail="Recurso não encontrado.")
+    if payload.parent_comment_id:
+        parent = await database.scalar(
+            select(AnalyticsCollaborationComment.id).where(
+                AnalyticsCollaborationComment.id == payload.parent_comment_id,
+                AnalyticsCollaborationComment.company_id == context.company_id,
+                AnalyticsCollaborationComment.resource_type == resource_type,
+                AnalyticsCollaborationComment.resource_id == resource_id,
+            )
+        )
+        if not parent:
+            raise HTTPException(status_code=422, detail="Comentário pai inválido.")
+    if payload.mentioned_user_ids:
+        membership = await database.execute(
+            text(
+                "SELECT user_id FROM company_users WHERE company_id=:company_id "
+                "AND status='active' AND user_id = ANY(:user_ids)"
+            ),
+            {"company_id": context.company_id, "user_ids": payload.mentioned_user_ids},
+        )
+        if set(membership.scalars()) != set(payload.mentioned_user_ids):
+            raise HTTPException(status_code=422, detail="Menção fora da empresa.")
+    comment = AnalyticsCollaborationComment(
+        company_id=context.company_id,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        parent_comment_id=payload.parent_comment_id,
+        body=payload.body,
+        created_by_user_id=context.user_id,
+    )
+    database.add(comment)
+    await database.flush()
+    for user_id in payload.mentioned_user_ids:
+        database.add(
+            AnalyticsCollaborationMention(
+                company_id=context.company_id,
+                comment_id=comment.id,
+                mentioned_user_id=user_id,
+            )
+        )
+    await database.commit()
+    await database.refresh(comment)
+    return CommentResponse(
+        **CommentResponse.model_validate(comment, from_attributes=True).model_dump(
+            exclude={"mentioned_user_ids"}
+        ),
+        mentioned_user_ids=payload.mentioned_user_ids,
+    )
+
+
+@router.post(
+    "/collaboration/{resource_type}/{resource_id}/follow",
+    response_model=FollowResponse,
+)
+async def follow(
+    resource_type: str,
+    resource_id: UUID,
+    principal: CanView,
+    database: DatabaseSession,
+) -> FollowResponse:
+    context = get_request_context(principal)
+    if resource_type not in {"report", "dashboard"} or not await _resource_exists(
+        database, context.company_id, resource_type, resource_id
+    ):
+        raise HTTPException(status_code=404, detail="Recurso não encontrado.")
+    existing = await database.scalar(
+        select(AnalyticsCollaborationFollower).where(
+            AnalyticsCollaborationFollower.company_id == context.company_id,
+            AnalyticsCollaborationFollower.resource_type == resource_type,
+            AnalyticsCollaborationFollower.resource_id == resource_id,
+            AnalyticsCollaborationFollower.user_id == context.user_id,
+        )
+    )
+    if existing:
+        await database.delete(existing)
+        following = False
+    else:
+        database.add(
+            AnalyticsCollaborationFollower(
+                company_id=context.company_id,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                user_id=context.user_id,
+            )
+        )
+        following = True
+    await database.commit()
+    return FollowResponse(
+        resource_type=resource_type, resource_id=resource_id, following=following
+    )

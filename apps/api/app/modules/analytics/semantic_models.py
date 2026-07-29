@@ -165,3 +165,97 @@ class AnalyticsReportRun(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now()
     )
+
+
+class AnalyticsCollaborationComment(Base):
+    __tablename__ = "analytics_collaboration_comments"
+    __table_args__ = (
+        CheckConstraint(
+            "resource_type IN ('report','dashboard')",
+            name="ck_analytics_collaboration_comments_resource",
+        ),
+        Index(
+            "ix_analytics_collaboration_comments_resource",
+            "company_id",
+            "resource_type",
+            "resource_id",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    resource_type: Mapped[str] = mapped_column(String(20))
+    resource_id: Mapped[UUID] = mapped_column(index=True)
+    parent_comment_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("analytics_collaboration_comments.id", ondelete="CASCADE")
+    )
+    body: Mapped[str] = mapped_column(Text)
+    created_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=func.now(),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AnalyticsCollaborationMention(Base):
+    __tablename__ = "analytics_collaboration_mentions"
+    __table_args__ = (
+        UniqueConstraint(
+            "comment_id",
+            "mentioned_user_id",
+            name="uq_analytics_collaboration_mentions_comment_user",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    comment_id: Mapped[UUID] = mapped_column(
+        ForeignKey("analytics_collaboration_comments.id", ondelete="CASCADE"), index=True
+    )
+    mentioned_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class AnalyticsCollaborationFollower(Base):
+    __tablename__ = "analytics_collaboration_followers"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "resource_type",
+            "resource_id",
+            "user_id",
+            name="uq_analytics_collaboration_followers_resource_user",
+        ),
+        CheckConstraint(
+            "resource_type IN ('report','dashboard')",
+            name="ck_analytics_collaboration_followers_resource",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    resource_type: Mapped[str] = mapped_column(String(20))
+    resource_id: Mapped[UUID] = mapped_column(index=True)
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
