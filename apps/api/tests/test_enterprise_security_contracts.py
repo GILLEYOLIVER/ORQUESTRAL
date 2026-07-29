@@ -197,7 +197,11 @@ def test_business_mutations_require_an_explicit_security_boundary() -> None:
             if "get_current_principal" not in dependency_names:
                 failures.append(f"{sorted(methods)} {route.path}: sem usuario autenticado")
             continue
-        if not {"permission_dependency", "require_platform_admin"} & dependency_names:
+        if not {
+            "permission_dependency",
+            "require_platform_admin",
+            "require_scim_access",
+        } & dependency_names:
             failures.append(f"{sorted(methods)} {route.path}: sem permissao explicita")
 
     assert not failures, "\n".join(failures)
@@ -212,7 +216,10 @@ def test_non_public_reads_require_an_authenticated_principal() -> None:
         if route.path in SIGNED_MONITOR_READS:
             assert "verify_agent_memory_monitor" in _dependency_names(route)
             continue
-        if "get_current_principal" not in _dependency_names(route):
+        if not {
+            "get_current_principal",
+            "require_scim_access",
+        } & _dependency_names(route):
             failures.append(f"GET {route.path}: sem usuario autenticado")
 
     assert not failures, "\n".join(failures)

@@ -1605,3 +1605,14 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Testes:** Ruff e MyPy aprovados; 336 testes completos da API aprovados.
 - **Fase atual concluida:** Fase 11 - Marketplace e plataforma para desenvolvedores, no recorte estrutural do roadmap.
 - **Proximo passo exato:** Fase 12 - identidade empresarial com OIDC/SSO e provisionamento SCIM, seguida de resiliencia, RLS ampliado e recuperacao de desastre.
+
+## Ciclo 111 - Fase 12: identidade empresarial e SCIM (2026-07-29)
+
+- **Concluido:** configuracao OIDC/SAML por empresa com segredo criptografado e resposta mascarada.
+- **Concluido:** tokens SCIM de servidor exibidos uma vez, armazenados como hash, com escopos, expiracao, revogacao e papel padrao.
+- **Concluido:** listagem, provisionamento e ativacao/desativacao SCIM de usuarios, limitados ao vinculo da empresa.
+- **Seguranca:** contexto tenant aplicado ao PostgreSQL antes da consulta do token, auditoria, eventos e RLS forcado.
+- **Transparencia:** provedor permanece `configured`; login federado nao e declarado ativo sem handshake real.
+- **Banco:** migracao `20260729_0123_enterprise_identity.py` validada em upgrade, downgrade para 0122 e novo upgrade.
+- **Testes:** Ruff e MyPy aprovados; 339 testes completos da API aprovados.
+- **Proximo passo exato:** ampliar verificacao automatica de RLS, testes hostis entre tenants e fronteiras de segredos.
