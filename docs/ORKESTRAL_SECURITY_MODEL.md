@@ -59,3 +59,16 @@ Alteracoes de politica, compartilhamentos e revogacoes registram ator, empresa, 
 - explicacao administrativa da decisao de acesso;
 - avaliacao controlada de PostgreSQL Row-Level Security;
 - SSO, MFA, SCIM, dispositivos e politicas condicionais na fase empresarial de identidade.
+
+## Verificacao RLS empresarial
+
+- toda tabela interna com `company_id` deve ter RLS habilitado e forcado;
+- a auditoria consulta `pg_catalog` e falha automaticamente em qualquer regressao;
+- o teste hostil usa `orkestral_tenant_runtime`, troca o tenant da transacao e
+  comprova que o registro externo deixa de existir;
+- `marketing_public_page_registry` e a unica excecao documentada: armazena
+  somente `public_id`, `company_id` e `page_id`, permitindo resolver o tenant
+  de uma pagina publica antes das consultas protegidas;
+- payloads de formularios, conteudo e demais dados nunca ficam nessa excecao.
+
+O Ciclo 112 confirmou RLS habilitado e forcado em 237 tabelas internas.

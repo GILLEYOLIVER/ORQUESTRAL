@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- este módulo exporta o singleton do roteador e seus guards locais. */
 import type { ReactNode } from "react";
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router";
 import { Alert } from "@orkestral/ui-components";
 import { AuthenticatedLayout } from "./layouts/AuthenticatedLayout";
 import { PublicLayout } from "./layouts/PublicLayout";

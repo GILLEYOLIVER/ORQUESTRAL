@@ -92,7 +92,7 @@ def compile_semantic_query(
         clauses.append(f"{item.field} {operator} :{parameter}")
         params[parameter] = item.value
     # Tabela, dimensoes, agregacoes e campos vieram exclusivamente de DATASETS.
-    query = f"SELECT {', '.join(selects)} FROM {contract.table}"  # noqa: S608
+    query = f"SELECT {', '.join(selects)} FROM {contract.table}"  # noqa: S608  # nosec B608
     query += " WHERE " + " AND ".join(clauses)
     if dimensions:
         query += " GROUP BY " + ", ".join(dimensions)

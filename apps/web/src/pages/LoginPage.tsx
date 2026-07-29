@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Link2, LockKeyhole, ShieldCheck, X } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { z } from "zod";
 import { Alert, Button, TextField } from "@orkestral/ui-components";
 import { ApiClientError, request } from "../lib/http";

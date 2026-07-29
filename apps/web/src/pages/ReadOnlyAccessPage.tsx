@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, LockKeyhole } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Alert } from "@orkestral/ui-components";
 import { ApiClientError } from "../lib/http";
 import { useSession } from "../session/context";

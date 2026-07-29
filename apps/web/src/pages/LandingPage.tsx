@@ -1,5 +1,5 @@
 import { ArrowRight, Bot, Cable, ShieldCheck, Workflow } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 export function LandingPage() {
   return (

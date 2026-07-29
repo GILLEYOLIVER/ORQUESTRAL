@@ -16,6 +16,14 @@ bash scripts/check-frontend-secret-boundary.sh
 printf '%s\n' 'Verificando a separação de identidades do PostgreSQL...'
 bash scripts/check-database-role-separation.sh
 
+printf '%s\n' 'Verificando RLS forçado em todas as tabelas tenant...'
+if docker compose ps --status running --services 2>/dev/null | rg -qx 'api'; then
+  docker compose exec -T api sh -lc \
+    'cd /workspace/apps/api && uv run python -m app.scripts.check_tenant_rls'
+else
+  uv run --package orkestral-api python -m app.scripts.check_tenant_rls
+fi
+
 printf '%s\n' 'Verificando pinning imutavel das GitHub Actions...'
 unpinned="$({
   grep -REn 'uses:[[:space:]]+[^[:space:]]+@' .github/workflows || true
