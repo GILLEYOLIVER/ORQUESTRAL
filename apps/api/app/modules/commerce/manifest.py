@@ -7,7 +7,7 @@ from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 commerce_module = ModuleDefinition(
     code="commerce",
     name="Comércio e receita",
-    version="1.1.0",
+    version="1.2.0",
     permissions=(
         "commerce.view",
         "commerce.catalog.manage",
@@ -35,5 +35,5 @@ commerce_module = ModuleDefinition(
         "commerce.order.fulfilled",
     ),
     events_consumed=("inventory.item.updated", "crm.price_book.published"),
-    migrations=("20260727_0115", "20260728_0116"),
+    migrations=("20260727_0115", "20260728_0116", "20260728_0117"),
 )

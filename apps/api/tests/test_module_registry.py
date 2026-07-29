@@ -24,7 +24,11 @@ def test_registry_loads_only_installed_modules() -> None:
     assert installed[0].version == "1.0.0"
     assert installed[0].migrations == ("20260720_0022",)
     assert "analytics.measurements.manage" in installed[0].permissions
-    assert installed[1].migrations == ("20260727_0115", "20260728_0116")
+    assert installed[1].migrations == (
+        "20260727_0115",
+        "20260728_0116",
+        "20260728_0117",
+    )
     assert "commerce.pricing.resolve" in installed[1].permissions
     assert installed[2].migrations == (
         "20260716_0004",

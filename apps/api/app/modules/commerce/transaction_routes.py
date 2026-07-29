@@ -160,3 +160,191 @@ async def fulfill(
         )
     except CommerceTransactionError as error:
         _raise(error)
+
+
+from fastapi import Header, Request  # noqa: E402
+
+from app.modules.commerce.settlement_schemas import (  # noqa: E402
+    CommissionCreate,
+    CommissionResponse,
+    PaymentIntentCreate,
+    PaymentIntentResponse,
+    PaymentWebhook,
+    ReturnCreate,
+    ReturnReceive,
+    ReturnResponse,
+    SettlementOverview,
+)
+from app.modules.commerce.settlement_service import (  # noqa: E402
+    PaymentSecurityError,
+    accrue_commission,
+    approve_commission,
+    create_payment_intent,
+    create_return,
+    process_payment_webhook,
+    receive_return,
+    settlement_overview,
+    verify_webhook_signature,
+)
+
+
+@router.get("/settlement", response_model=SettlementOverview)
+async def settlement(
+    principal: CanView,
+    database: DatabaseSession,
+    order_id: UUID | None = None,
+) -> SettlementOverview:
+    context = get_request_context(principal)
+    return await settlement_overview(
+        database, company_id=context.company_id, order_id=order_id
+    )
+
+
+@router.post(
+    "/orders/{order_id}/payment-intents",
+    response_model=PaymentIntentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def payment_intent(
+    order_id: UUID,
+    payload: PaymentIntentCreate,
+    principal: CanConfirmOrders,
+    database: DatabaseSession,
+) -> PaymentIntentResponse:
+    context = get_request_context(principal)
+    try:
+        return PaymentIntentResponse.model_validate(
+            await create_payment_intent(
+                database,
+                company_id=context.company_id,
+                actor_user_id=context.user_id,
+                order_id=order_id,
+                payload=payload,
+            )
+        )
+    except CommerceTransactionError as error:
+        _raise(error)
+
+
+@router.post(
+    "/payments/webhooks/{provider}",
+    response_model=PaymentIntentResponse,
+)
+async def payment_webhook(
+    provider: str,
+    payload: PaymentWebhook,
+    request: Request,
+    database: DatabaseSession,
+    signature: str | None = Header(default=None, alias="X-Orkestral-Signature"),
+) -> PaymentIntentResponse:
+    raw_body = await request.body()
+    try:
+        verify_webhook_signature(provider, raw_body, signature)
+        return PaymentIntentResponse.model_validate(
+            await process_payment_webhook(
+                database, provider=provider, payload=payload, raw_body=raw_body
+            )
+        )
+    except PaymentSecurityError as error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)
+        ) from error
+    except CommerceTransactionError as error:
+        _raise(error)
+
+
+@router.post(
+    "/orders/{order_id}/returns",
+    response_model=ReturnResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def request_return(
+    order_id: UUID,
+    payload: ReturnCreate,
+    principal: CanManageOrders,
+    database: DatabaseSession,
+) -> ReturnResponse:
+    context = get_request_context(principal)
+    try:
+        return ReturnResponse.model_validate(
+            await create_return(
+                database,
+                company_id=context.company_id,
+                actor_user_id=context.user_id,
+                order_id=order_id,
+                payload=payload,
+            )
+        )
+    except CommerceTransactionError as error:
+        _raise(error)
+
+
+@router.post("/returns/{return_id}/receive", response_model=ReturnResponse)
+async def return_received(
+    return_id: UUID,
+    payload: ReturnReceive,
+    principal: CanConfirmOrders,
+    database: DatabaseSession,
+) -> ReturnResponse:
+    context = get_request_context(principal)
+    try:
+        return ReturnResponse.model_validate(
+            await receive_return(
+                database,
+                company_id=context.company_id,
+                actor_user_id=context.user_id,
+                return_id=return_id,
+                payload=payload,
+            )
+        )
+    except CommerceTransactionError as error:
+        _raise(error)
+
+
+@router.post(
+    "/orders/{order_id}/commissions",
+    response_model=CommissionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def commission(
+    order_id: UUID,
+    payload: CommissionCreate,
+    principal: CanConfirmOrders,
+    database: DatabaseSession,
+) -> CommissionResponse:
+    context = get_request_context(principal)
+    try:
+        return CommissionResponse.model_validate(
+            await accrue_commission(
+                database,
+                company_id=context.company_id,
+                actor_user_id=context.user_id,
+                order_id=order_id,
+                payload=payload,
+            )
+        )
+    except CommerceTransactionError as error:
+        _raise(error)
+
+
+@router.post(
+    "/commissions/{commission_id}/approve",
+    response_model=CommissionResponse,
+)
+async def commission_approved(
+    commission_id: UUID,
+    principal: CanConfirmOrders,
+    database: DatabaseSession,
+) -> CommissionResponse:
+    context = get_request_context(principal)
+    try:
+        return CommissionResponse.model_validate(
+            await approve_commission(
+                database,
+                company_id=context.company_id,
+                actor_user_id=context.user_id,
+                commission_id=commission_id,
+            )
+        )
+    except CommerceTransactionError as error:
+        _raise(error)

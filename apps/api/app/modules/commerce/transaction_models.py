@@ -114,6 +114,9 @@ class CommerceOrderItem(Base):
     )
 
 
+from app.modules.commerce import settlement_models as _settlement_models  # noqa: E402,F401
+
+
 class CommerceInventoryReservation(Base):
     __tablename__ = "commerce_inventory_reservations"
     __table_args__ = (
