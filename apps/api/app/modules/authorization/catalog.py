@@ -315,6 +315,15 @@ PERMISSION_CATALOG = (
     PermissionDefinition(
         "plugins.manage", "plugins", "manage", "Ativar plugins e administrar credenciais"
     ),
+    PermissionDefinition(
+        "developer.view", "developer", "view", "Visualizar sandboxes e promoções"
+    ),
+    PermissionDefinition(
+        "developer.manage", "developer", "manage", "Criar e arquivar sandboxes"
+    ),
+    PermissionDefinition(
+        "developer.promote", "developer", "promote", "Decidir promoções entre ambientes"
+    ),
     PermissionDefinition("billing.view", "billing", "view", "Visualizar faturamento"),
     PermissionDefinition("billing.manage", "billing", "manage", "Gerenciar faturamento"),
     PermissionDefinition("notifications.view", "notifications", "view", "Visualizar notificações"),
