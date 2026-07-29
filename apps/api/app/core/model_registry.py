@@ -264,5 +264,6 @@ from app.modules.agents import runtime_models as _agent_runtime_models  # noqa: 
 from app.modules.authorization import policy_models as _policy_models  # noqa: F401
 from app.modules.events import models as _event_models  # noqa: F401
 from app.modules.metadata import models as _metadata_models  # noqa: F401
+from app.modules.portals import models as _portal_models  # noqa: F401
 from app.modules.support import agent_handoff_models as _support_agent_handoff_models  # noqa: F401
 from app.modules.support import engagement_models as _support_engagement_models  # noqa: F401

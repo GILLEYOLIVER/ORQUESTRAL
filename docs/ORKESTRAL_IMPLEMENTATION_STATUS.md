@@ -1563,3 +1563,14 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Migracao:** `20260728_0119_analytics_collaboration.py`, validada em downgrade para 0118 e novo upgrade.
 - **Testes:** Ruff, MyPy e 327 testes da API aprovados.
 - **Proximo passo exato:** concluir a Fase 10 com definicoes de portais externos, membros convidados e sessoes de escopo restrito.
+
+## Ciclo 107 - Fase 10: portais externos governados (2026-07-29)
+
+- **Concluido:** definicoes de portais por empresa para clientes, parceiros, fornecedores e colaboradores, com modulos e identidade visual em listas permitidas.
+- **Concluido:** membros externos vinculados a usuarios existentes e convites de uso unico com expiracao; somente o hash SHA-256 do token e persistido.
+- **Concluido:** ativacao autenticada do convite e consulta de acesso restrita ao portal e aos modulos concedidos.
+- **Seguranca:** permissoes dedicadas `portals.view` e `portals.manage`, auditoria de criacao/convite/aceite e nenhuma conta ou senha paralela.
+- **Banco:** migracao `20260729_0120_governed_portals.py` validada em upgrade, downgrade para 0119 e novo upgrade; RLS habilitado e forcado nas tres tabelas.
+- **Testes:** Ruff e MyPy aprovados; API com 329 testes; frontend com 19 testes, typecheck e build de producao aprovados.
+- **Fase atual concluida:** Fase 10 - Analytics, portais e colaboracao, no recorte estrutural definido pelo roadmap.
+- **Proximo passo exato:** Fase 11 - marketplace empresarial, iniciando por integridade, assinatura, compatibilidade, instalacao e rollback de pacotes.

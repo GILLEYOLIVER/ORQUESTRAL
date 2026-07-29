@@ -38,6 +38,7 @@ SELF_SERVICE_MUTATIONS = frozenset(
         "/notifications/preferences",
         "/notifications/read-all",
         "/notifications/{notification_id}/read",
+        "/portals/invitations/accept",
     }
 )
 
