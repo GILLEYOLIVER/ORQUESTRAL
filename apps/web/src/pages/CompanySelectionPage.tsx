@@ -1,5 +1,5 @@
 import { Building2 } from "lucide-react";
-import { Navigate } from "react-router-dom";
+import { Navigate } from "react-router";
 import { Button, Card } from "@orkestral/ui-components";
 import { useSession } from "../session/context";
 

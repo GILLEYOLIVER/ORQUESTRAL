@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { Link, useRouteError } from "react-router-dom";
+import { Link, useRouteError } from "react-router";
 import { Button, Card } from "@orkestral/ui-components";
 
 export function ErrorPage() {

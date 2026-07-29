@@ -1616,3 +1616,14 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Banco:** migracao `20260729_0123_enterprise_identity.py` validada em upgrade, downgrade para 0122 e novo upgrade.
 - **Testes:** Ruff e MyPy aprovados; 339 testes completos da API aprovados.
 - **Proximo passo exato:** ampliar verificacao automatica de RLS, testes hostis entre tenants e fronteiras de segredos.
+
+## Ciclo 112 - Fase 12: RLS e testes hostis (2026-07-29)
+
+- **Concluido:** RLS forcado nas sete tabelas legadas de CDC e direitos de titulares que ainda estavam apenas habilitadas.
+- **Concluido:** inventario executavel que falha se qualquer tabela tenant interna nao possuir RLS habilitado e forcado.
+- **Teste hostil:** o papel `orkestral_tenant_runtime` nao visualiza o registro ao trocar para um tenant forjado.
+- **Frontend:** React Router atualizado para `8.3.0`, eliminando `GHSA-qwww-vcr4-c8h2`; 19 testes, tipagem e build aprovados.
+- **Auditoria:** segredos, fronteira do navegador, papeis PostgreSQL, 237 tabelas RLS, Actions, Node, Bandit e Python sem bloqueios.
+- **Banco:** migracao `20260729_0124_force_remaining_rls.py` validada em upgrade, downgrade para 0123 e novo upgrade.
+- **Testes:** 342 testes completos da API aprovados.
+- **Proximo passo exato:** recuperacao de desastre, restauracao verificada, testes de carga e contratos de implantacao dedicada.

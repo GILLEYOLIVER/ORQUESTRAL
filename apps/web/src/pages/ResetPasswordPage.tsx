@@ -2,7 +2,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyRound } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { z } from "zod";
 import type { MessageResponse } from "@orkestral/shared-types";
 import { Alert, Button, Card, TextField } from "@orkestral/ui-components";

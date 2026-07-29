@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.modules.identity.schemas import IdentityProviderCreate
+from app.modules.identity.schemas import IdentityProviderCreate, IdentityProviderResponse
 from app.modules.identity.service import create_scim_token, parse_scim_token
 
 
@@ -35,3 +35,8 @@ def test_oidc_configuration_requires_all_security_endpoints() -> None:
                 "client_id": "client",
             }
         )
+
+
+def test_identity_responses_never_define_client_secret() -> None:
+    assert "client_secret" not in IdentityProviderResponse.model_fields
+    assert "encrypted_client_secret" not in IdentityProviderResponse.model_fields

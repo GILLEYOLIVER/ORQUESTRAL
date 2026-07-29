@@ -26,7 +26,7 @@ import {
   Workflow,
   Warehouse,
 } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router";
 import { environment } from "../lib/environment";
 import { isModuleActive, useModules } from "../modules/useModules";
 import { useNotificationSummary } from "../notifications/useNotifications";
