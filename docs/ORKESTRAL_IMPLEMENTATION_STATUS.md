@@ -1627,3 +1627,17 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Banco:** migracao `20260729_0124_force_remaining_rls.py` validada em upgrade, downgrade para 0123 e novo upgrade.
 - **Testes:** 342 testes completos da API aprovados.
 - **Proximo passo exato:** recuperacao de desastre, restauracao verificada, testes de carga e contratos de implantacao dedicada.
+
+## Ciclo 113 - Fase 12: resiliencia e recuperacao de desastre (2026-07-29)
+
+- **Concluido no codigo:** backup PostgreSQL portátil, verificação de integridade e permissões, restauração compatível e drill isolado.
+- **Concluido no codigo:** smoke de carga somente leitura com orçamento de erro e p95.
+- **Operacao:** runbooks de SLO, incidente, capacidade, recuperação e instalação dedicada independente de provedor.
+- **Seguranca:** drill temporário não altera o banco ativo e verifica Alembic, schema e RLS forçada após restauração.
+- **Fase atual:** Fase 12 concluída no recorte estrutural do roadmap.
+- **Transparencia:** alta disponibilidade, handshake real de SSO, certificações e capacidade de produção dependem da infraestrutura e do contrato escolhidos; não são declarados ativos por documentação.
+- **Validacao:** MyPy em 336 fontes, 346 testes da API, 19 testes web, TypeScript, build, backup, restauração isolada, carga, segurança e prontidão aprovados.
+- **Prova de recuperacao:** revisão `20260729_0124`, 253 tabelas e nenhuma falha de RLS no banco restaurado.
+- **Prova de carga:** 200 requisições, zero erro e p95 de 271,2 ms.
+- **Divida conhecida:** bundle web de aproximadamente 1,15 MB antes de gzip e 112 arquivos históricos pendentes de formatação global; os arquivos alterados no ciclo estão limpos.
+- **Proximo passo exato:** publicar o ciclo e manter a evolução por releases de produto, sem novas fases estruturais pendentes no Prompt Mestre.

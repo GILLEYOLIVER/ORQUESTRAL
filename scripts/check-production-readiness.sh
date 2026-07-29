@@ -28,11 +28,19 @@ contains_regex() {
 required_files=(
   .env.production.example
   .github/workflows/deploy-production.yml
+  docs/ORKESTRAL_DISASTER_RECOVERY.md
+  docs/ORKESTRAL_ENTERPRISE_OPERATIONS.md
   docs/infrastructure/production.md
+  infrastructure/scripts/restore-drill.sh
+  scripts/load-smoke.sh
   scripts/verify-deployment.sh
 )
 for file in "${required_files[@]}"; do
   [[ -f "$file" ]] || fail "missing $file"
+done
+
+for script in infrastructure/scripts/restore-drill.sh scripts/load-smoke.sh; do
+  [[ -x "$script" ]] || fail "script is not executable: $script"
 done
 
 workflow_markers=(

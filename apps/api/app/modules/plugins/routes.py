@@ -5,7 +5,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from orkestral_plugin_sdk import PluginSDKError
+from orkestral_plugin_sdk import (
+    MarketplaceContractError,
+    PackageContract,
+    PluginSDKError,
+)
 from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError
 
@@ -23,8 +27,6 @@ from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.plugins.adapters import MANAGED_VAULT_PROVIDERS, get_plugin_runtime
 from app.modules.plugins.crypto import CredentialVault, CredentialVaultError, mask_credential_fields
 from app.modules.plugins.marketplace import (
-    MarketplaceContractError,
-    PackageContract,
     install_release,
     publisher_fingerprint,
     rollback_release,
@@ -524,7 +526,9 @@ async def publish_marketplace_version(
         )
     )
     if plugin is None or publisher is None:
-        raise HTTPException(status_code=404, detail="Plugin ou publicador confiável não encontrado.")
+        raise HTTPException(
+            status_code=404, detail="Plugin ou publicador confiável não encontrado."
+        )
     contract = PackageContract(
         plugin_code=plugin.code,
         version=payload.version,
