@@ -44,8 +44,12 @@ anterior e nao apaga evidencias.
 - somente permissoes existentes no catalogo podem ser solicitadas;
 - runtimes continuam sendo adaptadores revisados do nucleo.
 
-## Evolucao
+## Ferramentas para desenvolvedores
 
-O proximo recorte fornece CLI e SDK para montar e assinar contratos, validar
-pacotes localmente e promover configuracoes entre desenvolvimento, teste,
-homologacao e producao.
+O SDK `0.2.0` fornece o contrato canonico consumido pela API e pela CLI
+`orkestral-plugin`. Os comandos `keygen`, `sign` e `verify` permitem montar e
+validar o pacote antes da publicacao. A chave privada permanece local, com
+permissao `0600`.
+
+O proximo recorte governa sandboxes e aprovacoes de promocao entre
+desenvolvimento, teste, homologacao e producao.

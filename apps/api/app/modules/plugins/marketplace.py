@@ -1,14 +1,21 @@
 from __future__ import annotations
 
-import base64
-import binascii
-import hashlib
-import json
-from dataclasses import dataclass
 from typing import Any
 
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+from orkestral_plugin_sdk.marketplace import (
+    MarketplaceContractError,
+    PackageContract,
+    is_version_supported,
+)
+from orkestral_plugin_sdk.marketplace import (
+    canonical_package_payload as sdk_canonical_package_payload,
+)
+from orkestral_plugin_sdk.marketplace import (
+    publisher_fingerprint as sdk_publisher_fingerprint,
+)
+from orkestral_plugin_sdk.marketplace import (
+    validate_package_signature as sdk_validate_package_signature,
+)
 from sqlalchemy import select
 
 from app.core.security import utc_now
@@ -25,81 +32,24 @@ from app.modules.plugins.models import (
 from app.modules.plugins.schemas import PluginInstallationResponse
 
 
-class MarketplaceContractError(ValueError):
-    pass
-
-
-@dataclass(frozen=True, slots=True)
-class PackageContract:
-    plugin_code: str
-    version: str
-    manifest: dict[str, Any]
-    artifact_digest: str
-    min_platform_version: str
-    max_platform_version: str | None
-    requested_permissions: list[str]
-
-
-def _semver(value: str) -> tuple[int, int, int]:
-    parts = value.split("-", 1)[0].split(".")
-    if len(parts) != 3 or any(not part.isdigit() for part in parts):
-        raise MarketplaceContractError(f"Versão semântica inválida: {value}")
-    return int(parts[0]), int(parts[1]), int(parts[2])
-
-
-def is_version_supported(
-    platform_version: str, minimum: str, maximum: str | None
-) -> bool:
-    current = _semver(platform_version)
-    return current >= _semver(minimum) and (maximum is None or current <= _semver(maximum))
-
-
 def canonical_package_payload(contract: PackageContract) -> bytes:
-    payload = {
-        "artifact_digest": contract.artifact_digest,
-        "manifest": contract.manifest,
-        "max_platform_version": contract.max_platform_version,
-        "min_platform_version": contract.min_platform_version,
-        "plugin_code": contract.plugin_code,
-        "requested_permissions": sorted(set(contract.requested_permissions)),
-        "version": contract.version,
-    }
-    return json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode()
-
-
-def _decode_base64(value: str, label: str) -> bytes:
-    try:
-        return base64.b64decode(value, validate=True)
-    except (ValueError, binascii.Error) as error:
-        raise MarketplaceContractError(f"{label} não possui Base64 válido.") from error
+    return sdk_canonical_package_payload(contract)
 
 
 def publisher_fingerprint(public_key: str) -> str:
-    key = _decode_base64(public_key, "Chave pública")
-    if len(key) != 32:
-        raise MarketplaceContractError("Chave pública Ed25519 deve possuir 32 bytes.")
-    return hashlib.sha256(key).hexdigest()
+    return sdk_publisher_fingerprint(public_key)
 
 
 def validate_package_signature(
     public_key: str, signature: str, contract: PackageContract
 ) -> None:
-    key = _decode_base64(public_key, "Chave pública")
-    signature_bytes = _decode_base64(signature, "Assinatura")
-    if len(key) != 32 or len(signature_bytes) != 64:
-        raise MarketplaceContractError("Contrato Ed25519 inválido.")
     known_permissions = {item.code for item in PERMISSION_CATALOG}
     unknown = sorted(set(contract.requested_permissions) - known_permissions)
     if unknown:
         raise MarketplaceContractError(
             f"Permissões desconhecidas no pacote: {', '.join(unknown)}"
         )
-    try:
-        Ed25519PublicKey.from_public_bytes(key).verify(
-            signature_bytes, canonical_package_payload(contract)
-        )
-    except InvalidSignature as error:
-        raise MarketplaceContractError("Assinatura do pacote inválida.") from error
+    sdk_validate_package_signature(public_key, signature, contract)
 
 
 def _response(
@@ -177,7 +127,7 @@ async def _validate_dependencies(
                 )
             )
         ).scalar_one_or_none()
-        if installed is None or _semver(installed) < _semver(minimum):
+        if installed is None or not is_version_supported(installed, minimum, None):
             raise MarketplaceContractError(
                 f"Dependência ausente ou incompatível: {code}>={minimum}"
             )
