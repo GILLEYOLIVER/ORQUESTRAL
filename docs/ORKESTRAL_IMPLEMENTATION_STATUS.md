@@ -1553,3 +1553,13 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Migracao:** `20260728_0118_semantic_analytics.py`, validada em downgrade para 0117 e novo upgrade.
 - **Testes:** Ruff e MyPy aprovados; conjunto completo alcançou 324 aprovados antes da correcao da expectativa de manifesto, seguida de 11 testes criticos aprovados; total logico atual 325.
 - **Proximo passo exato:** completar a Fase 10 com portais externos governados e colaboracao contextual em registros.
+
+## Ciclo 106 - Fase 10: colaboracao contextual (2026-07-28)
+
+- **Concluido:** comentarios e respostas em relatorios e dashboards.
+- **Concluido:** mencoes limitadas a membros ativos da mesma empresa.
+- **Concluido:** acompanhamento de recursos por usuario.
+- **Seguranca:** resolucao do recurso por `company_id`, permissao no backend e tres tabelas com RLS forcado.
+- **Migracao:** `20260728_0119_analytics_collaboration.py`, validada em downgrade para 0118 e novo upgrade.
+- **Testes:** Ruff, MyPy e 327 testes da API aprovados.
+- **Proximo passo exato:** concluir a Fase 10 com definicoes de portais externos, membros convidados e sessoes de escopo restrito.

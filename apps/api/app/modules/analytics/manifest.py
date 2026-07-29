@@ -5,7 +5,7 @@ from app.modules.modularity.contract import ModuleDefinition, ModuleMenu
 analytics_module = ModuleDefinition(
     code="analytics",
     name="Analytics",
-    version="2.0.0",
+    version="2.1.0",
     permissions=(
         "analytics.view",
         "analytics.indicators.manage",
@@ -20,5 +20,5 @@ analytics_module = ModuleDefinition(
         ),
     ),
     events_published=("analytics.indicator.created", "analytics.measurement.recorded"),
-    migrations=("20260720_0022", "20260728_0118"),
+    migrations=("20260720_0022", "20260728_0118", "20260728_0119"),
 )
