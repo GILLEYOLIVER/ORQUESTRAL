@@ -30,6 +30,7 @@ from app.modules.modularity.registry import module_registry
 from app.modules.modularity.routes import router as modules_router
 from app.modules.notifications.routes import router as notifications_router
 from app.modules.plugins.routes import router as plugins_router
+from app.modules.portals.routes import router as portals_router
 from app.modules.users.routes import router as users_router
 from app.modules.workflows.routes import router as workflows_router
 from app.modules.workflows.routes import webhook_router as workflow_webhooks_router
@@ -92,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(users_router)
     application.include_router(modules_router)
     application.include_router(notifications_router)
+    application.include_router(portals_router)
     application.include_router(plugins_router)
     application.include_router(workflows_router)
     application.include_router(workflow_webhooks_router)

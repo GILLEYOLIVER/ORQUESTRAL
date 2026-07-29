@@ -37,6 +37,13 @@ PERMISSION_CATALOG = (
         "access_links.manage",
         "Gerar links seguros de acesso somente leitura",
     ),
+    PermissionDefinition("portals.view", "portals", "view", "Visualizar portais da empresa"),
+    PermissionDefinition(
+        "portals.manage",
+        "portals",
+        "manage",
+        "Configurar portais e convites externos da empresa",
+    ),
     PermissionDefinition("roles.view", "roles", "view", "Visualizar papéis e permissões"),
     PermissionDefinition("roles.create", "roles", "create", "Criar papéis personalizados"),
     PermissionDefinition("roles.update", "roles", "update", "Alterar papéis personalizados"),
