@@ -2,7 +2,6 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 BACKUP_DIR="${1:-}"
 
 if [[ -z "${BACKUP_DIR}" || ! -d "${BACKUP_DIR}" ]]; then
@@ -13,27 +12,29 @@ if [[ "${CONFIRM_RESTORE:-}" != "YES" ]]; then
   printf 'Restauração cancelada. Defina CONFIRM_RESTORE=YES para confirmar.\n' >&2
   exit 1
 fi
-if [[ ! -f "${ENV_FILE}" ]]; then
-  printf 'Arquivo de ambiente não encontrado: %s\n' "${ENV_FILE}" >&2
-  exit 1
-fi
-
-set -a
-# shellcheck disable=SC1090
-source "${ENV_FILE}"
-set +a
-
-(
-  cd "${BACKUP_DIR}"
-  shasum -a 256 -c SHA256SUMS
-)
+uv run --project "${ROOT_DIR}/apps/api" \
+  python -m app.scripts.resilience verify-backup "${BACKUP_DIR}"
 
 docker compose --project-directory "${ROOT_DIR}" stop api worker n8n object-storage
-gunzip -c "${BACKUP_DIR}/postgres.sql.gz" | docker compose \
-  --project-directory "${ROOT_DIR}" exec -T postgres \
-  psql --set ON_ERROR_STOP=on --username="${POSTGRES_USER}" postgres
+if [[ -f "${BACKUP_DIR}/postgres.dump" ]]; then
+  docker compose --project-directory "${ROOT_DIR}" exec -T postgres \
+    sh -lc 'exec pg_restore \
+      --username="$POSTGRES_USER" \
+      --dbname="$POSTGRES_DB" \
+      --clean \
+      --if-exists \
+      --no-owner \
+      --no-acl \
+      --exit-on-error \
+      --single-transaction' <"${BACKUP_DIR}/postgres.dump"
+else
+  gunzip -c "${BACKUP_DIR}/postgres.sql.gz" | docker compose \
+    --project-directory "${ROOT_DIR}" exec -T postgres \
+    sh -lc 'exec psql --set ON_ERROR_STOP=on --username="$POSTGRES_USER" postgres'
+fi
 
 for volume in object-storage-data n8n-data; do
+  [[ -f "${BACKUP_DIR}/${volume}.tar.gz" ]] || continue
   docker run --rm \
     -v "orkestral_${volume}:/target" \
     -v "${BACKUP_DIR}:/backup:ro" \

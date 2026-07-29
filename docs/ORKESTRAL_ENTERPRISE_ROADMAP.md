@@ -362,6 +362,10 @@ Criterio de saida:
 
 Objetivo: autorizar clientes enterprise e implantacoes dedicadas.
 
+Situacao: concluida no recorte estrutural em 29/07/2026. Integracoes reais de
+SSO, capacidade, alta disponibilidade e compliance continuam condicionadas ao
+provedor e ao contrato de cada ambiente, sem falsa declaracao de operacao.
+
 Entregas:
 
 1. MFA, OIDC, SAML e SCIM.
