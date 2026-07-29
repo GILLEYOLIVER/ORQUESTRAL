@@ -48,6 +48,58 @@ class Plugin(Base):
     )
 
 
+class PluginPublisher(Base):
+    __tablename__ = "plugin_publishers"
+    __table_args__ = (
+        CheckConstraint("status IN ('trusted', 'revoked')", name="ck_plugin_publishers_status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    code: Mapped[str] = mapped_column(CITEXT(), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    public_key: Mapped[str] = mapped_column(String(128))
+    key_fingerprint: Mapped[str] = mapped_column(String(64), unique=True)
+    status: Mapped[str] = mapped_column(String(20), default="trusted", server_default="trusted")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
+class PluginPackageVersion(Base):
+    __tablename__ = "plugin_package_versions"
+    __table_args__ = (
+        UniqueConstraint("plugin_id", "version", name="uq_plugin_package_versions_release"),
+        CheckConstraint(
+            "status IN ('published', 'revoked')", name="ck_plugin_package_versions_status"
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    plugin_id: Mapped[UUID] = mapped_column(
+        ForeignKey("plugins.id", ondelete="CASCADE"), index=True
+    )
+    publisher_id: Mapped[UUID] = mapped_column(
+        ForeignKey("plugin_publishers.id", ondelete="RESTRICT"), index=True
+    )
+    version: Mapped[str] = mapped_column(String(32))
+    manifest: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    artifact_digest: Mapped[str] = mapped_column(String(64))
+    signature: Mapped[str] = mapped_column(String(128))
+    min_platform_version: Mapped[str] = mapped_column(String(32))
+    max_platform_version: Mapped[str | None] = mapped_column(String(32))
+    requested_permissions: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    status: Mapped[str] = mapped_column(String(20), default="published", server_default="published")
+    published_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now()
+    )
+
+
 class CompanyPlugin(Base):
     __tablename__ = "company_plugins"
     __table_args__ = (
@@ -64,6 +116,9 @@ class CompanyPlugin(Base):
     plugin_id: Mapped[UUID] = mapped_column(
         ForeignKey("plugins.id", ondelete="CASCADE"), index=True
     )
+    installed_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("plugin_package_versions.id", ondelete="SET NULL"), index=True
+    )
     status: Mapped[str] = mapped_column(String(20), default="inactive", server_default="inactive")
     configuration: Mapped[dict[str, Any]] = mapped_column(
         JSONB, default=dict, server_default=text("'{}'::jsonb")
@@ -75,6 +130,44 @@ class CompanyPlugin(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CompanyPluginInstallation(Base):
+    __tablename__ = "company_plugin_installations"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('installed', 'replaced')",
+            name="ck_company_plugin_installations_status",
+        ),
+        CheckConstraint(
+            "operation IN ('install', 'rollback')",
+            name="ck_company_plugin_installations_operation",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    company_id: Mapped[UUID] = mapped_column(
+        ForeignKey("companies.id", ondelete="CASCADE"), index=True
+    )
+    plugin_id: Mapped[UUID] = mapped_column(
+        ForeignKey("plugins.id", ondelete="CASCADE"), index=True
+    )
+    package_version_id: Mapped[UUID] = mapped_column(
+        ForeignKey("plugin_package_versions.id", ondelete="RESTRICT"), index=True
+    )
+    previous_version_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("plugin_package_versions.id", ondelete="SET NULL"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(20), default="installed")
+    operation: Mapped[str] = mapped_column(String(20), default="install")
+    installed_by_user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    installed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
 
 

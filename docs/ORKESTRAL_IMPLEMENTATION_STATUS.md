@@ -1574,3 +1574,13 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Testes:** Ruff e MyPy aprovados; API com 329 testes; frontend com 19 testes, typecheck e build de producao aprovados.
 - **Fase atual concluida:** Fase 10 - Analytics, portais e colaboracao, no recorte estrutural definido pelo roadmap.
 - **Proximo passo exato:** Fase 11 - marketplace empresarial, iniciando por integridade, assinatura, compatibilidade, instalacao e rollback de pacotes.
+
+## Ciclo 108 - Fase 11: cadeia segura do marketplace (2026-07-29)
+
+- **Concluido:** publicadores confiaveis com chave Ed25519 e fingerprint SHA-256.
+- **Concluido:** versoes assinadas sobre manifesto canonico, digest do artefato, compatibilidade e permissoes solicitadas.
+- **Concluido:** instalacao por empresa, validacao de dependencias e rollback com historico auditavel.
+- **Seguranca:** administracao global separada da instalacao tenant; nenhum codigo arbitrario de pacote e executado.
+- **Banco:** migracao `20260729_0121_marketplace_supply_chain.py` validada em upgrade, downgrade para 0120 e novo upgrade; RLS forcado no historico de instalacoes.
+- **Testes:** Ruff e MyPy aprovados; 332 testes completos da API aprovados.
+- **Proximo passo exato:** concluir a Fase 11 com SDK, CLI, sandboxes e promocao governada entre ambientes.

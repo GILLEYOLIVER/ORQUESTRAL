@@ -96,9 +96,12 @@ from app.modules.notifications.models import (
 )
 from app.modules.plugins.models import (
     CompanyPlugin,
+    CompanyPluginInstallation,  # noqa: F401
     IntegrationCredential,
     Plugin,
     PluginConnectionTest,
+    PluginPackageVersion,  # noqa: F401
+    PluginPublisher,  # noqa: F401
 )
 from app.modules.projects.models import (
     Project,

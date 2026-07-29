@@ -24,8 +24,10 @@ GLOBAL_TABLES = frozenset(
         "modules_catalog",
         "password_reset_tokens",
         "permissions",
-        "plans",
-        "plugins",
+    "plans",
+    "plugin_package_versions",
+    "plugin_publishers",
+    "plugins",
         "users",
     }
 )
