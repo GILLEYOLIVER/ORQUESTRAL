@@ -53,6 +53,10 @@ from app.modules.developer.models import (  # noqa: F401
 )
 from app.modules.finance.models import FinancialAccount, FinancialCategory, FinancialEntry
 from app.modules.hr.models import HRDepartment, HREmployee, HRLeaveRequest
+from app.modules.identity.models import (  # noqa: F401
+    EnterpriseIdentityProvider,
+    SCIMProvisioningToken,
+)
 from app.modules.inventory.models import (
     InventoryBalance,
     InventoryCategory,

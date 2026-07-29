@@ -324,6 +324,12 @@ PERMISSION_CATALOG = (
     PermissionDefinition(
         "developer.promote", "developer", "promote", "Decidir promoções entre ambientes"
     ),
+    PermissionDefinition(
+        "identity.view", "identity", "view", "Visualizar identidade empresarial"
+    ),
+    PermissionDefinition(
+        "identity.manage", "identity", "manage", "Configurar provedores e SCIM"
+    ),
     PermissionDefinition("billing.view", "billing", "view", "Visualizar faturamento"),
     PermissionDefinition("billing.manage", "billing", "manage", "Gerenciar faturamento"),
     PermissionDefinition("notifications.view", "notifications", "view", "Visualizar notificações"),
