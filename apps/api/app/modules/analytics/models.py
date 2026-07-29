@@ -98,3 +98,6 @@ class AnalyticsMeasurement(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), server_default=func.now(), index=True
     )
+
+
+from app.modules.analytics import semantic_models as _semantic_models  # noqa: E402,F401
