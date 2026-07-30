@@ -30,9 +30,13 @@ esac
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+ENV_FILE="${ORKESTRAL_ENV_FILE:-$PROJECT_ROOT/.env}"
+if [ ! -f "$ENV_FILE" ]; then
+  ENV_FILE="$PROJECT_ROOT/.env.example"
+fi
 COMPOSE_ARGS=(
   compose
-  --env-file "$PROJECT_ROOT/.env.example"
+  --env-file "$ENV_FILE"
   -f "$PROJECT_ROOT/docker-compose.yml"
   -f "$PROJECT_ROOT/docker-compose.development.yml"
 )
@@ -82,6 +86,30 @@ wait_orkestral() {
   run_compose logs --tail 80 api web nginx postgres >&2 || true
   echo "Falha ao iniciar o ambiente de desenvolvimento." >&2
   exit 1
+}
+
+ensure_n8n_ready() {
+  local deadline=$((SECONDS + 90))
+
+  if run_compose exec -T n8n sh -lc \
+    'wget -qO- http://127.0.0.1:5678/healthz/readiness >/dev/null' \
+    >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "Reconectando o n8n aos servicos internos..."
+  run_compose restart n8n
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if run_compose exec -T n8n sh -lc \
+      'wget -qO- http://127.0.0.1:5678/healthz/readiness >/dev/null' \
+      >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 3
+  done
+  echo "O n8n nao recuperou a conexao com o PostgreSQL." >&2
+  run_compose logs --tail 60 n8n postgres >&2 || true
+  return 1
 }
 
 refresh_web_dependencies() {
@@ -137,6 +165,7 @@ case "$ACTION" in
     refresh_web_dependencies
     # Recarrega o DNS dos upstreams quando a API ou o web foram recriados.
     run_compose restart nginx
+    ensure_n8n_ready
     wait_orkestral
     ;;
   stop)
@@ -152,6 +181,7 @@ case "$ACTION" in
     run_compose "${UP_ARGS[@]}"
     refresh_web_dependencies
     run_compose restart nginx
+    ensure_n8n_ready
     wait_orkestral
     ;;
   status)

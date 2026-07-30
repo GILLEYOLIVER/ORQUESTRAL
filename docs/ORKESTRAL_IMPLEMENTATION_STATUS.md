@@ -1641,3 +1641,16 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Prova de carga:** 200 requisições, zero erro e p95 de 271,2 ms.
 - **Divida conhecida:** bundle web de aproximadamente 1,15 MB antes de gzip e 112 arquivos históricos pendentes de formatação global; os arquivos alterados no ciclo estão limpos.
 - **Proximo passo exato:** publicar o ciclo e manter a evolução por releases de produto, sem novas fases estruturais pendentes no Prompt Mestre.
+
+## Ciclo 114 - instaladores, n8n e pentest local (2026-07-29)
+
+- **Instaladores:** fluxos clicaveis para macOS e Windows com verificacao/instalacao do Docker, geracao de segredos fortes, preservacao de `.env` existente e atalho local.
+- **n8n:** atualizado para `2.31.5`, readiness reparado automaticamente apos recriacao do PostgreSQL e configuracao endurecida contra acesso de nodes ao ambiente, arquivos locais, comandos e SSH.
+- **Containers:** `no-new-privileges` aplicado aos oito servicos; Nginx atualizado para `1.31.3-alpine3.24`; PostgreSQL/pgvector migrado para a variante Trixie.
+- **API:** imagem de producao reconstruida em Alpine 3.24, sem `uv` ou ferramentas de build e executada por usuario nao root; zero achados altos/criticos no Docker Scout.
+- **Gateway:** Host headers desconhecidos e path traversal codificado bloqueados, com CSP, COOP e CORP.
+- **Pentest:** 9 verificacoes aprovadas; autenticacao, JWT forjado, TRACE, Host header, traversal, CORS, rate limit e readiness.
+- **Auditoria:** segredos, frontend, 237 tabelas RLS, Actions, Node, Bandit e Python aprovados.
+- **Risco residual:** imagens de fornecedor n8n, PostgreSQL/pgvector e MinIO ainda possuem achados no SBOM; MinIO comunitario deve ser substituido antes de producao com dados reais.
+- **Relatorio:** `docs/security/PENTEST_REPORT_2026-07-29.md`.
+- **Proximo passo exato:** substituir o armazenamento comunitario arquivado por um provedor S3 mantido e executar pentest externo autenticado no ambiente de homologacao.
