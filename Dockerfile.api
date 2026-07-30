@@ -1,6 +1,6 @@
 FROM ghcr.io/astral-sh/uv:0.11.29 AS uv
 
-FROM python:3.13.14-slim-bookworm AS python-base
+FROM python:3.13.14-alpine3.24 AS python-base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
@@ -20,9 +20,16 @@ COPY packages/plugin-sdk packages/plugin-sdk
 COPY infrastructure infrastructure
 RUN uv sync --frozen --all-packages --no-dev
 
-FROM dependencies AS production
-RUN addgroup --system orkestral && adduser --system --ingroup orkestral orkestral \
-    && chown -R orkestral:orkestral /workspace
+FROM python:3.13.14-alpine3.24 AS production
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/workspace/.venv/bin:$PATH"
+WORKDIR /workspace
+RUN addgroup -S orkestral && adduser -S -G orkestral orkestral
+COPY --from=dependencies --chown=orkestral:orkestral /workspace/.venv /workspace/.venv
+COPY --from=dependencies --chown=orkestral:orkestral /workspace/apps /workspace/apps
+COPY --from=dependencies --chown=orkestral:orkestral /workspace/packages /workspace/packages
+COPY --from=dependencies --chown=orkestral:orkestral /workspace/infrastructure /workspace/infrastructure
 USER orkestral
 EXPOSE 8000
 CMD ["sh", "/workspace/infrastructure/docker/api/entrypoint.sh"]
