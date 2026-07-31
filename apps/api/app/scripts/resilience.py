@@ -17,7 +17,7 @@ from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
 DATABASE_ARTIFACTS = frozenset({"postgres.dump", "postgres.sql.gz"})
-OPTIONAL_ARCHIVES = frozenset({"object-storage-data.tar.gz", "n8n-data.tar.gz"})
+OPTIONAL_ARCHIVES = frozenset({"object-storage-rustfs-data.tar.gz", "n8n-data.tar.gz"})
 ALLOWED_ARTIFACTS = DATABASE_ARTIFACTS | OPTIONAL_ARCHIVES
 DEFAULT_PROBE_PATHS = ("/health", "/ready")
 

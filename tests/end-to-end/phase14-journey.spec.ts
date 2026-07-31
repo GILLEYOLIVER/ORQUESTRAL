@@ -62,7 +62,7 @@ test.describe
     "Execute com docker-compose.test.yml e PHASE14_E2E=true.",
   );
 
-  test("PostgreSQL, Redis, MinIO, n8n e contratos externos estao disponiveis", async ({
+  test("PostgreSQL, Redis, S3, n8n e contratos externos estao disponiveis", async ({
     request,
   }) => {
     const readiness = await request.get("/ready");

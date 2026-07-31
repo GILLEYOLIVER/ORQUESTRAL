@@ -9,12 +9,12 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.object_storage import ObjectStorageError, object_storage
 from app.core.security import utc_now
 from app.modules.audit.models import AuditEvent
 from app.modules.authentication.models import AuthAttempt, AuthSession
 from app.modules.companies.models import Company
 from app.modules.knowledge.models import KnowledgeDocument
-from app.modules.knowledge.processing import storage
 from app.modules.users.models import CompanyUser, User
 
 
@@ -38,14 +38,15 @@ async def _remove_storage_objects(settings: Settings, documents: list[KnowledgeD
             "Existem arquivos externos, mas o armazenamento está desativado. "
             "Ative a conexão segura antes da eliminação para não deixar resíduos."
         )
-    client = storage(settings)
-    for document in documents:
-        await asyncio.to_thread(
-            client.remove_object,
-            settings.storage_bucket,
-            document.storage_key,
+    try:
+        return await asyncio.to_thread(
+            object_storage(settings).purge_tenant,
+            documents[0].company_id,
         )
-    return len(documents)
+    except ObjectStorageError as exc:
+        raise ErasureBlockedError(
+            "A eliminação foi bloqueada porque os objetos externos não puderam ser confirmados."
+        ) from exc
 
 
 async def _remove_cache(redis: Redis, company_id: UUID) -> None:

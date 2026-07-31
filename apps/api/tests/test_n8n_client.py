@@ -60,7 +60,7 @@ async def test_n8n_client_retries_transient_failure() -> None:
 
 @pytest.mark.asyncio
 async def test_n8n_client_rejects_placeholder_key_without_network_call() -> None:
-    client = N8nClient(Settings())
+    client = N8nClient(Settings(n8n_api_key="development-only-change-me-n8n-api-key"))
 
     with pytest.raises(N8nConfigurationError, match="aguarda"):
         await client.test_connection()

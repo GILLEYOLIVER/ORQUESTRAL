@@ -25,7 +25,7 @@ mv "${database_tmp}" "${BACKUP_DIR}/postgres.dump"
 chmod 600 "${BACKUP_DIR}/postgres.dump"
 
 if [[ "${BACKUP_SCOPE}" == "full" ]]; then
-  for volume in object-storage-data n8n-data; do
+  for volume in object-storage-rustfs-data n8n-data; do
     docker run --rm \
       -v "orkestral_${volume}:/source:ro" \
       -v "${BACKUP_DIR}:/backup" \
@@ -39,7 +39,7 @@ fi
   cd "${BACKUP_DIR}"
   artifacts=(postgres.dump)
   if [[ "${BACKUP_SCOPE}" == "full" ]]; then
-    artifacts+=(object-storage-data.tar.gz n8n-data.tar.gz)
+    artifacts+=(object-storage-rustfs-data.tar.gz n8n-data.tar.gz)
   fi
   shasum -a 256 "${artifacts[@]}" >SHA256SUMS
 )
