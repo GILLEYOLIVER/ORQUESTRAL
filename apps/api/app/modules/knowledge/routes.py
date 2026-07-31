@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-from io import BytesIO
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
@@ -14,10 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.dependencies import DatabaseSession, RequestSettings
+from app.core.object_storage import ObjectStorageError, object_storage
 from app.core.tenancy import Principal, get_request_context, require_permission
 from app.modules.billing.service import UsageMetric, enforce_limit, record_usage
 from app.modules.knowledge.models import KnowledgeBase, KnowledgeDocument
-from app.modules.knowledge.processing import search_knowledge, storage, storage_sse
+from app.modules.knowledge.processing import search_knowledge
 from app.modules.knowledge.schemas import (
     BaseCreate,
     BaseResponse,
@@ -132,22 +131,17 @@ async def _store(
     )
     doc_id = uuid4()
     key = f"knowledge/{context.company_id}/{base_id}/{doc_id}/{name}"
-    client = storage(settings)
-    await asyncio.to_thread(
-        lambda: (
-            client.bucket_exists(settings.storage_bucket)
-            or client.make_bucket(settings.storage_bucket)
+    store = object_storage(settings)
+    try:
+        checksum = await asyncio.to_thread(
+            store.put_tenant_object,
+            company_id=context.company_id,
+            key=key,
+            data=data,
+            content_type=mime,
         )
-    )
-    await asyncio.to_thread(
-        client.put_object,
-        settings.storage_bucket,
-        key,
-        BytesIO(data),
-        len(data),
-        content_type=mime,
-        sse=storage_sse(settings),
-    )
+    except ObjectStorageError as exc:
+        raise HTTPException(503, str(exc)) from exc
     doc = KnowledgeDocument(
         id=doc_id,
         company_id=context.company_id,
@@ -159,7 +153,7 @@ async def _store(
         mime_type=mime,
         size_bytes=len(data),
         storage_key=key,
-        checksum_sha256=hashlib.sha256(data).hexdigest(),
+        checksum_sha256=checksum,
     )
     db.add(doc)
     await record_usage(
@@ -178,7 +172,19 @@ async def _store(
         metadata={"document_id": str(doc.id), "mime_type": mime},
         idempotency_key=f"knowledge-storage:{doc.id}",
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        try:
+            await asyncio.to_thread(
+                store.delete_tenant_object,
+                company_id=context.company_id,
+                key=key,
+            )
+        except ObjectStorageError:
+            pass
+        raise
     await db.refresh(doc)
     _enqueue(settings, doc.id)
     return DocumentResponse.model_validate(doc, from_attributes=True)
@@ -305,9 +311,14 @@ async def remove(
     )
     if not doc:
         raise HTTPException(404, "Documento não encontrado.")
-    await asyncio.to_thread(
-        storage(settings).remove_object, settings.storage_bucket, doc.storage_key
-    )
+    try:
+        await asyncio.to_thread(
+            object_storage(settings).delete_tenant_object,
+            company_id=context.company_id,
+            key=doc.storage_key,
+        )
+    except ObjectStorageError as exc:
+        raise HTTPException(503, str(exc)) from exc
     await db.delete(doc)
     await db.commit()
 

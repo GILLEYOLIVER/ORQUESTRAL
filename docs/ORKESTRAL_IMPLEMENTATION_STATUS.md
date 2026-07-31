@@ -24,7 +24,7 @@ Percentuais reavaliados no ciclo 52 conforme codigo, migracoes, testes e matriz 
 
 - Monorepo com API FastAPI, web React/TypeScript, worker Celery e pacotes compartilhados.
 - Monolito modular no back-end, com dominios separados em `apps/api/app/modules`.
-- PostgreSQL com `pgvector`, Redis, n8n, MinIO e Nginx executados por Docker Compose.
+- PostgreSQL com `pgvector`, Redis, n8n, S3 compatível e Nginx executados por Docker Compose.
 - Definicao canonica propria de workflows, compilada para n8n por adaptador.
 - Registro de modulos com manifestos, permissoes, menus, eventos declarados e migracoes.
 - RBAC por empresa, contexto autenticado e filtros `company_id` nas rotas analisadas.
@@ -1641,3 +1641,33 @@ Situacao: concluido e validado localmente em 23 de julho de 2026.
 - **Prova de carga:** 200 requisições, zero erro e p95 de 271,2 ms.
 - **Divida conhecida:** bundle web de aproximadamente 1,15 MB antes de gzip e 112 arquivos históricos pendentes de formatação global; os arquivos alterados no ciclo estão limpos.
 - **Proximo passo exato:** publicar o ciclo e manter a evolução por releases de produto, sem novas fases estruturais pendentes no Prompt Mestre.
+
+## Ciclo 114 - instaladores, n8n e pentest local (2026-07-29)
+
+- **Instaladores:** fluxos clicaveis para macOS e Windows com verificacao/instalacao do Docker, geracao de segredos fortes, preservacao de `.env` existente e atalho local.
+- **n8n:** atualizado para `2.31.5`, readiness reparado automaticamente apos recriacao do PostgreSQL e configuracao endurecida contra acesso de nodes ao ambiente, arquivos locais, comandos e SSH.
+- **Containers:** `no-new-privileges` aplicado aos oito servicos; Nginx atualizado para `1.31.3-alpine3.24`; PostgreSQL/pgvector migrado para a variante Trixie.
+- **API:** imagem de producao reconstruida em Alpine 3.24, sem `uv` ou ferramentas de build e executada por usuario nao root; zero achados altos/criticos no Docker Scout.
+- **Gateway:** Host headers desconhecidos e path traversal codificado bloqueados, com CSP, COOP e CORP.
+- **Pentest:** 9 verificacoes aprovadas; autenticacao, JWT forjado, TRACE, Host header, traversal, CORS, rate limit e readiness.
+- **Auditoria:** segredos, frontend, 237 tabelas RLS, Actions, Node, Bandit e Python aprovados.
+- **Risco residual:** imagens de fornecedor n8n, PostgreSQL/pgvector e MinIO ainda possuem achados no SBOM; MinIO comunitario deve ser substituido antes de producao com dados reais.
+- **Relatorio:** `docs/security/PENTEST_REPORT_2026-07-29.md`.
+- **Proximo passo exato:** substituir o armazenamento comunitario arquivado por um provedor S3 mantido e executar pentest externo autenticado no ambiente de homologacao.
+
+## Ciclo 115 - armazenamento S3 e conhecimento seguro (2026-07-30)
+
+- **Disco:** cache Docker removido sem volumes e imagem Colima compactada; o
+  macOS recuperou mais de 20 GiB.
+- **Armazenamento:** MinIO comunitario substituido localmente por RustFS fixado,
+  executado sem privilegios e em volume novo.
+- **Migracao:** objetos copiados pela API S3 e conferidos; volume legado
+  preservado como contingencia, sem reutilizar formato interno.
+- **Conhecimento:** fronteira S3 neutra, prefixo obrigatorio por empresa,
+  checksum SHA-256 na leitura, compensacao de upload e exclusao confirmada.
+- **Desligamento:** eliminacao verificavel por prefixo de tenant, sem tocar nos
+  objetos de outras empresas.
+- **Resiliencia:** backup, restauracao e contratos E2E atualizados para o novo
+  volume.
+- **Proximo passo exato:** validar localmente, publicar o ciclo, implantar
+  manualmente o SHA mesclado e executar pentest remoto autenticado.

@@ -17,29 +17,40 @@ A avaliação das atualizações automáticas está registrada na [Revisão de d
 
 ## Início rápido
 
-Na raiz do repositório:
+Use o instalador do seu sistema na raiz do repositório:
 
-Antes de iniciar, verifique automaticamente todas as ferramentas, versões, dependências e portas:
-
-```powershell
-.\check-environment.ps1
-```
-
-No macOS/Linux, pressione `F5` no VS Code ou execute `scripts/dev.sh start` depois de instalar e iniciar o Docker.
-
-Para obter saída estruturada:
-
-```powershell
-.\check-environment.ps1 -Json
-```
-
-O script retorna código `0` quando o ambiente está completo e `1` quando existem requisitos pendentes.
-
-Em seguida, inicie os serviços:
+### macOS
 
 ```bash
-docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.development.yml up --build
+./installers/macos/Install-Orkestral.command
 ```
+
+### Windows
+
+Clique duas vezes em `installers\windows\Install-Orkestral.cmd` ou execute:
+
+```powershell
+.\installers\windows\Install-Orkestral.ps1
+```
+
+Os instaladores verificam ou instalam o Docker Desktop, criam um `.env` privado
+com segredos aleatórios, iniciam os serviços e criam um atalho para a
+plataforma. Configurações existentes nunca são sobrescritas.
+
+Para iniciar manualmente depois da instalação:
+
+```bash
+./scripts/dev.sh start
+```
+
+No Windows:
+
+```powershell
+.\scripts\dev.ps1 start
+```
+
+Consulte [Instalação no macOS e Windows](docs/INSTALLATION.md) para requisitos,
+atualizações, credenciais locais e solução de problemas.
 
 Depois da inicialização:
 
@@ -55,13 +66,14 @@ Depois da inicialização:
 
 O n8n e os consoles auxiliares são publicados apenas no override de desenvolvimento e somente em `127.0.0.1`.
 
-Para encerrar:
+Para encerrar no macOS:
 
 ```bash
-docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.development.yml down
+./scripts/dev.sh stop
 ```
 
-Use `down -v` somente quando quiser apagar deliberadamente todos os dados locais.
+No Windows, execute `.\scripts\dev.ps1 stop`. Os comandos não apagam volumes
+nem dados.
 
 ## Acesso de desenvolvimento
 

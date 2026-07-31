@@ -33,7 +33,7 @@ else
     sh -lc 'exec psql --set ON_ERROR_STOP=on --username="$POSTGRES_USER" postgres'
 fi
 
-for volume in object-storage-data n8n-data; do
+for volume in object-storage-rustfs-data n8n-data; do
   [[ -f "${BACKUP_DIR}/${volume}.tar.gz" ]] || continue
   docker run --rm \
     -v "orkestral_${volume}:/target" \

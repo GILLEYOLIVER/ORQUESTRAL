@@ -28,7 +28,7 @@ STATE = ContractState()
 
 def runtime_dependencies() -> dict[str, bool]:
     endpoints = {
-        "minio": "http://object-storage:9000/minio/health/live",
+        "object_storage": "http://object-storage:9000/health",
         "n8n": "http://n8n:5678/healthz",
     }
     result: dict[str, bool] = {}

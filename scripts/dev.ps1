@@ -7,9 +7,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$EnvFile = if ($env:ORKESTRAL_ENV_FILE) {
+    $env:ORKESTRAL_ENV_FILE
+}
+elseif (Test-Path (Join-Path $ProjectRoot ".env")) {
+    Join-Path $ProjectRoot ".env"
+}
+else {
+    Join-Path $ProjectRoot ".env.example"
+}
 $ComposeArgs = @(
     "compose",
-    "--env-file", (Join-Path $ProjectRoot ".env.example"),
+    "--env-file", $EnvFile,
     "-f", (Join-Path $ProjectRoot "docker-compose.yml"),
     "-f", (Join-Path $ProjectRoot "docker-compose.development.yml")
 )
@@ -62,6 +71,28 @@ function Wait-Orkestral {
     throw "Falha ao iniciar o ambiente de desenvolvimento."
 }
 
+function Repair-N8nReadiness {
+    & docker @ComposeArgs exec -T n8n sh -lc `
+        "wget -qO- http://127.0.0.1:5678/healthz/readiness >/dev/null"
+    if ($LASTEXITCODE -eq 0) {
+        return
+    }
+
+    Write-Host "Reconectando o n8n aos serviços internos..." -ForegroundColor Cyan
+    Invoke-DockerCompose restart n8n
+    $deadline = (Get-Date).AddSeconds(90)
+    while ((Get-Date) -lt $deadline) {
+        & docker @ComposeArgs exec -T n8n sh -lc `
+            "wget -qO- http://127.0.0.1:5678/healthz/readiness >/dev/null"
+        if ($LASTEXITCODE -eq 0) {
+            return
+        }
+        Start-Sleep -Seconds 3
+    }
+    & docker @ComposeArgs logs --tail 60 n8n postgres
+    throw "O n8n não recuperou a conexão com o PostgreSQL."
+}
+
 Set-Location $ProjectRoot
 Test-Docker
 
@@ -72,6 +103,7 @@ switch ($Action) {
             $upArgs += "--build"
         }
         Invoke-DockerCompose @upArgs
+        Repair-N8nReadiness
         Wait-Orkestral
     }
     "stop" {
@@ -85,6 +117,7 @@ switch ($Action) {
             $upArgs += "--build"
         }
         Invoke-DockerCompose @upArgs
+        Repair-N8nReadiness
         Wait-Orkestral
     }
     "status" {
