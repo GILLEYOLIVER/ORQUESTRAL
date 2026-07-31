@@ -107,6 +107,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         request_id = getattr(request.state, "request_id", normalize_request_id(None))
         return JSONResponse(
             status_code=status_code,
+            media_type="application/problem+json",
             content={
                 "type": "about:blank",
                 "title": title,

@@ -220,6 +220,7 @@ def test_secure_read_only_link_blocks_every_mutation_and_audits_usage() -> None:
                 json={"company_id": str(identity.company_id)},
             )
             assert blocked.status_code == 403
+            assert blocked.headers["content-type"].startswith("application/problem+json")
             assert blocked.json()["detail"].startswith("Este acesso permite visualizar")
             assert client.post("/auth/logout").status_code == 204
             asyncio.run(
