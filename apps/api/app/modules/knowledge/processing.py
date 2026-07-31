@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import hmac
 import re
 from html.parser import HTMLParser
 from io import BytesIO
-from urllib.parse import urlsplit
 from uuid import UUID
 
 from docx import Document
-from minio import Minio
-from minio.sse import SseCustomerKey
 from openpyxl import load_workbook
 from pypdf import PdfReader
 from sqlalchemy import delete, select
@@ -19,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings, get_settings
 from app.core.database import create_database_engine
+from app.core.object_storage import object_storage
 from app.core.security import utc_now
 from app.modules.knowledge.embeddings import (
     get_embedding_provider,
@@ -43,27 +40,6 @@ class _HTML(HTMLParser):
     def handle_data(self, data: str) -> None:
         if not self.skip and data.strip():
             self.parts.append(data.strip())
-
-
-def storage(settings: Settings) -> Minio:
-    endpoint = urlsplit(str(settings.storage_endpoint))
-    return Minio(
-        endpoint.netloc,
-        access_key=settings.storage_access_key,
-        secret_key=settings.storage_secret_key,
-        secure=endpoint.scheme == "https",
-    )
-
-
-def storage_sse(settings: Settings) -> SseCustomerKey | None:
-    if not settings.object_storage_sse_enabled:
-        return None
-    key = hmac.new(
-        settings.encryption_key.encode("utf-8"),
-        b"orkestral-object-storage-sse-v1",
-        hashlib.sha256,
-    ).digest()
-    return SseCustomerKey(key)
 
 
 def extract(data: bytes, mime: str) -> str:
@@ -115,18 +91,12 @@ async def process_document(document_id: UUID, settings: Settings) -> None:
             document.error_summary = None
             await database.commit()
             try:
-                client = storage(settings)
-                response = await asyncio.to_thread(
-                    client.get_object,
-                    settings.storage_bucket,
-                    document.storage_key,
-                    ssec=storage_sse(settings),
+                data = await asyncio.to_thread(
+                    object_storage(settings).read_tenant_object,
+                    company_id=document.company_id,
+                    key=document.storage_key,
+                    expected_sha256=document.checksum_sha256,
                 )
-                try:
-                    data = await asyncio.to_thread(response.read)
-                finally:
-                    response.close()
-                    response.release_conn()
                 text = extract(data, document.mime_type)
                 parts = chunks(text)
                 if not parts:

@@ -15,6 +15,6 @@ O banco já faz parte da infraestrutura e preserva transações, backup e isolam
 ## Consequências
 
 - troca de modelo ou dimensão exige reindexação controlada;
-- documentos fonte permanecem no MinIO, enquanto chunks podem ser reconstruídos;
+- documentos fonte permanecem no armazenamento S3 compatível, enquanto chunks podem ser reconstruídos;
 - backups do PostgreSQL precisam incluir a extensão `vector` no ambiente de restauração;
 - um serviço vetorial dedicado só será considerado após métricas demonstrarem necessidade.

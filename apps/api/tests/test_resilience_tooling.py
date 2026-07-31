@@ -19,7 +19,7 @@ def _write_valid_backup(root: Path) -> None:
     database = root / "postgres.dump"
     database.write_bytes(b"PGDMP" + b"\x00" * 64)
     database.chmod(0o600)
-    archive = root / "object-storage-data.tar.gz"
+    archive = root / "object-storage-rustfs-data.tar.gz"
     source = root / "document.txt"
     source.write_text("conteudo ficticio", encoding="utf-8")
     with tarfile.open(archive, "w:gz") as output:
@@ -44,7 +44,7 @@ def test_backup_verifier_accepts_private_integral_artifacts(tmp_path: Path) -> N
     result = verify_backup(tmp_path)
 
     assert result["status"] == "verified"
-    assert result["artifacts"] == ["object-storage-data.tar.gz", "postgres.dump"]
+    assert result["artifacts"] == ["object-storage-rustfs-data.tar.gz", "postgres.dump"]
 
 
 def test_backup_verifier_rejects_tampering(tmp_path: Path) -> None:
