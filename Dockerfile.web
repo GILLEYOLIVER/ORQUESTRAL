@@ -25,7 +25,7 @@ RUN test "$DEVELOPMENT_PREVIEW_ENABLED" != "true" \
        VITE_AUTH_PREVIEW_ENABLED="$DEVELOPMENT_PREVIEW_ENABLED" \
        pnpm --filter @orkestral/web build
 
-FROM nginx:1.31.3-alpine AS production
+FROM nginx:1.31.7-alpine AS production
 COPY infrastructure/nginx/web.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/apps/web/dist /usr/share/nginx/html
 
